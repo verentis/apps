@@ -7,7 +7,7 @@ metadata:
     accounts, periods, journals and expenses, posted by script and reported with
     Canvas.'
   icon: ./icons/app.svg
-  version: 0.2.5
+  version: 0.2.6
   author: Verentis
 marketplace:
   readme: ./README.md
