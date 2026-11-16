@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.verentis.io/crm/v1/call.schema.json",
+  "title": "CRM call",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "const": "https://schemas.verentis.io/crm/v1/call.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "kind": {
+      "const": "call"
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "state": {
+      "enum": [
+        "active",
+        "archived"
+      ]
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "archivedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "subject": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "regarding": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^/",
+          "maxLength": 4096
+        },
+        "nodeId": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": false
+    },
+    "owner": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "direction": {
+      "enum": [
+        "inbound",
+        "outbound"
+      ]
+    },
+    "status": {
+      "enum": [
+        "planned",
+        "held",
+        "not-held"
+      ]
+    },
+    "phone": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "startsAt": {
+      "type": "string",
+      "pattern": "^([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2}(\\.[0-9]+)?)?Z?)?$"
+    },
+    "durationMinutes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1440
+    },
+    "result": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 10000
+    }
+  },
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "kind",
+    "id",
+    "state",
+    "createdAt",
+    "updatedAt",
+    "subject",
+    "direction",
+    "status"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "archived"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "archivedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          }
+        },
+        "required": [
+          "archivedAt"
+        ]
+      }
+    }
+  ]
+}

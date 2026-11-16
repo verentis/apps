@@ -1,0 +1,16 @@
+# Installed (managed) to /.workspace/desktop/apps/invoicing/, where the workspace registers it as an
+# app-owned window layout. Users save a copy to change it.
+api-version: verentis.io/v1
+kind: WindowLayout
+metadata:
+  id: invoice-follow-up
+  name: Invoice follow-up
+  description: CRM customers beside Invoicing receivables, for chasing what is owed.
+spec:
+  focus: receivables
+  windows:
+    - { id: customers, app: crm, entry-point: home }
+    - { id: receivables, app: invoicing, entry-point: receivables }
+  zones:
+    - { width: 400, tabs: [customers], active: customers }
+    - { width: flex, tabs: [receivables], active: receivables }

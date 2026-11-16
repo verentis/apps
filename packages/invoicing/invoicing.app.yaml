@@ -1,0 +1,393 @@
+api-version: verentis.io/v1
+kind: Application
+metadata:
+  id: invoicing
+  name: Invoicing
+  description: Invoices, credit notes and payments as files in your workspace,
+    issued and posted to the Accounting ledger by script.
+  icon: ./icons/app.svg
+  version: 0.2.5
+  author: Verentis
+marketplace:
+  readme: ./README.md
+  keywords:
+    - invoicing
+    - invoices
+    - credit notes
+    - payments
+    - receivables
+    - billing
+    - accounting
+spec:
+  install-root: /applications/invoicing
+  entry: https://canvas.apps.localtest.me
+  scope: global
+  entry-points:
+    - id: home
+      display-name: Invoicing
+      route: /render?document=.%2Fcanvas%2Fhome.page.yaml
+      order: 10
+    - id: receivables
+      display-name: Receivables
+      route: /render?document=.%2Fcanvas%2Freceivables.page.yaml
+      order: 20
+  launch:
+    enabled: true
+    entry-point: home
+    pinnable: true
+  widgets:
+    - id: invoices-due
+      display-name: Invoices due
+      description: Open and overdue invoices by due date
+      route: /render?document=.%2Fcanvas%2Fdue.widget.page.yaml
+      default-size:
+        w: 4
+        h: 4
+      min-size:
+        w: 3
+        h: 3
+  permissions:
+    - file.read
+    - file.write
+    - execution.run
+  scopes:
+    - invoicing.default
+  settings:
+    - key: invoice-code-prefix
+      display-name: Invoice number prefix
+      type: string
+      default: INV-
+      description: Prefix of generated invoice numbers, e.g. INV-0001.
+    - key: credit-code-prefix
+      display-name: Credit note number prefix
+      type: string
+      default: CN-
+      description: Prefix of generated credit note numbers, e.g. CN-0001.
+    - key: payment-code-prefix
+      display-name: Payment code prefix
+      type: string
+      default: PAY-
+      description: Prefix of generated payment numbers, e.g. PAY-0001.
+    - key: code-digits
+      display-name: Code digits
+      type: number
+      default: 4
+      description: Minimum number of digits in generated numbers (zero-padded).
+  dependencies:
+    - package: verentis/canvas
+      version: latest
+    - package: verentis/nodejs
+      version: latest
+    - package: verentis/accounting
+      version: latest
+    - package: verentis/crm
+      version: latest
+      optional: true
+  engine: verentis/nodejs
+  scripts:
+    - scripts/create
+    - scripts/post
+  install:
+    - from: canvas/*.form.yaml
+      to: /applications/invoicing/canvas/
+      mode: managed
+      mime: application/vnd.verentis.canvas.form+yaml
+    - from: canvas/*.page.yaml
+      to: /applications/invoicing/canvas/
+      mode: managed
+      mime: application/vnd.verentis.canvas.page+yaml
+    - from: schemas/*.schema.json
+      to: /applications/invoicing/schemas/
+      mode: managed
+      mime: application/schema+json
+    - from: templates/*.json
+      to: /applications/invoicing/templates/
+      mode: managed
+      mime: application/json
+    - from: seed/invoices
+      to: /invoices
+      mode: seed
+      mime: application/vnd.verentis.invoicing.invoices
+    - from: seed/credits
+      to: /credit-notes
+      mode: seed
+      mime: application/vnd.verentis.invoicing.credits
+    - from: seed/payments
+      to: /payments
+      mode: seed
+      mime: application/vnd.verentis.invoicing.payments
+    - from: seed/settings.json
+      to: /settings/invoicing.json
+      mode: seed
+      mime: application/vnd.verentis.invoicing.settings+json
+    - from: desktop/*.layout.yaml
+      to: /.workspace/desktop/apps/invoicing/
+      mode: managed
+  creatables:
+    - id: invoice
+      display-name: Invoice
+      description: A new invoice
+      icon: lucide:file-text
+      mime: application/vnd.verentis.invoicing.invoice+json
+      parents:
+        - application/vnd.verentis.invoicing.invoices
+      folder-names:
+        - invoices
+        - invoicing
+      script: ./scripts/create
+      template: ./templates/invoice.json
+    - id: credit
+      display-name: Credit note
+      description: A new credit note
+      icon: lucide:file-minus
+      mime: application/vnd.verentis.invoicing.credit+json
+      parents:
+        - application/vnd.verentis.invoicing.credits
+      folder-names:
+        - credit-notes
+        - invoicing
+      script: ./scripts/create
+      template: ./templates/credit.json
+    - id: payment
+      display-name: Payment
+      description: A new payment
+      icon: lucide:banknote
+      mime: application/vnd.verentis.invoicing.payment+json
+      parents:
+        - application/vnd.verentis.invoicing.payments
+      folder-names:
+        - payments
+        - invoicing
+      script: ./scripts/create
+      template: ./templates/payment.json
+  sandbox:
+    allow-scripts: true
+    allow-same-origin: true
+    allow-forms: true
+    allow-popups: false
+  file-access:
+    - path: /invoices
+      mode: read
+      reason: List invoices
+      origin:
+        kind: document
+        id: canvas/home.page.yaml
+    - path: /credit-notes
+      mode: read
+      reason: List credit notes
+      origin:
+        kind: document
+        id: canvas/home.page.yaml
+    - path: /payments
+      mode: read
+      reason: List payments
+      origin:
+        kind: document
+        id: canvas/home.page.yaml
+    - path: /invoices
+      mode: read
+      reason: Sum issued invoices, credit notes and payment allocations
+      origin:
+        kind: document
+        id: canvas/receivables.page.yaml
+    - path: /credit-notes
+      mode: read
+      reason: Sum issued invoices, credit notes and payment allocations
+      origin:
+        kind: document
+        id: canvas/receivables.page.yaml
+    - path: /payments
+      mode: read
+      reason: Sum issued invoices, credit notes and payment allocations
+      origin:
+        kind: document
+        id: canvas/receivables.page.yaml
+    - path: /invoices
+      mode: read
+      reason: Show open and overdue invoices
+      origin:
+        kind: document
+        id: canvas/due.widget.page.yaml
+    - path: /credit-notes
+      mode: read
+      reason: Show open and overdue invoices
+      origin:
+        kind: document
+        id: canvas/due.widget.page.yaml
+    - path: /payments
+      mode: read
+      reason: Show open and overdue invoices
+      origin:
+        kind: document
+        id: canvas/due.widget.page.yaml
+    - path: /customers
+      mode: read
+      reason: Offer CRM customers to bill (when CRM is installed)
+      origin:
+        kind: document
+        id: invoicing-invoice
+    - path: /credit-notes
+      mode: read
+      reason: Show the credit notes against this invoice
+      origin:
+        kind: document
+        id: invoicing-invoice
+    - path: /payments
+      mode: read
+      reason: Show the payments allocated to this invoice
+      origin:
+        kind: document
+        id: invoicing-invoice
+    - path: /settings/invoicing.json
+      mode: read
+      reason: Estimate tax with the default rate
+      origin:
+        kind: document
+        id: invoicing-invoice
+    - path: /applications/invoicing/
+      mode: read
+      reason: Read the Invoicing schemas and run the posting script
+      origin:
+        kind: document
+        id: invoicing-invoice
+    - path: /invoices
+      mode: read
+      reason: Choose the issued invoice to credit
+      origin:
+        kind: document
+        id: invoicing-credit
+    - path: /settings/invoicing.json
+      mode: read
+      reason: Estimate tax with the default rate
+      origin:
+        kind: document
+        id: invoicing-credit
+    - path: /applications/invoicing/
+      mode: read
+      reason: Read the Invoicing schemas and run the posting script
+      origin:
+        kind: document
+        id: invoicing-credit
+    - path: /chart-of-accounts
+      mode: read
+      reason: Choose the bank account
+      origin:
+        kind: document
+        id: invoicing-payment
+    - path: /invoices
+      mode: read
+      reason: Choose the invoices a payment settles
+      origin:
+        kind: document
+        id: invoicing-payment
+    - path: /applications/invoicing/
+      mode: read
+      reason: Read the Invoicing schemas and run the posting script
+      origin:
+        kind: document
+        id: invoicing-payment
+    - path: /chart-of-accounts
+      mode: read
+      reason: Choose the accounts invoices, credit notes and payments post to
+      origin:
+        kind: document
+        id: invoicing-settings
+    - path: /applications/invoicing/
+      mode: read
+      reason: Read the Invoicing schemas and run the posting script
+      origin:
+        kind: document
+        id: invoicing-settings
+    - path: /invoices
+      mode: write
+      reason: Create invoices with the next number
+      origin:
+        kind: script
+        id: invoicing-create
+    - path: /credit-notes
+      mode: write
+      reason: Create credit notes with the next number
+      origin:
+        kind: script
+        id: invoicing-create
+    - path: /payments
+      mode: write
+      reason: Create payments with the next number
+      origin:
+        kind: script
+        id: invoicing-create
+    - path: /settings/invoicing.json
+      mode: read
+      reason: Default new invoices' due date and notes, and payments' bank account
+      origin:
+        kind: script
+        id: invoicing-create
+    - path: /settings/accounting.json
+      mode: read
+      reason: Default new records to the ledger's base currency
+      origin:
+        kind: script
+        id: invoicing-create
+    - path: /settings/invoicing.json
+      mode: read
+      reason: Read the seller details and posting accounts
+      origin:
+        kind: script
+        id: invoicing-post
+    - path: /settings/accounting.json
+      mode: read
+      reason: Read the ledger's base currency and precision
+      origin:
+        kind: script
+        id: invoicing-post
+    - path: /chart-of-accounts
+      mode: read
+      reason: Check that posted accounts exist and are active
+      origin:
+        kind: script
+        id: invoicing-post
+    - path: /periods
+      mode: read
+      reason: Find the open period a posting date falls in
+      origin:
+        kind: script
+        id: invoicing-post
+    - path: /journals
+      mode: write
+      reason: Post invoice, credit note and payment journals and their reversals
+      origin:
+        kind: script
+        id: invoicing-post
+    - path: /invoices
+      mode: write
+      reason: Mark invoices issued and store their document copy
+      origin:
+        kind: script
+        id: invoicing-post
+    - path: /credit-notes
+      mode: write
+      reason: Mark credit notes issued and store their document copy
+      origin:
+        kind: script
+        id: invoicing-post
+    - path: /payments
+      mode: write
+      reason: Mark payments posted or reversed
+      origin:
+        kind: script
+        id: invoicing-post
+packaging:
+  publisher: verentis
+  files:
+    - canvas/**
+    - schemas/**
+    - templates/**
+    - seed/**
+    - scripts/**
+    - desktop/**
+    - README.md
+  templates:
+    - canvas/*.yaml
+  variables:
+    canvas-origin: https://canvas.apps.localtest.me
+  encryption: none

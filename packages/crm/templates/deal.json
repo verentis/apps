@@ -1,0 +1,16 @@
+{
+  "$schema": "https://schemas.verentis.io/crm/v1/deal.schema.json",
+  "schemaVersion": 1,
+  "kind": "deal",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "title": "{{ name }}",
+  "stageId": "lead",
+  "amount": 0,
+  "currency": "",
+  "probability": 10,
+  "outcome": "open"
+}

@@ -1,0 +1,23 @@
+# VCS / CI
+.git
+.github
+
+# Dependencies & build outputs (rebuilt inside the image)
+node_modules
+.output
+.nuxt
+.nitro
+.cache
+.data
+dist
+
+# Local env & logs (never bake secrets into the image)
+.env
+.env.*
+!.env.example
+*.log
+
+# Editor / OS noise
+.DS_Store
+.vscode
+.idea

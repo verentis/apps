@@ -1,0 +1,12 @@
+{
+  "$schema": "https://schemas.verentis.io/crm/v1/meeting.schema.json",
+  "schemaVersion": 1,
+  "kind": "meeting",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "subject": "{{ name }}",
+  "status": "planned",
+  "attendees": []
+}

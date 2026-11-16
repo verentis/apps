@@ -1,0 +1,60 @@
+:root { font-family: system-ui, sans-serif; color: #1b1b2a; background: #fff; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+button, input, select { font: inherit; }
+button { cursor: pointer; padding: .5rem .8rem; border: 1px solid #babac7; border-radius: .35rem; background: #f8f8fc; color: inherit; }
+button:disabled { cursor: default; opacity: .55; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid #6965db; outline-offset: 2px; }
+.launcher { max-width: 64rem; margin: 2rem auto; padding: 0 1.5rem; }
+.new-document { display: flex; gap: 1rem; flex-wrap: wrap; align-items: end; margin: 2rem 0; }
+label { display: flex; gap: .4rem; flex-direction: column; }
+input, select { padding: .5rem; border: 1px solid #babac7; border-radius: .35rem; }
+nav, .toolbar { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
+.documents { padding: 0; list-style: none; }
+.documents li { display: flex; align-items: center; justify-content: space-between; margin: .5rem 0; }
+.error { color: #a01d30; }
+.message { padding: 2rem; }
+.document-shell { height: 100dvh; display: flex; flex-direction: column; }
+.toolbar { padding: .5rem; border-bottom: 1px solid #ddd; font-size: .9rem; }
+.toolbar .status { margin-right: auto; }
+.editor-island { flex: 1; min-height: 0; width: 100%; }
+.notice { padding: .4rem .8rem; background: #fff3ce; margin: 0; font-size: .9rem; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+
+/* Dashboard widget (Signal): square corners, 1px rules, one 150ms ease, host theme variables with local fallbacks. */
+html:has(.recent-widget), html:has(.recent-widget) body { background: var(--card, #fff); }
+.recent-widget {
+  --rw-fg: var(--card-foreground, #1b1b2a);
+  --rw-muted: var(--muted-foreground, #6b6b7b);
+  --rw-rule: var(--border, #e2e2ea);
+  --rw-band: var(--accent, #f6f1e7);
+  --rw-ring: var(--ring, #6965db);
+  --rw-display: "Archivo", system-ui, sans-serif;
+  --rw-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  display: flex; flex-direction: column; height: 100dvh; overflow: hidden;
+  color: var(--rw-fg); font-family: "Inter", system-ui, sans-serif; font-size: 13px;
+}
+.dark .recent-widget { --rw-fg: var(--card-foreground, #ececf2); --rw-muted: var(--muted-foreground, #9a9aab); --rw-rule: var(--border, #2c2c36); --rw-band: var(--accent, #26231d); }
+html.dark:has(.recent-widget), html.dark:has(.recent-widget) body { background: var(--card, #17171c); }
+.rw-header { display: flex; align-items: baseline; gap: .6rem; padding-bottom: 10px; }
+.rw-title { margin: 0; font-family: var(--rw-display); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.rw-meta { flex: 1; min-width: 0; color: var(--rw-muted); font-family: var(--rw-mono); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.recent-widget button { border-radius: 0; font: inherit; color: inherit; }
+.recent-widget button:focus-visible { outline: 2px solid var(--rw-ring); outline-offset: -2px; }
+.rw-link { padding: 0; border: 0; background: none; color: var(--rw-muted); font-family: var(--rw-display); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; transition: color 150ms ease; }
+.rw-link:hover:not(:disabled) { color: var(--rw-fg); }
+.rw-note { margin: 0; padding: 9px 0; border-top: 1px solid var(--rw-rule); color: var(--rw-muted); }
+.rw-error { color: var(--destructive, #a01d30); }
+.rw-list { flex: 1; min-height: 0; margin: 0; padding: 0; list-style: none; overflow: hidden; }
+.rw-row {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 6px; border: 0; border-top: 1px solid var(--rw-rule);
+  background: transparent; text-align: left; transition: background-color 150ms ease;
+}
+.rw-row:hover:not(:disabled) { background: var(--rw-band); }
+.rw-row:disabled { opacity: 1; cursor: default; }
+.rw-icon { flex: none; width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.rw-text { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 1px; }
+.rw-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rw-sub, .rw-time { color: var(--rw-muted); font-family: var(--rw-mono); font-size: 11px; }
+.rw-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rw-time { flex: none; }

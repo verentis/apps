@@ -1,0 +1,14 @@
+{
+  "$schema": "https://schemas.verentis.io/crm/v1/email.schema.json",
+  "schemaVersion": 1,
+  "kind": "email",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "subject": "{{ name }}",
+  "direction": "outbound",
+  "status": "draft",
+  "to": [],
+  "cc": []
+}

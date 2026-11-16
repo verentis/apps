@@ -1,0 +1,48 @@
+{
+  "hosted": [
+    {
+      "name": "image-viewer",
+      "package-root": "packages/image-viewer",
+      "image": "verentis/image-viewer",
+      "context": "packages/image-viewer",
+      "dockerfile": "packages/image-viewer/Dockerfile",
+      "manifests": "packages/image-viewer/k8s/deployment.yaml",
+      "deployments": ["image-viewer"],
+      "health": [{ "path": "/" }],
+      "paths": ["packages/image-viewer/"]
+    },
+    {
+      "name": "markdown-viewer",
+      "package-root": "packages/markdown-viewer",
+      "image": "verentis/markdown-viewer",
+      "context": "packages/markdown-viewer",
+      "dockerfile": "packages/markdown-viewer/Dockerfile",
+      "manifests": "packages/markdown-viewer/k8s/deployment.yaml",
+      "deployments": ["markdown-viewer"],
+      "health": [{ "path": "/" }],
+      "paths": ["packages/markdown-viewer/"]
+    },
+    {
+      "name": "smart-editor",
+      "package-root": "packages/smart-editor",
+      "image": "verentis/smart-editor",
+      "context": "packages/smart-editor",
+      "dockerfile": "packages/smart-editor/Dockerfile",
+      "manifests": "packages/smart-editor/k8s/deployment.yaml",
+      "deployments": ["smart-editor"],
+      "health": [{ "path": "/" }],
+      "paths": ["packages/smart-editor/"]
+    },
+    {
+      "name": "excalidraw",
+      "package-root": "packages/excalidraw",
+      "image": "verentis/excalidraw",
+      "context": "packages/excalidraw",
+      "dockerfile": "packages/excalidraw/Dockerfile",
+      "manifests": "packages/excalidraw/k8s/deployment.yaml",
+      "deployments": ["excalidraw"],
+      "health": [{ "path": "/_ready" }],
+      "paths": ["packages/excalidraw/"]
+    }
+  ]
+}

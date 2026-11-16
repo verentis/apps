@@ -1,0 +1,66 @@
+api-version: verentis.io/v1
+kind: Application
+
+metadata:
+  id: markdown-viewer
+  name: Markdown Viewer
+  description: Read workspace Markdown with formatted tables, highlighted code, an
+    outline and a source view.
+  icon: ./icons/app.svg
+  version: 0.1.47
+  author: Verentis
+  labels:
+    category: docs
+    builtin: "true"
+
+marketplace:
+  logo: ./marketplace/logo.svg
+  hero:
+    source: ./marketplace/markdown-viewer-hero.svg
+    alt: "Subdued fine document-like rules on a tonal background, with a quiet
+      centre for the marketplace title, details and install controls."
+  images:
+    - source: ./marketplace/markdown-viewer.svg
+      alt: "Workflow illustration: Markdown source becomes a readable plan with a
+        heading outline, checklist and table; this is not an application
+        screenshot."
+      caption: "Workflow illustration: Markdown source becomes a readable plan with a
+        heading outline, checklist and table; this is not an application
+        screenshot."
+  readme: ./marketplace/README.md
+  changelog: ./CHANGELOG.md
+
+spec:
+  # `entry` (the iframe URL) is per-environment — see environments/{local,production}.yaml,
+  # merged onto this base by `verentis pack . --env <env>`.
+  scope: global
+
+  mime-types:
+    - pattern: "text/markdown"
+      mode: view
+      priority: 100
+    - pattern: "text/x-markdown"
+      mode: view
+      priority: 100
+
+  capabilities:
+    - file:read
+
+  permissions:
+    - file.read
+
+  sandbox:
+    allow-scripts: true
+    allow-same-origin: true
+    allow-popups: true
+    allow-forms: false
+
+  oauth:
+    client-type: public
+    # `redirect-uris` are per-environment — see environments/{local,production}.yaml.
+
+    # Marketplace packaging (`verentis pack`): a hosted iframe app keyed on intrinsic MIME types
+    # (text/markdown) installs only its manifest node — there are no companion files to bundle.
+packaging:
+  publisher: verentis
+  encryption: none

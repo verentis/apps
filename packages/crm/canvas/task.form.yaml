@@ -1,0 +1,313 @@
+api-version: canvas.verentis.io/v1
+kind: Form
+metadata:
+  id: crm-task
+  name: CRM task
+  description: View and edit a CRM task.
+  icon: square-check
+spec:
+  binds:
+  - pattern: application/vnd.verentis.crm.task+json
+    mode: edit
+    priority: 200
+    scope: global
+    json-schema:
+      id: https://schemas.verentis.io/crm/v1/task.schema.json
+      source: /applications/crm/schemas/task.schema.json
+      title: CRM task
+      version: '1'
+  entry: ${var:canvas-origin}/render?document=%2Fapplications%2Fcrm%2Fcanvas%2Ftask.form.yaml
+  scope: global
+  mime-types:
+  - pattern: application/vnd.verentis.crm.task+json
+    mode: edit
+    priority: 200
+    json-schema:
+      id: https://schemas.verentis.io/crm/v1/task.schema.json
+      source: /applications/crm/schemas/task.schema.json
+      title: CRM task
+      version: '1'
+  permissions:
+  - file.read
+  - file.write
+  capabilities:
+  - file:read
+  - file:write
+  sandbox:
+    allow-scripts: true
+    allow-same-origin: true
+    allow-popups: false
+    allow-forms: true
+  data:
+    record:
+      kind: document
+      consistency: conditional
+  state:
+    showarchived: false
+  tree:
+  - type: canvas.stack
+    layout:
+      base:
+        padding: 6
+        gap: 4
+        maxWidth: 72rem
+        margin:
+          x: auto
+    children:
+    - type: canvas.stack
+      layout:
+        base:
+          direction: row
+          wrap: true
+          gap: 2
+          align: center
+          justify: between
+      children:
+      - type: canvas.stack
+        layout:
+          base:
+            gap: 1
+        children:
+        - type: canvas.stack
+          layout:
+            base:
+              direction: row
+              wrap: true
+              gap: 2
+              align: center
+          children:
+          - type: canvas.heading
+            props:
+              level: 2
+              text: '{{ form.values.subject || ''New task'' }}'
+          - type: canvas.dashboard.badge
+            props:
+              text: '{{ String(form.values.status || '''').split(''-'').join('' '') }}'
+              tone: '{{ ["customer","won","sent","received","held","completed","resolved","closed"].includes(form.values.status)
+                ? ''success'' : ["prospect","pending","in-progress","planned","draft","deferred","new"].includes(form.values.status)
+                ? ''warning'' : ["lost","not-held","cancelled","urgent"].includes(form.values.status)
+                ? ''danger'' : ["open","partner","supplier","not-started"].includes(form.values.status)
+                ? ''info'' : ''neutral'' }}'
+            rules:
+              visible: '!!form.values.status'
+          - type: canvas.dashboard.badge
+            props:
+              text: Archived
+              tone: warning
+              icon: archive
+            rules:
+              visible: form.values.state === 'archived'
+        - type: canvas.text
+          props:
+            text: Task · {{ ctx.file.path }}
+            tone: muted
+      - type: canvas.stack
+        layout:
+          base:
+            direction: row
+            wrap: true
+            gap: 2
+            align: center
+        children:
+        - type: canvas.button
+          props:
+            label: Archive
+            variant: ghost
+            icon: archive
+            size: sm
+          'on':
+            click: archive
+          rules:
+            visible: '!(form.values.state === ''archived'')'
+            disabled: form.saving || form.dirty
+        - type: canvas.button
+          props:
+            label: Restore
+            variant: outline
+            icon: archive-restore
+            size: sm
+          'on':
+            click: restore
+          rules:
+            visible: form.values.state === 'archived'
+            disabled: form.saving || form.dirty
+        - type: canvas.button
+          props:
+            label: Reset
+            variant: ghost
+            size: sm
+          'on':
+            click: reset
+          rules:
+            disabled: form.saving || !form.dirty
+        - type: canvas.button
+          props:
+            label: Save
+            icon: save
+            size: sm
+          'on':
+            click: save
+          rules:
+            disabled: form.saving || !form.dirty || form.invalid || form.values.state === 'archived'
+    - type: canvas.text
+      props:
+        text: '{{ data.$record.error }}'
+      rules:
+        visible: data.$record.status === 'error'
+    - type: canvas.text
+      props:
+        text: Loading…
+        tone: muted
+      rules:
+        visible: data.$record.status === 'loading'
+    - type: canvas.dashboard.badge
+      props:
+        text: This task is archived. Restore it to edit.
+        tone: warning
+        icon: archive
+      rules:
+        visible: form.values.state === 'archived'
+    - type: canvas.stack
+      layout:
+        base:
+          direction: row
+          wrap: true
+          gap: 2
+          align: center
+      children:
+      - type: canvas.button
+        props:
+          label: '{{ form.values.regarding && form.values.regarding.path ? form.values.regarding.path.split(''/'').pop()
+            : ''Record'' }}'
+          variant: ghost
+          icon: corner-left-up
+          size: sm
+        'on':
+          click:
+          - open-file:
+              path: '{{ form.values.regarding.path }}'
+              mode: edit
+        rules:
+          visible: '!!(form.values.regarding && form.values.regarding.path)'
+    - type: canvas.grid
+      layout:
+        base:
+          columns: 1
+          gap: 4
+        tablet:
+          columns: 1
+      children:
+      - type: canvas.card
+        props:
+          title: Task
+        children:
+        - type: canvas.grid
+          layout:
+            base:
+              columns: 1
+              gap: 4
+            tablet:
+              columns: 2
+          children:
+          - type: canvas.form.input
+            props:
+              label: Subject
+              value: '{{ form.values.subject }}'
+              required: true
+            layout:
+              tablet:
+                colSpan: 2
+            rules:
+              disabled: form.values.state === 'archived'
+          - type: canvas.form.select
+            props:
+              label: Status
+              value: '{{ form.values.status }}'
+              options:
+              - value: not-started
+                label: Not Started
+              - value: in-progress
+                label: In Progress
+              - value: completed
+                label: Completed
+              - value: deferred
+                label: Deferred
+            rules:
+              disabled: form.values.state === 'archived'
+          - type: canvas.form.select
+            props:
+              label: Priority
+              value: '{{ form.values.priority }}'
+              options:
+              - value: low
+                label: Low
+              - value: normal
+                label: Normal
+              - value: high
+                label: High
+              - value: urgent
+                label: Urgent
+            rules:
+              disabled: form.values.state === 'archived'
+          - type: canvas.form.date
+            props:
+              label: Due
+              value: '{{ form.values.dueDate }}'
+            rules:
+              disabled: form.values.state === 'archived'
+          - type: canvas.form.input
+            props:
+              label: Owner
+              value: '{{ form.values.owner }}'
+              placeholder: Name or email
+            rules:
+              disabled: form.values.state === 'archived'
+          - type: canvas.form.textarea
+            props:
+              label: Description
+              value: '{{ form.values.description }}'
+              rows: 6
+            layout:
+              tablet:
+                colSpan: 2
+            rules:
+              disabled: form.values.state === 'archived'
+  actions:
+    save:
+      steps:
+      - patch-form:
+          values:
+            updatedAt: '{{ Date() }}'
+            completedAt: '{{ form.values.status === ''completed'' ? (form.values.completedAt || Date())
+              : undefined }}'
+      - save: {}
+      - toast:
+          message: Saved
+          variant: success
+    reset:
+      steps:
+      - reset-form: {}
+    archive:
+      steps:
+      - confirm:
+          title: Archive
+          message: Archive this record? It stays in the workspace and can be restored.
+      - patch-form:
+          values:
+            state: archived
+            archivedAt: '{{ Date() }}'
+            updatedAt: '{{ Date() }}'
+      - save: {}
+      - toast:
+          message: Archived
+          variant: success
+    restore:
+      steps:
+      - patch-form:
+          values:
+            state: active
+            updatedAt: '{{ Date() }}'
+      - save: {}
+      - toast:
+          message: Restored
+          variant: success

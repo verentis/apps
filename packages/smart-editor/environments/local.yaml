@@ -1,0 +1,8 @@
+# Local development overlay for smart-editor.app.yaml.
+# Merged onto the base manifest by `verentis pack . --env local` (and `verentis validate . --env local`).
+# Aspire routes the app through the shared HTTPS frontend gateway on port 443.
+spec:
+  entry: https://smart-editor.apps.localtest.me
+  oauth:
+    redirect-uris:
+      - https://smart-editor.apps.localtest.me/auth/callback

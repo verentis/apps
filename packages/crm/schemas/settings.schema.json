@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.verentis.io/crm/v1/settings.schema.json",
+  "title": "CRM settings",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "const": "https://schemas.verentis.io/crm/v1/settings.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "country": {
+      "type": "string",
+      "pattern": "^([A-Z]{2})?$"
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^([A-Z]{3})?$"
+    },
+    "stages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "order": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "probability": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "order"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1,
+      "maxItems": 50
+    }
+  },
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "stages"
+  ],
+  "additionalProperties": false
+}

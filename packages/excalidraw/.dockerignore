@@ -1,0 +1,14 @@
+.git
+node_modules
+.nuxt
+.output
+coverage
+*.log
+.env
+.env.*
+public/excalidraw-assets
+.browsers
+.cache
+test-results
+playwright-report
+tests/scenarios/*/outcomes

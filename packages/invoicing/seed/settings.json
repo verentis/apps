@@ -1,0 +1,25 @@
+{
+  "$schema": "https://schemas.verentis.io/invoicing/v1/settings.schema.json",
+  "schemaVersion": 1,
+  "seller": {
+    "name": "",
+    "legalName": "",
+    "email": "",
+    "phone": "",
+    "taxIdentifier": "",
+    "address": {
+      "lines": [],
+      "city": "",
+      "region": "",
+      "postalCode": "",
+      "country": ""
+    }
+  },
+  "defaultDueDays": 30,
+  "defaultTaxRate": "15",
+  "notes": "Thank you for your business.",
+  "receivableAccount": "/chart-of-accounts/ACC-0002",
+  "incomeAccount": "/chart-of-accounts/ACC-0005",
+  "taxAccount": "/chart-of-accounts/ACC-0003",
+  "bankAccount": "/chart-of-accounts/ACC-0001"
+}

@@ -1,0 +1,34 @@
+api-version: verentis.io/v1
+kind: Theme
+
+metadata:
+  id: verentis-ocean-theme
+  name: Verentis Ocean
+  description: Cool blue palette with a deep navy sidebar and matching dashboard
+    stripes. Light and dark mode; it keeps your existing logos, favicon and
+    backgrounds.
+  icon: ./marketplace/logo.svg
+  version: 1.0.4
+  author: Verentis
+  tags: [ theme, verentis, blue ]
+
+marketplace:
+  logo: ./marketplace/logo.svg
+  hero:
+    source: ./marketplace/hero.svg
+    alt: "Layered blue waves from deep navy to pale sky."
+  readme: ./README.md
+
+# Installs colours and dashboard heroes (record at themes/verentis-ocean-theme). Assets not listed here keep the
+# workspace's current files.
+spec:
+  assets:
+    theme.css: theme/theme.css
+    hero: theme/hero.svg
+    hero.dark: theme/hero-dark.svg
+
+packaging:
+  publisher: verentis
+  files:
+    - "theme/*"
+  encryption: none

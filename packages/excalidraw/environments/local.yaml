@@ -1,0 +1,5 @@
+spec:
+  entry: https://excalidraw.apps.localtest.me
+  oauth:
+    redirect-uris:
+      - https://excalidraw.apps.localtest.me/auth/callback

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://schemas.verentis.io/accounting/v1/journal.schema.json",
+  "schemaVersion": 1,
+  "kind": "journal",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "date": "",
+  "description": "{{ name }}",
+  "currency": "",
+  "status": "draft",
+  "lines": [
+    {
+      "account": "",
+      "direction": "debit",
+      "amount": ""
+    },
+    {
+      "account": "",
+      "direction": "credit",
+      "amount": ""
+    }
+  ]
+}

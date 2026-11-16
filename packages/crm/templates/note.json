@@ -1,0 +1,11 @@
+{
+  "$schema": "https://schemas.verentis.io/crm/v1/note.schema.json",
+  "schemaVersion": 1,
+  "kind": "note",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "title": "{{ name }}",
+  "content": ""
+}

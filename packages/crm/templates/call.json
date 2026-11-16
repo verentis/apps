@@ -1,0 +1,12 @@
+{
+  "$schema": "https://schemas.verentis.io/crm/v1/call.schema.json",
+  "schemaVersion": 1,
+  "kind": "call",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "subject": "{{ name }}",
+  "direction": "outbound",
+  "status": "planned"
+}

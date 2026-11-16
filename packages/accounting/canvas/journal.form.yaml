@@ -1,0 +1,506 @@
+api-version: canvas.verentis.io/v1
+kind: Form
+metadata:
+  id: accounting-journal
+  name: Accounting journal
+  description: View and edit an Accounting journal.
+  icon: notebook-pen
+spec:
+  binds:
+  - pattern: application/vnd.verentis.accounting.journal+json
+    mode: edit
+    priority: 200
+    scope: global
+    json-schema:
+      id: https://schemas.verentis.io/accounting/v1/journal.schema.json
+      source: /applications/accounting/schemas/journal.schema.json
+      title: Accounting journal
+      version: '1'
+  entry: ${var:canvas-origin}/render?document=%2Fapplications%2Faccounting%2Fcanvas%2Fjournal.form.yaml
+  scope: global
+  mime-types:
+  - pattern: application/vnd.verentis.accounting.journal+json
+    mode: edit
+    priority: 200
+    json-schema:
+      id: https://schemas.verentis.io/accounting/v1/journal.schema.json
+      source: /applications/accounting/schemas/journal.schema.json
+      title: Accounting journal
+      version: '1'
+  permissions:
+  - file.read
+  - file.write
+  - execution.run
+  - execution.read
+  capabilities: []
+  sandbox:
+    allow-scripts: true
+    allow-same-origin: true
+    allow-popups: false
+    allow-forms: true
+  file-access:
+  - path: /chart-of-accounts
+    mode: read
+    reason: Choose the accounts of journal lines
+  - path: /applications/accounting/
+    mode: read
+    reason: Read the Accounting schemas and run the posting script
+  access:
+  - path: /chart-of-accounts
+    reason: Choose the accounts of journal lines
+  - path: /applications/accounting/
+    reason: Read the Accounting schemas and run the posting script
+  data:
+    record:
+      kind: document
+      consistency: conditional
+    accounts:
+      kind: folder
+      path: /chart-of-accounts
+      contents: true
+      mime-pattern: application/vnd.verentis.accounting.account+json
+    accountoptions:
+      kind: computed
+      expr: '(data.accounts || []).filter(e => e.kind === ''file'' && e.data && e.data.state !== ''archived''
+        && (true)).map(e => ({ label: (e.data.code || e.name) + '' · '' + ((e.data.number ? e.data.number
+        + '' '' : '''') + (e.data.name || '''')), value: e.path }))'
+  state:
+    reversaldate: ''
+    reversalreason: ''
+  tree:
+  - type: canvas.stack
+    layout:
+      base:
+        padding: 6
+        gap: 4
+        maxWidth: 72rem
+        margin:
+          x: auto
+    children:
+    - type: canvas.stack
+      layout:
+        base:
+          direction: row
+          wrap: true
+          gap: 2
+          align: center
+          justify: between
+      children:
+      - type: canvas.stack
+        layout:
+          base:
+            gap: 1
+        children:
+        - type: canvas.stack
+          layout:
+            base:
+              direction: row
+              wrap: true
+              gap: 2
+              align: center
+          children:
+          - type: canvas.heading
+            props:
+              level: 2
+              text: '{{ form.values.description || ''New journal'' }}'
+          - type: canvas.dashboard.badge
+            props:
+              text: '{{ String(form.values.status || '''').split(''-'').join('' '') }}'
+              tone: '{{ ["posted","closed"].includes(form.values.status) ? ''success'' : ["draft"].includes(form.values.status)
+                ? ''warning'' : ["reversed"].includes(form.values.status) ? ''danger'' : ["open","asset","liability","equity","income","expense"].includes(form.values.status)
+                ? ''info'' : ''neutral'' }}'
+            rules:
+              visible: '!!form.values.status'
+          - type: canvas.dashboard.badge
+            props:
+              text: Archived
+              tone: warning
+              icon: archive
+            rules:
+              visible: form.values.state === 'archived'
+        - type: canvas.text
+          props:
+            text: Journal {{ form.values.code || '' }} · {{ ctx.file.path }}
+            tone: muted
+      - type: canvas.stack
+        layout:
+          base:
+            direction: row
+            wrap: true
+            gap: 2
+            align: center
+        children:
+        - type: canvas.button
+          props:
+            label: Post
+            icon: check
+            size: sm
+          'on':
+            click: post
+          rules:
+            visible: (!form.values.status || form.values.status === 'draft') && !(form.values.state ===
+              'archived')
+            disabled: form.saving || form.dirty || form.invalid
+        - type: canvas.button
+          props:
+            label: Reverse
+            variant: outline
+            icon: undo-2
+            size: sm
+          'on':
+            click: reverse
+          rules:
+            visible: form.values.status === 'posted' && !form.values.reversedBy && !form.values.source
+              && !form.values.reversalOf
+            disabled: form.saving || form.dirty
+        - type: canvas.stack
+          layout:
+            base:
+              direction: row
+              wrap: true
+              gap: 2
+              align: center
+          children:
+          - type: canvas.button
+            props:
+              label: Archive
+              variant: ghost
+              icon: archive
+              size: sm
+            'on':
+              click: archive
+            rules:
+              visible: '!(form.values.state === ''archived'') && !(!(!form.values.status || form.values.status
+                === ''draft''))'
+              disabled: form.saving || form.dirty
+          - type: canvas.button
+            props:
+              label: Restore
+              variant: outline
+              icon: archive-restore
+              size: sm
+            'on':
+              click: restore
+            rules:
+              visible: form.values.state === 'archived'
+              disabled: form.saving || form.dirty
+          - type: canvas.button
+            props:
+              label: Reset
+              variant: ghost
+              size: sm
+            'on':
+              click: reset
+            rules:
+              disabled: form.saving || !form.dirty
+          - type: canvas.button
+            props:
+              label: Save
+              icon: save
+              size: sm
+            'on':
+              click: save
+            rules:
+              disabled: form.saving || !form.dirty || form.invalid || form.values.state === 'archived'
+                || (!(!form.values.status || form.values.status === 'draft'))
+    - type: canvas.text
+      props:
+        text: '{{ data.$record.error }}'
+      rules:
+        visible: data.$record.status === 'error'
+    - type: canvas.text
+      props:
+        text: Loading…
+        tone: muted
+      rules:
+        visible: data.$record.status === 'loading'
+    - type: canvas.dashboard.badge
+      props:
+        text: This journal is archived. Restore it to edit.
+        tone: warning
+        icon: archive
+      rules:
+        visible: form.values.state === 'archived'
+    - type: canvas.stack
+      layout:
+        base:
+          direction: row
+          wrap: true
+          gap: 2
+          align: center
+      children:
+      - type: canvas.button
+        props:
+          label: Period
+          variant: ghost
+          icon: calendar-range
+          size: sm
+        'on':
+          click:
+          - open-file:
+              path: '{{ form.values.period && form.values.period.path }}'
+              mode: edit
+        rules:
+          visible: '!!(form.values.period && form.values.period.path)'
+      - type: canvas.button
+        props:
+          label: Source
+          variant: ghost
+          icon: corner-left-up
+          size: sm
+        'on':
+          click:
+          - open-file:
+              path: '{{ form.values.source && form.values.source.path }}'
+              mode: edit
+        rules:
+          visible: '!!(form.values.source && form.values.source.path)'
+      - type: canvas.button
+        props:
+          label: Reverses
+          variant: ghost
+          icon: undo-2
+          size: sm
+        'on':
+          click:
+          - open-file:
+              path: '{{ form.values.reversalOf && form.values.reversalOf.path }}'
+              mode: edit
+        rules:
+          visible: '!!(form.values.reversalOf && form.values.reversalOf.path)'
+      - type: canvas.button
+        props:
+          label: Reversed by
+          variant: ghost
+          icon: redo-2
+          size: sm
+        'on':
+          click:
+          - open-file:
+              path: '{{ form.values.reversedBy && form.values.reversedBy.path }}'
+              mode: edit
+        rules:
+          visible: '!!(form.values.reversedBy && form.values.reversedBy.path)'
+    - type: canvas.grid
+      layout:
+        base:
+          columns: 2
+          gap: 4
+        desktop:
+          columns: 2
+      children:
+      - type: canvas.dashboard.stat
+        props:
+          label: Debits
+          value: '{{ ((form.values.lines || []).filter(l => l.direction === ''debit'').reduce((s, l) =>
+            s + Math.round(Number(l.amount || 0) * 10000), 0) / 10000).toFixed(2) }}'
+          icon: arrow-down-left
+      - type: canvas.dashboard.stat
+        props:
+          label: Credits
+          value: '{{ ((form.values.lines || []).filter(l => l.direction === ''credit'').reduce((s, l)
+            => s + Math.round(Number(l.amount || 0) * 10000), 0) / 10000).toFixed(2) }}'
+          icon: arrow-up-right
+    - type: canvas.grid
+      layout:
+        base:
+          columns: 1
+          gap: 4
+        tablet:
+          columns: 2
+      children:
+      - type: canvas.form.date
+        props:
+          label: Reversal date
+          description: Defaults to today.
+          value: '{{ state.reversaldate }}'
+        rules:
+          visible: form.values.status === 'posted' && !form.values.reversedBy && !form.values.source &&
+            !form.values.reversalOf
+      - type: canvas.form.input
+        props:
+          label: Reason
+          placeholder: Why is this being reversed?
+          value: '{{ state.reversalreason }}'
+        rules:
+          visible: form.values.status === 'posted' && !form.values.reversedBy && !form.values.source &&
+            !form.values.reversalOf
+    - type: canvas.grid
+      layout:
+        base:
+          columns: 1
+          gap: 4
+        tablet:
+          columns: 2
+      children:
+      - type: canvas.card
+        props:
+          title: Journal
+        children:
+        - type: canvas.grid
+          layout:
+            base:
+              columns: 1
+              gap: 4
+            tablet:
+              columns: 2
+          children:
+          - type: canvas.form.input
+            props:
+              label: Description
+              value: '{{ form.values.description }}'
+              required: true
+            layout:
+              tablet:
+                colSpan: 2
+            rules:
+              disabled: (form.values.state === 'archived' || (!(!form.values.status || form.values.status
+                === 'draft')))
+          - type: canvas.form.date
+            props:
+              label: Date
+              value: '{{ form.values.date }}'
+              required: true
+            rules:
+              disabled: (form.values.state === 'archived' || (!(!form.values.status || form.values.status
+                === 'draft')))
+          - type: canvas.form.input
+            props:
+              label: Currency
+              value: '{{ form.values.currency }}'
+              required: true
+              placeholder: ZAR
+            rules:
+              disabled: (form.values.state === 'archived' || (!(!form.values.status || form.values.status
+                === 'draft')))
+      - type: canvas.card
+        props:
+          title: Lines
+          description: Debits must equal credits. Amounts are exact decimals, e.g. 1250.00.
+        children:
+        - type: canvas.grid
+          layout:
+            base:
+              columns: 1
+              gap: 4
+            tablet:
+              columns: 2
+          children:
+          - type: canvas.form.array
+            props:
+              label: Journal lines
+              value: '{{ form.values.lines }}'
+              fields:
+              - key: account
+                label: Account
+                type: select
+                required: true
+                options: '{{ data.accountoptions }}'
+              - key: direction
+                label: Direction
+                type: select
+                required: true
+                options:
+                - label: Debit
+                  value: debit
+                - label: Credit
+                  value: credit
+              - key: amount
+                label: Amount
+                required: true
+              - key: description
+                label: Description
+              defaultRow:
+                account: ''
+                direction: debit
+                amount: ''
+              rowIds: false
+              minimum: 2
+              maximum: 1000
+              addLabel: Add line
+              removeLabel: Remove row
+            layout:
+              tablet:
+                colSpan: 2
+            rules:
+              disabled: (form.values.state === 'archived' || (!(!form.values.status || form.values.status
+                === 'draft')))
+  actions:
+    save:
+      steps:
+      - patch-form:
+          values:
+            updatedAt: '{{ Date() }}'
+      - save: {}
+      - toast:
+          message: Saved
+          variant: success
+    reset:
+      steps:
+      - reset-form: {}
+    archive:
+      steps:
+      - confirm:
+          title: Archive
+          message: Archive this record? It stays in the workspace and can be restored.
+      - patch-form:
+          values:
+            state: archived
+            archivedAt: '{{ Date() }}'
+            updatedAt: '{{ Date() }}'
+      - save: {}
+      - toast:
+          message: Archived
+          variant: success
+    restore:
+      steps:
+      - patch-form:
+          values:
+            state: active
+            updatedAt: '{{ Date() }}'
+      - save: {}
+      - toast:
+          message: Restored
+          variant: success
+    post:
+      permissions:
+      - execution.run
+      - execution.read
+      steps:
+      - confirm:
+          title: Post journal
+          message: Post this journal to the ledger? Posted journals cannot be edited, only reversed.
+      - run-script:
+          file: /applications/accounting/scripts/post
+          timeout: 120
+          parameters:
+            operation: post-journal
+            path: '{{ ctx.file.path }}'
+          assign: lastresult
+      - refresh-source:
+          source: record
+      - toast:
+          message: '{{ (state.lastresult && state.lastresult.message) || ''Done'' }}'
+          variant: success
+    reverse:
+      permissions:
+      - execution.run
+      - execution.read
+      steps:
+      - confirm:
+          title: Reverse journal
+          message: Post a journal that reverses every line of this one?
+      - run-script:
+          file: /applications/accounting/scripts/post
+          timeout: 120
+          parameters:
+            operation: reverse-journal
+            path: '{{ ctx.file.path }}'
+            date: '{{ state.reversaldate }}'
+            reason: '{{ state.reversalreason }}'
+          assign: lastresult
+      - refresh-source:
+          source: record
+      - toast:
+          message: '{{ (state.lastresult && state.lastresult.message) || ''Done'' }}'
+          variant: success

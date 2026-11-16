@@ -1,0 +1,174 @@
+/*
+ * Verentis Forest workspace theme. Calm green palette with a dark pine sidebar.
+ * Installing this package replaces the workspace theme (/.theme/theme.css); logos, favicon and backgrounds stay
+ * as they are. Primary is deep enough for white button text and the dark-mode primary is light enough for dark
+ * text (both WCAG AA). Light values live in :root and dark values in .dark.
+ */
+
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.210 0.018 152);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.210 0.018 152);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.210 0.018 152);
+  --primary: oklch(0.480 0.135 152);
+  --primary-hover: oklch(0.420 0.135 152);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.960 0.009 152);
+  --secondary-foreground: oklch(0.210 0.018 152);
+  --muted: oklch(0.960 0.009 152);
+  --muted-foreground: oklch(0.480 0.023 152);
+  --accent: oklch(0.940 0.018 152);
+  --accent-foreground: oklch(0.210 0.018 152);
+  --destructive: oklch(0.489 0.161 28);
+  --destructive-foreground: oklch(1 0 0);
+  --warning: oklch(0.760 0.140 80);
+  --warning-foreground: oklch(0.210 0.018 152);
+  --border: oklch(0.210 0.018 152 / 14%);
+  --input: oklch(0.210 0.018 152 / 22%);
+  --ring: var(--primary);
+
+  --brand: var(--primary);
+  --brand-foreground: var(--primary-foreground);
+  --brand-soft: oklch(0.580 0.126 152);
+  --brand-rust: oklch(0.600 0.130 45);
+  --brand-mustard: oklch(0.760 0.140 80);
+  --brand-olive: oklch(0.640 0.100 135);
+
+  --ink-band: oklch(0.250 0.041 152);
+  --ink-band-foreground: oklch(0.950 0.013 152);
+  --ink-band-muted: oklch(0.950 0.013 152 / 60%);
+  --ink-band-line: oklch(0.950 0.013 152 / 16%);
+
+  --field-clay: var(--brand-rust);
+  --field-ochre: var(--brand-mustard);
+  --field-sage: var(--brand-olive);
+  --field-slate: oklch(0.480 0.060 230);
+
+  --chart-1: var(--brand);
+  --chart-2: var(--ink-band);
+  --chart-3: oklch(0.620 0.117 302);
+  --chart-4: oklch(0.740 0.117 242);
+  --chart-5: oklch(0.550 0.099 2);
+
+  --sidebar: var(--ink-band);
+  --sidebar-foreground: var(--ink-band-foreground);
+  --sidebar-primary: oklch(0.800 0.108 152);
+  --sidebar-primary-foreground: oklch(0.250 0.041 152);
+  --sidebar-accent: oklch(0.950 0.013 152 / 8%);
+  --sidebar-accent-foreground: oklch(0.950 0.013 152);
+  --sidebar-border: oklch(0.950 0.013 152 / 16%);
+  --sidebar-ring: oklch(0.800 0.108 152);
+
+  --radius: 0.375rem;
+  --spacing: 0.25rem;
+  --tracking-normal: 0em;
+
+  --shadow-2xs: 0 1px 1px 0 rgb(0 0 0 / 4%);
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 6%);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 8%);
+  --shadow: 0 2px 4px 0 rgb(0 0 0 / 8%);
+  --shadow-md: 0 4px 10px -2px rgb(0 0 0 / 12%);
+  --shadow-lg: 0 10px 20px -4px rgb(0 0 0 / 14%);
+  --shadow-xl: 0 16px 30px -6px rgb(0 0 0 / 16%);
+  --shadow-2xl: 0 24px 48px -12px rgb(0 0 0 / 22%);
+
+  /* Compatibility scale for existing workspace brand utilities. */
+  --brand-50: oklch(0.975 0.011 152);
+  --brand-100: oklch(0.950 0.023 152);
+  --brand-200: oklch(0.900 0.045 152);
+  --brand-300: oklch(0.800 0.081 152);
+  --brand-400: oklch(0.680 0.117 152);
+  --brand-500: oklch(0.580 0.135 152);
+  --brand-600: oklch(0.520 0.135 152);
+  --brand-700: oklch(0.460 0.126 152);
+  --brand-800: oklch(0.390 0.099 152);
+  --brand-900: oklch(0.320 0.072 152);
+  --brand-950: oklch(0.250 0.041 152);
+  --brand-hover: var(--primary-hover);
+  --brand-soft-foreground: var(--foreground);
+  --brand-border: oklch(0.210 0.018 152 / 22%);
+
+  --ink: var(--ink-band);
+  --ink-foreground: var(--ink-band-foreground);
+
+  --ws-content-max: 100rem;
+  --ws-gutter: clamp(1rem, 2.5vw, 2.5rem);
+  --ws-page-gap: clamp(1.5rem, 3vw, 3rem);
+  --ws-panel-padding: clamp(1rem, 2vw, 1.5rem);
+  --ws-terminal-background: var(--ink-band);
+  --ws-terminal-foreground: var(--ink-band-foreground);
+  --ws-ai-background: var(--card);
+  --ws-ai-foreground: var(--card-foreground);
+  --ws-ai-accent: var(--brand);
+  --ws-file-background: var(--card);
+  --ws-file-selected: var(--secondary);
+  --ws-file-accent: var(--brand);
+}
+
+.dark {
+  --background: oklch(0.200 0.018 152);
+  --foreground: oklch(0.950 0.011 152);
+  --card: oklch(0.240 0.023 152);
+  --card-foreground: oklch(0.950 0.011 152);
+  --popover: oklch(0.240 0.023 152);
+  --popover-foreground: oklch(0.950 0.011 152);
+  --primary: oklch(0.700 0.126 152);
+  --primary-hover: oklch(0.760 0.117 152);
+  --primary-foreground: oklch(0.150 0 0);
+  --secondary: oklch(0.280 0.025 152);
+  --secondary-foreground: oklch(0.950 0.011 152);
+  --muted: oklch(0.280 0.025 152);
+  --muted-foreground: oklch(0.720 0.023 152);
+  --accent: oklch(0.320 0.032 152);
+  --accent-foreground: oklch(0.950 0.011 152);
+  --destructive: oklch(0.600 0.180 28);
+  --destructive-foreground: oklch(1 0 0);
+  --warning: oklch(0.800 0.140 80);
+  --warning-foreground: oklch(0.150 0 0);
+  --border: oklch(0.950 0.011 152 / 16%);
+  --input: oklch(0.950 0.011 152 / 24%);
+  --ring: var(--primary);
+
+  --brand: var(--primary);
+  --brand-foreground: var(--primary-foreground);
+  --brand-soft: oklch(0.700 0.126 152);
+  --brand-rust: oklch(0.700 0.130 45);
+  --brand-mustard: oklch(0.800 0.140 80);
+  --brand-olive: oklch(0.720 0.100 135);
+
+  --ink-band: oklch(0.170 0.027 152);
+  --ink-band-foreground: oklch(0.950 0.011 152);
+  --ink-band-muted: oklch(0.950 0.011 152 / 60%);
+  --ink-band-line: oklch(0.950 0.011 152 / 16%);
+
+  --field-clay: var(--brand-rust);
+  --field-ochre: var(--brand-mustard);
+  --field-sage: var(--brand-olive);
+  --field-slate: oklch(0.680 0.070 230);
+
+  --chart-1: var(--brand);
+  --chart-2: oklch(0.850 0.045 152);
+  --chart-3: oklch(0.720 0.117 302);
+  --chart-4: oklch(0.820 0.108 242);
+  --chart-5: oklch(0.680 0.099 2);
+
+  --sidebar: var(--ink-band);
+  --sidebar-foreground: var(--ink-band-foreground);
+  --sidebar-primary: oklch(0.700 0.126 152);
+  --sidebar-primary-foreground: oklch(0.150 0 0);
+  --sidebar-accent: oklch(0.950 0.011 152 / 8%);
+  --sidebar-accent-foreground: oklch(0.950 0.011 152);
+  --sidebar-border: oklch(0.950 0.011 152 / 14%);
+  --sidebar-ring: oklch(0.700 0.126 152);
+
+  --shadow-md: 0 4px 10px -2px rgb(0 0 0 / 45%);
+  --shadow-lg: 0 10px 20px -4px rgb(0 0 0 / 50%);
+  --shadow-xl: 0 16px 30px -6px rgb(0 0 0 / 55%);
+  --shadow-2xl: 0 24px 48px -12px rgb(0 0 0 / 60%);
+
+  --brand-hover: var(--primary-hover);
+  --brand-soft-foreground: var(--foreground);
+  --brand-border: oklch(0.950 0.011 152 / 24%);
+}

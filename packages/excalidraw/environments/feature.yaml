@@ -1,0 +1,5 @@
+spec:
+  entry: https://${param:app-host}
+  oauth:
+    redirect-uris:
+      - https://${param:app-host}/auth/callback

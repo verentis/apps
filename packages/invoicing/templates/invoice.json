@@ -1,0 +1,39 @@
+{
+  "$schema": "https://schemas.verentis.io/invoicing/v1/invoice.schema.json",
+  "schemaVersion": 1,
+  "kind": "invoice",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "issueDate": "",
+  "dueDate": "",
+  "currency": "",
+  "reference": "{{ name }}",
+  "customerRef": "",
+  "customer": {
+    "name": "",
+    "legalName": "",
+    "email": "",
+    "phone": "",
+    "taxIdentifier": "",
+    "address": {
+      "lines": [],
+      "city": "",
+      "region": "",
+      "postalCode": "",
+      "country": ""
+    }
+  },
+  "lines": [
+    {
+      "description": "",
+      "quantity": "1",
+      "unitPrice": "",
+      "taxRate": ""
+    }
+  ],
+  "notes": "",
+  "status": "draft"
+}

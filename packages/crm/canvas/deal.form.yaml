@@ -1,0 +1,964 @@
+api-version: canvas.verentis.io/v1
+kind: Form
+metadata:
+  id: crm-deal
+  name: CRM deal
+  description: View and edit a CRM deal.
+  icon: handshake
+spec:
+  binds:
+  - pattern: application/vnd.verentis.crm.deal+json
+    mode: edit
+    priority: 200
+    scope: global
+    json-schema:
+      id: https://schemas.verentis.io/crm/v1/deal.schema.json
+      source: /applications/crm/schemas/deal.schema.json
+      title: CRM deal
+      version: '1'
+  entry: ${var:canvas-origin}/render?document=%2Fapplications%2Fcrm%2Fcanvas%2Fdeal.form.yaml
+  scope: global
+  mime-types:
+  - pattern: application/vnd.verentis.crm.deal+json
+    mode: edit
+    priority: 200
+    json-schema:
+      id: https://schemas.verentis.io/crm/v1/deal.schema.json
+      source: /applications/crm/schemas/deal.schema.json
+      title: CRM deal
+      version: '1'
+  permissions:
+  - file.read
+  - file.write
+  capabilities: []
+  sandbox:
+    allow-scripts: true
+    allow-same-origin: true
+    allow-popups: false
+    allow-forms: true
+  file-access:
+  - path: /customers
+    mode: read
+    reason: Pick the customer and contact
+  - path: /settings/crm.json
+    mode: read
+    reason: Read the pipeline stages
+  - path: /applications/crm/
+    mode: read
+    reason: Read the CRM schemas
+  access:
+  - path: /customers
+    reason: Pick the customer and contact
+  - path: /settings/crm.json
+    reason: Read the pipeline stages
+  - path: /applications/crm/
+    reason: Read the CRM schemas
+  data:
+    record:
+      kind: document
+      consistency: conditional
+    companies:
+      kind: folder
+      path: /customers
+      contents: true
+      mime-pattern: application/vnd.verentis.crm.company+json
+    contacts:
+      kind: folder
+      path: /customers
+      contents: true
+      mime-pattern: application/vnd.verentis.crm.contact+json
+    customeroptions:
+      kind: computed
+      expr: '(data.companies || []).filter(e => e.kind === ''file'' && e.data && e.data.state !== ''archived''
+        && (true)).map(e => ({ label: (e.data.code ? e.data.code + '' · '' : '''') + (e.data.name || [e.data.salutation,
+        e.data.givenName, e.data.familyName].filter(Boolean).join('' '').trim() || e.data.code || e.name),
+        value: e.path })).concat((data.contacts || []).filter(e => e.kind === ''file'' && e.data && e.data.state
+        !== ''archived'' && (true)).map(e => ({ label: (e.data.code ? e.data.code + '' · '' : '''') +
+        (e.data.name || [e.data.salutation, e.data.givenName, e.data.familyName].filter(Boolean).join(''
+        '').trim() || e.data.code || e.name), value: e.path })))'
+    contactoptions:
+      kind: computed
+      expr: '(data.contacts || []).filter(e => e.kind === ''file'' && e.data && e.data.state !== ''archived''
+        && (!form.values.customer || !form.values.customer.path || (e.data.company && e.data.company.path
+        === form.values.customer.path) || e.path === form.values.customer.path)).map(e => ({ label: (e.data.code
+        ? e.data.code + '' · '' : '''') + (e.data.name || [e.data.salutation, e.data.givenName, e.data.familyName].filter(Boolean).join(''
+        '').trim() || e.data.code || e.name), value: e.path }))'
+    settings:
+      kind: file
+      path: /settings/crm.json
+      parse: json
+    stageoptions:
+      kind: computed
+      expr: '((data.settings && data.settings.stages) || []).slice().sort((a, b) => a.order - b.order).map(stage
+        => ({ label: stage.label, value: stage.id }))'
+  state:
+    showarchived: false
+  tree:
+  - type: canvas.stack
+    layout:
+      base:
+        padding: 6
+        gap: 4
+        maxWidth: 72rem
+        margin:
+          x: auto
+    children:
+    - type: canvas.stack
+      layout:
+        base:
+          direction: row
+          wrap: true
+          gap: 2
+          align: center
+          justify: between
+      children:
+      - type: canvas.stack
+        layout:
+          base:
+            gap: 1
+        children:
+        - type: canvas.stack
+          layout:
+            base:
+              direction: row
+              wrap: true
+              gap: 2
+              align: center
+          children:
+          - type: canvas.heading
+            props:
+              level: 2
+              text: '{{ form.values.title || ''New deal'' }}'
+          - type: canvas.dashboard.badge
+            props:
+              text: '{{ String(form.values.outcome || '''').split(''-'').join('' '') }}'
+              tone: '{{ ["customer","won","sent","received","held","completed","resolved","closed"].includes(form.values.outcome)
+                ? ''success'' : ["prospect","pending","in-progress","planned","draft","deferred","new"].includes(form.values.outcome)
+                ? ''warning'' : ["lost","not-held","cancelled","urgent"].includes(form.values.outcome)
+                ? ''danger'' : ["open","partner","supplier","not-started"].includes(form.values.outcome)
+                ? ''info'' : ''neutral'' }}'
+            rules:
+              visible: '!!form.values.outcome'
+          - type: canvas.dashboard.badge
+            props:
+              text: Archived
+              tone: warning
+              icon: archive
+            rules:
+              visible: form.values.state === 'archived'
+        - type: canvas.text
+          props:
+            text: Deal {{ form.values.code || '' }} · {{ ctx.file.path }}
+            tone: muted
+      - type: canvas.stack
+        layout:
+          base:
+            direction: row
+            wrap: true
+            gap: 2
+            align: center
+        children:
+        - type: canvas.button
+          props:
+            label: Archive
+            variant: ghost
+            icon: archive
+            size: sm
+          'on':
+            click: archive
+          rules:
+            visible: '!(form.values.state === ''archived'')'
+            disabled: form.saving || form.dirty
+        - type: canvas.button
+          props:
+            label: Restore
+            variant: outline
+            icon: archive-restore
+            size: sm
+          'on':
+            click: restore
+          rules:
+            visible: form.values.state === 'archived'
+            disabled: form.saving || form.dirty
+        - type: canvas.button
+          props:
+            label: Reset
+            variant: ghost
+            size: sm
+          'on':
+            click: reset
+          rules:
+            disabled: form.saving || !form.dirty
+        - type: canvas.button
+          props:
+            label: Save
+            icon: save
+            size: sm
+          'on':
+            click: save
+          rules:
+            disabled: form.saving || !form.dirty || form.invalid || form.values.state === 'archived'
+    - type: canvas.text
+      props:
+        text: '{{ data.$record.error }}'
+      rules:
+        visible: data.$record.status === 'error'
+    - type: canvas.text
+      props:
+        text: Loading…
+        tone: muted
+      rules:
+        visible: data.$record.status === 'loading'
+    - type: canvas.dashboard.badge
+      props:
+        text: This deal is archived. Restore it to edit.
+        tone: warning
+        icon: archive
+      rules:
+        visible: form.values.state === 'archived'
+    - type: canvas.tabs
+      props:
+        items:
+        - value: overview
+          label: Overview
+          icon: handshake
+        - value: activities
+          label: Activities
+          icon: calendar-check
+        - value: notes
+          label: Notes
+          icon: sticky-note
+        - value: documents
+          label: Documents
+          icon: paperclip
+      children:
+      - type: canvas.stack
+        layout:
+          base:
+            gap: 4
+        children:
+        - type: canvas.stack
+          layout:
+            base:
+              direction: row
+              wrap: true
+              gap: 2
+              align: center
+          children:
+          - type: canvas.button
+            props:
+              label: Customer
+              variant: ghost
+              icon: building-2
+              size: sm
+            'on':
+              click:
+              - open-file:
+                  path: '{{ form.values.customer.path }}'
+                  mode: edit
+            rules:
+              visible: '!!(form.values.customer && form.values.customer.path)'
+          - type: canvas.button
+            props:
+              label: Contact
+              variant: ghost
+              icon: user
+              size: sm
+            'on':
+              click:
+              - open-file:
+                  path: '{{ form.values.contact.path }}'
+                  mode: edit
+            rules:
+              visible: '!!(form.values.contact && form.values.contact.path)'
+        - type: canvas.text
+          props:
+            text: CRM settings could not be read from /settings/crm.json. Pipeline stages are unavailable.
+          rules:
+            visible: data.$settings.status === 'error'
+        - type: canvas.text
+          props:
+            text: Loading…
+            tone: muted
+          rules:
+            visible: data.$settings.status === 'loading'
+        - type: canvas.grid
+          layout:
+            base:
+              columns: 1
+              gap: 4
+            tablet:
+              columns: 2
+          children:
+          - type: canvas.card
+            props:
+              title: Deal
+            children:
+            - type: canvas.grid
+              layout:
+                base:
+                  columns: 1
+                  gap: 4
+                tablet:
+                  columns: 2
+              children:
+              - type: canvas.form.input
+                props:
+                  label: Title
+                  value: '{{ form.values.title }}'
+                  required: true
+                layout:
+                  tablet:
+                    colSpan: 2
+                rules:
+                  disabled: form.values.state === 'archived'
+              - type: canvas.form.select
+                props:
+                  label: Customer
+                  value: '{{ form.values.customer.path }}'
+                  required: true
+                  options: '{{ data.customeroptions }}'
+                rules:
+                  disabled: form.values.state === 'archived'
+              - type: canvas.form.select
+                props:
+                  label: Contact
+                  value: '{{ form.values.contact.path }}'
+                  options: '{{ data.contactoptions }}'
+                rules:
+                  disabled: form.values.state === 'archived'
+              - type: canvas.form.select
+                props:
+                  label: Stage
+                  value: '{{ form.values.stageId }}'
+                  required: true
+                  options: '{{ data.stageoptions }}'
+                rules:
+                  disabled: form.values.state === 'archived'
+              - type: canvas.form.select
+                props:
+                  label: Outcome
+                  value: '{{ form.values.outcome }}'
+                  options:
+                  - value: open
+                    label: Open
+                  - value: won
+                    label: Won
+                  - value: lost
+                    label: Lost
+                rules:
+                  disabled: form.values.state === 'archived'
+          - type: canvas.card
+            props:
+              title: Value
+            children:
+            - type: canvas.grid
+              layout:
+                base:
+                  columns: 1
+                  gap: 4
+                tablet:
+                  columns: 2
+              children:
+              - type: canvas.form.number
+                props:
+                  label: Amount
+                  value: '{{ form.values.amount }}'
+                  required: true
+                  min: 0
+                  step: 0.01
+                rules:
+                  disabled: form.values.state === 'archived'
+              - type: canvas.form.input
+                props:
+                  label: Currency
+                  value: '{{ form.values.currency }}'
+                  placeholder: ZAR
+                rules:
+                  disabled: form.values.state === 'archived'
+              - type: canvas.form.number
+                props:
+                  label: Probability (%)
+                  value: '{{ form.values.probability }}'
+                  min: 0
+                  max: 100
+                  step: 5
+                rules:
+                  disabled: form.values.state === 'archived'
+              - type: canvas.form.date
+                props:
+                  label: Expected close
+                  value: '{{ form.values.expectedCloseDate }}'
+                rules:
+                  disabled: form.values.state === 'archived'
+          - type: canvas.card
+            props:
+              title: More
+            children:
+            - type: canvas.grid
+              layout:
+                base:
+                  columns: 1
+                  gap: 4
+                tablet:
+                  columns: 2
+              children:
+              - type: canvas.form.input
+                props:
+                  label: Source
+                  value: '{{ form.values.source }}'
+                  placeholder: Referral, website, …
+                rules:
+                  disabled: form.values.state === 'archived'
+              - type: canvas.form.input
+                props:
+                  label: Owner
+                  value: '{{ form.values.owner }}'
+                  placeholder: Name or email
+                rules:
+                  disabled: form.values.state === 'archived'
+              - type: canvas.form.input
+                props:
+                  label: Lost reason
+                  value: '{{ form.values.lostReason }}'
+                layout:
+                  tablet:
+                    colSpan: 2
+                rules:
+                  disabled: form.values.state === 'archived'
+                  visible: form.values.outcome === 'lost'
+              - type: canvas.form.textarea
+                props:
+                  label: Description
+                  value: '{{ form.values.description }}'
+                  rows: 4
+                layout:
+                  tablet:
+                    colSpan: 2
+                rules:
+                  disabled: form.values.state === 'archived'
+        slot: overview
+      - type: canvas.stack
+        layout:
+          base:
+            gap: 4
+        children:
+        - type: canvas.stack
+          layout:
+            base:
+              direction: row
+              wrap: true
+              gap: 2
+              align: center
+          children:
+          - type: canvas.text
+            props:
+              text: New
+              tone: muted
+          - type: canvas.stack
+            layout:
+              base:
+                direction: row
+                wrap: true
+                gap: 2
+                align: center
+            children:
+            - type: canvas.button
+              props:
+                label: Email
+                variant: outline
+                icon: mail
+                size: sm
+              'on':
+                click: new-email
+              rules:
+                disabled: form.values.state === 'archived'
+            - type: canvas.button
+              props:
+                label: Call
+                variant: outline
+                icon: phone
+                size: sm
+              'on':
+                click: new-call
+              rules:
+                disabled: form.values.state === 'archived'
+            - type: canvas.button
+              props:
+                label: Meeting
+                variant: outline
+                icon: calendar-days
+                size: sm
+              'on':
+                click: new-meeting
+              rules:
+                disabled: form.values.state === 'archived'
+            - type: canvas.button
+              props:
+                label: Task
+                variant: outline
+                icon: square-check
+                size: sm
+              'on':
+                click: new-task
+              rules:
+                disabled: form.values.state === 'archived'
+        - type: canvas.tabs
+          props:
+            items:
+            - value: all
+              label: All
+            - value: email
+              label: Emails
+            - value: call
+              label: Calls
+            - value: meeting
+              label: Meetings
+            - value: task
+              label: Tasks
+          children:
+          - type: canvas.stack
+            layout:
+              base:
+                gap: 4
+            children:
+            - type: canvas.files
+              props:
+                path: ./activities/
+                mimeTypes:
+                - application/vnd.verentis.crm.email+json
+                - application/vnd.verentis.crm.call+json
+                - application/vnd.verentis.crm.meeting+json
+                - application/vnd.verentis.crm.task+json
+                showFolders: false
+                navigable: false
+                columns:
+                - key: data.subject
+                  label: Subject
+                - key: type
+                  label: Type
+                - key: data.status
+                  label: Status
+                - key: modified
+                  label: Updated
+                typeLabels:
+                  application/vnd.verentis.crm.email+json: Email
+                  application/vnd.verentis.crm.call+json: Call
+                  application/vnd.verentis.crm.meeting+json: Meeting
+                  application/vnd.verentis.crm.task+json: Task
+                  application/vnd.verentis.crm.note+json: Note
+                valueLabels:
+                  data.status:
+                    not-started: Not started
+                    in-progress: In progress
+                    not-held: Not held
+                sort: name
+                descending: true
+                emptyText: No activity yet
+            slot: all
+          - type: canvas.stack
+            layout:
+              base:
+                gap: 4
+            children:
+            - type: canvas.files
+              props:
+                path: ./activities/
+                mimeTypes:
+                - application/vnd.verentis.crm.email+json
+                showFolders: false
+                navigable: false
+                columns:
+                - key: data.subject
+                  label: Subject
+                - key: type
+                  label: Type
+                - key: data.status
+                  label: Status
+                - key: modified
+                  label: Updated
+                typeLabels:
+                  application/vnd.verentis.crm.email+json: Email
+                  application/vnd.verentis.crm.call+json: Call
+                  application/vnd.verentis.crm.meeting+json: Meeting
+                  application/vnd.verentis.crm.task+json: Task
+                  application/vnd.verentis.crm.note+json: Note
+                valueLabels:
+                  data.status:
+                    not-started: Not started
+                    in-progress: In progress
+                    not-held: Not held
+                sort: name
+                descending: true
+                emptyText: No emails yet
+            slot: email
+          - type: canvas.stack
+            layout:
+              base:
+                gap: 4
+            children:
+            - type: canvas.files
+              props:
+                path: ./activities/
+                mimeTypes:
+                - application/vnd.verentis.crm.call+json
+                showFolders: false
+                navigable: false
+                columns:
+                - key: data.subject
+                  label: Subject
+                - key: type
+                  label: Type
+                - key: data.status
+                  label: Status
+                - key: modified
+                  label: Updated
+                typeLabels:
+                  application/vnd.verentis.crm.email+json: Email
+                  application/vnd.verentis.crm.call+json: Call
+                  application/vnd.verentis.crm.meeting+json: Meeting
+                  application/vnd.verentis.crm.task+json: Task
+                  application/vnd.verentis.crm.note+json: Note
+                valueLabels:
+                  data.status:
+                    not-started: Not started
+                    in-progress: In progress
+                    not-held: Not held
+                sort: name
+                descending: true
+                emptyText: No calls yet
+            slot: call
+          - type: canvas.stack
+            layout:
+              base:
+                gap: 4
+            children:
+            - type: canvas.files
+              props:
+                path: ./activities/
+                mimeTypes:
+                - application/vnd.verentis.crm.meeting+json
+                showFolders: false
+                navigable: false
+                columns:
+                - key: data.subject
+                  label: Subject
+                - key: type
+                  label: Type
+                - key: data.status
+                  label: Status
+                - key: modified
+                  label: Updated
+                typeLabels:
+                  application/vnd.verentis.crm.email+json: Email
+                  application/vnd.verentis.crm.call+json: Call
+                  application/vnd.verentis.crm.meeting+json: Meeting
+                  application/vnd.verentis.crm.task+json: Task
+                  application/vnd.verentis.crm.note+json: Note
+                valueLabels:
+                  data.status:
+                    not-started: Not started
+                    in-progress: In progress
+                    not-held: Not held
+                sort: name
+                descending: true
+                emptyText: No meetings yet
+            slot: meeting
+          - type: canvas.stack
+            layout:
+              base:
+                gap: 4
+            children:
+            - type: canvas.files
+              props:
+                path: ./activities/
+                mimeTypes:
+                - application/vnd.verentis.crm.task+json
+                showFolders: false
+                navigable: false
+                columns:
+                - key: data.subject
+                  label: Subject
+                - key: type
+                  label: Type
+                - key: data.status
+                  label: Status
+                - key: modified
+                  label: Updated
+                typeLabels:
+                  application/vnd.verentis.crm.email+json: Email
+                  application/vnd.verentis.crm.call+json: Call
+                  application/vnd.verentis.crm.meeting+json: Meeting
+                  application/vnd.verentis.crm.task+json: Task
+                  application/vnd.verentis.crm.note+json: Note
+                valueLabels:
+                  data.status:
+                    not-started: Not started
+                    in-progress: In progress
+                    not-held: Not held
+                sort: name
+                descending: true
+                emptyText: No tasks yet
+            slot: task
+        slot: activities
+      - type: canvas.stack
+        layout:
+          base:
+            gap: 4
+        children:
+        - type: canvas.stack
+          layout:
+            base:
+              direction: row
+              wrap: true
+              gap: 2
+              align: center
+          children:
+          - type: canvas.button
+            props:
+              label: Note
+              variant: outline
+              icon: sticky-note
+              size: sm
+            'on':
+              click: new-note
+            rules:
+              disabled: form.values.state === 'archived'
+        - type: canvas.files
+          props:
+            path: ./notes/
+            mimeTypes:
+            - application/vnd.verentis.crm.note+json
+            showFolders: false
+            navigable: false
+            columns:
+            - key: data.title
+              label: Title
+            - key: modified
+              label: Updated
+            typeLabels:
+              application/vnd.verentis.crm.email+json: Email
+              application/vnd.verentis.crm.call+json: Call
+              application/vnd.verentis.crm.meeting+json: Meeting
+              application/vnd.verentis.crm.task+json: Task
+              application/vnd.verentis.crm.note+json: Note
+            valueLabels:
+              data.status:
+                not-started: Not started
+                in-progress: In progress
+                not-held: Not held
+            sort: name
+            descending: true
+            emptyText: No notes yet
+        slot: notes
+      - type: canvas.stack
+        layout:
+          base:
+            gap: 4
+        children:
+        - type: canvas.text
+          props:
+            text: Files of any type in {{ ctx.file.path }}/documents. Upload or create them from Files.
+            tone: muted
+        - type: canvas.stack
+          layout:
+            base:
+              direction: row
+              wrap: true
+              gap: 2
+              align: center
+          children:
+          - type: canvas.button
+            props:
+              label: Open in Files
+              variant: outline
+              icon: folder-open
+              size: sm
+            'on':
+              click:
+              - open-file:
+                  path: '{{ ctx.file.path }}/documents'
+        - type: canvas.files
+          props:
+            path: ./documents/
+            columns:
+            - name
+            - type
+            - size
+            - modified
+            emptyText: No documents yet
+        slot: documents
+  actions:
+    save:
+      steps:
+      - patch-form:
+          values:
+            updatedAt: '{{ Date() }}'
+            closedAt: '{{ form.values.outcome !== ''open'' ? (form.values.closedAt || Date()) : undefined
+              }}'
+      - save: {}
+      - toast:
+          message: Saved
+          variant: success
+    reset:
+      steps:
+      - reset-form: {}
+    archive:
+      steps:
+      - confirm:
+          title: Archive
+          message: Archive this record? It stays in the workspace and can be restored.
+      - patch-form:
+          values:
+            state: archived
+            archivedAt: '{{ Date() }}'
+            updatedAt: '{{ Date() }}'
+      - save: {}
+      - toast:
+          message: Archived
+          variant: success
+    restore:
+      steps:
+      - patch-form:
+          values:
+            state: active
+            updatedAt: '{{ Date() }}'
+      - save: {}
+      - toast:
+          message: Restored
+          variant: success
+    new-email:
+      permissions:
+      - file.write
+      steps:
+      - set-state:
+          key: newid
+          value:
+            $expr: 'Array.from(''xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'', c => c === ''x'' ? Math.floor(Math.random()
+              * 16).toString(16) : (c === ''y'' ? (8 + Math.floor(Math.random() * 4)).toString(16) : c)).join('''')'
+      - set-state:
+          key: newat
+          value:
+            $expr: Date()
+      - set-state:
+          key: newstamp
+          value:
+            $expr: Date().slice(0, 19).split('-').join('').split(':').join('').split('T').join('-')
+      - write-file:
+          path: '{{ ctx.file.path }}/activities/{{ state.newstamp }}-email.json'
+          mime: application/vnd.verentis.crm.email+json
+          content: '{{ JSON.stringify({ "$schema": "https://schemas.verentis.io/crm/v1/email.schema.json",
+            "schemaVersion": 1, "kind": "email", "id": state.newid, "state": "active", "createdAt": state.newat,
+            "updatedAt": state.newat, "subject": '''', "direction": "outbound", "status": "draft", "to":
+            [], "cc": [], "regarding": { "path": ctx.file.path } }, null, 2) }}'
+      - open-file:
+          path: '{{ ctx.file.path }}/activities/{{ state.newstamp }}-email.json'
+          mode: edit
+    new-call:
+      permissions:
+      - file.write
+      steps:
+      - set-state:
+          key: newid
+          value:
+            $expr: 'Array.from(''xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'', c => c === ''x'' ? Math.floor(Math.random()
+              * 16).toString(16) : (c === ''y'' ? (8 + Math.floor(Math.random() * 4)).toString(16) : c)).join('''')'
+      - set-state:
+          key: newat
+          value:
+            $expr: Date()
+      - set-state:
+          key: newstamp
+          value:
+            $expr: Date().slice(0, 19).split('-').join('').split(':').join('').split('T').join('-')
+      - write-file:
+          path: '{{ ctx.file.path }}/activities/{{ state.newstamp }}-call.json'
+          mime: application/vnd.verentis.crm.call+json
+          content: '{{ JSON.stringify({ "$schema": "https://schemas.verentis.io/crm/v1/call.schema.json",
+            "schemaVersion": 1, "kind": "call", "id": state.newid, "state": "active", "createdAt": state.newat,
+            "updatedAt": state.newat, "subject": '''', "direction": "outbound", "status": "planned", "regarding":
+            { "path": ctx.file.path } }, null, 2) }}'
+      - open-file:
+          path: '{{ ctx.file.path }}/activities/{{ state.newstamp }}-call.json'
+          mode: edit
+    new-meeting:
+      permissions:
+      - file.write
+      steps:
+      - set-state:
+          key: newid
+          value:
+            $expr: 'Array.from(''xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'', c => c === ''x'' ? Math.floor(Math.random()
+              * 16).toString(16) : (c === ''y'' ? (8 + Math.floor(Math.random() * 4)).toString(16) : c)).join('''')'
+      - set-state:
+          key: newat
+          value:
+            $expr: Date()
+      - set-state:
+          key: newstamp
+          value:
+            $expr: Date().slice(0, 19).split('-').join('').split(':').join('').split('T').join('-')
+      - write-file:
+          path: '{{ ctx.file.path }}/activities/{{ state.newstamp }}-meeting.json'
+          mime: application/vnd.verentis.crm.meeting+json
+          content: '{{ JSON.stringify({ "$schema": "https://schemas.verentis.io/crm/v1/meeting.schema.json",
+            "schemaVersion": 1, "kind": "meeting", "id": state.newid, "state": "active", "createdAt":
+            state.newat, "updatedAt": state.newat, "subject": '''', "status": "planned", "attendees":
+            [], "regarding": { "path": ctx.file.path } }, null, 2) }}'
+      - open-file:
+          path: '{{ ctx.file.path }}/activities/{{ state.newstamp }}-meeting.json'
+          mode: edit
+    new-task:
+      permissions:
+      - file.write
+      steps:
+      - set-state:
+          key: newid
+          value:
+            $expr: 'Array.from(''xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'', c => c === ''x'' ? Math.floor(Math.random()
+              * 16).toString(16) : (c === ''y'' ? (8 + Math.floor(Math.random() * 4)).toString(16) : c)).join('''')'
+      - set-state:
+          key: newat
+          value:
+            $expr: Date()
+      - set-state:
+          key: newstamp
+          value:
+            $expr: Date().slice(0, 19).split('-').join('').split(':').join('').split('T').join('-')
+      - write-file:
+          path: '{{ ctx.file.path }}/activities/{{ state.newstamp }}-task.json'
+          mime: application/vnd.verentis.crm.task+json
+          content: '{{ JSON.stringify({ "$schema": "https://schemas.verentis.io/crm/v1/task.schema.json",
+            "schemaVersion": 1, "kind": "task", "id": state.newid, "state": "active", "createdAt": state.newat,
+            "updatedAt": state.newat, "subject": '''', "status": "not-started", "priority": "normal",
+            "regarding": { "path": ctx.file.path } }, null, 2) }}'
+      - open-file:
+          path: '{{ ctx.file.path }}/activities/{{ state.newstamp }}-task.json'
+          mode: edit
+    new-note:
+      permissions:
+      - file.write
+      steps:
+      - set-state:
+          key: newid
+          value:
+            $expr: 'Array.from(''xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'', c => c === ''x'' ? Math.floor(Math.random()
+              * 16).toString(16) : (c === ''y'' ? (8 + Math.floor(Math.random() * 4)).toString(16) : c)).join('''')'
+      - set-state:
+          key: newat
+          value:
+            $expr: Date()
+      - set-state:
+          key: newstamp
+          value:
+            $expr: Date().slice(0, 19).split('-').join('').split(':').join('').split('T').join('-')
+      - write-file:
+          path: '{{ ctx.file.path }}/notes/{{ state.newstamp }}-note.json'
+          mime: application/vnd.verentis.crm.note+json
+          content: '{{ JSON.stringify({ "$schema": "https://schemas.verentis.io/crm/v1/note.schema.json",
+            "schemaVersion": 1, "kind": "note", "id": state.newid, "state": "active", "createdAt": state.newat,
+            "updatedAt": state.newat, "title": '''', "content": "", "regarding": { "path": ctx.file.path
+            } }, null, 2) }}'
+      - open-file:
+          path: '{{ ctx.file.path }}/notes/{{ state.newstamp }}-note.json'
+          mode: edit

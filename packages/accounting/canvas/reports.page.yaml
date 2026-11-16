@@ -1,0 +1,435 @@
+api-version: canvas.verentis.io/v1
+kind: Page
+metadata:
+  id: accounting-reports
+  name: Financial reports
+  description: Trial balance, profit and loss, balance sheet and general ledger.
+  icon: chart-column
+spec:
+  access:
+  - path: /chart-of-accounts
+    reason: Report on the chart of accounts
+  - path: /journals
+    reason: Sum the posted journals
+  data:
+    accounts:
+      kind: folder
+      path: /chart-of-accounts
+      contents: true
+      mime-pattern: application/vnd.verentis.accounting.account+json
+    journals:
+      kind: folder
+      path: /journals
+      contents: true
+      mime-pattern: application/vnd.verentis.accounting.journal+json
+    period:
+      kind: computed
+      expr: '(data.accounts || []).filter(e => e.kind === ''file'' && e.data && e.data.kind === ''account'').map(e
+        => ({ path: e.path, code: e.data.code || e.name, number: e.data.number || '''', name: e.data.name
+        || '''', type: e.data.accountType, units: (data.journals || []).filter(j => j.kind === ''file''
+        && j.data && j.data.status === ''posted'' && Array.isArray(j.data.lines) && (!state.fromdate ||
+        j.data.date >= state.fromdate) && (!state.todate || j.data.date <= state.todate)).reduce((sum,
+        j) => sum + j.data.lines.filter(l => l.account === e.path).reduce((s, l) => s + (l.direction ===
+        ''debit'' ? 1 : -1) * Math.round(Number(l.amount || 0) * 10000), 0), 0) })).sort((a, b) => (String(a.number)
+        + a.code < String(b.number) + b.code ? -1 : 1))'
+    position:
+      kind: computed
+      expr: '(data.accounts || []).filter(e => e.kind === ''file'' && e.data && e.data.kind === ''account'').map(e
+        => ({ path: e.path, code: e.data.code || e.name, number: e.data.number || '''', name: e.data.name
+        || '''', type: e.data.accountType, units: (data.journals || []).filter(j => j.kind === ''file''
+        && j.data && j.data.status === ''posted'' && Array.isArray(j.data.lines) && (!state.todate ||
+        j.data.date <= state.todate)).reduce((sum, j) => sum + j.data.lines.filter(l => l.account ===
+        e.path).reduce((s, l) => s + (l.direction === ''debit'' ? 1 : -1) * Math.round(Number(l.amount
+        || 0) * 10000), 0), 0) })).sort((a, b) => (String(a.number) + a.code < String(b.number) + b.code
+        ? -1 : 1))'
+  state:
+    fromdate: ''
+    todate: ''
+  tree:
+  - type: canvas.stack
+    layout:
+      base:
+        padding: 6
+        gap: 4
+        maxWidth: 72rem
+        margin:
+          x: auto
+    children:
+    - type: canvas.stack
+      layout:
+        base:
+          direction: row
+          wrap: true
+          gap: 2
+          align: center
+          justify: between
+      children:
+      - type: canvas.stack
+        layout:
+          base:
+            gap: 1
+        children:
+        - type: canvas.heading
+          props:
+            level: 2
+            text: Financial reports
+        - type: canvas.text
+          props:
+            text: Computed from posted journals. Choose dates to limit the period; the balance sheet shows
+              positions at the end date.
+            tone: muted
+      - type: canvas.button
+        props:
+          label: Accounting
+          variant: ghost
+          icon: book-open
+          size: sm
+        'on':
+          click:
+          - open-file:
+              path: /applications/accounting/canvas/home.page.yaml
+    - type: canvas.grid
+      layout:
+        base:
+          columns: 1
+          gap: 4
+        tablet:
+          columns: 2
+      children:
+      - type: canvas.form.date
+        props:
+          label: From
+          value: '{{ state.fromdate }}'
+      - type: canvas.form.date
+        props:
+          label: To
+          value: '{{ state.todate }}'
+    - type: canvas.text
+      props:
+        text: '{{ data.$accounts.error }}'
+      rules:
+        visible: data.$accounts.status === 'error'
+    - type: canvas.text
+      props:
+        text: Loading…
+        tone: muted
+      rules:
+        visible: data.$accounts.status === 'loading'
+    - type: canvas.text
+      props:
+        text: '{{ data.$journals.error }}'
+      rules:
+        visible: data.$journals.status === 'error'
+    - type: canvas.text
+      props:
+        text: Loading…
+        tone: muted
+      rules:
+        visible: data.$journals.status === 'loading'
+    - type: canvas.tabs
+      props:
+        items:
+        - value: trial
+          label: Trial balance
+          icon: scale
+        - value: profit
+          label: Profit and loss
+          icon: trending-up
+        - value: balance
+          label: Balance sheet
+          icon: landmark
+        - value: ledger
+          label: General ledger
+          icon: list
+      children:
+      - type: canvas.stack
+        layout:
+          base:
+            gap: 4
+        children:
+        - type: canvas.grid
+          layout:
+            base:
+              columns: 2
+              gap: 4
+            desktop:
+              columns: 2
+          children:
+          - type: canvas.dashboard.stat
+            props:
+              label: Total debits
+              value: '{{ ((data.period || []).filter(b => b.units > 0).reduce((s, b) => s + b.units, 0)
+                / 10000).toFixed(2) }}'
+              icon: arrow-down-left
+              loading: '{{ data.$journals.status === ''loading'' }}'
+          - type: canvas.dashboard.stat
+            props:
+              label: Total credits
+              value: '{{ ((data.period || []).filter(b => b.units < 0).reduce((s, b) => s - b.units, 0)
+                / 10000).toFixed(2) }}'
+              icon: arrow-up-right
+              loading: '{{ data.$journals.status === ''loading'' }}'
+        - type: canvas.table
+          props:
+            rows: '{{ (data.period || []).filter(b => b.units !== 0).map(b => ({ path: b.path, number:
+              b.number, name: b.name, type: b.type, debit: b.units > 0 ? (b.units / 10000).toFixed(2)
+              : '''', credit: b.units < 0 ? (-b.units / 10000).toFixed(2) : '''' })) }}'
+            columns:
+            - key: number
+              label: Number
+            - key: name
+              label: Account
+            - key: type
+              label: Type
+            - key: debit
+              label: Debit
+              align: end
+            - key: credit
+              label: Credit
+              align: end
+            emptyText: No postings in this period
+            clickable: true
+          'on':
+            row-click:
+            - open-file:
+                path: '{{ event.path }}'
+                mode: edit
+        slot: trial
+      - type: canvas.stack
+        layout:
+          base:
+            gap: 4
+        children:
+        - type: canvas.grid
+          layout:
+            base:
+              columns: 2
+              gap: 4
+            desktop:
+              columns: 3
+          children:
+          - type: canvas.dashboard.stat
+            props:
+              label: Income
+              value: '{{ ((data.period || []).filter(b => ["income"].includes(b.type) && b.units !== 0).reduce((s,
+                b) => s + -1 * b.units, 0) / 10000).toFixed(2) }}'
+              icon: trending-up
+              loading: '{{ data.$journals.status === ''loading'' }}'
+          - type: canvas.dashboard.stat
+            props:
+              label: Expenses
+              value: '{{ ((data.period || []).filter(b => ["expense"].includes(b.type) && b.units !==
+                0).reduce((s, b) => s + 1 * b.units, 0) / 10000).toFixed(2) }}'
+              icon: trending-down
+              loading: '{{ data.$journals.status === ''loading'' }}'
+          - type: canvas.dashboard.stat
+            props:
+              label: Net profit
+              value: '{{ (((data.period || []).filter(b => ["income"].includes(b.type) && b.units !==
+                0).reduce((s, b) => s + -1 * b.units, 0) - (data.period || []).filter(b => ["expense"].includes(b.type)
+                && b.units !== 0).reduce((s, b) => s + 1 * b.units, 0)) / 10000).toFixed(2) }}'
+              icon: scale
+              loading: '{{ data.$journals.status === ''loading'' }}'
+        - type: canvas.card
+          props:
+            title: Income
+          children:
+          - type: canvas.table
+            props:
+              rows: '{{ (data.period || []).filter(b => ["income"].includes(b.type) && b.units !== 0).map(b
+                => ({ path: b.path, number: b.number, name: b.name, amount: (-1 * b.units / 10000).toFixed(2)
+                })) }}'
+              columns:
+              - key: number
+                label: Number
+              - key: name
+                label: Account
+              - key: amount
+                label: Amount
+                align: end
+              emptyText: No income in this period
+              clickable: true
+            'on':
+              row-click:
+              - open-file:
+                  path: '{{ event.path }}'
+                  mode: edit
+        - type: canvas.card
+          props:
+            title: Expenses
+          children:
+          - type: canvas.table
+            props:
+              rows: '{{ (data.period || []).filter(b => ["expense"].includes(b.type) && b.units !== 0).map(b
+                => ({ path: b.path, number: b.number, name: b.name, amount: (1 * b.units / 10000).toFixed(2)
+                })) }}'
+              columns:
+              - key: number
+                label: Number
+              - key: name
+                label: Account
+              - key: amount
+                label: Amount
+                align: end
+              emptyText: No expenses in this period
+              clickable: true
+            'on':
+              row-click:
+              - open-file:
+                  path: '{{ event.path }}'
+                  mode: edit
+        slot: profit
+      - type: canvas.stack
+        layout:
+          base:
+            gap: 4
+        children:
+        - type: canvas.grid
+          layout:
+            base:
+              columns: 2
+              gap: 4
+            desktop:
+              columns: 3
+          children:
+          - type: canvas.dashboard.stat
+            props:
+              label: Assets
+              value: '{{ ((data.position || []).filter(b => ["asset"].includes(b.type) && b.units !==
+                0).reduce((s, b) => s + 1 * b.units, 0) / 10000).toFixed(2) }}'
+              icon: wallet
+              loading: '{{ data.$journals.status === ''loading'' }}'
+          - type: canvas.dashboard.stat
+            props:
+              label: Liabilities
+              value: '{{ ((data.position || []).filter(b => ["liability"].includes(b.type) && b.units
+                !== 0).reduce((s, b) => s + -1 * b.units, 0) / 10000).toFixed(2) }}'
+              icon: credit-card
+              loading: '{{ data.$journals.status === ''loading'' }}'
+          - type: canvas.dashboard.stat
+            props:
+              label: Equity incl. earnings
+              value: '{{ (((data.position || []).filter(b => ["equity"].includes(b.type) && b.units !==
+                0).reduce((s, b) => s + -1 * b.units, 0) + ((data.position || []).filter(b => ["income"].includes(b.type)
+                && b.units !== 0).reduce((s, b) => s + -1 * b.units, 0) - (data.position || []).filter(b
+                => ["expense"].includes(b.type) && b.units !== 0).reduce((s, b) => s + 1 * b.units, 0)))
+                / 10000).toFixed(2) }}'
+              icon: landmark
+              loading: '{{ data.$journals.status === ''loading'' }}'
+        - type: canvas.card
+          props:
+            title: Assets
+          children:
+          - type: canvas.table
+            props:
+              rows: '{{ (data.position || []).filter(b => ["asset"].includes(b.type) && b.units !== 0).map(b
+                => ({ path: b.path, number: b.number, name: b.name, amount: (1 * b.units / 10000).toFixed(2)
+                })) }}'
+              columns:
+              - key: number
+                label: Number
+              - key: name
+                label: Account
+              - key: amount
+                label: Amount
+                align: end
+              emptyText: No assets
+              clickable: true
+            'on':
+              row-click:
+              - open-file:
+                  path: '{{ event.path }}'
+                  mode: edit
+        - type: canvas.card
+          props:
+            title: Liabilities
+          children:
+          - type: canvas.table
+            props:
+              rows: '{{ (data.position || []).filter(b => ["liability"].includes(b.type) && b.units !==
+                0).map(b => ({ path: b.path, number: b.number, name: b.name, amount: (-1 * b.units / 10000).toFixed(2)
+                })) }}'
+              columns:
+              - key: number
+                label: Number
+              - key: name
+                label: Account
+              - key: amount
+                label: Amount
+                align: end
+              emptyText: No liabilities
+              clickable: true
+            'on':
+              row-click:
+              - open-file:
+                  path: '{{ event.path }}'
+                  mode: edit
+        - type: canvas.card
+          props:
+            title: Equity
+          children:
+          - type: canvas.table
+            props:
+              rows: '{{ (data.position || []).filter(b => ["equity"].includes(b.type) && b.units !== 0).map(b
+                => ({ path: b.path, number: b.number, name: b.name, amount: (-1 * b.units / 10000).toFixed(2)
+                })) }}'
+              columns:
+              - key: number
+                label: Number
+              - key: name
+                label: Account
+              - key: amount
+                label: Amount
+                align: end
+              emptyText: No equity postings
+              clickable: true
+            'on':
+              row-click:
+              - open-file:
+                  path: '{{ event.path }}'
+                  mode: edit
+          - type: canvas.text
+            props:
+              text: 'Retained earnings (income less expenses to date): {{ (((data.position || []).filter(b
+                => ["income"].includes(b.type) && b.units !== 0).reduce((s, b) => s + -1 * b.units, 0)
+                - (data.position || []).filter(b => ["expense"].includes(b.type) && b.units !== 0).reduce((s,
+                b) => s + 1 * b.units, 0)) / 10000).toFixed(2) }}'
+              tone: muted
+        slot: balance
+      - type: canvas.stack
+        layout:
+          base:
+            gap: 4
+        children:
+        - type: canvas.table
+          props:
+            rows: '{{ (data.journals || []).filter(j => j.kind === ''file'' && j.data && j.data.status
+              === ''posted'' && Array.isArray(j.data.lines) && (!state.fromdate || j.data.date >= state.fromdate)
+              && (!state.todate || j.data.date <= state.todate)).reduce((rows, j) => rows.concat(j.data.lines.map(l
+              => ({ path: j.path, date: j.data.date, journal: j.data.code || j.name, account: l.account.split(''/'').pop(),
+              description: l.description || j.data.description, debit: l.direction === ''debit'' ? l.amount
+              : '''', credit: l.direction === ''credit'' ? l.amount : '''' }))), []).sort((a, b) => (a.date
+              + a.journal < b.date + b.journal ? -1 : 1)) }}'
+            columns:
+            - key: date
+              label: Date
+            - key: journal
+              label: Journal
+            - key: account
+              label: Account
+            - key: description
+              label: Description
+            - key: debit
+              label: Debit
+              align: end
+            - key: credit
+              label: Credit
+              align: end
+            emptyText: No postings in this period
+            clickable: true
+          'on':
+            row-click:
+            - open-file:
+                path: '{{ event.path }}'
+                mode: edit
+        slot: ledger

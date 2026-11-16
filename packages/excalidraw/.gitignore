@@ -1,0 +1,11 @@
+node_modules/
+.nuxt/
+.output/
+coverage/
+public/excalidraw-assets/
+*.log
+.browsers/
+.cache/
+playwright-report/
+test-results/
+tests/scenarios/*/outcomes/browser-artifacts/

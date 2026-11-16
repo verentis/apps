@@ -1,0 +1,11 @@
+{
+  "$schema": "https://schemas.verentis.io/crm/v1/contact.schema.json",
+  "schemaVersion": 1,
+  "kind": "contact",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "givenName": "{{ name }}"
+}

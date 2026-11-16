@@ -1,0 +1,90 @@
+# Verentis hosted app workload: Deployment + Service + Ingress, rendered per target by the shared
+# deploy-hosted-app action (.github/verentis-delivery.json). __APP__ carries the preview suffix, so names and
+# selectors never collide; the Ingress uses the platform's wildcard certificate (__TLS_SECRET__).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: __APP__
+  namespace: __NAMESPACE__
+  labels:
+    app.kubernetes.io/name: __APP__
+    app.kubernetes.io/part-of: verentis-apps
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: __APP__
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: __APP__
+        app.kubernetes.io/part-of: verentis-apps
+    spec:
+      containers:
+        - name: app
+          image: __IMAGE__
+          ports:
+            - name: http
+              containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 96Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: __APP__
+  namespace: __NAMESPACE__
+  labels:
+    app.kubernetes.io/name: __APP__
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: __APP__
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: __APP__
+  namespace: __NAMESPACE__
+  labels:
+    app.kubernetes.io/name: __APP__
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - __HOST__
+      secretName: __TLS_SECRET__
+  rules:
+    - host: __HOST__
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: __APP__
+                port:
+                  number: 80

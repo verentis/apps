@@ -1,0 +1,16 @@
+name: Pull request
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, closed]
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: ${{ github.event.action != 'closed' }}
+jobs:
+  delivery:
+    uses: verentis/.github/.github/workflows/app-pull-request.yml@main
+    with:
+      build-target: root
+    secrets: inherit

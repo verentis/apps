@@ -1,0 +1,33 @@
+name: Validate applications
+
+# Tests and validation belong to the pull request; the release after the merge does not repeat them.
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  delivery-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test .github/tests/delivery-config.test.mjs
+
+  changes:
+    uses: verentis/.github/.github/workflows/discover-verentis-packages.yml@main
+    with:
+      base-sha: ${{ github.event.pull_request.base.sha || github.event.before }}
+
+  validate:
+    needs: changes
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.changes.outputs.matrix) }}
+    uses: verentis/.github/.github/workflows/validate-verentis-package.yml@main
+    with:
+      package-root: ${{ matrix.package-root }}
+      manifest: ${{ matrix.manifest }}

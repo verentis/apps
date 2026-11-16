@@ -1,0 +1,304 @@
+api-version: canvas.verentis.io/v1
+kind: Page
+metadata:
+  id: invoicing-home
+  name: Invoicing
+  description: Invoicing overview.
+  icon: file-text
+spec:
+  access:
+  - path: /invoices
+    reason: List invoices
+  - path: /credit-notes
+    reason: List credit notes
+  - path: /payments
+    reason: List payments
+  data:
+    invoices:
+      kind: folder
+      path: /invoices
+      contents: true
+      mime-pattern: application/vnd.verentis.invoicing.invoice+json
+    credits:
+      kind: folder
+      path: /credit-notes
+      contents: true
+      mime-pattern: application/vnd.verentis.invoicing.credit+json
+    payments:
+      kind: folder
+      path: /payments
+      contents: true
+      mime-pattern: application/vnd.verentis.invoicing.payment+json
+    receivables:
+      kind: computed
+      expr: '(data.invoices || []).filter(e => e.kind === ''file'' && e.data && e.data.state !== ''archived''
+        && e.data.status === ''issued'' && e.data.totals).map(e => ({ path: e.path, code: e.data.code
+        || e.name, customer: (e.data.customer && e.data.customer.name) || '''', issueDate: e.data.issueDate,
+        dueDate: e.data.dueDate, gross: Math.round(Number(e.data.totals.gross || 0) * 10000), credited:
+        (data.credits || []).filter(c => c.kind === ''file'' && c.data && c.data.status === ''issued''
+        && c.data.invoice === e.path).reduce((s, c) => s + Math.round(Number(c.data.totals.gross || 0)
+        * 10000), 0), paid: (data.payments || []).filter(p => p.kind === ''file'' && p.data && p.data.status
+        === ''posted'').reduce((s, p) => s + (p.data.allocations || []).filter(a => a.invoice === e.path).reduce((t,
+        a) => t + Math.round(Number(a.amount || 0) * 10000), 0), 0) })).map(r => ({ path: r.path, code:
+        r.code, customer: r.customer, issueDate: r.issueDate, dueDate: r.dueDate, gross: r.gross, credited:
+        r.credited, paid: r.paid, outstanding: r.gross - r.credited - r.paid, overdue: r.gross - r.credited
+        - r.paid > 0 && r.dueDate < Date().slice(0, 10) }))'
+  tree:
+  - type: canvas.stack
+    layout:
+      base:
+        padding: 6
+        gap: 4
+        maxWidth: 72rem
+        margin:
+          x: auto
+    children:
+    - type: canvas.stack
+      layout:
+        base:
+          direction: row
+          wrap: true
+          gap: 2
+          align: center
+          justify: between
+      children:
+      - type: canvas.stack
+        layout:
+          base:
+            gap: 1
+        children:
+        - type: canvas.heading
+          props:
+            level: 2
+            text: Invoicing
+        - type: canvas.text
+          props:
+            text: Invoices, credit notes and payments are files in your workspace. Draft them in their
+              folders, then issue or post them from their forms to the Accounting ledger.
+            tone: muted
+      - type: canvas.stack
+        layout:
+          base:
+            direction: row
+            wrap: true
+            gap: 2
+            align: center
+        children:
+        - type: canvas.button
+          props:
+            label: Receivables
+            variant: outline
+            icon: hourglass
+            size: sm
+          'on':
+            click:
+            - open-file:
+                path: /applications/invoicing/canvas/receivables.page.yaml
+        - type: canvas.button
+          props:
+            label: Settings
+            variant: ghost
+            icon: settings
+            size: sm
+          'on':
+            click:
+            - open-file:
+                path: /settings/invoicing.json
+                mode: edit
+    - type: canvas.grid
+      layout:
+        base:
+          columns: 2
+          gap: 4
+        desktop:
+          columns: 4
+      children:
+      - type: canvas.dashboard.stat
+        props:
+          label: Draft invoices
+          value: '{{ (data.invoices || []).filter(e => e.kind === ''file'' && e.data && e.data.state !==
+            ''archived'' && (e.data.status === ''draft'')).length }}'
+          icon: file-pen
+          loading: '{{ data.$invoices.status === ''loading'' }}'
+      - type: canvas.dashboard.stat
+        props:
+          label: Unpaid invoices
+          value: '{{ (data.receivables || []).filter(r => r.outstanding > 0).length }}'
+          icon: file-text
+          loading: '{{ data.$invoices.status === ''loading'' }}'
+      - type: canvas.dashboard.stat
+        props:
+          label: Outstanding
+          value: '{{ ((data.receivables || []).filter(r => r.outstanding > 0).reduce((s, r) => s + r.outstanding,
+            0) / 10000).toFixed(2) }}'
+          icon: hourglass
+          loading: '{{ data.$payments.status === ''loading'' }}'
+      - type: canvas.dashboard.stat
+        props:
+          label: Overdue
+          value: '{{ ((data.receivables || []).filter(r => r.overdue).reduce((s, r) => s + r.outstanding,
+            0) / 10000).toFixed(2) }}'
+          icon: alarm-clock
+          loading: '{{ data.$payments.status === ''loading'' }}'
+    - type: canvas.text
+      props:
+        text: The /invoices folder could not be read. Reinstall Invoicing to recreate it.
+      rules:
+        visible: data.$invoices.status === 'error'
+    - type: canvas.text
+      props:
+        text: The /credit-notes folder could not be read. Reinstall Invoicing to recreate it.
+      rules:
+        visible: data.$credits.status === 'error'
+    - type: canvas.text
+      props:
+        text: The /payments folder could not be read. Reinstall Invoicing to recreate it.
+      rules:
+        visible: data.$payments.status === 'error'
+    - type: canvas.tabs
+      props:
+        items:
+        - value: invoices
+          label: Invoices
+          icon: file-text
+        - value: credits
+          label: Credit notes
+          icon: file-minus
+        - value: payments
+          label: Payments
+          icon: banknote
+      children:
+      - type: canvas.stack
+        layout:
+          base:
+            gap: 4
+        children:
+        - type: canvas.stack
+          layout:
+            base:
+              direction: row
+              wrap: true
+              gap: 2
+              align: center
+          children:
+          - type: canvas.button
+            props:
+              label: Open /invoices
+              variant: outline
+              icon: folder-open
+              size: sm
+            'on':
+              click:
+              - open-file:
+                  path: /invoices
+        - type: canvas.files
+          props:
+            path: /invoices/
+            mimeTypes:
+            - application/vnd.verentis.invoicing.invoice+json
+            showFolders: false
+            navigable: false
+            columns:
+            - key: name
+              label: Number
+            - key: data.customer.name
+              label: Customer
+            - key: data.issueDate
+              label: Issued
+            - key: data.dueDate
+              label: Due
+            - key: data.totals.gross
+              label: Total
+              align: end
+            - key: data.status
+              label: Status
+            emptyText: No invoices yet. Use New in /invoices.
+        slot: invoices
+      - type: canvas.stack
+        layout:
+          base:
+            gap: 4
+        children:
+        - type: canvas.stack
+          layout:
+            base:
+              direction: row
+              wrap: true
+              gap: 2
+              align: center
+          children:
+          - type: canvas.button
+            props:
+              label: Open /credit-notes
+              variant: outline
+              icon: folder-open
+              size: sm
+            'on':
+              click:
+              - open-file:
+                  path: /credit-notes
+        - type: canvas.files
+          props:
+            path: /credit-notes/
+            mimeTypes:
+            - application/vnd.verentis.invoicing.credit+json
+            showFolders: false
+            navigable: false
+            columns:
+            - key: name
+              label: Number
+            - key: data.date
+              label: Date
+            - key: data.reason
+              label: Reason
+            - key: data.totals.gross
+              label: Total
+              align: end
+            - key: data.status
+              label: Status
+            emptyText: No credit notes yet. Use New in /credit-notes.
+        slot: credits
+      - type: canvas.stack
+        layout:
+          base:
+            gap: 4
+        children:
+        - type: canvas.stack
+          layout:
+            base:
+              direction: row
+              wrap: true
+              gap: 2
+              align: center
+          children:
+          - type: canvas.button
+            props:
+              label: Open /payments
+              variant: outline
+              icon: folder-open
+              size: sm
+            'on':
+              click:
+              - open-file:
+                  path: /payments
+        - type: canvas.files
+          props:
+            path: /payments/
+            mimeTypes:
+            - application/vnd.verentis.invoicing.payment+json
+            showFolders: false
+            navigable: false
+            columns:
+            - key: name
+              label: Number
+            - key: data.date
+              label: Date
+            - key: data.payer
+              label: Payer
+            - key: data.amount
+              label: Amount
+              align: end
+            - key: data.status
+              label: Status
+            emptyText: No payments yet. Use New in /payments.
+        slot: payments

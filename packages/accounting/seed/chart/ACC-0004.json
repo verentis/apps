@@ -1,0 +1,13 @@
+{
+  "$schema": "https://schemas.verentis.io/accounting/v1/account.schema.json",
+  "schemaVersion": 1,
+  "kind": "account",
+  "id": "6f9a3d1e-2b4c-4e8a-9f10-1a2b3c4d5e04",
+  "state": "active",
+  "createdAt": "2026-01-01T00:00:00Z",
+  "updatedAt": "2026-01-01T00:00:00Z",
+  "code": "ACC-0004",
+  "number": "3000",
+  "name": "Owner's equity",
+  "accountType": "equity"
+}

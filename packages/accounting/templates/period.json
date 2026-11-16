@@ -1,0 +1,14 @@
+{
+  "$schema": "https://schemas.verentis.io/accounting/v1/period.schema.json",
+  "schemaVersion": 1,
+  "kind": "period",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "name": "{{ name }}",
+  "startDate": "",
+  "endDate": "",
+  "status": "open"
+}

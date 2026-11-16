@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.verentis.io/invoicing/v1/settings.schema.json",
+  "title": "Invoicing settings",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "const": "https://schemas.verentis.io/invoicing/v1/settings.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "seller": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "legalName": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 254,
+          "pattern": "^([^@\\s]+@[^@\\s]+)?$"
+        },
+        "phone": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "taxIdentifier": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "address": {
+          "type": "object",
+          "properties": {
+            "lines": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "minItems": 0,
+              "maxItems": 5
+            },
+            "city": {
+              "type": "string",
+              "maxLength": 1000
+            },
+            "region": {
+              "type": "string",
+              "maxLength": 1000
+            },
+            "postalCode": {
+              "type": "string",
+              "maxLength": 32
+            },
+            "country": {
+              "type": "string",
+              "pattern": "^([A-Z]{2})?$"
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "defaultDueDays": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 365
+    },
+    "defaultTaxRate": {
+      "type": "string",
+      "pattern": "^((0|[1-9][0-9]{0,11})(\\.[0-9]{1,6})?)?$"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 10000
+    },
+    "receivableAccount": {
+      "type": "string",
+      "maxLength": 4096,
+      "pattern": "^(/.*)?$"
+    },
+    "incomeAccount": {
+      "type": "string",
+      "maxLength": 4096,
+      "pattern": "^(/.*)?$"
+    },
+    "taxAccount": {
+      "type": "string",
+      "maxLength": 4096,
+      "pattern": "^(/.*)?$"
+    },
+    "bankAccount": {
+      "type": "string",
+      "maxLength": 4096,
+      "pattern": "^(/.*)?$"
+    }
+  },
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "seller",
+    "defaultDueDays",
+    "defaultTaxRate",
+    "notes",
+    "receivableAccount",
+    "incomeAccount",
+    "taxAccount",
+    "bankAccount"
+  ],
+  "additionalProperties": false
+}

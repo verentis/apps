@@ -1,0 +1,258 @@
+api-version: canvas.verentis.io/v1
+kind: Form
+metadata:
+  id: crm-note
+  name: CRM note
+  description: View and edit a CRM note.
+  icon: sticky-note
+spec:
+  binds:
+  - pattern: application/vnd.verentis.crm.note+json
+    mode: edit
+    priority: 200
+    scope: global
+    json-schema:
+      id: https://schemas.verentis.io/crm/v1/note.schema.json
+      source: /applications/crm/schemas/note.schema.json
+      title: CRM note
+      version: '1'
+  entry: ${var:canvas-origin}/render?document=%2Fapplications%2Fcrm%2Fcanvas%2Fnote.form.yaml
+  scope: global
+  mime-types:
+  - pattern: application/vnd.verentis.crm.note+json
+    mode: edit
+    priority: 200
+    json-schema:
+      id: https://schemas.verentis.io/crm/v1/note.schema.json
+      source: /applications/crm/schemas/note.schema.json
+      title: CRM note
+      version: '1'
+  permissions:
+  - file.read
+  - file.write
+  capabilities:
+  - file:read
+  - file:write
+  sandbox:
+    allow-scripts: true
+    allow-same-origin: true
+    allow-popups: false
+    allow-forms: true
+  data:
+    record:
+      kind: document
+      consistency: conditional
+  state:
+    showarchived: false
+  tree:
+  - type: canvas.stack
+    layout:
+      base:
+        padding: 6
+        gap: 4
+        maxWidth: 72rem
+        margin:
+          x: auto
+    children:
+    - type: canvas.stack
+      layout:
+        base:
+          direction: row
+          wrap: true
+          gap: 2
+          align: center
+          justify: between
+      children:
+      - type: canvas.stack
+        layout:
+          base:
+            gap: 1
+        children:
+        - type: canvas.stack
+          layout:
+            base:
+              direction: row
+              wrap: true
+              gap: 2
+              align: center
+          children:
+          - type: canvas.heading
+            props:
+              level: 2
+              text: '{{ form.values.title || ''New note'' }}'
+          - type: canvas.dashboard.badge
+            props:
+              text: Archived
+              tone: warning
+              icon: archive
+            rules:
+              visible: form.values.state === 'archived'
+        - type: canvas.text
+          props:
+            text: Note · {{ ctx.file.path }}
+            tone: muted
+      - type: canvas.stack
+        layout:
+          base:
+            direction: row
+            wrap: true
+            gap: 2
+            align: center
+        children:
+        - type: canvas.button
+          props:
+            label: Archive
+            variant: ghost
+            icon: archive
+            size: sm
+          'on':
+            click: archive
+          rules:
+            visible: '!(form.values.state === ''archived'')'
+            disabled: form.saving || form.dirty
+        - type: canvas.button
+          props:
+            label: Restore
+            variant: outline
+            icon: archive-restore
+            size: sm
+          'on':
+            click: restore
+          rules:
+            visible: form.values.state === 'archived'
+            disabled: form.saving || form.dirty
+        - type: canvas.button
+          props:
+            label: Reset
+            variant: ghost
+            size: sm
+          'on':
+            click: reset
+          rules:
+            disabled: form.saving || !form.dirty
+        - type: canvas.button
+          props:
+            label: Save
+            icon: save
+            size: sm
+          'on':
+            click: save
+          rules:
+            disabled: form.saving || !form.dirty || form.invalid || form.values.state === 'archived'
+    - type: canvas.text
+      props:
+        text: '{{ data.$record.error }}'
+      rules:
+        visible: data.$record.status === 'error'
+    - type: canvas.text
+      props:
+        text: Loading…
+        tone: muted
+      rules:
+        visible: data.$record.status === 'loading'
+    - type: canvas.dashboard.badge
+      props:
+        text: This note is archived. Restore it to edit.
+        tone: warning
+        icon: archive
+      rules:
+        visible: form.values.state === 'archived'
+    - type: canvas.stack
+      layout:
+        base:
+          direction: row
+          wrap: true
+          gap: 2
+          align: center
+      children:
+      - type: canvas.button
+        props:
+          label: '{{ form.values.regarding && form.values.regarding.path ? form.values.regarding.path.split(''/'').pop()
+            : ''Record'' }}'
+          variant: ghost
+          icon: corner-left-up
+          size: sm
+        'on':
+          click:
+          - open-file:
+              path: '{{ form.values.regarding.path }}'
+              mode: edit
+        rules:
+          visible: '!!(form.values.regarding && form.values.regarding.path)'
+    - type: canvas.grid
+      layout:
+        base:
+          columns: 1
+          gap: 4
+        tablet:
+          columns: 1
+      children:
+      - type: canvas.card
+        props:
+          title: Note
+        children:
+        - type: canvas.grid
+          layout:
+            base:
+              columns: 1
+              gap: 4
+            tablet:
+              columns: 2
+          children:
+          - type: canvas.form.input
+            props:
+              label: Title
+              value: '{{ form.values.title }}'
+              required: true
+            layout:
+              tablet:
+                colSpan: 2
+            rules:
+              disabled: form.values.state === 'archived'
+          - type: canvas.form.textarea
+            props:
+              label: Note
+              value: '{{ form.values.content }}'
+              rows: 12
+            layout:
+              tablet:
+                colSpan: 2
+            rules:
+              disabled: form.values.state === 'archived'
+  actions:
+    save:
+      steps:
+      - patch-form:
+          values:
+            updatedAt: '{{ Date() }}'
+      - save: {}
+      - toast:
+          message: Saved
+          variant: success
+    reset:
+      steps:
+      - reset-form: {}
+    archive:
+      steps:
+      - confirm:
+          title: Archive
+          message: Archive this record? It stays in the workspace and can be restored.
+      - patch-form:
+          values:
+            state: archived
+            archivedAt: '{{ Date() }}'
+            updatedAt: '{{ Date() }}'
+      - save: {}
+      - toast:
+          message: Archived
+          variant: success
+    restore:
+      steps:
+      - patch-form:
+          values:
+            state: active
+            updatedAt: '{{ Date() }}'
+      - save: {}
+      - toast:
+          message: Restored
+          variant: success

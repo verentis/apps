@@ -1,0 +1,7 @@
+# Feature overlay for markdown-viewer.app.yaml: pull request previews and the stable feature copy.
+# app-host is supplied at publish time (for example markdown-viewer-pr-12.apps.feature.verentis.dev).
+spec:
+  entry: https://${param:app-host}
+  oauth:
+    redirect-uris:
+      - https://${param:app-host}/auth/callback

@@ -1,0 +1,61 @@
+api-version: verentis.io/v1
+kind: Application
+
+metadata:
+  id: image-viewer
+  name: Image Viewer
+  description: Open workspace images, zoom into details and rotate the view
+    without changing the original file.
+  icon: ./icons/app.svg
+  version: 0.1.46
+  author: Verentis
+  labels:
+    category: media
+    builtin: "true"
+
+marketplace:
+  logo: ./marketplace/logo.svg
+  hero:
+    source: ./marketplace/image-viewer-hero.svg
+    alt: "Subdued layered colour planes on a tonal background, with a quiet centre
+      for the marketplace title, details and install controls."
+  images:
+    - source: ./marketplace/image-viewer.svg
+      alt: "Workflow illustration: inspect an original synthetic landscape at full
+        view and in detail; viewing controls do not modify the file."
+      caption: "Workflow illustration: inspect an original synthetic landscape at full
+        view and in detail; viewing controls do not modify the file."
+  readme: ./marketplace/README.md
+  changelog: ./CHANGELOG.md
+
+spec:
+  # `entry` (the iframe URL) is per-environment — see environments/{local,production}.yaml,
+  # merged onto this base by `verentis pack . --env <env>`.
+  scope: global
+
+  mime-types:
+    - pattern: "image/*"
+      mode: view
+      priority: 100
+
+  capabilities:
+    - file:read
+
+  permissions:
+    - file.read
+
+  sandbox:
+    allow-scripts: true
+    allow-same-origin: true
+    allow-popups: false
+    allow-forms: false
+
+  oauth:
+    client-type: public
+    # `redirect-uris` are per-environment — see environments/{local,production}.yaml.
+
+    # Marketplace packaging (`verentis pack`): a hosted iframe app keyed on intrinsic MIME types
+    # (image/*) installs only its manifest node — there are no companion files to bundle.
+packaging:
+  publisher: verentis
+  encryption: none

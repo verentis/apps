@@ -1,0 +1,7 @@
+# Production overlay for smart-editor.app.yaml, published once to the global registry by
+# .github/workflows/release.yml. The edge routes the region-free host to the owning region.
+spec:
+  entry: https://smart-editor.apps.verentis.io
+  oauth:
+    redirect-uris:
+      - https://smart-editor.apps.verentis.io/auth/callback

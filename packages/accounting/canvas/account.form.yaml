@@ -1,0 +1,365 @@
+api-version: canvas.verentis.io/v1
+kind: Form
+metadata:
+  id: accounting-account
+  name: Accounting account
+  description: View and edit an Accounting account.
+  icon: book-open
+spec:
+  binds:
+  - pattern: application/vnd.verentis.accounting.account+json
+    mode: edit
+    priority: 200
+    scope: global
+    json-schema:
+      id: https://schemas.verentis.io/accounting/v1/account.schema.json
+      source: /applications/accounting/schemas/account.schema.json
+      title: Accounting account
+      version: '1'
+  entry: ${var:canvas-origin}/render?document=%2Fapplications%2Faccounting%2Fcanvas%2Faccount.form.yaml
+  scope: global
+  mime-types:
+  - pattern: application/vnd.verentis.accounting.account+json
+    mode: edit
+    priority: 200
+    json-schema:
+      id: https://schemas.verentis.io/accounting/v1/account.schema.json
+      source: /applications/accounting/schemas/account.schema.json
+      title: Accounting account
+      version: '1'
+  permissions:
+  - file.read
+  - file.write
+  capabilities: []
+  sandbox:
+    allow-scripts: true
+    allow-same-origin: true
+    allow-popups: false
+    allow-forms: true
+  file-access:
+  - path: /journals
+    mode: read
+    reason: Show the postings to this account
+  - path: /applications/accounting/
+    mode: read
+    reason: Read the Accounting schemas and run the posting script
+  access:
+  - path: /journals
+    reason: Show the postings to this account
+  - path: /applications/accounting/
+    reason: Read the Accounting schemas and run the posting script
+  data:
+    record:
+      kind: document
+      consistency: conditional
+    journals:
+      kind: folder
+      path: /journals
+      contents: true
+      mime-pattern: application/vnd.verentis.accounting.journal+json
+  tree:
+  - type: canvas.stack
+    layout:
+      base:
+        padding: 6
+        gap: 4
+        maxWidth: 72rem
+        margin:
+          x: auto
+    children:
+    - type: canvas.stack
+      layout:
+        base:
+          direction: row
+          wrap: true
+          gap: 2
+          align: center
+          justify: between
+      children:
+      - type: canvas.stack
+        layout:
+          base:
+            gap: 1
+        children:
+        - type: canvas.stack
+          layout:
+            base:
+              direction: row
+              wrap: true
+              gap: 2
+              align: center
+          children:
+          - type: canvas.heading
+            props:
+              level: 2
+              text: '{{ form.values.name || ''New account'' }}'
+          - type: canvas.dashboard.badge
+            props:
+              text: '{{ String(form.values.accountType || '''').split(''-'').join('' '') }}'
+              tone: '{{ ["posted","closed"].includes(form.values.accountType) ? ''success'' : ["draft"].includes(form.values.accountType)
+                ? ''warning'' : ["reversed"].includes(form.values.accountType) ? ''danger'' : ["open","asset","liability","equity","income","expense"].includes(form.values.accountType)
+                ? ''info'' : ''neutral'' }}'
+            rules:
+              visible: '!!form.values.accountType'
+          - type: canvas.dashboard.badge
+            props:
+              text: Archived
+              tone: warning
+              icon: archive
+            rules:
+              visible: form.values.state === 'archived'
+        - type: canvas.text
+          props:
+            text: Account {{ form.values.code || '' }} · {{ ctx.file.path }}
+            tone: muted
+      - type: canvas.stack
+        layout:
+          base:
+            direction: row
+            wrap: true
+            gap: 2
+            align: center
+        children:
+        - type: canvas.stack
+          layout:
+            base:
+              direction: row
+              wrap: true
+              gap: 2
+              align: center
+          children:
+          - type: canvas.button
+            props:
+              label: Archive
+              variant: ghost
+              icon: archive
+              size: sm
+            'on':
+              click: archive
+            rules:
+              visible: '!(form.values.state === ''archived'') && !(false)'
+              disabled: form.saving || form.dirty
+          - type: canvas.button
+            props:
+              label: Restore
+              variant: outline
+              icon: archive-restore
+              size: sm
+            'on':
+              click: restore
+            rules:
+              visible: form.values.state === 'archived'
+              disabled: form.saving || form.dirty
+          - type: canvas.button
+            props:
+              label: Reset
+              variant: ghost
+              size: sm
+            'on':
+              click: reset
+            rules:
+              disabled: form.saving || !form.dirty
+          - type: canvas.button
+            props:
+              label: Save
+              icon: save
+              size: sm
+            'on':
+              click: save
+            rules:
+              disabled: form.saving || !form.dirty || form.invalid || form.values.state === 'archived'
+                || (false)
+    - type: canvas.text
+      props:
+        text: '{{ data.$record.error }}'
+      rules:
+        visible: data.$record.status === 'error'
+    - type: canvas.text
+      props:
+        text: Loading…
+        tone: muted
+      rules:
+        visible: data.$record.status === 'loading'
+    - type: canvas.dashboard.badge
+      props:
+        text: This account is archived. Restore it to edit.
+        tone: warning
+        icon: archive
+      rules:
+        visible: form.values.state === 'archived'
+    - type: canvas.tabs
+      props:
+        items:
+        - value: overview
+          label: Overview
+          icon: book-open
+        - value: ledger
+          label: Ledger
+          icon: list
+      children:
+      - type: canvas.stack
+        layout:
+          base:
+            gap: 4
+        children:
+        - type: canvas.grid
+          layout:
+            base:
+              columns: 1
+              gap: 4
+            tablet:
+              columns: 2
+          children:
+          - type: canvas.card
+            props:
+              title: Account
+            children:
+            - type: canvas.grid
+              layout:
+                base:
+                  columns: 1
+                  gap: 4
+                tablet:
+                  columns: 2
+              children:
+              - type: canvas.form.input
+                props:
+                  label: Account number
+                  value: '{{ form.values.number }}'
+                  placeholder: '1000'
+                rules:
+                  disabled: (form.values.state === 'archived' || (false))
+              - type: canvas.form.input
+                props:
+                  label: Name
+                  value: '{{ form.values.name }}'
+                  required: true
+                rules:
+                  disabled: (form.values.state === 'archived' || (false))
+              - type: canvas.form.select
+                props:
+                  label: Type
+                  value: '{{ form.values.accountType }}'
+                  options:
+                  - value: asset
+                    label: Asset
+                  - value: liability
+                    label: Liability
+                  - value: equity
+                    label: Equity
+                  - value: income
+                    label: Income
+                  - value: expense
+                    label: Expense
+                rules:
+                  disabled: (form.values.state === 'archived' || (false))
+              - type: canvas.form.textarea
+                props:
+                  label: Description
+                  value: '{{ form.values.description }}'
+                  rows: 4
+                layout:
+                  tablet:
+                    colSpan: 2
+                rules:
+                  disabled: (form.values.state === 'archived' || (false))
+        slot: overview
+      - type: canvas.stack
+        layout:
+          base:
+            gap: 4
+        children:
+        - type: canvas.text
+          props:
+            text: '{{ data.$journals.error }}'
+          rules:
+            visible: data.$journals.status === 'error'
+        - type: canvas.text
+          props:
+            text: Loading…
+            tone: muted
+          rules:
+            visible: data.$journals.status === 'loading'
+        - type: canvas.grid
+          layout:
+            base:
+              columns: 2
+              gap: 4
+            desktop:
+              columns: 3
+          children:
+          - type: canvas.dashboard.stat
+            props:
+              label: Balance (debit − credit)
+              value: '{{ ((data.journals || []).filter(j => j.kind === ''file'' && j.data && j.data.status
+                === ''posted'' && Array.isArray(j.data.lines)).reduce((sum, j) => sum + j.data.lines.filter(l
+                => l.account === ctx.file.path).reduce((s, l) => s + (l.direction === ''debit'' ? 1 :
+                -1) * Math.round(Number(l.amount || 0) * 10000), 0), 0) / 10000).toFixed(2) }}'
+              icon: scale
+              loading: '{{ data.$journals.status === ''loading'' }}'
+        - type: canvas.table
+          props:
+            rows: '{{ (data.journals || []).filter(j => j.kind === ''file'' && j.data && j.data.status
+              === ''posted'' && Array.isArray(j.data.lines)).reduce((rows, j) => rows.concat(j.data.lines.filter(l
+              => l.account === ctx.file.path).map(l => ({ path: j.path, date: j.data.date, journal: j.data.code
+              || j.name, description: l.description || j.data.description, debit: l.direction === ''debit''
+              ? l.amount : '''', credit: l.direction === ''credit'' ? l.amount : '''' }))), []).sort((a,
+              b) => (a.date < b.date ? -1 : (a.date > b.date ? 1 : 0))) }}'
+            columns:
+            - key: date
+              label: Date
+            - key: journal
+              label: Journal
+            - key: description
+              label: Description
+            - key: debit
+              label: Debit
+              align: end
+            - key: credit
+              label: Credit
+              align: end
+            emptyText: No posted journals use this account yet
+            clickable: true
+          'on':
+            row-click:
+            - open-file:
+                path: '{{ event.path }}'
+                mode: edit
+        slot: ledger
+  actions:
+    save:
+      steps:
+      - patch-form:
+          values:
+            updatedAt: '{{ Date() }}'
+      - save: {}
+      - toast:
+          message: Saved
+          variant: success
+    reset:
+      steps:
+      - reset-form: {}
+    archive:
+      steps:
+      - confirm:
+          title: Archive
+          message: Archive this record? It stays in the workspace and can be restored.
+      - patch-form:
+          values:
+            state: archived
+            archivedAt: '{{ Date() }}'
+            updatedAt: '{{ Date() }}'
+      - save: {}
+      - toast:
+          message: Archived
+          variant: success
+    restore:
+      steps:
+      - patch-form:
+          values:
+            state: active
+            updatedAt: '{{ Date() }}'
+      - save: {}
+      - toast:
+          message: Restored
+          variant: success

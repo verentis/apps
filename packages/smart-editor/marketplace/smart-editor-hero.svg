@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="640" viewBox="0 0 1600 640" role="img" aria-labelledby="title desc">
+  <title id="title">Smart Editor marketplace background</title>
+  <desc id="desc">Subdued fine angled linework on a tonal background, with a quiet centre for the marketplace title, details and install controls. Decorative edge motifs remain expendable under responsive cover cropping. No text, interface or product mark is embedded.</desc>
+  <defs>
+    <linearGradient id="field" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#43364F"/><stop offset="1" stop-color="#584762"/></linearGradient>
+    <linearGradient id="edges"><stop stop-color="white" stop-opacity=".5"/><stop offset=".17" stop-color="white" stop-opacity="0"/><stop offset=".83" stop-color="white" stop-opacity="0"/><stop offset="1" stop-color="white" stop-opacity=".45"/></linearGradient>
+    <mask id="quiet"><rect width="1600" height="640" fill="url(#edges)"/></mask>
+  </defs>
+  <rect width="1600" height="640" fill="url(#field)"/>
+  <g mask="url(#quiet)" color="#BCD0C7" stroke="currentColor" stroke-width="2" opacity=".18"><path d="M120 190-60 340l180 150M1500 160l180 160-180 160M-20 500l240-110M1440 580l220-100" fill="none" stroke-width="3"/></g>
+</svg>

@@ -1,0 +1,396 @@
+api-version: verentis.io/v1
+kind: Application
+metadata:
+  id: crm
+  name: CRM
+  description: Customers, contacts, deals, cases and their emails, calls,
+    meetings, tasks, notes and documents as files in your workspace, edited with
+    Canvas forms.
+  icon: ./icons/app.svg
+  version: 0.2.16
+  author: Verentis
+marketplace:
+  readme: ./README.md
+  keywords:
+    - crm
+    - customers
+    - clients
+    - accounts
+    - contacts
+    - companies
+    - deals
+    - opportunities
+    - sales
+    - pipeline
+    - cases
+    - support
+spec:
+  install-root: /applications/crm
+  entry: https://canvas.apps.localtest.me
+  scope: global
+  entry-points:
+    - id: home
+      display-name: CRM
+      route: /render?document=.%2Fcanvas%2Fhome.page.yaml
+      order: 10
+  launch:
+    enabled: true
+    entry-point: home
+    pinnable: true
+  widgets:
+    - id: follow-ups
+      display-name: Follow-ups
+      description: Open cases and deals closing within 14 days
+      route: /render?document=.%2Fcanvas%2Ffollow-ups.widget.page.yaml
+      default-size:
+        w: 4
+        h: 5
+      min-size:
+        w: 3
+        h: 3
+  permissions:
+    - file.read
+    - file.write
+    - execution.run
+  scopes:
+    - crm.default
+  settings:
+    - key: customer-code-prefix
+      display-name: Customer code prefix
+      type: string
+      default: CUST-
+      description: Prefix of generated customer codes, e.g. CUST-0001.
+    - key: contact-code-prefix
+      display-name: Contact code prefix
+      type: string
+      default: CON-
+      description: Prefix of generated contact codes, e.g. CON-0001.
+    - key: deal-code-prefix
+      display-name: Deal code prefix
+      type: string
+      default: DEAL-
+      description: Prefix of generated deal codes, e.g. DEAL-0001.
+    - key: case-code-prefix
+      display-name: Case code prefix
+      type: string
+      default: CASE-
+      description: Prefix of generated case codes, e.g. CASE-0001.
+    - key: code-digits
+      display-name: Code digits
+      type: number
+      default: 4
+      description: Minimum number of digits in generated codes (zero-padded).
+  dependencies:
+    - package: verentis/canvas
+      version: latest
+    - package: verentis/nodejs
+      version: latest
+  engine: verentis/nodejs
+  scripts:
+    - scripts/create
+  install:
+    - from: canvas/*.form.yaml
+      to: /applications/crm/canvas/
+      mode: managed
+      mime: application/vnd.verentis.canvas.form+yaml
+    - from: canvas/*.page.yaml
+      to: /applications/crm/canvas/
+      mode: managed
+      mime: application/vnd.verentis.canvas.page+yaml
+    - from: schemas/*.schema.json
+      to: /applications/crm/schemas/
+      mode: managed
+      mime: application/schema+json
+    - from: templates/*.json
+      to: /applications/crm/templates/
+      mode: managed
+      mime: application/json
+    - from: seed/customers
+      to: /customers
+      mode: seed
+      mime: application/vnd.verentis.crm.customers
+    - from: seed/deals
+      to: /deals
+      mode: seed
+      mime: application/vnd.verentis.crm.deals
+    - from: seed/cases
+      to: /cases
+      mode: seed
+      mime: application/vnd.verentis.crm.cases
+    - from: seed/settings.json
+      to: /settings/crm.json
+      mode: seed
+      mime: application/vnd.verentis.crm.settings+json
+  creatables:
+    - id: company
+      display-name: Customer
+      description: A new CRM customer
+      icon: lucide:building-2
+      mime: application/vnd.verentis.crm.company+json
+      parents:
+        - application/vnd.verentis.crm.customers
+      folder-names:
+        - customers
+        - clients
+        - accounts
+        - crm
+      script: ./scripts/create
+      template: ./templates/company.json
+    - id: contact
+      display-name: Contact
+      description: A new CRM contact
+      icon: lucide:user
+      mime: application/vnd.verentis.crm.contact+json
+      parents:
+        - application/vnd.verentis.crm.customers
+      folder-names:
+        - customers
+        - clients
+        - accounts
+        - contacts
+        - crm
+      script: ./scripts/create
+      template: ./templates/contact.json
+    - id: deal
+      display-name: Deal
+      description: A new CRM deal
+      icon: lucide:handshake
+      mime: application/vnd.verentis.crm.deal+json
+      parents:
+        - application/vnd.verentis.crm.deals
+      folder-names:
+        - deals
+        - opportunities
+        - pipeline
+      script: ./scripts/create
+      template: ./templates/deal.json
+    - id: case
+      display-name: Case
+      description: A new CRM case
+      icon: lucide:life-buoy
+      mime: application/vnd.verentis.crm.case+json
+      parents:
+        - application/vnd.verentis.crm.cases
+      folder-names:
+        - cases
+        - support
+        - tickets
+      script: ./scripts/create
+      template: ./templates/case.json
+    - id: email
+      display-name: Email
+      description: A new CRM email
+      icon: lucide:mail
+      mime: application/vnd.verentis.crm.email+json
+      parents:
+        - application/vnd.verentis.crm.company+json
+        - application/vnd.verentis.crm.contact+json
+        - application/vnd.verentis.crm.deal+json
+        - application/vnd.verentis.crm.case+json
+      folder-names:
+        - activities
+      script: ./scripts/create
+      template: ./templates/email.json
+    - id: call
+      display-name: Call
+      description: A new CRM call
+      icon: lucide:phone
+      mime: application/vnd.verentis.crm.call+json
+      parents:
+        - application/vnd.verentis.crm.company+json
+        - application/vnd.verentis.crm.contact+json
+        - application/vnd.verentis.crm.deal+json
+        - application/vnd.verentis.crm.case+json
+      folder-names:
+        - activities
+      script: ./scripts/create
+      template: ./templates/call.json
+    - id: meeting
+      display-name: Meeting
+      description: A new CRM meeting
+      icon: lucide:calendar-days
+      mime: application/vnd.verentis.crm.meeting+json
+      parents:
+        - application/vnd.verentis.crm.company+json
+        - application/vnd.verentis.crm.contact+json
+        - application/vnd.verentis.crm.deal+json
+        - application/vnd.verentis.crm.case+json
+      folder-names:
+        - activities
+      script: ./scripts/create
+      template: ./templates/meeting.json
+    - id: task
+      display-name: Task
+      description: A new CRM task
+      icon: lucide:square-check
+      mime: application/vnd.verentis.crm.task+json
+      parents:
+        - application/vnd.verentis.crm.company+json
+        - application/vnd.verentis.crm.contact+json
+        - application/vnd.verentis.crm.deal+json
+        - application/vnd.verentis.crm.case+json
+      folder-names:
+        - activities
+      script: ./scripts/create
+      template: ./templates/task.json
+    - id: note
+      display-name: Note
+      description: A new CRM note
+      icon: lucide:sticky-note
+      mime: application/vnd.verentis.crm.note+json
+      parents:
+        - application/vnd.verentis.crm.company+json
+        - application/vnd.verentis.crm.contact+json
+        - application/vnd.verentis.crm.deal+json
+        - application/vnd.verentis.crm.case+json
+      folder-names:
+        - notes
+      script: ./scripts/create
+      template: ./templates/note.json
+  sandbox:
+    allow-scripts: true
+    allow-same-origin: true
+    allow-forms: true
+    allow-popups: false
+  file-access:
+    - path: /customers
+      mode: read
+      reason: List customers and contacts
+      origin:
+        kind: document
+        id: canvas/home.page.yaml
+    - path: /deals
+      mode: read
+      reason: List deals and the pipeline
+      origin:
+        kind: document
+        id: canvas/home.page.yaml
+    - path: /cases
+      mode: read
+      reason: List cases
+      origin:
+        kind: document
+        id: canvas/home.page.yaml
+    - path: /deals
+      mode: read
+      reason: Show open deals that are due to close
+      origin:
+        kind: document
+        id: canvas/follow-ups.widget.page.yaml
+    - path: /cases
+      mode: read
+      reason: Show open cases
+      origin:
+        kind: document
+        id: canvas/follow-ups.widget.page.yaml
+    - path: /customers
+      mode: read
+      reason: List the contacts and companies of this customer
+      origin:
+        kind: document
+        id: crm-company
+    - path: /deals
+      mode: read
+      reason: Show this customer's deals
+      origin:
+        kind: document
+        id: crm-company
+    - path: /cases
+      mode: read
+      reason: Show this customer's cases
+      origin:
+        kind: document
+        id: crm-company
+    - path: /applications/crm/
+      mode: read
+      reason: Read the CRM schemas
+      origin:
+        kind: document
+        id: crm-company
+    - path: /customers
+      mode: read
+      reason: List the contacts and companies of this customer
+      origin:
+        kind: document
+        id: crm-contact
+    - path: /deals
+      mode: read
+      reason: Show this customer's deals
+      origin:
+        kind: document
+        id: crm-contact
+    - path: /cases
+      mode: read
+      reason: Show this customer's cases
+      origin:
+        kind: document
+        id: crm-contact
+    - path: /applications/crm/
+      mode: read
+      reason: Read the CRM schemas
+      origin:
+        kind: document
+        id: crm-contact
+    - path: /customers
+      mode: read
+      reason: Pick the customer and contact
+      origin:
+        kind: document
+        id: crm-deal
+    - path: /settings/crm.json
+      mode: read
+      reason: Read the pipeline stages
+      origin:
+        kind: document
+        id: crm-deal
+    - path: /applications/crm/
+      mode: read
+      reason: Read the CRM schemas
+      origin:
+        kind: document
+        id: crm-deal
+    - path: /customers
+      mode: read
+      reason: Pick the customer and contact
+      origin:
+        kind: document
+        id: crm-case
+    - path: /applications/crm/
+      mode: read
+      reason: Read the CRM schemas
+      origin:
+        kind: document
+        id: crm-case
+    - path: /customers
+      mode: write
+      reason: Create customers and contacts with the next code, and their activities
+        and notes
+      origin:
+        kind: script
+        id: crm-create
+    - path: /deals
+      mode: write
+      reason: Create deals with the next code, and their activities and notes
+      origin:
+        kind: script
+        id: crm-create
+    - path: /cases
+      mode: write
+      reason: Create cases with the next code, and their activities and notes
+      origin:
+        kind: script
+        id: crm-create
+packaging:
+  publisher: verentis
+  files:
+    - canvas/**
+    - schemas/**
+    - templates/**
+    - seed/**
+    - scripts/**
+    - README.md
+  templates:
+    - canvas/*.yaml
+  variables:
+    canvas-origin: https://canvas.apps.localtest.me
+  encryption: none

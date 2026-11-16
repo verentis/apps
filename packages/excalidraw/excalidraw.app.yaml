@@ -1,0 +1,92 @@
+api-version: verentis.io/v1
+kind: Application
+metadata:
+  id: excalidraw
+  name: Excalidraw
+  description: Workspace whiteboards, diagrams and wireframes with a self-hosted
+    Excalidraw editor.
+  icon: ./icons/excalidraw.svg
+  version: 0.1.19
+  author: Verentis
+  labels:
+    category: editor
+marketplace:
+  logo: ./marketplace/logo.svg
+  hero:
+    source: ./marketplace/hero.svg
+    alt: Synthetic shapes and connectors on a quiet whiteboard background.
+  images:
+    - source: ./marketplace/workflow.svg
+      alt: Synthetic flowchart illustrating a workspace document, shared editor and
+        durable save.
+      caption: Workflow illustration, not a screenshot or production collaboration
+        claim.
+  readme: ./marketplace/README.md
+  changelog: ./CHANGELOG.md
+spec:
+  scope: global
+  launch:
+    enabled: true
+    entry-point: home
+    pinnable: true
+  entry-points:
+    - id: home
+      display-name: Excalidraw
+      icon: ./icons/excalidraw.svg
+      route: /
+    - id: document
+      display-name: Excalidraw document
+      icon: ./icons/excalidraw.svg
+      route: /
+      mime-types:
+        - pattern: application/vnd.excalidraw+json
+          mode: edit
+          priority: 200
+  widgets:
+    - id: recent
+      display-name: Recent boards
+      description: Recently changed Excalidraw boards
+      route: /widgets/recent
+      default-size: { w: 4, h: 4 }
+      min-size: { w: 3, h: 2 }
+  menus:
+    - id: board
+      label: Board
+      items:
+        - { command: board.save, label: Save, shortcut: "⌘S" }
+        - { separator: true }
+        - { command: board.download, label: Download document }
+        - { command: board.export-png, label: Export PNG }
+        - { command: board.export-svg, label: Export SVG }
+    - id: view
+      label: View
+      items:
+        - { command: view.zoom-to-fit, label: Zoom to fit }
+  mime-types:
+    - pattern: application/vnd.excalidraw+json
+      mode: edit
+      priority: 200
+  file-types:
+    - pattern: application/vnd.excalidraw+json
+      extensions: [ .excalidraw ]
+      priority: 200
+      icon: ./icons/excalidraw.svg
+  capabilities:
+    - file:read
+    - file:write
+  collaboration:
+    mode: native-scene-v1
+  permissions:
+    - file.read
+    - file.write
+  sandbox:
+    allow-scripts: true
+    allow-same-origin: true
+    allow-popups: false
+    allow-forms: true
+    allow-downloads: true
+  oauth:
+    client-type: public
+packaging:
+  publisher: verentis
+  encryption: none

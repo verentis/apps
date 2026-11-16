@@ -1,0 +1,16 @@
+{
+  "$schema": "https://schemas.verentis.io/accounting/v1/settings.schema.json",
+  "schemaVersion": 1,
+  "country": "",
+  "baseCurrency": "",
+  "minorDigits": 2,
+  "fiscalYearStartMonth": 1,
+  "taxCodes": [
+    {
+      "code": "VAT",
+      "name": "Value-added tax",
+      "ratePercent": "15",
+      "account": "/chart-of-accounts/ACC-0003"
+    }
+  ]
+}

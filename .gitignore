@@ -1,0 +1,9 @@
+node_modules/
+.nuxt/
+.output/
+.agents/
+.claude/
+.env
+.env.*
+tests/scenarios/*/outcomes/
+*.vpkg

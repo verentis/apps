@@ -1,0 +1,32 @@
+{
+  "$schema": "https://schemas.verentis.io/crm/v1/settings.schema.json",
+  "schemaVersion": 1,
+  "country": "",
+  "currency": "",
+  "stages": [
+    {
+      "id": "lead",
+      "label": "Lead",
+      "order": 0,
+      "probability": 10
+    },
+    {
+      "id": "qualified",
+      "label": "Qualified",
+      "order": 1,
+      "probability": 25
+    },
+    {
+      "id": "proposal",
+      "label": "Proposal",
+      "order": 2,
+      "probability": 50
+    },
+    {
+      "id": "negotiation",
+      "label": "Negotiation",
+      "order": 3,
+      "probability": 75
+    }
+  ]
+}
