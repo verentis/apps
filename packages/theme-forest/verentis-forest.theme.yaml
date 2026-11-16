@@ -8,7 +8,7 @@ metadata:
     stripes. Light and dark mode; it keeps your existing logos, favicon and
     backgrounds.
   icon: ./marketplace/logo.svg
-  version: 1.0.4
+  version: 1.0.5
   author: Verentis
   tags: [ theme, verentis, green ]
 
