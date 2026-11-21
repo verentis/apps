@@ -1,0 +1,206 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "timesheets-week",
+    "name": "This week",
+    "description": "Hours by project over the last seven days.",
+    "icon": "calendar-days"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/timesheets",
+        "reason": "Sum this week's hours by project"
+      },
+      {
+        "path": "/projects",
+        "reason": "Show project names (when Project is installed)"
+      }
+    ],
+    "data": {
+      "entries": {
+        "kind": "folder",
+        "path": "/timesheets",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.timesheets.entry+json"
+      },
+      "projects": {
+        "kind": "folder",
+        "path": "/projects",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.project.project+json"
+      },
+      "weekly": {
+        "kind": "computed",
+        "expr": "(data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.date >= Date(Date.now() - 6 * 86400000).slice(0, 10) && e.data.date <= Date().slice(0, 10))).map(e => e.data.project || '').filter((key, index, keys) => keys.indexOf(key) === index).map(key => ({ key, project: ((((data.projects || []).find(p => p.path === key) || {}).data || {}).name || key || '(no project)'), entries: (data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.date >= Date(Date.now() - 6 * 86400000).slice(0, 10) && e.data.date <= Date().slice(0, 10))).filter(e => (e.data.project || '') === key).length, validated: (data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.date >= Date(Date.now() - 6 * 86400000).slice(0, 10) && e.data.date <= Date().slice(0, 10))).filter(e => (e.data.project || '') === key && (e.data.status === 'validated') === true).reduce((s, e) => s + Math.round(Number(e.data.hours || 0) * 10000), 0), draft: (data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.date >= Date(Date.now() - 6 * 86400000).slice(0, 10) && e.data.date <= Date().slice(0, 10))).filter(e => (e.data.project || '') === key && (e.data.status === 'validated') === false).reduce((s, e) => s + Math.round(Number(e.data.hours || 0) * 10000), 0) })).sort((a, b) => (b.validated + b.draft) - (a.validated + a.draft))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "This week"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Hours by project over the last seven days, today inclusive (since {{ Date(Date.now() - 6 * 86400000).slice(0, 10) }}).",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Timesheets",
+                  "variant": "ghost",
+                  "icon": "clock",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/applications/timesheets/canvas/home.page.yaml"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$entries.error }}"
+            },
+            "rules": {
+              "visible": "data.$entries.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$entries.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 3
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Hours this week",
+                  "value": "{{ ((data.weekly || []).reduce((s, g) => s + g.draft + g.validated, 0) / 10000).toFixed(2) }}",
+                  "icon": "clock",
+                  "loading": "{{ data.$entries.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Validated",
+                  "value": "{{ ((data.weekly || []).reduce((s, g) => s + g.validated, 0) / 10000).toFixed(2) }}",
+                  "icon": "check",
+                  "loading": "{{ data.$entries.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Projects",
+                  "value": "{{ (data.weekly || []).length }}",
+                  "icon": "folder-kanban",
+                  "loading": "{{ data.$entries.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.weekly || []).map(g => ({ project: g.project, entries: g.entries, draft: (g.draft / 10000).toFixed(2), validated: (g.validated / 10000).toFixed(2), total: ((g.draft + g.validated) / 10000).toFixed(2) })) }}",
+              "columns": [
+                {
+                  "key": "project",
+                  "label": "Project"
+                },
+                {
+                  "key": "entries",
+                  "label": "Entries",
+                  "align": "end"
+                },
+                {
+                  "key": "draft",
+                  "label": "Draft hours",
+                  "align": "end"
+                },
+                {
+                  "key": "validated",
+                  "label": "Validated hours",
+                  "align": "end"
+                },
+                {
+                  "key": "total",
+                  "label": "Total",
+                  "align": "end"
+                }
+              ],
+              "emptyText": "No hours logged this week"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

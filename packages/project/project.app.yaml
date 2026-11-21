@@ -1,0 +1,328 @@
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "project",
+    "name": "Project",
+    "description": "Projects and their tasks as files in your workspace, with a stage board and a Complete action script.",
+    "icon": "./icons/app.svg",
+    "version": "0.1.0",
+    "author": "Verentis"
+  },
+  "marketplace": {
+    "readme": "./README.md",
+    "keywords": [
+      "project",
+      "projects",
+      "tasks",
+      "kanban",
+      "board",
+      "planning"
+    ]
+  },
+  "spec": {
+    "install-root": "/applications/project",
+    "entry": "https://canvas.apps.localtest.me",
+    "scope": "global",
+    "entry-points": [
+      {
+        "id": "home",
+        "display-name": "Project",
+        "route": "/render?document=.%2Fcanvas%2Fhome.page.yaml",
+        "order": 10
+      },
+      {
+        "id": "board",
+        "display-name": "Task board",
+        "route": "/render?document=.%2Fcanvas%2Fboard.page.yaml",
+        "order": 20
+      }
+    ],
+    "launch": {
+      "enabled": true,
+      "entry-point": "home",
+      "pinnable": true
+    },
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run"
+    ],
+    "scopes": [
+      "project.default"
+    ],
+    "settings": [
+      {
+        "key": "project-code-prefix",
+        "display-name": "Project code prefix",
+        "type": "string",
+        "default": "PROJ-",
+        "description": "Prefix of generated project codes, e.g. PROJ-0001."
+      },
+      {
+        "key": "task-code-prefix",
+        "display-name": "Task code prefix",
+        "type": "string",
+        "default": "TASK-",
+        "description": "Prefix of generated task codes, e.g. TASK-0001."
+      },
+      {
+        "key": "code-digits",
+        "display-name": "Code digits",
+        "type": "number",
+        "default": 4,
+        "description": "Minimum number of digits in generated codes (zero-padded)."
+      }
+    ],
+    "dependencies": [
+      {
+        "package": "verentis/canvas",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/nodejs",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/crm",
+        "version": "latest",
+        "optional": true
+      }
+    ],
+    "engine": "verentis/nodejs",
+    "scripts": [
+      "scripts/create",
+      "scripts/post"
+    ],
+    "install": [
+      {
+        "from": "canvas/*.form.yaml",
+        "to": "/applications/project/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.form+yaml"
+      },
+      {
+        "from": "canvas/*.page.yaml",
+        "to": "/applications/project/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.page+yaml"
+      },
+      {
+        "from": "schemas/*.schema.json",
+        "to": "/applications/project/schemas/",
+        "mode": "managed",
+        "mime": "application/schema+json"
+      },
+      {
+        "from": "templates/*.json",
+        "to": "/applications/project/templates/",
+        "mode": "managed",
+        "mime": "application/json"
+      },
+      {
+        "from": "seed/projects",
+        "to": "/projects",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.project.projects"
+      },
+      {
+        "from": "seed/tasks",
+        "to": "/tasks",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.project.tasks"
+      },
+      {
+        "from": "seed/settings.json",
+        "to": "/settings/project.json",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.project.settings+json"
+      }
+    ],
+    "creatables": [
+      {
+        "id": "project",
+        "display-name": "Project",
+        "description": "A new project",
+        "icon": "lucide:folder-kanban",
+        "mime": "application/vnd.verentis.project.project+json",
+        "parents": [
+          "application/vnd.verentis.project.projects"
+        ],
+        "folder-names": [
+          "projects",
+          "project"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/project.json"
+      },
+      {
+        "id": "task",
+        "display-name": "Task",
+        "description": "A new task",
+        "icon": "lucide:square-check-big",
+        "mime": "application/vnd.verentis.project.task+json",
+        "parents": [
+          "application/vnd.verentis.project.tasks"
+        ],
+        "folder-names": [
+          "tasks",
+          "project"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/task.json"
+      }
+    ],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-forms": true,
+      "allow-popups": false
+    },
+    "file-access": [
+      {
+        "path": "/projects",
+        "mode": "read",
+        "reason": "List projects",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/tasks",
+        "mode": "read",
+        "reason": "List tasks",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/tasks",
+        "mode": "read",
+        "reason": "Group tasks by stage",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/board.page.yaml"
+        }
+      },
+      {
+        "path": "/projects",
+        "mode": "read",
+        "reason": "Show each task's project name",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/board.page.yaml"
+        }
+      },
+      {
+        "path": "/customers",
+        "mode": "read",
+        "reason": "Offer CRM customers to link (when CRM is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "project-project"
+        }
+      },
+      {
+        "path": "/tasks",
+        "mode": "read",
+        "reason": "Summarise this project's tasks by stage",
+        "origin": {
+          "kind": "document",
+          "id": "project-project"
+        }
+      },
+      {
+        "path": "/applications/project/",
+        "mode": "read",
+        "reason": "Read the Project schemas and run the task script",
+        "origin": {
+          "kind": "document",
+          "id": "project-project"
+        }
+      },
+      {
+        "path": "/projects",
+        "mode": "read",
+        "reason": "Choose the project a task belongs to",
+        "origin": {
+          "kind": "document",
+          "id": "project-task"
+        }
+      },
+      {
+        "path": "/applications/project/",
+        "mode": "read",
+        "reason": "Read the Project schemas and run the task script",
+        "origin": {
+          "kind": "document",
+          "id": "project-task"
+        }
+      },
+      {
+        "path": "/applications/project/",
+        "mode": "read",
+        "reason": "Read the Project schemas and run the task script",
+        "origin": {
+          "kind": "document",
+          "id": "project-settings"
+        }
+      },
+      {
+        "path": "/projects",
+        "mode": "write",
+        "reason": "Create projects with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "project-create"
+        }
+      },
+      {
+        "path": "/tasks",
+        "mode": "write",
+        "reason": "Create tasks with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "project-create"
+        }
+      },
+      {
+        "path": "/settings/project.json",
+        "mode": "read",
+        "reason": "Default new tasks' assignee",
+        "origin": {
+          "kind": "script",
+          "id": "project-create"
+        }
+      },
+      {
+        "path": "/tasks",
+        "mode": "write",
+        "reason": "Mark tasks done with their completion time",
+        "origin": {
+          "kind": "script",
+          "id": "project-post"
+        }
+      }
+    ]
+  },
+  "packaging": {
+    "publisher": "verentis",
+    "files": [
+      "canvas/**",
+      "schemas/**",
+      "templates/**",
+      "seed/**",
+      "scripts/**",
+      "README.md"
+    ],
+    "templates": [
+      "canvas/*.yaml"
+    ],
+    "variables": {
+      "canvas-origin": "https://canvas.apps.localtest.me"
+    },
+    "encryption": "none"
+  }
+}
