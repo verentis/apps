@@ -1,0 +1,224 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "expenses-by-category",
+    "name": "Expenses by category",
+    "description": "What has been expensed against each category.",
+    "icon": "tags"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/expense-categories",
+        "reason": "Sum submitted, approved and posted report lines by category"
+      },
+      {
+        "path": "/expense-reports",
+        "reason": "Sum submitted, approved and posted report lines by category"
+      }
+    ],
+    "data": {
+      "reports": {
+        "kind": "folder",
+        "path": "/expense-reports",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.expenses.report+json"
+      },
+      "categories": {
+        "kind": "folder",
+        "path": "/expense-categories",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.expenses.category+json"
+      },
+      "rows": {
+        "kind": "computed",
+        "expr": "(data.reports || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, employee: e.data.employeeName || '', date: e.data.date || '', lineCount: (e.data.lines || []).length, total: e.data.total ? Math.round(Number(e.data.total || 0) * 10000) : (e.data.lines || []).reduce((s, l) => s + Math.round(Number(l.amount || 0) * 10000), 0), status: e.data.status || 'draft', approver: e.data.approver || '' }))"
+      },
+      "summary": {
+        "kind": "computed",
+        "expr": "(data.categories || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, name: e.data.name || '', lineCount: (data.reports || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && ['submitted', 'approved', 'posted'].includes(e.data.status)).flatMap(e => (e.data.lines || []).map(l => ({ category: l.category, amount: Math.round(Number(l.amount || 0) * 10000) }))).filter(l => l.category === e.path).length, total: (data.reports || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && ['submitted', 'approved', 'posted'].includes(e.data.status)).flatMap(e => (e.data.lines || []).map(l => ({ category: l.category, amount: Math.round(Number(l.amount || 0) * 10000) }))).filter(l => l.category === e.path).reduce((s, l) => s + l.amount, 0) }))"
+      }
+    },
+    "state": {
+      "showempty": false
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Expenses by category"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Submitted, approved and posted report lines, summed by their category.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Expenses",
+                  "variant": "ghost",
+                  "icon": "receipt",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/applications/expenses/canvas/home.page.yaml"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$reports.error }}"
+            },
+            "rules": {
+              "visible": "data.$reports.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$categories.error }}"
+            },
+            "rules": {
+              "visible": "data.$categories.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 3
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Categories",
+                  "value": "{{ (data.categories || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).length }}",
+                  "icon": "tags",
+                  "loading": "{{ data.$categories.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Expensed lines",
+                  "value": "{{ (data.reports || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && ['submitted', 'approved', 'posted'].includes(e.data.status)).flatMap(e => (e.data.lines || []).map(l => ({ category: l.category, amount: Math.round(Number(l.amount || 0) * 10000) }))).length }}",
+                  "icon": "receipt",
+                  "loading": "{{ data.$reports.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Expensed total",
+                  "value": "{{ ((data.reports || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && ['submitted', 'approved', 'posted'].includes(e.data.status)).flatMap(e => (e.data.lines || []).map(l => ({ category: l.category, amount: Math.round(Number(l.amount || 0) * 10000) }))).reduce((s, l) => s + l.amount, 0) / 10000).toFixed(2) }}",
+                  "icon": "sigma",
+                  "loading": "{{ data.$reports.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.form.switch",
+            "props": {
+              "label": "Show categories without expenses",
+              "value": "{{ state.showempty }}"
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.summary || []).filter(c => state.showempty || c.lineCount > 0).map(c => ({ path: c.path, code: c.code, name: c.name, lineCount: c.lineCount, total: (c.total / 10000).toFixed(2) })) }}",
+              "columns": [
+                {
+                  "key": "code",
+                  "label": "Category"
+                },
+                {
+                  "key": "name",
+                  "label": "Name"
+                },
+                {
+                  "key": "lineCount",
+                  "label": "Lines",
+                  "align": "end"
+                },
+                {
+                  "key": "total",
+                  "label": "Total",
+                  "align": "end"
+                }
+              ],
+              "emptyText": "Nothing expensed yet",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

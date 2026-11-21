@@ -1,0 +1,13 @@
+{
+  "$schema": "https://schemas.verentis.io/helpdesk/v1/team.schema.json",
+  "schemaVersion": 1,
+  "kind": "team",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "name": "{{ name }}",
+  "members": [],
+  "slaHours": 24
+}

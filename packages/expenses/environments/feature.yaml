@@ -1,0 +1,15 @@
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "expenses"
+  },
+  "spec": {
+    "entry": "https://canvas.${param:apps-domain}"
+  },
+  "packaging": {
+    "variables": {
+      "canvas-origin": "https://canvas.${param:apps-domain}"
+    }
+  }
+}

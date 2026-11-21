@@ -1,0 +1,5 @@
+{
+  "$schema": "https://schemas.verentis.io/expenses/v1/settings.schema.json",
+  "schemaVersion": 1,
+  "reimbursementAccount": "/chart-of-accounts/ACC-0001"
+}

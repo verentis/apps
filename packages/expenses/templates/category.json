@@ -1,0 +1,12 @@
+{
+  "$schema": "https://schemas.verentis.io/expenses/v1/category.schema.json",
+  "schemaVersion": 1,
+  "kind": "category",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "name": "{{ name }}",
+  "expenseAccount": ""
+}

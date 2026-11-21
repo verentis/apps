@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.verentis.io/expenses/v1/settings.schema.json",
+  "title": "Expenses settings",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "const": "https://schemas.verentis.io/expenses/v1/settings.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "reimbursementAccount": {
+      "type": "string",
+      "maxLength": 4096,
+      "pattern": "^(/.*)?$"
+    }
+  },
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "reimbursementAccount"
+  ],
+  "additionalProperties": false
+}

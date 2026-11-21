@@ -1,0 +1,419 @@
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "expenses",
+    "name": "Expenses",
+    "description": "Expense categories and employee expense reports as files in your workspace, submitted, approved and posted to the Accounting ledger by script.",
+    "icon": "./icons/app.svg",
+    "version": "0.1.0",
+    "author": "Verentis"
+  },
+  "marketplace": {
+    "readme": "./README.md",
+    "keywords": [
+      "expenses",
+      "expense reports",
+      "reimbursements",
+      "approvals",
+      "accounting"
+    ]
+  },
+  "spec": {
+    "install-root": "/applications/expenses",
+    "entry": "https://canvas.apps.localtest.me",
+    "scope": "global",
+    "entry-points": [
+      {
+        "id": "home",
+        "display-name": "Expenses",
+        "route": "/render?document=.%2Fcanvas%2Fhome.page.yaml",
+        "order": 10
+      },
+      {
+        "id": "reports",
+        "display-name": "Expense reports",
+        "route": "/render?document=.%2Fcanvas%2Freports.page.yaml",
+        "order": 20
+      },
+      {
+        "id": "by-category",
+        "display-name": "By category",
+        "route": "/render?document=.%2Fcanvas%2Fby-category.page.yaml",
+        "order": 30
+      }
+    ],
+    "launch": {
+      "enabled": true,
+      "entry-point": "home",
+      "pinnable": true
+    },
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run"
+    ],
+    "scopes": [
+      "expenses.default"
+    ],
+    "settings": [
+      {
+        "key": "category-code-prefix",
+        "display-name": "Category code prefix",
+        "type": "string",
+        "default": "CAT-",
+        "description": "Prefix of generated expense category numbers, e.g. CAT-0001."
+      },
+      {
+        "key": "report-code-prefix",
+        "display-name": "Expense report number prefix",
+        "type": "string",
+        "default": "EXP-",
+        "description": "Prefix of generated expense report numbers, e.g. EXP-0001."
+      },
+      {
+        "key": "code-digits",
+        "display-name": "Code digits",
+        "type": "number",
+        "default": 4,
+        "description": "Minimum number of digits in generated numbers (zero-padded)."
+      }
+    ],
+    "dependencies": [
+      {
+        "package": "verentis/canvas",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/nodejs",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/accounting",
+        "version": "latest"
+      }
+    ],
+    "engine": "verentis/nodejs",
+    "scripts": [
+      "scripts/create",
+      "scripts/post"
+    ],
+    "install": [
+      {
+        "from": "canvas/*.form.yaml",
+        "to": "/applications/expenses/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.form+yaml"
+      },
+      {
+        "from": "canvas/*.page.yaml",
+        "to": "/applications/expenses/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.page+yaml"
+      },
+      {
+        "from": "schemas/*.schema.json",
+        "to": "/applications/expenses/schemas/",
+        "mode": "managed",
+        "mime": "application/schema+json"
+      },
+      {
+        "from": "templates/*.json",
+        "to": "/applications/expenses/templates/",
+        "mode": "managed",
+        "mime": "application/json"
+      },
+      {
+        "from": "seed/categories",
+        "to": "/expense-categories",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.expenses.categories"
+      },
+      {
+        "from": "seed/reports",
+        "to": "/expense-reports",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.expenses.reports"
+      },
+      {
+        "from": "seed/starter/CAT-0001.json",
+        "to": "/expense-categories/CAT-0001",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.expenses.category+json"
+      },
+      {
+        "from": "seed/starter/CAT-0002.json",
+        "to": "/expense-categories/CAT-0002",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.expenses.category+json"
+      },
+      {
+        "from": "seed/starter/CAT-0003.json",
+        "to": "/expense-categories/CAT-0003",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.expenses.category+json"
+      },
+      {
+        "from": "seed/sample/EXP-0001.json",
+        "to": "/expense-reports/EXP-0001",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.expenses.report+json"
+      },
+      {
+        "from": "seed/settings.json",
+        "to": "/settings/expenses.json",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.expenses.settings+json"
+      }
+    ],
+    "creatables": [
+      {
+        "id": "category",
+        "display-name": "Expense category",
+        "description": "A new expense category",
+        "icon": "lucide:tags",
+        "mime": "application/vnd.verentis.expenses.category+json",
+        "parents": [
+          "application/vnd.verentis.expenses.categories"
+        ],
+        "folder-names": [
+          "expense-categories",
+          "expenses"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/category.json"
+      },
+      {
+        "id": "report",
+        "display-name": "Expense report",
+        "description": "A new expense report",
+        "icon": "lucide:receipt",
+        "mime": "application/vnd.verentis.expenses.report+json",
+        "parents": [
+          "application/vnd.verentis.expenses.reports"
+        ],
+        "folder-names": [
+          "expense-reports",
+          "expenses"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/report.json"
+      }
+    ],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-forms": true,
+      "allow-popups": false
+    },
+    "file-access": [
+      {
+        "path": "/expense-categories",
+        "mode": "read",
+        "reason": "List expense reports and categories",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/expense-reports",
+        "mode": "read",
+        "reason": "List expense reports and categories",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/expense-categories",
+        "mode": "read",
+        "reason": "List expense reports with their totals and statuses",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/reports.page.yaml"
+        }
+      },
+      {
+        "path": "/expense-reports",
+        "mode": "read",
+        "reason": "List expense reports with their totals and statuses",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/reports.page.yaml"
+        }
+      },
+      {
+        "path": "/expense-categories",
+        "mode": "read",
+        "reason": "Sum submitted, approved and posted report lines by category",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/by-category.page.yaml"
+        }
+      },
+      {
+        "path": "/expense-reports",
+        "mode": "read",
+        "reason": "Sum submitted, approved and posted report lines by category",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/by-category.page.yaml"
+        }
+      },
+      {
+        "path": "/chart-of-accounts",
+        "mode": "read",
+        "reason": "Choose the expense account lines of this category post to",
+        "origin": {
+          "kind": "document",
+          "id": "expenses-category"
+        }
+      },
+      {
+        "path": "/applications/expenses/",
+        "mode": "read",
+        "reason": "Read the Expenses schemas and run the posting script",
+        "origin": {
+          "kind": "document",
+          "id": "expenses-category"
+        }
+      },
+      {
+        "path": "/expense-categories",
+        "mode": "read",
+        "reason": "Offer the expense categories for each line",
+        "origin": {
+          "kind": "document",
+          "id": "expenses-report"
+        }
+      },
+      {
+        "path": "/applications/expenses/",
+        "mode": "read",
+        "reason": "Read the Expenses schemas and run the posting script",
+        "origin": {
+          "kind": "document",
+          "id": "expenses-report"
+        }
+      },
+      {
+        "path": "/chart-of-accounts",
+        "mode": "read",
+        "reason": "Choose the account posted reports credit",
+        "origin": {
+          "kind": "document",
+          "id": "expenses-settings"
+        }
+      },
+      {
+        "path": "/applications/expenses/",
+        "mode": "read",
+        "reason": "Read the Expenses schemas and run the posting script",
+        "origin": {
+          "kind": "document",
+          "id": "expenses-settings"
+        }
+      },
+      {
+        "path": "/expense-categories",
+        "mode": "write",
+        "reason": "Create expense categories with the next number",
+        "origin": {
+          "kind": "script",
+          "id": "expenses-create"
+        }
+      },
+      {
+        "path": "/expense-reports",
+        "mode": "write",
+        "reason": "Create expense reports with the next number",
+        "origin": {
+          "kind": "script",
+          "id": "expenses-create"
+        }
+      },
+      {
+        "path": "/settings/expenses.json",
+        "mode": "read",
+        "reason": "Read the reimbursement account reports post against",
+        "origin": {
+          "kind": "script",
+          "id": "expenses-post"
+        }
+      },
+      {
+        "path": "/settings/accounting.json",
+        "mode": "read",
+        "reason": "Read the ledger's base currency and precision",
+        "origin": {
+          "kind": "script",
+          "id": "expenses-post"
+        }
+      },
+      {
+        "path": "/chart-of-accounts",
+        "mode": "read",
+        "reason": "Check that posted accounts exist and are active",
+        "origin": {
+          "kind": "script",
+          "id": "expenses-post"
+        }
+      },
+      {
+        "path": "/periods",
+        "mode": "read",
+        "reason": "Find the open period a posting date falls in",
+        "origin": {
+          "kind": "script",
+          "id": "expenses-post"
+        }
+      },
+      {
+        "path": "/expense-categories",
+        "mode": "read",
+        "reason": "Read the expense account of each line's category",
+        "origin": {
+          "kind": "script",
+          "id": "expenses-post"
+        }
+      },
+      {
+        "path": "/journals",
+        "mode": "write",
+        "reason": "Post approved expense reports as journals",
+        "origin": {
+          "kind": "script",
+          "id": "expenses-post"
+        }
+      },
+      {
+        "path": "/expense-reports",
+        "mode": "write",
+        "reason": "Mark reports submitted, approved, refused or posted",
+        "origin": {
+          "kind": "script",
+          "id": "expenses-post"
+        }
+      }
+    ]
+  },
+  "packaging": {
+    "publisher": "verentis",
+    "files": [
+      "canvas/**",
+      "schemas/**",
+      "templates/**",
+      "seed/**",
+      "scripts/**",
+      "README.md"
+    ],
+    "templates": [
+      "canvas/*.yaml"
+    ],
+    "variables": {
+      "canvas-origin": "https://canvas.apps.localtest.me"
+    },
+    "encryption": "none"
+  }
+}
