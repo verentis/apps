@@ -1,0 +1,644 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Form",
+  "metadata": {
+    "id": "manufacturing-bom",
+    "name": "Manufacturing bill of materials",
+    "description": "View and edit a Manufacturing bill of materials.",
+    "icon": "list-tree"
+  },
+  "spec": {
+    "binds": [
+      {
+        "pattern": "application/vnd.verentis.manufacturing.bom+json",
+        "mode": "edit",
+        "priority": 200,
+        "scope": "global",
+        "json-schema": {
+          "id": "https://schemas.verentis.io/manufacturing/v1/bom.schema.json",
+          "source": "/applications/manufacturing/schemas/bom.schema.json",
+          "title": "Manufacturing bill of materials",
+          "version": "1"
+        }
+      }
+    ],
+    "entry": "${var:canvas-origin}/render?document=%2Fapplications%2Fmanufacturing%2Fcanvas%2Fbom.form.yaml",
+    "scope": "global",
+    "mime-types": [
+      {
+        "pattern": "application/vnd.verentis.manufacturing.bom+json",
+        "mode": "edit",
+        "priority": 200,
+        "json-schema": {
+          "id": "https://schemas.verentis.io/manufacturing/v1/bom.schema.json",
+          "source": "/applications/manufacturing/schemas/bom.schema.json",
+          "title": "Manufacturing bill of materials",
+          "version": "1"
+        }
+      }
+    ],
+    "permissions": [
+      "file.read",
+      "file.write"
+    ],
+    "capabilities": [],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-popups": false,
+      "allow-forms": true
+    },
+    "file-access": [
+      {
+        "path": "/products",
+        "mode": "read",
+        "reason": "Offer Inventory products to build (when Inventory is installed)"
+      },
+      {
+        "path": "/applications/manufacturing/",
+        "mode": "read",
+        "reason": "Read the Manufacturing schemas and run the production script"
+      }
+    ],
+    "access": [
+      {
+        "path": "/products",
+        "reason": "Offer Inventory products to build (when Inventory is installed)"
+      },
+      {
+        "path": "/applications/manufacturing/",
+        "reason": "Read the Manufacturing schemas and run the production script"
+      }
+    ],
+    "data": {
+      "record": {
+        "kind": "document",
+        "consistency": "conditional"
+      },
+      "products": {
+        "kind": "folder",
+        "path": "/products",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.inventory.product+json"
+      },
+      "productoptions": {
+        "kind": "computed",
+        "expr": "(data.products || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + ((e.data.name || '') + (e.data.sku ? ' (' + e.data.sku + ')' : '')), value: e.path }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.heading",
+                        "props": {
+                          "level": 2,
+                          "text": "{{ form.values.productName || 'New bill of materials' }}"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.badge",
+                        "props": {
+                          "text": "Archived",
+                          "tone": "warning",
+                          "icon": "archive"
+                        },
+                        "rules": {
+                          "visible": "form.values.state === 'archived'"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Bill of materials {{ form.values.code || '' }} · {{ ctx.file.path }}",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Archive",
+                          "variant": "ghost",
+                          "icon": "archive",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "archive"
+                        },
+                        "rules": {
+                          "visible": "!(form.values.state === 'archived') && !(false)",
+                          "disabled": "form.saving || form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Restore",
+                          "variant": "outline",
+                          "icon": "archive-restore",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "restore"
+                        },
+                        "rules": {
+                          "visible": "form.values.state === 'archived'",
+                          "disabled": "form.saving || form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Reset",
+                          "variant": "ghost",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "reset"
+                        },
+                        "rules": {
+                          "disabled": "form.saving || !form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Save",
+                          "icon": "save",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "save"
+                        },
+                        "rules": {
+                          "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (false)"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$record.error }}"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.dashboard.badge",
+            "props": {
+              "text": "This bill of materials is archived. Restore it to edit.",
+              "tone": "warning",
+              "icon": "archive"
+            },
+            "rules": {
+              "visible": "form.values.state === 'archived'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 3
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Components",
+                  "value": "{{ (form.values.components || []).length }}",
+                  "icon": "list"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Operations",
+                  "value": "{{ (form.values.routing || []).length }}",
+                  "icon": "route"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Minutes per run",
+                  "value": "{{ ((form.values.routing || []).reduce((s, r) => s + Math.round(Number(r.minutes || 0) * 10000), 0) / 10000) }}",
+                  "icon": "timer"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 1,
+                "gap": 4
+              },
+              "tablet": {
+                "columns": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Output"
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Product",
+                          "value": "{{ form.values.product }}",
+                          "description": "The product this BoM builds, from Inventory when it is installed.",
+                          "options": "{{ data.productoptions }}"
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (false))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Product name",
+                          "value": "{{ form.values.productName }}",
+                          "required": true
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (false))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Output quantity",
+                          "value": "{{ form.values.outputQty }}",
+                          "required": true,
+                          "description": "How many units one run of this BoM produces.",
+                          "placeholder": "0"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (false))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Components",
+                  "description": "Quantities are per BoM output quantity. Confirming an order scales them to the quantity to produce."
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.array",
+                        "props": {
+                          "label": "Components",
+                          "value": "{{ form.values.components }}",
+                          "fields": [
+                            {
+                              "key": "product",
+                              "label": "Product path",
+                              "placeholder": "/products/PRD-0001",
+                              "required": true
+                            },
+                            {
+                              "key": "name",
+                              "label": "Name"
+                            },
+                            {
+                              "key": "quantity",
+                              "label": "Quantity per output",
+                              "required": true
+                            }
+                          ],
+                          "defaultRow": {
+                            "product": "",
+                            "name": "",
+                            "quantity": "1"
+                          },
+                          "rowIds": false,
+                          "minimum": 1,
+                          "maximum": 200,
+                          "addLabel": "Add component",
+                          "removeLabel": "Remove row"
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (false))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Routing",
+                  "description": "Optional operations in production order."
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.array",
+                        "props": {
+                          "label": "Operations",
+                          "value": "{{ form.values.routing }}",
+                          "fields": [
+                            {
+                              "key": "operation",
+                              "label": "Operation",
+                              "required": true
+                            },
+                            {
+                              "key": "workcenter",
+                              "label": "Workcenter"
+                            },
+                            {
+                              "key": "minutes",
+                              "label": "Minutes"
+                            }
+                          ],
+                          "defaultRow": {
+                            "operation": "",
+                            "workcenter": "",
+                            "minutes": ""
+                          },
+                          "rowIds": false,
+                          "minimum": 0,
+                          "maximum": 100,
+                          "addLabel": "Add operation",
+                          "removeLabel": "Remove row"
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (false))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Notes"
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.textarea",
+                        "props": {
+                          "label": "Notes",
+                          "value": "{{ form.values.notes }}",
+                          "rows": 4
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (false))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "actions": {
+      "save": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Saved",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "reset": {
+        "steps": [
+          {
+            "reset-form": {}
+          }
+        ]
+      },
+      "archive": {
+        "steps": [
+          {
+            "confirm": {
+              "title": "Archive",
+              "message": "Archive this record? It stays in the workspace and can be restored."
+            }
+          },
+          {
+            "patch-form": {
+              "values": {
+                "state": "archived",
+                "archivedAt": "{{ Date() }}",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Archived",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "restore": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "state": "active",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Restored",
+              "variant": "success"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

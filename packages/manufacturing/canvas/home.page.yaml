@@ -1,0 +1,381 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "manufacturing-home",
+    "name": "Manufacturing",
+    "description": "Production summary.",
+    "icon": "factory"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/bills-of-materials",
+        "reason": "List bills of materials"
+      },
+      {
+        "path": "/manufacturing-orders",
+        "reason": "List manufacturing orders"
+      }
+    ],
+    "data": {
+      "boms": {
+        "kind": "folder",
+        "path": "/bills-of-materials",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.manufacturing.bom+json"
+      },
+      "bomoptions": {
+        "kind": "computed",
+        "expr": "(data.boms || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + (e.data.productName || ''), value: e.path }))"
+      },
+      "orders": {
+        "kind": "folder",
+        "path": "/manufacturing-orders",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.manufacturing.order+json"
+      },
+      "orderrows": {
+        "kind": "computed",
+        "expr": "(data.orders || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, productName: e.data.productName || '', quantity: e.data.quantity || '', scheduledDate: e.data.scheduledDate || '', status: e.data.status || 'draft', components: (e.data.demand || []).length, units: Math.round(Number(e.data.quantity || 0) * 10000) }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Manufacturing"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Bills of materials and manufacturing orders are files in your workspace. Draft an order in its folder, then confirm, start and complete it from its form.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Manufacturing orders",
+                      "variant": "outline",
+                      "icon": "factory",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/applications/manufacturing/canvas/orders.page.yaml"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Bills of materials",
+                      "variant": "outline",
+                      "icon": "list-tree",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/applications/manufacturing/canvas/boms.page.yaml"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 4
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Bills of materials",
+                  "value": "{{ (data.boms || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).length }}",
+                  "icon": "list-tree",
+                  "loading": "{{ data.$boms.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Draft orders",
+                  "value": "{{ (data.orders || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && ((e.data.status || 'draft') === 'draft')).length }}",
+                  "icon": "file-pen",
+                  "loading": "{{ data.$orders.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "In production",
+                  "value": "{{ (data.orders || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status === 'confirmed' || e.data.status === 'in-progress')).length }}",
+                  "icon": "factory",
+                  "loading": "{{ data.$orders.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Units in production",
+                  "value": "{{ ((data.orderrows || []).filter(r => r.status === 'confirmed' || r.status === 'in-progress').reduce((s, r) => s + r.units, 0) / 10000) }}",
+                  "icon": "package",
+                  "loading": "{{ data.$orders.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /bills-of-materials folder could not be read. Reinstall Manufacturing to recreate it."
+            },
+            "rules": {
+              "visible": "data.$boms.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /manufacturing-orders folder could not be read. Reinstall Manufacturing to recreate it."
+            },
+            "rules": {
+              "visible": "data.$orders.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.tabs",
+            "props": {
+              "items": [
+                {
+                  "value": "orders",
+                  "label": "Manufacturing orders",
+                  "icon": "factory"
+                },
+                {
+                  "value": "boms",
+                  "label": "Bills of materials",
+                  "icon": "list-tree"
+                }
+              ]
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Open /manufacturing-orders",
+                          "variant": "outline",
+                          "icon": "folder-open",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "open-file": {
+                                "path": "/manufacturing-orders"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.files",
+                    "props": {
+                      "path": "/manufacturing-orders/",
+                      "mimeTypes": [
+                        "application/vnd.verentis.manufacturing.order+json"
+                      ],
+                      "showFolders": false,
+                      "navigable": false,
+                      "columns": [
+                        {
+                          "key": "name",
+                          "label": "Code"
+                        },
+                        {
+                          "key": "data.productName",
+                          "label": "Product"
+                        },
+                        {
+                          "key": "data.quantity",
+                          "label": "Quantity",
+                          "align": "end"
+                        },
+                        {
+                          "key": "data.scheduledDate",
+                          "label": "Scheduled"
+                        },
+                        {
+                          "key": "data.status",
+                          "label": "Status"
+                        }
+                      ],
+                      "emptyText": "No manufacturing orders yet. Use New in /manufacturing-orders."
+                    }
+                  }
+                ],
+                "slot": "orders"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Open /bills-of-materials",
+                          "variant": "outline",
+                          "icon": "folder-open",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "open-file": {
+                                "path": "/bills-of-materials"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.files",
+                    "props": {
+                      "path": "/bills-of-materials/",
+                      "mimeTypes": [
+                        "application/vnd.verentis.manufacturing.bom+json"
+                      ],
+                      "showFolders": false,
+                      "navigable": false,
+                      "columns": [
+                        {
+                          "key": "name",
+                          "label": "Code"
+                        },
+                        {
+                          "key": "data.productName",
+                          "label": "Product"
+                        },
+                        {
+                          "key": "data.outputQty",
+                          "label": "Output",
+                          "align": "end"
+                        }
+                      ],
+                      "emptyText": "No bills of materials yet. Use New in /bills-of-materials."
+                    }
+                  }
+                ],
+                "slot": "boms"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

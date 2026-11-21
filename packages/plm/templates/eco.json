@@ -1,0 +1,19 @@
+{
+  "$schema": "https://schemas.verentis.io/plm/v1/eco.schema.json",
+  "schemaVersion": 1,
+  "kind": "eco",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "title": "{{ name }}",
+  "type": "change",
+  "product": "",
+  "priority": "normal",
+  "stage": "draft",
+  "approver": "",
+  "effectiveDate": "",
+  "description": "",
+  "rejectionReason": ""
+}

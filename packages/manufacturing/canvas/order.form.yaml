@@ -1,0 +1,816 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Form",
+  "metadata": {
+    "id": "manufacturing-order",
+    "name": "Manufacturing manufacturing order",
+    "description": "View and edit a Manufacturing manufacturing order.",
+    "icon": "factory"
+  },
+  "spec": {
+    "binds": [
+      {
+        "pattern": "application/vnd.verentis.manufacturing.order+json",
+        "mode": "edit",
+        "priority": 200,
+        "scope": "global",
+        "json-schema": {
+          "id": "https://schemas.verentis.io/manufacturing/v1/order.schema.json",
+          "source": "/applications/manufacturing/schemas/order.schema.json",
+          "title": "Manufacturing manufacturing order",
+          "version": "1"
+        }
+      }
+    ],
+    "entry": "${var:canvas-origin}/render?document=%2Fapplications%2Fmanufacturing%2Fcanvas%2Forder.form.yaml",
+    "scope": "global",
+    "mime-types": [
+      {
+        "pattern": "application/vnd.verentis.manufacturing.order+json",
+        "mode": "edit",
+        "priority": 200,
+        "json-schema": {
+          "id": "https://schemas.verentis.io/manufacturing/v1/order.schema.json",
+          "source": "/applications/manufacturing/schemas/order.schema.json",
+          "title": "Manufacturing manufacturing order",
+          "version": "1"
+        }
+      }
+    ],
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run",
+      "execution.read"
+    ],
+    "capabilities": [],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-popups": false,
+      "allow-forms": true
+    },
+    "file-access": [
+      {
+        "path": "/bills-of-materials",
+        "mode": "read",
+        "reason": "Choose the bill of materials to build"
+      },
+      {
+        "path": "/applications/manufacturing/",
+        "mode": "read",
+        "reason": "Read the Manufacturing schemas and run the production script"
+      }
+    ],
+    "access": [
+      {
+        "path": "/bills-of-materials",
+        "reason": "Choose the bill of materials to build"
+      },
+      {
+        "path": "/applications/manufacturing/",
+        "reason": "Read the Manufacturing schemas and run the production script"
+      }
+    ],
+    "data": {
+      "record": {
+        "kind": "document",
+        "consistency": "conditional"
+      },
+      "boms": {
+        "kind": "folder",
+        "path": "/bills-of-materials",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.manufacturing.bom+json"
+      },
+      "bomoptions": {
+        "kind": "computed",
+        "expr": "(data.boms || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + (e.data.productName || ''), value: e.path }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.heading",
+                        "props": {
+                          "level": 2,
+                          "text": "{{ form.values.productName || 'New manufacturing order' }}"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.badge",
+                        "props": {
+                          "text": "{{ String(form.values.status || '').split('-').join(' ') }}",
+                          "tone": "{{ [\"done\"].includes(form.values.status) ? 'success' : [\"draft\",\"confirmed\",\"in-progress\"].includes(form.values.status) ? 'warning' : [\"cancelled\"].includes(form.values.status) ? 'danger' : 'neutral' }}"
+                        },
+                        "rules": {
+                          "visible": "!!form.values.status"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.badge",
+                        "props": {
+                          "text": "Archived",
+                          "tone": "warning",
+                          "icon": "archive"
+                        },
+                        "rules": {
+                          "visible": "form.values.state === 'archived'"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Manufacturing order {{ form.values.code || '' }} · {{ ctx.file.path }}",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Confirm",
+                      "icon": "check",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "confirm"
+                    },
+                    "rules": {
+                      "visible": "(!form.values.status || form.values.status === 'draft') && !(form.values.state === 'archived')",
+                      "disabled": "form.saving || form.dirty || form.invalid"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Start",
+                      "icon": "play",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "start"
+                    },
+                    "rules": {
+                      "visible": "form.values.status === 'confirmed'",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Complete",
+                      "icon": "check-check",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "complete"
+                    },
+                    "rules": {
+                      "visible": "form.values.status === 'in-progress'",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Cancel order",
+                      "variant": "ghost",
+                      "icon": "x",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "cancel"
+                    },
+                    "rules": {
+                      "visible": "((!form.values.status || form.values.status === 'draft') || form.values.status === 'confirmed') && !(form.values.state === 'archived')",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Archive",
+                          "variant": "ghost",
+                          "icon": "archive",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "archive"
+                        },
+                        "rules": {
+                          "visible": "!(form.values.state === 'archived') && !(!(!form.values.status || form.values.status === 'draft'))",
+                          "disabled": "form.saving || form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Restore",
+                          "variant": "outline",
+                          "icon": "archive-restore",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "restore"
+                        },
+                        "rules": {
+                          "visible": "form.values.state === 'archived'",
+                          "disabled": "form.saving || form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Reset",
+                          "variant": "ghost",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "reset"
+                        },
+                        "rules": {
+                          "disabled": "form.saving || !form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Save",
+                          "icon": "save",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "save"
+                        },
+                        "rules": {
+                          "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft'))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$record.error }}"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.dashboard.badge",
+            "props": {
+              "text": "This manufacturing order is archived. Restore it to edit.",
+              "tone": "warning",
+              "icon": "archive"
+            },
+            "rules": {
+              "visible": "form.values.state === 'archived'"
+            }
+          },
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Bill of materials",
+                  "variant": "ghost",
+                  "icon": "list-tree",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "{{ form.values.bom }}",
+                        "mode": "edit"
+                      }
+                    }
+                  ]
+                },
+                "rules": {
+                  "visible": "!!(form.values.bom)"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 3
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Produces",
+                  "value": "{{ form.values.productName || '—' }}",
+                  "icon": "package"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Quantity",
+                  "value": "{{ form.values.quantity || '0' }}",
+                  "icon": "hash"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Scheduled",
+                  "value": "{{ form.values.scheduledDate || '—' }}",
+                  "icon": "calendar"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 1,
+                "gap": 4
+              },
+              "tablet": {
+                "columns": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Order"
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Bill of materials",
+                          "value": "{{ form.values.bom }}",
+                          "required": true,
+                          "description": "Confirming snapshots the BoM product and computes the component demand.",
+                          "options": "{{ data.bomoptions }}"
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft')))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Quantity to produce",
+                          "value": "{{ form.values.quantity }}",
+                          "required": true,
+                          "placeholder": "0"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft')))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.date",
+                        "props": {
+                          "label": "Scheduled date",
+                          "value": "{{ form.values.scheduledDate }}",
+                          "required": true
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft')))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 1,
+                "gap": 4
+              },
+              "tablet": {
+                "columns": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Component demand"
+                },
+                "children": [
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Computed from the BoM components × the quantity to produce when the order is confirmed.",
+                      "tone": "muted"
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (form.values.demand || []).map((d, i) => ({ product: d.product, name: d.name, quantity: d.quantity })) }}",
+                      "columns": [
+                        {
+                          "key": "product",
+                          "label": "Product"
+                        },
+                        {
+                          "key": "name",
+                          "label": "Name"
+                        },
+                        {
+                          "key": "quantity",
+                          "label": "Quantity",
+                          "align": "end"
+                        }
+                      ],
+                      "emptyText": "Not confirmed yet"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Stock moves"
+                },
+                "children": [
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Consumption and production moves emitted into /stock-moves on completion, when Inventory is installed.",
+                      "tone": "muted"
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (form.values.moves || []).map(m => ({ path: m.path, move: m.path.split('/').pop() })) }}",
+                      "columns": [
+                        {
+                          "key": "move",
+                          "label": "Move"
+                        },
+                        {
+                          "key": "path",
+                          "label": "Path"
+                        }
+                      ],
+                      "emptyText": "No stock moves emitted",
+                      "clickable": true
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "actions": {
+      "save": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Saved",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "reset": {
+        "steps": [
+          {
+            "reset-form": {}
+          }
+        ]
+      },
+      "archive": {
+        "steps": [
+          {
+            "confirm": {
+              "title": "Archive",
+              "message": "Archive this record? It stays in the workspace and can be restored."
+            }
+          },
+          {
+            "patch-form": {
+              "values": {
+                "state": "archived",
+                "archivedAt": "{{ Date() }}",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Archived",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "restore": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "state": "active",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Restored",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "confirm": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Confirm order",
+              "message": "Confirm this manufacturing order? Its component demand is computed from the bill of materials and the order is locked."
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/manufacturing/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "confirm-mo",
+                "path": "{{ ctx.file.path }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "start": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Start production",
+              "message": "Start production of this manufacturing order?"
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/manufacturing/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "start-mo",
+                "path": "{{ ctx.file.path }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "complete": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Complete order",
+              "message": "Complete this manufacturing order? When Inventory is installed, consumption and production stock moves are written to /stock-moves. Done orders cannot be edited."
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/manufacturing/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "complete-mo",
+                "path": "{{ ctx.file.path }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "cancel": {
+        "steps": [
+          {
+            "confirm": {
+              "title": "Cancel order",
+              "message": "Cancel this manufacturing order? Cancelled orders cannot be confirmed or completed."
+            }
+          },
+          {
+            "patch-form": {
+              "values": {
+                "status": "cancelled",
+                "cancelledAt": "{{ Date() }}",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Cancelled",
+              "variant": "success"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

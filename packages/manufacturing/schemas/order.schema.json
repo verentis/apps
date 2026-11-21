@@ -1,0 +1,287 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.verentis.io/manufacturing/v1/order.schema.json",
+  "title": "Manufacturing manufacturing order",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "const": "https://schemas.verentis.io/manufacturing/v1/order.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "kind": {
+      "const": "order"
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "state": {
+      "enum": [
+        "active",
+        "archived"
+      ]
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "archivedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "code": {
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "bom": {
+      "type": "string",
+      "maxLength": 4096,
+      "pattern": "^(/.*)?$"
+    },
+    "product": {
+      "type": "string",
+      "maxLength": 4096,
+      "pattern": "^(/.*)?$"
+    },
+    "productName": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "quantity": {
+      "type": "string",
+      "pattern": "^((0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?)?$"
+    },
+    "scheduledDate": {
+      "type": "string",
+      "pattern": "^([0-9]{4}-[0-9]{2}-[0-9]{2})?$"
+    },
+    "demand": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "product": {
+            "type": "string",
+            "maxLength": 4096,
+            "pattern": "^(/.*)?$"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "quantity": {
+            "type": "string",
+            "pattern": "^((0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?)?$"
+          }
+        },
+        "required": [
+          "product",
+          "name",
+          "quantity"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "maxItems": 200
+    },
+    "status": {
+      "enum": [
+        "draft",
+        "confirmed",
+        "in-progress",
+        "done",
+        "cancelled"
+      ]
+    },
+    "confirmedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "startedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "completedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "cancelledAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "moves": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "pattern": "^/",
+            "maxLength": 4096
+          },
+          "nodeId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "maxItems": 250
+    }
+  },
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "kind",
+    "id",
+    "state",
+    "createdAt",
+    "updatedAt",
+    "code",
+    "bom",
+    "quantity",
+    "scheduledDate",
+    "demand",
+    "status"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "archived"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "archivedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          }
+        },
+        "required": [
+          "archivedAt"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "confirmed",
+              "in-progress",
+              "done"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "confirmedAt": true,
+          "product": true,
+          "productName": true
+        },
+        "required": [
+          "confirmedAt",
+          "product",
+          "productName"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "in-progress",
+              "done"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "startedAt": true
+        },
+        "required": [
+          "startedAt"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "done"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "completedAt": true
+        },
+        "required": [
+          "completedAt"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "cancelled"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "cancelledAt": true
+        },
+        "required": [
+          "cancelledAt"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://schemas.verentis.io/manufacturing/v1/order.schema.json",
+  "schemaVersion": 1,
+  "kind": "order",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "bom": "",
+  "product": "",
+  "productName": "",
+  "quantity": "1",
+  "scheduledDate": "",
+  "demand": [],
+  "status": "draft"
+}
