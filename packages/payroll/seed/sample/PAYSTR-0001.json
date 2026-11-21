@@ -1,0 +1,40 @@
+{
+  "$schema": "https://schemas.verentis.io/payroll/v1/structure.schema.json",
+  "schemaVersion": 1,
+  "kind": "structure",
+  "id": "7c1e5a2b-3d4f-4a6b-8c90-1a2b3c4d5e01",
+  "state": "active",
+  "createdAt": "2026-01-01T00:00:00Z",
+  "updatedAt": "2026-01-01T00:00:00Z",
+  "code": "PAYSTR-0001",
+  "name": "Standard salary",
+  "rules": [
+    {
+      "code": "BASE",
+      "name": "Base salary",
+      "kind": "earning",
+      "computation": "percent-of-base",
+      "amount": "",
+      "rate": "100",
+      "sequence": "10"
+    },
+    {
+      "code": "DED",
+      "name": "Example deduction (10%)",
+      "kind": "deduction",
+      "computation": "percent-of-base",
+      "amount": "",
+      "rate": "10",
+      "sequence": "20"
+    },
+    {
+      "code": "EC",
+      "name": "Example employer contribution (5%)",
+      "kind": "employer-contribution",
+      "computation": "percent-of-base",
+      "amount": "",
+      "rate": "5",
+      "sequence": "30"
+    }
+  ]
+}

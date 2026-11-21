@@ -1,0 +1,16 @@
+{
+  "$schema": "https://schemas.verentis.io/rental/v1/product.schema.json",
+  "schemaVersion": 1,
+  "kind": "product",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "name": "{{ name }}",
+  "dailyRate": "",
+  "deposit": "",
+  "quantityOwned": 1,
+  "description": "",
+  "status": "available"
+}

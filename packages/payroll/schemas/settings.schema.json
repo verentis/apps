@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.verentis.io/payroll/v1/settings.schema.json",
+  "title": "Payroll settings",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "const": "https://schemas.verentis.io/payroll/v1/settings.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "wageExpenseAccount": {
+      "type": "string",
+      "maxLength": 4096,
+      "pattern": "^(/.*)?$"
+    },
+    "deductionsPayableAccount": {
+      "type": "string",
+      "maxLength": 4096,
+      "pattern": "^(/.*)?$"
+    },
+    "netWagesPayableAccount": {
+      "type": "string",
+      "maxLength": 4096,
+      "pattern": "^(/.*)?$"
+    },
+    "contributionExpenseAccount": {
+      "type": "string",
+      "maxLength": 4096,
+      "pattern": "^(/.*)?$"
+    },
+    "contributionPayableAccount": {
+      "type": "string",
+      "maxLength": 4096,
+      "pattern": "^(/.*)?$"
+    }
+  },
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "wageExpenseAccount",
+    "deductionsPayableAccount",
+    "netWagesPayableAccount",
+    "contributionExpenseAccount",
+    "contributionPayableAccount"
+  ],
+  "additionalProperties": false
+}

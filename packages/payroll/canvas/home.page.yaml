@@ -1,0 +1,257 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "payroll-home",
+    "name": "Payroll",
+    "description": "Payroll overview and pay runs.",
+    "icon": "calendar-check"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/pay-runs",
+        "reason": "List pay runs"
+      }
+    ],
+    "data": {
+      "runs": {
+        "kind": "folder",
+        "path": "/pay-runs",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.payroll.payrun+json"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Payroll"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "A region-agnostic payroll engine: salary structures and their rules are your data. Draft a pay run for a period, Compute payslips for every active pay profile, Approve, then Post one journal to the Accounting ledger.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Structures",
+                      "variant": "outline",
+                      "icon": "layers",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/applications/payroll/canvas/structures.page.yaml"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Settings",
+                      "variant": "ghost",
+                      "icon": "settings",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/settings/payroll.json",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 4
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Draft runs",
+                  "value": "{{ (data.runs || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status === 'draft')).length }}",
+                  "icon": "file-pen",
+                  "loading": "{{ data.$runs.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Awaiting approval",
+                  "value": "{{ (data.runs || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status === 'computed')).length }}",
+                  "icon": "calculator",
+                  "loading": "{{ data.$runs.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Approved",
+                  "value": "{{ (data.runs || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status === 'approved')).length }}",
+                  "icon": "check",
+                  "loading": "{{ data.$runs.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Net paid (posted)",
+                  "value": "{{ ((data.runs || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && e.data.status === 'posted' && e.data.totals).reduce((s, e) => s + Math.round(Number(e.data.totals.net || 0) * 10000), 0) / 10000).toFixed(2) }}",
+                  "icon": "banknote",
+                  "loading": "{{ data.$runs.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /pay-runs folder could not be read. Reinstall Payroll to recreate it."
+            },
+            "rules": {
+              "visible": "data.$runs.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Open /pay-runs",
+                  "variant": "outline",
+                  "icon": "folder-open",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/pay-runs"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.files",
+            "props": {
+              "path": "/pay-runs/",
+              "mimeTypes": [
+                "application/vnd.verentis.payroll.payrun+json"
+              ],
+              "showFolders": false,
+              "navigable": false,
+              "columns": [
+                {
+                  "key": "name",
+                  "label": "Code"
+                },
+                {
+                  "key": "data.period",
+                  "label": "Period"
+                },
+                {
+                  "key": "data.status",
+                  "label": "Status"
+                },
+                {
+                  "key": "data.totals.gross",
+                  "label": "Gross",
+                  "align": "end"
+                },
+                {
+                  "key": "data.totals.net",
+                  "label": "Net",
+                  "align": "end"
+                }
+              ],
+              "emptyText": "No pay runs yet. Use New in /pay-runs."
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

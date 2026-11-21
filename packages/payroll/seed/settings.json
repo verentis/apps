@@ -1,0 +1,9 @@
+{
+  "$schema": "https://schemas.verentis.io/payroll/v1/settings.schema.json",
+  "schemaVersion": 1,
+  "wageExpenseAccount": "/chart-of-accounts/ACC-0006",
+  "deductionsPayableAccount": "",
+  "netWagesPayableAccount": "",
+  "contributionExpenseAccount": "/chart-of-accounts/ACC-0006",
+  "contributionPayableAccount": ""
+}

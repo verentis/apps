@@ -1,0 +1,16 @@
+{
+  "$schema": "https://schemas.verentis.io/payroll/v1/profile.schema.json",
+  "schemaVersion": 1,
+  "kind": "profile",
+  "id": "7c1e5a2b-3d4f-4a6b-8c90-1a2b3c4d5e02",
+  "state": "active",
+  "createdAt": "2026-01-01T00:00:00Z",
+  "updatedAt": "2026-01-01T00:00:00Z",
+  "code": "PAYEMP-0001",
+  "employeeName": "Alex Taylor",
+  "employeeRef": "",
+  "structure": "/salary-structures/PAYSTR-0001",
+  "baseWage": "20000.00",
+  "currency": "",
+  "active": true
+}

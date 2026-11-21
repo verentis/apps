@@ -1,0 +1,232 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "rental-bookings",
+    "name": "Bookings",
+    "description": "Bookings by status, ordered by start date.",
+    "icon": "calendar-check"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/rental-bookings",
+        "reason": "List bookings by status"
+      }
+    ],
+    "data": {
+      "bookings": {
+        "kind": "folder",
+        "path": "/rental-bookings",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.rental.booking+json"
+      }
+    },
+    "state": {
+      "showclosed": false
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Bookings"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "The rental calendar as a list: bookings ordered by start date, badged by status. Confirming reserves the units; picking up and returning move them through the lifecycle.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Rental",
+                  "variant": "ghost",
+                  "icon": "key",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/applications/rental/canvas/home.page.yaml"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$bookings.error }}"
+            },
+            "rules": {
+              "visible": "data.$bookings.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$bookings.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 4
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Draft",
+                  "value": "{{ (data.bookings || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status === 'draft')).length }}",
+                  "icon": "file-pen",
+                  "loading": "{{ data.$bookings.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Confirmed",
+                  "value": "{{ (data.bookings || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status === 'confirmed')).length }}",
+                  "icon": "check",
+                  "loading": "{{ data.$bookings.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Picked up",
+                  "value": "{{ (data.bookings || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status === 'picked-up')).length }}",
+                  "icon": "package-open",
+                  "loading": "{{ data.$bookings.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Returned",
+                  "value": "{{ (data.bookings || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status === 'returned')).length }}",
+                  "icon": "package-check",
+                  "loading": "{{ data.$bookings.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.form.switch",
+            "props": {
+              "label": "Show returned and cancelled bookings",
+              "value": "{{ state.showclosed }}"
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.bookings || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (state.showclosed || (e.data.status !== 'returned' && e.data.status !== 'cancelled'))).map(e => ({ path: e.path, code: e.data.code || e.name, customer: e.data.customerName || '', product: (e.data.product || '').split('/').pop() || '', start: e.data.startDate, end: e.data.endDate, quantity: e.data.quantity, status: e.data.status, total: e.data.total || '' })).sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0)) }}",
+              "columns": [
+                {
+                  "key": "code",
+                  "label": "Booking"
+                },
+                {
+                  "key": "customer",
+                  "label": "Customer"
+                },
+                {
+                  "key": "product",
+                  "label": "Product"
+                },
+                {
+                  "key": "start",
+                  "label": "Start"
+                },
+                {
+                  "key": "end",
+                  "label": "End"
+                },
+                {
+                  "key": "quantity",
+                  "label": "Qty",
+                  "align": "end"
+                },
+                {
+                  "key": "status",
+                  "label": "Status"
+                },
+                {
+                  "key": "total",
+                  "label": "Total",
+                  "align": "end"
+                }
+              ],
+              "emptyText": "No bookings yet",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
