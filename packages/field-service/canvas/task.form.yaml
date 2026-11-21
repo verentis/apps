@@ -1,0 +1,965 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Form",
+  "metadata": {
+    "id": "field-service-task",
+    "name": "Field Service task",
+    "description": "View and edit a Field Service task.",
+    "icon": "wrench"
+  },
+  "spec": {
+    "binds": [
+      {
+        "pattern": "application/vnd.verentis.field-service.task+json",
+        "mode": "edit",
+        "priority": 200,
+        "scope": "global",
+        "json-schema": {
+          "id": "https://schemas.verentis.io/field-service/v1/task.schema.json",
+          "source": "/applications/field-service/schemas/task.schema.json",
+          "title": "Field Service task",
+          "version": "1"
+        }
+      }
+    ],
+    "entry": "${var:canvas-origin}/render?document=%2Fapplications%2Ffield-service%2Fcanvas%2Ftask.form.yaml",
+    "scope": "global",
+    "mime-types": [
+      {
+        "pattern": "application/vnd.verentis.field-service.task+json",
+        "mode": "edit",
+        "priority": 200,
+        "json-schema": {
+          "id": "https://schemas.verentis.io/field-service/v1/task.schema.json",
+          "source": "/applications/field-service/schemas/task.schema.json",
+          "title": "Field Service task",
+          "version": "1"
+        }
+      }
+    ],
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run",
+      "execution.read"
+    ],
+    "capabilities": [],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-popups": false,
+      "allow-forms": true
+    },
+    "file-access": [
+      {
+        "path": "/customers",
+        "mode": "read",
+        "reason": "Offer CRM customers on tasks (when CRM is installed)"
+      },
+      {
+        "path": "/applications/field-service/",
+        "mode": "read",
+        "reason": "Read the Field Service schemas and run the task action script"
+      }
+    ],
+    "access": [
+      {
+        "path": "/customers",
+        "reason": "Offer CRM customers on tasks (when CRM is installed)"
+      },
+      {
+        "path": "/applications/field-service/",
+        "reason": "Read the Field Service schemas and run the task action script"
+      }
+    ],
+    "data": {
+      "record": {
+        "kind": "document",
+        "consistency": "conditional"
+      },
+      "companies": {
+        "kind": "folder",
+        "path": "/customers",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.crm.company+json"
+      },
+      "contacts": {
+        "kind": "folder",
+        "path": "/customers",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.crm.contact+json"
+      },
+      "customeroptions": {
+        "kind": "computed",
+        "expr": "(data.companies || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + (e.data.name || ''), value: e.path })).concat((data.contacts || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + ([e.data.givenName, e.data.familyName].filter(Boolean).join(' ')), value: e.path })))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.heading",
+                        "props": {
+                          "level": 2,
+                          "text": "{{ form.values.customerName || 'New field task' }}"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.badge",
+                        "props": {
+                          "text": "{{ String(form.values.stage || '').split('-').join(' ') }}",
+                          "tone": "{{ [\"done\"].includes(form.values.stage) ? 'success' : [\"on-site\"].includes(form.values.stage) ? 'warning' : [\"cancelled\"].includes(form.values.stage) ? 'danger' : 'neutral' }}"
+                        },
+                        "rules": {
+                          "visible": "!!form.values.stage"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.badge",
+                        "props": {
+                          "text": "Archived",
+                          "tone": "warning",
+                          "icon": "archive"
+                        },
+                        "rules": {
+                          "visible": "form.values.state === 'archived'"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Field task {{ form.values.code || '' }} · {{ ctx.file.path }}",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Schedule",
+                      "icon": "calendar",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "schedule"
+                    },
+                    "rules": {
+                      "visible": "form.values.stage === 'new' && !(form.values.state === 'archived')",
+                      "disabled": "form.saving || form.dirty || !form.values.scheduledDate || !String(form.values.technician || '').trim()"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Start",
+                      "icon": "play",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "start"
+                    },
+                    "rules": {
+                      "visible": "form.values.stage === 'scheduled' && !(form.values.state === 'archived')",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Complete",
+                      "icon": "check",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "complete"
+                    },
+                    "rules": {
+                      "visible": "form.values.stage === 'on-site' && !(form.values.state === 'archived')",
+                      "disabled": "form.saving || form.dirty || !String(form.values.hours || '').trim()"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Cancel task",
+                      "variant": "outline",
+                      "icon": "x",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "cancel"
+                    },
+                    "rules": {
+                      "visible": "[\"new\",\"scheduled\",\"on-site\"].includes(form.values.stage) && !(form.values.state === 'archived')",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Copy name",
+                      "variant": "ghost",
+                      "icon": "copy",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "copy-customer"
+                    },
+                    "rules": {
+                      "visible": "!(['done', 'cancelled'].includes(form.values.stage)) && !!form.values.customerRef",
+                      "disabled": "form.saving || form.values.state === 'archived'"
+                    }
+                  },
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Archive",
+                          "variant": "ghost",
+                          "icon": "archive",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "archive"
+                        },
+                        "rules": {
+                          "visible": "!(form.values.state === 'archived') && !(['done', 'cancelled'].includes(form.values.stage))",
+                          "disabled": "form.saving || form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Restore",
+                          "variant": "outline",
+                          "icon": "archive-restore",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "restore"
+                        },
+                        "rules": {
+                          "visible": "form.values.state === 'archived'",
+                          "disabled": "form.saving || form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Reset",
+                          "variant": "ghost",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "reset"
+                        },
+                        "rules": {
+                          "disabled": "form.saving || !form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Save",
+                          "icon": "save",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "save"
+                        },
+                        "rules": {
+                          "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (['done', 'cancelled'].includes(form.values.stage))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$record.error }}"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.dashboard.badge",
+            "props": {
+              "text": "This task is archived. Restore it to edit.",
+              "tone": "warning",
+              "icon": "archive"
+            },
+            "rules": {
+              "visible": "form.values.state === 'archived'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "This task is done and can no longer be edited. Its materials total was computed when it was completed.",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "form.values.stage === 'done'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "This task was cancelled and can no longer be edited.",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "form.values.stage === 'cancelled'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "An invoice was drafted for this task: {{ form.values.invoice }}",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "!!form.values.invoice"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 1,
+                "gap": 4
+              },
+              "tablet": {
+                "columns": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Customer"
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "CRM customer",
+                          "value": "{{ form.values.customerRef }}",
+                          "description": "Optional. Choose a CRM customer, then Copy name.",
+                          "options": "{{ data.customeroptions }}"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (['done', 'cancelled'].includes(form.values.stage)))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Customer name",
+                          "value": "{{ form.values.customerName }}",
+                          "required": true
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (['done', 'cancelled'].includes(form.values.stage)))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Address",
+                          "value": "{{ form.values.address }}",
+                          "required": true,
+                          "placeholder": "Street, city"
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (['done', 'cancelled'].includes(form.values.stage)))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Schedule"
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.date",
+                        "props": {
+                          "label": "Scheduled date",
+                          "value": "{{ form.values.scheduledDate }}"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (['done', 'cancelled'].includes(form.values.stage)))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Technician",
+                          "value": "{{ form.values.technician }}",
+                          "placeholder": "Name or email"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (['done', 'cancelled'].includes(form.values.stage)))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Window start",
+                          "value": "{{ form.values.windowStart }}",
+                          "description": "Time of day, HH:MM.",
+                          "placeholder": "08:00"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (['done', 'cancelled'].includes(form.values.stage)))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Window end",
+                          "value": "{{ form.values.windowEnd }}",
+                          "description": "Time of day, HH:MM.",
+                          "placeholder": "10:00"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (['done', 'cancelled'].includes(form.values.stage)))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Work"
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Type",
+                          "value": "{{ form.values.type }}",
+                          "options": [
+                            {
+                              "value": "install",
+                              "label": "Install"
+                            },
+                            {
+                              "value": "repair",
+                              "label": "Repair"
+                            },
+                            {
+                              "value": "inspection",
+                              "label": "Inspection"
+                            }
+                          ]
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (['done', 'cancelled'].includes(form.values.stage)))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Stage",
+                          "value": "{{ form.values.stage }}",
+                          "description": "Stages are set by Schedule, Start, Complete and Cancel.",
+                          "options": [
+                            {
+                              "value": "new",
+                              "label": "New"
+                            },
+                            {
+                              "value": "scheduled",
+                              "label": "Scheduled"
+                            },
+                            {
+                              "value": "on-site",
+                              "label": "On Site"
+                            },
+                            {
+                              "value": "done",
+                              "label": "Done"
+                            },
+                            {
+                              "value": "cancelled",
+                              "label": "Cancelled"
+                            }
+                          ]
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (['done', 'cancelled'].includes(form.values.stage))) || (true)"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Hours spent",
+                          "value": "{{ form.values.hours }}",
+                          "description": "A decimal number of hours, required to complete.",
+                          "placeholder": "2.5"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (['done', 'cancelled'].includes(form.values.stage)))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Materials total",
+                          "value": "{{ form.values.materialsTotal }}",
+                          "description": "Computed from the materials when the task is completed."
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (['done', 'cancelled'].includes(form.values.stage))) || (true)"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.textarea",
+                        "props": {
+                          "label": "Work log",
+                          "value": "{{ form.values.workLog }}",
+                          "rows": 6
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (['done', 'cancelled'].includes(form.values.stage)))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Materials"
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.array",
+                        "props": {
+                          "label": "Materials used",
+                          "value": "{{ form.values.materials }}",
+                          "fields": [
+                            {
+                              "key": "description",
+                              "label": "Description"
+                            },
+                            {
+                              "key": "quantity",
+                              "label": "Qty"
+                            },
+                            {
+                              "key": "unitPrice",
+                              "label": "Unit price"
+                            }
+                          ],
+                          "defaultRow": {
+                            "description": "",
+                            "quantity": "1",
+                            "unitPrice": ""
+                          },
+                          "rowIds": false,
+                          "minimum": 0,
+                          "maximum": 200,
+                          "addLabel": "Add material",
+                          "removeLabel": "Remove row"
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (['done', 'cancelled'].includes(form.values.stage)))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "actions": {
+      "save": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Saved",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "reset": {
+        "steps": [
+          {
+            "reset-form": {}
+          }
+        ]
+      },
+      "archive": {
+        "steps": [
+          {
+            "confirm": {
+              "title": "Archive",
+              "message": "Archive this record? It stays in the workspace and can be restored."
+            }
+          },
+          {
+            "patch-form": {
+              "values": {
+                "state": "archived",
+                "archivedAt": "{{ Date() }}",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Archived",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "restore": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "state": "active",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Restored",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "copy-customer": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "customerName": "{{ ((data.companies || []).concat(data.contacts || []).filter(e => e.kind === 'file' && e.data && e.path === form.values.customerRef).map(e => e.data.name || [e.data.givenName, e.data.familyName].filter(Boolean).join(' '))[0]) || form.values.customerName }}"
+              }
+            }
+          }
+        ]
+      },
+      "schedule": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Schedule task",
+              "message": "Schedule this task for its date and technician?"
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/field-service/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "schedule",
+                "path": "{{ ctx.file.path }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "start": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Start task",
+              "message": "Mark the technician on site?"
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/field-service/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "start",
+                "path": "{{ ctx.file.path }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "complete": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Complete task",
+              "message": "Complete this task? The materials total is computed, an invoice may be drafted and the task is locked."
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/field-service/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "complete",
+                "path": "{{ ctx.file.path }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "cancel": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Cancel task",
+              "message": "Cancel this task? Cancelled tasks are locked and cannot be edited."
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/field-service/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "cancel",
+                "path": "{{ ctx.file.path }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

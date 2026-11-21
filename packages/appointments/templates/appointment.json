@@ -1,0 +1,19 @@
+{
+  "$schema": "https://schemas.verentis.io/appointments/v1/appointment.schema.json",
+  "schemaVersion": 1,
+  "kind": "appointment",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "type": "",
+  "guestName": "{{ name }}",
+  "guestEmail": "",
+  "date": "",
+  "startTime": "",
+  "endTime": "",
+  "host": "",
+  "status": "booked",
+  "notes": ""
+}

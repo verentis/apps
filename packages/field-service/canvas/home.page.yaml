@@ -1,0 +1,291 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "field-service-home",
+    "name": "Field Service",
+    "description": "Field Service overview.",
+    "icon": "wrench"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/field-tasks",
+        "reason": "Count tasks and show the task list"
+      }
+    ],
+    "data": {
+      "tasks": {
+        "kind": "folder",
+        "path": "/field-tasks",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.field-service.task+json"
+      },
+      "rows": {
+        "kind": "computed",
+        "expr": "(data.tasks || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, customer: e.data.customerName || '', address: e.data.address || '', type: e.data.type || '', stage: e.data.stage || '', technician: e.data.technician || '', date: e.data.scheduledDate || '', window: [e.data.windowStart, e.data.windowEnd].filter(Boolean).join('–'), windowStart: e.data.windowStart || '', hours: e.data.hours || '', today: !!e.data.scheduledDate && e.data.scheduledDate === Date().slice(0, 10) }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Field Service"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Field tasks are files in your workspace. Draft tasks in /field-tasks, schedule a technician, work them on site, then complete them from their forms.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Tasks",
+                      "variant": "outline",
+                      "icon": "wrench",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/applications/field-service/canvas/tasks.page.yaml"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Day schedule",
+                      "variant": "outline",
+                      "icon": "calendar",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/applications/field-service/canvas/schedule.page.yaml"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Settings",
+                      "variant": "ghost",
+                      "icon": "settings",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/settings/field-service.json",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 4
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Open tasks",
+                  "value": "{{ (data.rows || []).filter(r => [\"new\",\"scheduled\",\"on-site\"].includes(r.stage)).length }}",
+                  "icon": "wrench",
+                  "loading": "{{ data.$tasks.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Today",
+                  "value": "{{ (data.rows || []).filter(r => r.today && [\"new\",\"scheduled\",\"on-site\"].includes(r.stage)).length }}",
+                  "icon": "calendar",
+                  "loading": "{{ data.$tasks.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "On site",
+                  "value": "{{ (data.rows || []).filter(r => r.stage === 'on-site').length }}",
+                  "icon": "map-pin",
+                  "loading": "{{ data.$tasks.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Done",
+                  "value": "{{ (data.rows || []).filter(r => r.stage === 'done').length }}",
+                  "icon": "check",
+                  "loading": "{{ data.$tasks.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /field-tasks folder could not be read. Reinstall Field Service to recreate it."
+            },
+            "rules": {
+              "visible": "data.$tasks.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$tasks.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Open /field-tasks",
+                  "variant": "outline",
+                  "icon": "folder-open",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/field-tasks"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.files",
+            "props": {
+              "path": "/field-tasks/",
+              "mimeTypes": [
+                "application/vnd.verentis.field-service.task+json"
+              ],
+              "showFolders": false,
+              "navigable": false,
+              "columns": [
+                {
+                  "key": "name",
+                  "label": "Task"
+                },
+                {
+                  "key": "data.customerName",
+                  "label": "Customer"
+                },
+                {
+                  "key": "data.type",
+                  "label": "Type"
+                },
+                {
+                  "key": "data.stage",
+                  "label": "Stage"
+                },
+                {
+                  "key": "data.technician",
+                  "label": "Technician"
+                },
+                {
+                  "key": "data.scheduledDate",
+                  "label": "Date"
+                }
+              ],
+              "emptyText": "No tasks yet. Use New in /field-tasks."
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

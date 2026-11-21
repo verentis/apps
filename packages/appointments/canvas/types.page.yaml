@@ -1,0 +1,259 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "appointments-types",
+    "name": "Types",
+    "description": "Every appointment type with its bookings.",
+    "icon": "calendar-clock"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/appointment-types",
+        "reason": "Summarise the appointments booked per type"
+      },
+      {
+        "path": "/appointments",
+        "reason": "Summarise the appointments booked per type"
+      }
+    ],
+    "data": {
+      "appointments": {
+        "kind": "folder",
+        "path": "/appointments",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.appointments.appointment+json"
+      },
+      "types": {
+        "kind": "folder",
+        "path": "/appointment-types",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.appointments.type+json"
+      },
+      "rows": {
+        "kind": "computed",
+        "expr": "(data.appointments || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, guest: e.data.guestName || '', typePath: e.data.type || '', type: ((((data.types || []).find(t => t.kind === 'file' && t.data && t.path === e.data.type) || {}).data || {}).name) || '', host: e.data.host || '', date: e.data.date || '', start: e.data.startTime || '', time: [e.data.startTime, e.data.endTime].filter(Boolean).join('–'), status: e.data.status || '' }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Appointment types"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Every type with its duration, buffer and bookings. Click a type to open it.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Appointments",
+                  "variant": "ghost",
+                  "icon": "calendar-check",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/applications/appointments/canvas/home.page.yaml"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /appointments folder could not be read. Reinstall Appointments to recreate it."
+            },
+            "rules": {
+              "visible": "data.$appointments.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /appointment-types folder could not be read. Reinstall Appointments to recreate it."
+            },
+            "rules": {
+              "visible": "data.$types.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 3
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Booked",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'booked').length }}",
+                  "icon": "calendar-check",
+                  "loading": "{{ data.$appointments.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Confirmed",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'confirmed').length }}",
+                  "icon": "calendar-check",
+                  "loading": "{{ data.$appointments.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Done",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'done').length }}",
+                  "icon": "calendar-check",
+                  "loading": "{{ data.$appointments.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Cancelled",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'cancelled').length }}",
+                  "icon": "calendar-check",
+                  "loading": "{{ data.$appointments.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "No Show",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'no-show').length }}",
+                  "icon": "calendar-check",
+                  "loading": "{{ data.$appointments.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "By type"
+            },
+            "children": [
+              {
+                "type": "canvas.table",
+                "props": {
+                  "rows": "{{ (data.types || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(t => ({ path: t.path, code: t.data.code || t.name, name: t.data.name || '', minutes: t.data.durationMinutes || 0, buffer: t.data.bufferMinutes || 0, host: t.data.host || '', active: t.data.active === false ? 'No' : 'Yes', appointments: (data.rows || []).filter(r => r.typePath === t.path).length, upcoming: (data.rows || []).filter(r => ['booked', 'confirmed'].includes(r.status) && !!r.date && r.date >= Date().slice(0, 10)).filter(r => r.typePath === t.path).length, done: (data.rows || []).filter(r => r.typePath === t.path && r.status === 'done').length })).sort((a, b) => (a.name < b.name ? -1 : 1)) }}",
+                  "columns": [
+                    {
+                      "key": "code",
+                      "label": "Type"
+                    },
+                    {
+                      "key": "name",
+                      "label": "Name"
+                    },
+                    {
+                      "key": "minutes",
+                      "label": "Minutes",
+                      "align": "end"
+                    },
+                    {
+                      "key": "buffer",
+                      "label": "Buffer",
+                      "align": "end"
+                    },
+                    {
+                      "key": "host",
+                      "label": "Host"
+                    },
+                    {
+                      "key": "active",
+                      "label": "Active"
+                    },
+                    {
+                      "key": "appointments",
+                      "label": "Appointments",
+                      "align": "end"
+                    },
+                    {
+                      "key": "upcoming",
+                      "label": "Upcoming",
+                      "align": "end"
+                    },
+                    {
+                      "key": "done",
+                      "label": "Done",
+                      "align": "end"
+                    }
+                  ],
+                  "emptyText": "No appointment types yet",
+                  "clickable": true
+                },
+                "on": {
+                  "row-click": [
+                    {
+                      "open-file": {
+                        "path": "{{ event.path }}",
+                        "mode": "edit"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

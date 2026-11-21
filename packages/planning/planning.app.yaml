@@ -1,0 +1,353 @@
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "planning",
+    "name": "Planning",
+    "description": "Shift planning as files in your workspace: roles and shifts with a week schedule, overlap-checked publishing and confirmed, locked shifts.",
+    "icon": "./icons/app.svg",
+    "version": "0.1.0",
+    "author": "Verentis"
+  },
+  "marketplace": {
+    "readme": "./README.md",
+    "keywords": [
+      "planning",
+      "shifts",
+      "schedule",
+      "roster",
+      "roles",
+      "workforce"
+    ]
+  },
+  "spec": {
+    "install-root": "/applications/planning",
+    "entry": "https://canvas.apps.localtest.me",
+    "scope": "global",
+    "entry-points": [
+      {
+        "id": "home",
+        "display-name": "Planning",
+        "route": "/render?document=.%2Fcanvas%2Fhome.page.yaml",
+        "order": 10
+      },
+      {
+        "id": "week",
+        "display-name": "Week schedule",
+        "route": "/render?document=.%2Fcanvas%2Fweek.page.yaml",
+        "order": 20
+      },
+      {
+        "id": "shifts",
+        "display-name": "Shifts",
+        "route": "/render?document=.%2Fcanvas%2Fshifts.page.yaml",
+        "order": 30
+      }
+    ],
+    "launch": {
+      "enabled": true,
+      "entry-point": "home",
+      "pinnable": true
+    },
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run"
+    ],
+    "scopes": [
+      "planning.default"
+    ],
+    "settings": [
+      {
+        "key": "role-code-prefix",
+        "display-name": "Role code prefix",
+        "type": "string",
+        "default": "PLR-",
+        "description": "Prefix of generated shift role codes, e.g. PLR-0001."
+      },
+      {
+        "key": "shift-code-prefix",
+        "display-name": "Shift code prefix",
+        "type": "string",
+        "default": "SHF-",
+        "description": "Prefix of generated shift codes, e.g. SHF-0001."
+      },
+      {
+        "key": "code-digits",
+        "display-name": "Code digits",
+        "type": "number",
+        "default": 4,
+        "description": "Minimum number of digits in generated codes (zero-padded)."
+      }
+    ],
+    "dependencies": [
+      {
+        "package": "verentis/canvas",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/nodejs",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/employees",
+        "version": "latest",
+        "optional": true
+      }
+    ],
+    "engine": "verentis/nodejs",
+    "scripts": [
+      "scripts/create",
+      "scripts/post"
+    ],
+    "install": [
+      {
+        "from": "canvas/*.form.yaml",
+        "to": "/applications/planning/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.form+yaml"
+      },
+      {
+        "from": "canvas/*.page.yaml",
+        "to": "/applications/planning/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.page+yaml"
+      },
+      {
+        "from": "schemas/*.schema.json",
+        "to": "/applications/planning/schemas/",
+        "mode": "managed",
+        "mime": "application/schema+json"
+      },
+      {
+        "from": "templates/*.json",
+        "to": "/applications/planning/templates/",
+        "mode": "managed",
+        "mime": "application/json"
+      },
+      {
+        "from": "seed/roles",
+        "to": "/shift-roles",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.planning.roles"
+      },
+      {
+        "from": "seed/shifts",
+        "to": "/shifts",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.planning.shifts"
+      },
+      {
+        "from": "seed/settings.json",
+        "to": "/settings/planning.json",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.planning.settings+json"
+      }
+    ],
+    "creatables": [
+      {
+        "id": "role",
+        "display-name": "Shift role",
+        "description": "A new shift role",
+        "icon": "lucide:tags",
+        "mime": "application/vnd.verentis.planning.role+json",
+        "parents": [
+          "application/vnd.verentis.planning.roles"
+        ],
+        "folder-names": [
+          "shift-roles",
+          "roles",
+          "planning"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/role.json"
+      },
+      {
+        "id": "shift",
+        "display-name": "Shift",
+        "description": "A new shift",
+        "icon": "lucide:calendar-days",
+        "mime": "application/vnd.verentis.planning.shift+json",
+        "parents": [
+          "application/vnd.verentis.planning.shifts"
+        ],
+        "folder-names": [
+          "shifts",
+          "planning"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/shift.json"
+      }
+    ],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-forms": true,
+      "allow-popups": false
+    },
+    "file-access": [
+      {
+        "path": "/shift-roles",
+        "mode": "read",
+        "reason": "Count shifts and show the roles and shifts",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/shifts",
+        "mode": "read",
+        "reason": "Count shifts and show the roles and shifts",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/shift-roles",
+        "mode": "read",
+        "reason": "Summarise the coming week's shifts by date and employee",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/week.page.yaml"
+        }
+      },
+      {
+        "path": "/shifts",
+        "mode": "read",
+        "reason": "Summarise the coming week's shifts by date and employee",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/week.page.yaml"
+        }
+      },
+      {
+        "path": "/shift-roles",
+        "mode": "read",
+        "reason": "List shifts by status with their role names",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/shifts.page.yaml"
+        }
+      },
+      {
+        "path": "/shifts",
+        "mode": "read",
+        "reason": "List shifts by status with their role names",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/shifts.page.yaml"
+        }
+      },
+      {
+        "path": "/applications/planning/",
+        "mode": "read",
+        "reason": "Read the Planning schemas and run the shift action script",
+        "origin": {
+          "kind": "document",
+          "id": "planning-role"
+        }
+      },
+      {
+        "path": "/shift-roles",
+        "mode": "read",
+        "reason": "Choose the role a shift is planned for",
+        "origin": {
+          "kind": "document",
+          "id": "planning-shift"
+        }
+      },
+      {
+        "path": "/employees",
+        "mode": "read",
+        "reason": "Offer employees on shifts (when Employees is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "planning-shift"
+        }
+      },
+      {
+        "path": "/applications/planning/",
+        "mode": "read",
+        "reason": "Read the Planning schemas and run the shift action script",
+        "origin": {
+          "kind": "document",
+          "id": "planning-shift"
+        }
+      },
+      {
+        "path": "/shift-roles",
+        "mode": "read",
+        "reason": "Choose the default role for new shifts",
+        "origin": {
+          "kind": "document",
+          "id": "planning-settings"
+        }
+      },
+      {
+        "path": "/applications/planning/",
+        "mode": "read",
+        "reason": "Read the Planning schemas and run the shift action script",
+        "origin": {
+          "kind": "document",
+          "id": "planning-settings"
+        }
+      },
+      {
+        "path": "/shift-roles",
+        "mode": "write",
+        "reason": "Create roles with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "planning-create"
+        }
+      },
+      {
+        "path": "/shifts",
+        "mode": "write",
+        "reason": "Create shifts with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "planning-create"
+        }
+      },
+      {
+        "path": "/settings/planning.json",
+        "mode": "read",
+        "reason": "Default new shifts to the default role",
+        "origin": {
+          "kind": "script",
+          "id": "planning-create"
+        }
+      },
+      {
+        "path": "/shifts",
+        "mode": "write",
+        "reason": "Publish and confirm shifts after checking the employee's schedule for overlaps",
+        "origin": {
+          "kind": "script",
+          "id": "planning-post"
+        }
+      }
+    ]
+  },
+  "packaging": {
+    "publisher": "verentis",
+    "files": [
+      "canvas/**",
+      "schemas/**",
+      "templates/**",
+      "seed/**",
+      "scripts/**",
+      "README.md"
+    ],
+    "templates": [
+      "canvas/*.yaml"
+    ],
+    "variables": {
+      "canvas-origin": "https://canvas.apps.localtest.me"
+    },
+    "encryption": "none"
+  }
+}

@@ -1,0 +1,284 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "appointments-upcoming",
+    "name": "Upcoming",
+    "description": "Booked and confirmed appointments from today on.",
+    "icon": "calendar-days"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/appointment-types",
+        "reason": "List the upcoming booked and confirmed appointments"
+      },
+      {
+        "path": "/appointments",
+        "reason": "List the upcoming booked and confirmed appointments"
+      }
+    ],
+    "data": {
+      "appointments": {
+        "kind": "folder",
+        "path": "/appointments",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.appointments.appointment+json"
+      },
+      "types": {
+        "kind": "folder",
+        "path": "/appointment-types",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.appointments.type+json"
+      },
+      "rows": {
+        "kind": "computed",
+        "expr": "(data.appointments || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, guest: e.data.guestName || '', typePath: e.data.type || '', type: ((((data.types || []).find(t => t.kind === 'file' && t.data && t.path === e.data.type) || {}).data || {}).name) || '', host: e.data.host || '', date: e.data.date || '', start: e.data.startTime || '', time: [e.data.startTime, e.data.endTime].filter(Boolean).join('–'), status: e.data.status || '' }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Upcoming appointments"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Booked and confirmed appointments from today on, in schedule order. Click an appointment to open it.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Appointments",
+                  "variant": "ghost",
+                  "icon": "calendar-check",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/applications/appointments/canvas/home.page.yaml"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /appointments folder could not be read. Reinstall Appointments to recreate it."
+            },
+            "rules": {
+              "visible": "data.$appointments.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /appointment-types folder could not be read. Reinstall Appointments to recreate it."
+            },
+            "rules": {
+              "visible": "data.$types.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 3
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Upcoming",
+                  "value": "{{ (data.rows || []).filter(r => ['booked', 'confirmed'].includes(r.status) && !!r.date && r.date >= Date().slice(0, 10)).length }}",
+                  "icon": "calendar-days",
+                  "loading": "{{ data.$appointments.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Today",
+                  "value": "{{ (data.rows || []).filter(r => ['booked', 'confirmed'].includes(r.status) && !!r.date && r.date >= Date().slice(0, 10)).filter(r => r.date === Date().slice(0, 10)).length }}",
+                  "icon": "clock",
+                  "loading": "{{ data.$appointments.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Awaiting confirmation",
+                  "value": "{{ (data.rows || []).filter(r => ['booked', 'confirmed'].includes(r.status) && !!r.date && r.date >= Date().slice(0, 10)).filter(r => r.status === 'booked').length }}",
+                  "icon": "circle-dashed",
+                  "loading": "{{ data.$appointments.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Today"
+            },
+            "children": [
+              {
+                "type": "canvas.table",
+                "props": {
+                  "rows": "{{ (data.rows || []).filter(r => ['booked', 'confirmed'].includes(r.status) && !!r.date && r.date >= Date().slice(0, 10)).filter(r => r.date === Date().slice(0, 10)).sort((a, b) => ((a.start || '~') < (b.start || '~') ? -1 : 1)) }}",
+                  "columns": [
+                    {
+                      "key": "code",
+                      "label": "Appointment"
+                    },
+                    {
+                      "key": "guest",
+                      "label": "Guest"
+                    },
+                    {
+                      "key": "type",
+                      "label": "Type"
+                    },
+                    {
+                      "key": "host",
+                      "label": "Host"
+                    },
+                    {
+                      "key": "date",
+                      "label": "Date"
+                    },
+                    {
+                      "key": "time",
+                      "label": "Time"
+                    },
+                    {
+                      "key": "status",
+                      "label": "Status"
+                    }
+                  ],
+                  "emptyText": "No appointments today",
+                  "clickable": true
+                },
+                "on": {
+                  "row-click": [
+                    {
+                      "open-file": {
+                        "path": "{{ event.path }}",
+                        "mode": "edit"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Upcoming"
+            },
+            "children": [
+              {
+                "type": "canvas.table",
+                "props": {
+                  "rows": "{{ (data.rows || []).filter(r => ['booked', 'confirmed'].includes(r.status) && !!r.date && r.date >= Date().slice(0, 10)).sort((a, b) => ((a.date + (a.start || '~')) < (b.date + (b.start || '~')) ? -1 : 1)) }}",
+                  "columns": [
+                    {
+                      "key": "code",
+                      "label": "Appointment"
+                    },
+                    {
+                      "key": "guest",
+                      "label": "Guest"
+                    },
+                    {
+                      "key": "type",
+                      "label": "Type"
+                    },
+                    {
+                      "key": "host",
+                      "label": "Host"
+                    },
+                    {
+                      "key": "date",
+                      "label": "Date"
+                    },
+                    {
+                      "key": "time",
+                      "label": "Time"
+                    },
+                    {
+                      "key": "status",
+                      "label": "Status"
+                    }
+                  ],
+                  "emptyText": "No upcoming appointments",
+                  "clickable": true
+                },
+                "on": {
+                  "row-click": [
+                    {
+                      "open-file": {
+                        "path": "{{ event.path }}",
+                        "mode": "edit"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

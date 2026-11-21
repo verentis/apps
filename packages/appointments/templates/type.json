@@ -1,0 +1,16 @@
+{
+  "$schema": "https://schemas.verentis.io/appointments/v1/type.schema.json",
+  "schemaVersion": 1,
+  "kind": "type",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "name": "{{ name }}",
+  "durationMinutes": 30,
+  "bufferMinutes": 0,
+  "host": "",
+  "location": "",
+  "active": true
+}

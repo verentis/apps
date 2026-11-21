@@ -1,0 +1,402 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "appointments-home",
+    "name": "Appointments",
+    "description": "Appointments overview.",
+    "icon": "calendar-check"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/appointment-types",
+        "reason": "Count appointments and show the types and appointments"
+      },
+      {
+        "path": "/appointments",
+        "reason": "Count appointments and show the types and appointments"
+      }
+    ],
+    "data": {
+      "appointments": {
+        "kind": "folder",
+        "path": "/appointments",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.appointments.appointment+json"
+      },
+      "types": {
+        "kind": "folder",
+        "path": "/appointment-types",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.appointments.type+json"
+      },
+      "rows": {
+        "kind": "computed",
+        "expr": "(data.appointments || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, guest: e.data.guestName || '', typePath: e.data.type || '', type: ((((data.types || []).find(t => t.kind === 'file' && t.data && t.path === e.data.type) || {}).data || {}).name) || '', host: e.data.host || '', date: e.data.date || '', start: e.data.startTime || '', time: [e.data.startTime, e.data.endTime].filter(Boolean).join('–'), status: e.data.status || '' }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Appointments"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Appointment types and bookings are files in your workspace. Book appointments in /appointments, confirm them conflict-checked, then complete them from their forms.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Upcoming",
+                      "variant": "outline",
+                      "icon": "calendar-check",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/applications/appointments/canvas/upcoming.page.yaml"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Types",
+                      "variant": "outline",
+                      "icon": "calendar-clock",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/applications/appointments/canvas/types.page.yaml"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Settings",
+                      "variant": "ghost",
+                      "icon": "settings",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/settings/appointments.json",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 4
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Appointments",
+                  "value": "{{ (data.rows || []).filter(r => true).length }}",
+                  "icon": "calendar-check",
+                  "loading": "{{ data.$appointments.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Upcoming",
+                  "value": "{{ (data.rows || []).filter(r => ['booked', 'confirmed'].includes(r.status) && !!r.date && r.date >= Date().slice(0, 10)).length }}",
+                  "icon": "calendar-days",
+                  "loading": "{{ data.$appointments.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Done",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'done').length }}",
+                  "icon": "check-check",
+                  "loading": "{{ data.$appointments.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Cancelled or no-show",
+                  "value": "{{ (data.rows || []).filter(r => ['cancelled', 'no-show'].includes(r.status)).length }}",
+                  "icon": "x",
+                  "loading": "{{ data.$appointments.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /appointments folder could not be read. Reinstall Appointments to recreate it."
+            },
+            "rules": {
+              "visible": "data.$appointments.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /appointment-types folder could not be read. Reinstall Appointments to recreate it."
+            },
+            "rules": {
+              "visible": "data.$types.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.tabs",
+            "props": {
+              "items": [
+                {
+                  "value": "appointments",
+                  "label": "Appointments",
+                  "icon": "calendar-check"
+                },
+                {
+                  "value": "types",
+                  "label": "Types",
+                  "icon": "calendar-clock"
+                }
+              ]
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Open /appointments",
+                          "variant": "outline",
+                          "icon": "folder-open",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "open-file": {
+                                "path": "/appointments"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.files",
+                    "props": {
+                      "path": "/appointments/",
+                      "mimeTypes": [
+                        "application/vnd.verentis.appointments.appointment+json"
+                      ],
+                      "showFolders": false,
+                      "navigable": false,
+                      "columns": [
+                        {
+                          "key": "name",
+                          "label": "Appointment"
+                        },
+                        {
+                          "key": "data.guestName",
+                          "label": "Guest"
+                        },
+                        {
+                          "key": "data.date",
+                          "label": "Date"
+                        },
+                        {
+                          "key": "data.startTime",
+                          "label": "Start"
+                        },
+                        {
+                          "key": "data.host",
+                          "label": "Host"
+                        },
+                        {
+                          "key": "data.status",
+                          "label": "Status"
+                        }
+                      ],
+                      "emptyText": "No appointments yet. Use New in /appointments."
+                    }
+                  }
+                ],
+                "slot": "appointments"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Open /appointment-types",
+                          "variant": "outline",
+                          "icon": "folder-open",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "open-file": {
+                                "path": "/appointment-types"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.files",
+                    "props": {
+                      "path": "/appointment-types/",
+                      "mimeTypes": [
+                        "application/vnd.verentis.appointments.type+json"
+                      ],
+                      "showFolders": false,
+                      "navigable": false,
+                      "columns": [
+                        {
+                          "key": "name",
+                          "label": "Type"
+                        },
+                        {
+                          "key": "data.name",
+                          "label": "Name"
+                        },
+                        {
+                          "key": "data.durationMinutes",
+                          "label": "Minutes"
+                        },
+                        {
+                          "key": "data.host",
+                          "label": "Host"
+                        }
+                      ],
+                      "emptyText": "No types yet. Use New in /appointment-types."
+                    }
+                  }
+                ],
+                "slot": "types"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

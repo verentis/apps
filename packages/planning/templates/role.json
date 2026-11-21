@@ -1,0 +1,13 @@
+{
+  "$schema": "https://schemas.verentis.io/planning/v1/role.schema.json",
+  "schemaVersion": 1,
+  "kind": "role",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "name": "{{ name }}",
+  "color": "",
+  "notes": ""
+}
