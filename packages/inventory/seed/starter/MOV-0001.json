@@ -1,0 +1,20 @@
+{
+  "$schema": "https://schemas.verentis.io/inventory/v1/move.schema.json",
+  "schemaVersion": 1,
+  "kind": "move",
+  "id": "7a1b2c3d-4e5f-4a6b-8c9d-0e1f2a3b4c05",
+  "state": "active",
+  "createdAt": "2026-01-01T00:00:00Z",
+  "updatedAt": "2026-01-01T00:00:00Z",
+  "code": "MOV-0001",
+  "product": "/products/PRD-0001",
+  "quantity": "20",
+  "fromWarehouse": "",
+  "fromLocation": "",
+  "toWarehouse": "/warehouses/WH-0001",
+  "toLocation": "Stock",
+  "date": "2026-01-02",
+  "reference": "Initial receipt",
+  "status": "done",
+  "postedAt": "2026-01-01T00:00:00Z"
+}

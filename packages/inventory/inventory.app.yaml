@@ -1,0 +1,579 @@
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "inventory",
+    "name": "Inventory",
+    "description": "Products, warehouses, stock moves and inventory adjustments as files in your workspace, validated and applied by script and reported with Canvas.",
+    "icon": "./icons/app.svg",
+    "version": "0.1.0",
+    "author": "Verentis"
+  },
+  "marketplace": {
+    "readme": "./README.md",
+    "keywords": [
+      "inventory",
+      "stock",
+      "warehouse",
+      "products",
+      "stock moves",
+      "inventory adjustments",
+      "on hand",
+      "reorder point"
+    ]
+  },
+  "spec": {
+    "install-root": "/applications/inventory",
+    "entry": "https://canvas.apps.localtest.me",
+    "scope": "global",
+    "entry-points": [
+      {
+        "id": "home",
+        "display-name": "Inventory",
+        "route": "/render?document=.%2Fcanvas%2Fhome.page.yaml",
+        "order": 10
+      },
+      {
+        "id": "stock",
+        "display-name": "Stock levels",
+        "route": "/render?document=.%2Fcanvas%2Fstock.page.yaml",
+        "order": 20
+      }
+    ],
+    "launch": {
+      "enabled": true,
+      "entry-point": "home",
+      "pinnable": true
+    },
+    "widgets": [
+      {
+        "id": "low-stock",
+        "display-name": "Low stock",
+        "description": "Products at or below their reorder point, from done stock moves",
+        "route": "/render?document=.%2Fcanvas%2Flow-stock.widget.page.yaml",
+        "default-size": {
+          "w": 4,
+          "h": 4
+        },
+        "min-size": {
+          "w": 3,
+          "h": 3
+        }
+      }
+    ],
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run"
+    ],
+    "scopes": [
+      "inventory.default"
+    ],
+    "settings": [
+      {
+        "key": "product-code-prefix",
+        "display-name": "Product code prefix",
+        "type": "string",
+        "default": "PRD-",
+        "description": "Prefix of generated product codes, e.g. PRD-0001."
+      },
+      {
+        "key": "warehouse-code-prefix",
+        "display-name": "Warehouse code prefix",
+        "type": "string",
+        "default": "WH-",
+        "description": "Prefix of generated warehouse codes, e.g. WH-0001."
+      },
+      {
+        "key": "move-code-prefix",
+        "display-name": "Stock move code prefix",
+        "type": "string",
+        "default": "MOV-",
+        "description": "Prefix of generated stock move codes, e.g. MOV-0001."
+      },
+      {
+        "key": "adjustment-code-prefix",
+        "display-name": "Adjustment code prefix",
+        "type": "string",
+        "default": "ADJ-",
+        "description": "Prefix of generated inventory adjustment codes, e.g. ADJ-0001."
+      },
+      {
+        "key": "code-digits",
+        "display-name": "Code digits",
+        "type": "number",
+        "default": 4,
+        "description": "Minimum number of digits in generated codes (zero-padded)."
+      }
+    ],
+    "dependencies": [
+      {
+        "package": "verentis/canvas",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/nodejs",
+        "version": "latest"
+      }
+    ],
+    "engine": "verentis/nodejs",
+    "scripts": [
+      "scripts/create",
+      "scripts/post"
+    ],
+    "install": [
+      {
+        "from": "canvas/*.form.yaml",
+        "to": "/applications/inventory/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.form+yaml"
+      },
+      {
+        "from": "canvas/*.page.yaml",
+        "to": "/applications/inventory/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.page+yaml"
+      },
+      {
+        "from": "schemas/*.schema.json",
+        "to": "/applications/inventory/schemas/",
+        "mode": "managed",
+        "mime": "application/schema+json"
+      },
+      {
+        "from": "templates/*.json",
+        "to": "/applications/inventory/templates/",
+        "mode": "managed",
+        "mime": "application/json"
+      },
+      {
+        "from": "seed/products",
+        "to": "/products",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.inventory.products"
+      },
+      {
+        "from": "seed/warehouses",
+        "to": "/warehouses",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.inventory.warehouses"
+      },
+      {
+        "from": "seed/moves",
+        "to": "/stock-moves",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.inventory.moves"
+      },
+      {
+        "from": "seed/adjustments",
+        "to": "/inventory-adjustments",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.inventory.adjustments"
+      },
+      {
+        "from": "seed/starter/WH-0001.json",
+        "to": "/warehouses/WH-0001",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.inventory.warehouse+json"
+      },
+      {
+        "from": "seed/starter/PRD-0001.json",
+        "to": "/products/PRD-0001",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.inventory.product+json"
+      },
+      {
+        "from": "seed/starter/PRD-0002.json",
+        "to": "/products/PRD-0002",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.inventory.product+json"
+      },
+      {
+        "from": "seed/starter/PRD-0003.json",
+        "to": "/products/PRD-0003",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.inventory.product+json"
+      },
+      {
+        "from": "seed/starter/MOV-0001.json",
+        "to": "/stock-moves/MOV-0001",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.inventory.move+json"
+      },
+      {
+        "from": "seed/starter/MOV-0002.json",
+        "to": "/stock-moves/MOV-0002",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.inventory.move+json"
+      },
+      {
+        "from": "seed/starter/MOV-0003.json",
+        "to": "/stock-moves/MOV-0003",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.inventory.move+json"
+      },
+      {
+        "from": "seed/settings.json",
+        "to": "/settings/inventory.json",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.inventory.settings+json"
+      }
+    ],
+    "creatables": [
+      {
+        "id": "product",
+        "display-name": "Product",
+        "description": "A new product",
+        "icon": "lucide:package",
+        "mime": "application/vnd.verentis.inventory.product+json",
+        "parents": [
+          "application/vnd.verentis.inventory.products"
+        ],
+        "folder-names": [
+          "products",
+          "catalog",
+          "inventory"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/product.json"
+      },
+      {
+        "id": "warehouse",
+        "display-name": "Warehouse",
+        "description": "A new warehouse",
+        "icon": "lucide:warehouse",
+        "mime": "application/vnd.verentis.inventory.warehouse+json",
+        "parents": [
+          "application/vnd.verentis.inventory.warehouses"
+        ],
+        "folder-names": [
+          "warehouses",
+          "inventory"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/warehouse.json"
+      },
+      {
+        "id": "move",
+        "display-name": "Stock move",
+        "description": "A new stock move",
+        "icon": "lucide:arrow-left-right",
+        "mime": "application/vnd.verentis.inventory.move+json",
+        "parents": [
+          "application/vnd.verentis.inventory.moves"
+        ],
+        "folder-names": [
+          "stock-moves",
+          "moves",
+          "inventory"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/move.json"
+      },
+      {
+        "id": "adjustment",
+        "display-name": "Inventory adjustment",
+        "description": "A new inventory adjustment",
+        "icon": "lucide:clipboard-check",
+        "mime": "application/vnd.verentis.inventory.adjustment+json",
+        "parents": [
+          "application/vnd.verentis.inventory.adjustments"
+        ],
+        "folder-names": [
+          "inventory-adjustments",
+          "adjustments",
+          "inventory"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/adjustment.json"
+      }
+    ],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-forms": true,
+      "allow-popups": false
+    },
+    "file-access": [
+      {
+        "path": "/products",
+        "mode": "read",
+        "reason": "List the products",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/warehouses",
+        "mode": "read",
+        "reason": "List the warehouses",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/stock-moves",
+        "mode": "read",
+        "reason": "List stock moves",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/inventory-adjustments",
+        "mode": "read",
+        "reason": "List inventory adjustments",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/products",
+        "mode": "read",
+        "reason": "Report on the products",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/stock.page.yaml"
+        }
+      },
+      {
+        "path": "/warehouses",
+        "mode": "read",
+        "reason": "Break stock down per warehouse",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/stock.page.yaml"
+        }
+      },
+      {
+        "path": "/stock-moves",
+        "mode": "read",
+        "reason": "Sum the done stock moves",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/stock.page.yaml"
+        }
+      },
+      {
+        "path": "/products",
+        "mode": "read",
+        "reason": "Show the products and their reorder points",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/low-stock.widget.page.yaml"
+        }
+      },
+      {
+        "path": "/stock-moves",
+        "mode": "read",
+        "reason": "Sum the done stock moves",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/low-stock.widget.page.yaml"
+        }
+      },
+      {
+        "path": "/stock-moves",
+        "mode": "read",
+        "reason": "Show the stock moves of this product",
+        "origin": {
+          "kind": "document",
+          "id": "inventory-product"
+        }
+      },
+      {
+        "path": "/applications/inventory/",
+        "mode": "read",
+        "reason": "Read the Inventory schemas and run the posting script",
+        "origin": {
+          "kind": "document",
+          "id": "inventory-product"
+        }
+      },
+      {
+        "path": "/applications/inventory/",
+        "mode": "read",
+        "reason": "Read the Inventory schemas and run the posting script",
+        "origin": {
+          "kind": "document",
+          "id": "inventory-warehouse"
+        }
+      },
+      {
+        "path": "/products",
+        "mode": "read",
+        "reason": "Choose the product being moved",
+        "origin": {
+          "kind": "document",
+          "id": "inventory-move"
+        }
+      },
+      {
+        "path": "/warehouses",
+        "mode": "read",
+        "reason": "Choose the from and to warehouses",
+        "origin": {
+          "kind": "document",
+          "id": "inventory-move"
+        }
+      },
+      {
+        "path": "/applications/inventory/",
+        "mode": "read",
+        "reason": "Read the Inventory schemas and run the posting script",
+        "origin": {
+          "kind": "document",
+          "id": "inventory-move"
+        }
+      },
+      {
+        "path": "/products",
+        "mode": "read",
+        "reason": "Choose the product being counted",
+        "origin": {
+          "kind": "document",
+          "id": "inventory-adjustment"
+        }
+      },
+      {
+        "path": "/warehouses",
+        "mode": "read",
+        "reason": "Choose the warehouse being counted",
+        "origin": {
+          "kind": "document",
+          "id": "inventory-adjustment"
+        }
+      },
+      {
+        "path": "/applications/inventory/",
+        "mode": "read",
+        "reason": "Read the Inventory schemas and run the posting script",
+        "origin": {
+          "kind": "document",
+          "id": "inventory-adjustment"
+        }
+      },
+      {
+        "path": "/warehouses",
+        "mode": "read",
+        "reason": "Choose the default warehouse",
+        "origin": {
+          "kind": "document",
+          "id": "inventory-settings"
+        }
+      },
+      {
+        "path": "/applications/inventory/",
+        "mode": "read",
+        "reason": "Read the Inventory schemas and run the posting script",
+        "origin": {
+          "kind": "document",
+          "id": "inventory-settings"
+        }
+      },
+      {
+        "path": "/products",
+        "mode": "write",
+        "reason": "Create products with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "inventory-create"
+        }
+      },
+      {
+        "path": "/warehouses",
+        "mode": "write",
+        "reason": "Create warehouses with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "inventory-create"
+        }
+      },
+      {
+        "path": "/stock-moves",
+        "mode": "write",
+        "reason": "Create moves with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "inventory-create"
+        }
+      },
+      {
+        "path": "/inventory-adjustments",
+        "mode": "write",
+        "reason": "Create adjustments with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "inventory-create"
+        }
+      },
+      {
+        "path": "/settings/inventory.json",
+        "mode": "read",
+        "reason": "Default new adjustments to the default warehouse",
+        "origin": {
+          "kind": "script",
+          "id": "inventory-create"
+        }
+      },
+      {
+        "path": "/products",
+        "mode": "read",
+        "reason": "Check that the moved or counted product exists and is active",
+        "origin": {
+          "kind": "script",
+          "id": "inventory-post"
+        }
+      },
+      {
+        "path": "/warehouses",
+        "mode": "read",
+        "reason": "Check warehouses and their locations",
+        "origin": {
+          "kind": "script",
+          "id": "inventory-post"
+        }
+      },
+      {
+        "path": "/stock-moves",
+        "mode": "write",
+        "reason": "Mark moves done and write corrective moves for applied adjustments",
+        "origin": {
+          "kind": "script",
+          "id": "inventory-post"
+        }
+      },
+      {
+        "path": "/inventory-adjustments",
+        "mode": "write",
+        "reason": "Mark adjustments applied",
+        "origin": {
+          "kind": "script",
+          "id": "inventory-post"
+        }
+      }
+    ]
+  },
+  "packaging": {
+    "publisher": "verentis",
+    "files": [
+      "canvas/**",
+      "schemas/**",
+      "templates/**",
+      "seed/**",
+      "scripts/**",
+      "README.md"
+    ],
+    "templates": [
+      "canvas/*.yaml"
+    ],
+    "variables": {
+      "canvas-origin": "https://canvas.apps.localtest.me"
+    },
+    "encryption": "none"
+  }
+}

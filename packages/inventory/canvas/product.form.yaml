@@ -1,0 +1,583 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Form",
+  "metadata": {
+    "id": "inventory-product",
+    "name": "Inventory product",
+    "description": "View and edit an Inventory product.",
+    "icon": "package"
+  },
+  "spec": {
+    "binds": [
+      {
+        "pattern": "application/vnd.verentis.inventory.product+json",
+        "mode": "edit",
+        "priority": 200,
+        "scope": "global",
+        "json-schema": {
+          "id": "https://schemas.verentis.io/inventory/v1/product.schema.json",
+          "source": "/applications/inventory/schemas/product.schema.json",
+          "title": "Inventory product",
+          "version": "1"
+        }
+      }
+    ],
+    "entry": "${var:canvas-origin}/render?document=%2Fapplications%2Finventory%2Fcanvas%2Fproduct.form.yaml",
+    "scope": "global",
+    "mime-types": [
+      {
+        "pattern": "application/vnd.verentis.inventory.product+json",
+        "mode": "edit",
+        "priority": 200,
+        "json-schema": {
+          "id": "https://schemas.verentis.io/inventory/v1/product.schema.json",
+          "source": "/applications/inventory/schemas/product.schema.json",
+          "title": "Inventory product",
+          "version": "1"
+        }
+      }
+    ],
+    "permissions": [
+      "file.read",
+      "file.write"
+    ],
+    "capabilities": [],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-popups": false,
+      "allow-forms": true
+    },
+    "file-access": [
+      {
+        "path": "/stock-moves",
+        "mode": "read",
+        "reason": "Show the stock moves of this product"
+      },
+      {
+        "path": "/applications/inventory/",
+        "mode": "read",
+        "reason": "Read the Inventory schemas and run the posting script"
+      }
+    ],
+    "access": [
+      {
+        "path": "/stock-moves",
+        "reason": "Show the stock moves of this product"
+      },
+      {
+        "path": "/applications/inventory/",
+        "reason": "Read the Inventory schemas and run the posting script"
+      }
+    ],
+    "data": {
+      "record": {
+        "kind": "document",
+        "consistency": "conditional"
+      },
+      "moves": {
+        "kind": "folder",
+        "path": "/stock-moves",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.inventory.move+json"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.heading",
+                        "props": {
+                          "level": 2,
+                          "text": "{{ form.values.name || 'New product' }}"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.badge",
+                        "props": {
+                          "text": "Archived",
+                          "tone": "warning",
+                          "icon": "archive"
+                        },
+                        "rules": {
+                          "visible": "form.values.state === 'archived'"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Product {{ form.values.code || '' }} · {{ ctx.file.path }}",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Archive",
+                          "variant": "ghost",
+                          "icon": "archive",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "archive"
+                        },
+                        "rules": {
+                          "visible": "!(form.values.state === 'archived') && !(false)",
+                          "disabled": "form.saving || form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Restore",
+                          "variant": "outline",
+                          "icon": "archive-restore",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "restore"
+                        },
+                        "rules": {
+                          "visible": "form.values.state === 'archived'",
+                          "disabled": "form.saving || form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Reset",
+                          "variant": "ghost",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "reset"
+                        },
+                        "rules": {
+                          "disabled": "form.saving || !form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Save",
+                          "icon": "save",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "save"
+                        },
+                        "rules": {
+                          "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (false)"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$record.error }}"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.dashboard.badge",
+            "props": {
+              "text": "This product is archived. Restore it to edit.",
+              "tone": "warning",
+              "icon": "archive"
+            },
+            "rules": {
+              "visible": "form.values.state === 'archived'"
+            }
+          },
+          {
+            "type": "canvas.tabs",
+            "props": {
+              "items": [
+                {
+                  "value": "overview",
+                  "label": "Overview",
+                  "icon": "package"
+                },
+                {
+                  "value": "moves",
+                  "label": "Moves",
+                  "icon": "arrow-left-right"
+                }
+              ]
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.card",
+                        "props": {
+                          "title": "Product"
+                        },
+                        "children": [
+                          {
+                            "type": "canvas.grid",
+                            "layout": {
+                              "base": {
+                                "columns": 1,
+                                "gap": 4
+                              },
+                              "tablet": {
+                                "columns": 2
+                              }
+                            },
+                            "children": [
+                              {
+                                "type": "canvas.form.input",
+                                "props": {
+                                  "label": "Name",
+                                  "value": "{{ form.values.name }}",
+                                  "required": true
+                                },
+                                "rules": {
+                                  "disabled": "(form.values.state === 'archived' || (false))"
+                                }
+                              },
+                              {
+                                "type": "canvas.form.input",
+                                "props": {
+                                  "label": "SKU",
+                                  "value": "{{ form.values.sku }}",
+                                  "placeholder": "DESK-001"
+                                },
+                                "rules": {
+                                  "disabled": "(form.values.state === 'archived' || (false))"
+                                }
+                              },
+                              {
+                                "type": "canvas.form.input",
+                                "props": {
+                                  "label": "Unit",
+                                  "value": "{{ form.values.unit }}",
+                                  "placeholder": "ea"
+                                },
+                                "rules": {
+                                  "disabled": "(form.values.state === 'archived' || (false))"
+                                }
+                              },
+                              {
+                                "type": "canvas.form.input",
+                                "props": {
+                                  "label": "Category",
+                                  "value": "{{ form.values.category }}",
+                                  "placeholder": "Furniture"
+                                },
+                                "rules": {
+                                  "disabled": "(form.values.state === 'archived' || (false))"
+                                }
+                              },
+                              {
+                                "type": "canvas.form.input",
+                                "props": {
+                                  "label": "Reorder point",
+                                  "value": "{{ form.values.reorderPoint }}",
+                                  "description": "Flag the product on the stock report when on hand falls to this quantity.",
+                                  "placeholder": "0"
+                                },
+                                "rules": {
+                                  "disabled": "(form.values.state === 'archived' || (false))"
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ],
+                "slot": "overview"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "{{ data.$moves.error }}"
+                    },
+                    "rules": {
+                      "visible": "data.$moves.status === 'error'"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Loading…",
+                      "tone": "muted"
+                    },
+                    "rules": {
+                      "visible": "data.$moves.status === 'loading'"
+                    }
+                  },
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 2,
+                        "gap": 4
+                      },
+                      "desktop": {
+                        "columns": 3
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.dashboard.stat",
+                        "props": {
+                          "label": "On hand (done moves)",
+                          "value": "{{ ((data.moves || []).filter(m => m.kind === 'file' && m.data && m.data.kind === 'move' && m.data.status === 'done').reduce((s, m) => s + (m.data.product === ctx.file.path ? ((m.data.toWarehouse ? Math.round(Number(m.data.quantity || 0) * 10000) : 0) - (m.data.fromWarehouse ? Math.round(Number(m.data.quantity || 0) * 10000) : 0)) : 0), 0) / 10000) }}",
+                          "icon": "package",
+                          "loading": "{{ data.$moves.status === 'loading' }}"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.moves || []).filter(m => m.kind === 'file' && m.data && m.data.kind === 'move' && m.data.product === ctx.file.path).map(m => ({ path: m.path, date: m.data.date, move: m.data.code || m.name, reference: m.data.reference || '', from: (m.data.fromWarehouse || '').split('/').pop() + (m.data.fromLocation ? ' · ' + m.data.fromLocation : ''), to: (m.data.toWarehouse || '').split('/').pop() + (m.data.toLocation ? ' · ' + m.data.toLocation : ''), quantity: m.data.quantity, status: m.data.status })).sort((a, b) => (a.date < b.date ? -1 : (a.date > b.date ? 1 : 0))) }}",
+                      "columns": [
+                        {
+                          "key": "date",
+                          "label": "Date"
+                        },
+                        {
+                          "key": "move",
+                          "label": "Move"
+                        },
+                        {
+                          "key": "reference",
+                          "label": "Reference"
+                        },
+                        {
+                          "key": "from",
+                          "label": "From"
+                        },
+                        {
+                          "key": "to",
+                          "label": "To"
+                        },
+                        {
+                          "key": "quantity",
+                          "label": "Quantity",
+                          "align": "end"
+                        },
+                        {
+                          "key": "status",
+                          "label": "Status"
+                        }
+                      ],
+                      "emptyText": "No stock moves use this product yet",
+                      "clickable": true
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "moves"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "actions": {
+      "save": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Saved",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "reset": {
+        "steps": [
+          {
+            "reset-form": {}
+          }
+        ]
+      },
+      "archive": {
+        "steps": [
+          {
+            "confirm": {
+              "title": "Archive",
+              "message": "Archive this record? It stays in the workspace and can be restored."
+            }
+          },
+          {
+            "patch-form": {
+              "values": {
+                "state": "archived",
+                "archivedAt": "{{ Date() }}",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Archived",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "restore": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "state": "active",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Restored",
+              "variant": "success"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

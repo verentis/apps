@@ -1,0 +1,456 @@
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "sales",
+    "name": "Sales",
+    "description": "Products, quotations and sales orders as files in your workspace; a quotation is confirmed into a sales order by script.",
+    "icon": "./icons/app.svg",
+    "version": "0.1.0",
+    "author": "Verentis"
+  },
+  "marketplace": {
+    "readme": "./README.md",
+    "keywords": [
+      "sales",
+      "quotations",
+      "quotes",
+      "sales orders",
+      "products",
+      "crm",
+      "invoicing"
+    ]
+  },
+  "spec": {
+    "install-root": "/applications/sales",
+    "entry": "https://canvas.apps.localtest.me",
+    "scope": "global",
+    "entry-points": [
+      {
+        "id": "home",
+        "display-name": "Sales",
+        "route": "/render?document=.%2Fcanvas%2Fhome.page.yaml",
+        "order": 10
+      },
+      {
+        "id": "quotations",
+        "display-name": "Quotations",
+        "route": "/render?document=.%2Fcanvas%2Fquotations.page.yaml",
+        "order": 20
+      },
+      {
+        "id": "orders",
+        "display-name": "Sales orders",
+        "route": "/render?document=.%2Fcanvas%2Forders.page.yaml",
+        "order": 30
+      },
+      {
+        "id": "summary",
+        "display-name": "Summary",
+        "route": "/render?document=.%2Fcanvas%2Fsummary.page.yaml",
+        "order": 40
+      }
+    ],
+    "launch": {
+      "enabled": true,
+      "entry-point": "home",
+      "pinnable": true
+    },
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run"
+    ],
+    "scopes": [
+      "sales.default"
+    ],
+    "settings": [
+      {
+        "key": "product-code-prefix",
+        "display-name": "Product code prefix",
+        "type": "string",
+        "default": "PROD-",
+        "description": "Prefix of generated product numbers, e.g. PROD-0001."
+      },
+      {
+        "key": "quotation-code-prefix",
+        "display-name": "Quotation number prefix",
+        "type": "string",
+        "default": "QUO-",
+        "description": "Prefix of generated quotation numbers, e.g. QUO-0001."
+      },
+      {
+        "key": "order-code-prefix",
+        "display-name": "Sales order number prefix",
+        "type": "string",
+        "default": "SO-",
+        "description": "Prefix of generated sales order numbers, e.g. SO-0001."
+      },
+      {
+        "key": "code-digits",
+        "display-name": "Code digits",
+        "type": "number",
+        "default": 4,
+        "description": "Minimum number of digits in generated numbers (zero-padded)."
+      }
+    ],
+    "dependencies": [
+      {
+        "package": "verentis/canvas",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/nodejs",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/crm",
+        "version": "latest",
+        "optional": true
+      },
+      {
+        "package": "verentis/invoicing",
+        "version": "latest",
+        "optional": true
+      }
+    ],
+    "engine": "verentis/nodejs",
+    "scripts": [
+      "scripts/create",
+      "scripts/post"
+    ],
+    "install": [
+      {
+        "from": "canvas/*.form.yaml",
+        "to": "/applications/sales/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.form+yaml"
+      },
+      {
+        "from": "canvas/*.page.yaml",
+        "to": "/applications/sales/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.page+yaml"
+      },
+      {
+        "from": "schemas/*.schema.json",
+        "to": "/applications/sales/schemas/",
+        "mode": "managed",
+        "mime": "application/schema+json"
+      },
+      {
+        "from": "templates/*.json",
+        "to": "/applications/sales/templates/",
+        "mode": "managed",
+        "mime": "application/json"
+      },
+      {
+        "from": "seed/products",
+        "to": "/products",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.sales.products"
+      },
+      {
+        "from": "seed/quotations",
+        "to": "/quotations",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.sales.quotations"
+      },
+      {
+        "from": "seed/orders",
+        "to": "/sales-orders",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.sales.orders"
+      },
+      {
+        "from": "seed/settings.json",
+        "to": "/settings/sales.json",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.sales.settings+json"
+      }
+    ],
+    "creatables": [
+      {
+        "id": "product",
+        "display-name": "Product",
+        "description": "A new product",
+        "icon": "lucide:package",
+        "mime": "application/vnd.verentis.sales.product+json",
+        "parents": [
+          "application/vnd.verentis.sales.products"
+        ],
+        "folder-names": [
+          "products",
+          "sales"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/product.json"
+      },
+      {
+        "id": "quotation",
+        "display-name": "Quotation",
+        "description": "A new quotation",
+        "icon": "lucide:file-text",
+        "mime": "application/vnd.verentis.sales.quotation+json",
+        "parents": [
+          "application/vnd.verentis.sales.quotations"
+        ],
+        "folder-names": [
+          "quotations",
+          "sales"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/quotation.json"
+      },
+      {
+        "id": "order",
+        "display-name": "Sales order",
+        "description": "A new sales order",
+        "icon": "lucide:package-check",
+        "mime": "application/vnd.verentis.sales.order+json",
+        "parents": [
+          "application/vnd.verentis.sales.orders"
+        ],
+        "folder-names": [
+          "sales-orders",
+          "sales"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/order.json"
+      }
+    ],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-forms": true,
+      "allow-popups": false
+    },
+    "file-access": [
+      {
+        "path": "/products",
+        "mode": "read",
+        "reason": "List products",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/quotations",
+        "mode": "read",
+        "reason": "List quotations",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/sales-orders",
+        "mode": "read",
+        "reason": "List sales orders",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/quotations",
+        "mode": "read",
+        "reason": "List quotations by status",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/quotations.page.yaml"
+        }
+      },
+      {
+        "path": "/sales-orders",
+        "mode": "read",
+        "reason": "List sales orders by delivery status",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/orders.page.yaml"
+        }
+      },
+      {
+        "path": "/quotations",
+        "mode": "read",
+        "reason": "Sum the quotation pipeline and confirmed value",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/summary.page.yaml"
+        }
+      },
+      {
+        "path": "/sales-orders",
+        "mode": "read",
+        "reason": "Sum the order book and open deliveries",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/summary.page.yaml"
+        }
+      },
+      {
+        "path": "/applications/sales/",
+        "mode": "read",
+        "reason": "Read the Sales schemas and run the confirm script",
+        "origin": {
+          "kind": "document",
+          "id": "sales-product"
+        }
+      },
+      {
+        "path": "/customers",
+        "mode": "read",
+        "reason": "Offer CRM customers to quote (when CRM is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "sales-quotation"
+        }
+      },
+      {
+        "path": "/products",
+        "mode": "read",
+        "reason": "Offer products on quotation lines",
+        "origin": {
+          "kind": "document",
+          "id": "sales-quotation"
+        }
+      },
+      {
+        "path": "/applications/sales/",
+        "mode": "read",
+        "reason": "Read the Sales schemas and run the confirm script",
+        "origin": {
+          "kind": "document",
+          "id": "sales-quotation"
+        }
+      },
+      {
+        "path": "/quotations",
+        "mode": "read",
+        "reason": "Link back to the quotation this order came from",
+        "origin": {
+          "kind": "document",
+          "id": "sales-order"
+        }
+      },
+      {
+        "path": "/applications/sales/",
+        "mode": "read",
+        "reason": "Read the Sales schemas and run the confirm script",
+        "origin": {
+          "kind": "document",
+          "id": "sales-order"
+        }
+      },
+      {
+        "path": "/applications/sales/",
+        "mode": "read",
+        "reason": "Read the Sales schemas and run the confirm script",
+        "origin": {
+          "kind": "document",
+          "id": "sales-settings"
+        }
+      },
+      {
+        "path": "/products",
+        "mode": "write",
+        "reason": "Create products with the next number",
+        "origin": {
+          "kind": "script",
+          "id": "sales-create"
+        }
+      },
+      {
+        "path": "/quotations",
+        "mode": "write",
+        "reason": "Create quotations with the next number",
+        "origin": {
+          "kind": "script",
+          "id": "sales-create"
+        }
+      },
+      {
+        "path": "/sales-orders",
+        "mode": "write",
+        "reason": "Create sales orders with the next number",
+        "origin": {
+          "kind": "script",
+          "id": "sales-create"
+        }
+      },
+      {
+        "path": "/settings/sales.json",
+        "mode": "read",
+        "reason": "Default new quotations' currency and notes",
+        "origin": {
+          "kind": "script",
+          "id": "sales-create"
+        }
+      },
+      {
+        "path": "/settings/sales.json",
+        "mode": "read",
+        "reason": "Default the currency when a quotation leaves it empty",
+        "origin": {
+          "kind": "script",
+          "id": "sales-post"
+        }
+      },
+      {
+        "path": "/products",
+        "mode": "read",
+        "reason": "Check that quoted products exist and are active",
+        "origin": {
+          "kind": "script",
+          "id": "sales-post"
+        }
+      },
+      {
+        "path": "/quotations",
+        "mode": "write",
+        "reason": "Mark quotations confirmed with their computed totals",
+        "origin": {
+          "kind": "script",
+          "id": "sales-post"
+        }
+      },
+      {
+        "path": "/sales-orders",
+        "mode": "write",
+        "reason": "Create the sales order a confirmed quotation becomes",
+        "origin": {
+          "kind": "script",
+          "id": "sales-post"
+        }
+      },
+      {
+        "path": "/invoices",
+        "mode": "write",
+        "reason": "Draft an invoice for a confirmed quotation when Invoicing is installed",
+        "origin": {
+          "kind": "script",
+          "id": "sales-post"
+        }
+      }
+    ]
+  },
+  "packaging": {
+    "publisher": "verentis",
+    "files": [
+      "canvas/**",
+      "schemas/**",
+      "templates/**",
+      "seed/**",
+      "scripts/**",
+      "README.md"
+    ],
+    "templates": [
+      "canvas/*.yaml"
+    ],
+    "variables": {
+      "canvas-origin": "https://canvas.apps.localtest.me"
+    },
+    "encryption": "none"
+  }
+}

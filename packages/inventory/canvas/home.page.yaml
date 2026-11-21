@@ -1,0 +1,566 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "inventory-home",
+    "name": "Inventory",
+    "description": "Inventory overview.",
+    "icon": "package"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/products",
+        "reason": "List the products"
+      },
+      {
+        "path": "/warehouses",
+        "reason": "List the warehouses"
+      },
+      {
+        "path": "/stock-moves",
+        "reason": "List stock moves"
+      },
+      {
+        "path": "/inventory-adjustments",
+        "reason": "List inventory adjustments"
+      }
+    ],
+    "data": {
+      "products": {
+        "kind": "folder",
+        "path": "/products",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.inventory.product+json"
+      },
+      "warehouses": {
+        "kind": "folder",
+        "path": "/warehouses",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.inventory.warehouse+json"
+      },
+      "moves": {
+        "kind": "folder",
+        "path": "/stock-moves",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.inventory.move+json"
+      },
+      "adjustments": {
+        "kind": "folder",
+        "path": "/inventory-adjustments",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.inventory.adjustment+json"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Inventory"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Products, warehouses, stock moves and inventory adjustments as files in your workspace. Draft moves and counts in their folders, then post or apply them from their forms.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Stock levels",
+                      "variant": "outline",
+                      "icon": "chart-column",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/applications/inventory/canvas/stock.page.yaml"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Settings",
+                      "variant": "ghost",
+                      "icon": "settings",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/settings/inventory.json",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 4
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Products",
+                  "value": "{{ (data.products || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).length }}",
+                  "icon": "package",
+                  "loading": "{{ data.$products.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Warehouses",
+                  "value": "{{ (data.warehouses || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).length }}",
+                  "icon": "warehouse",
+                  "loading": "{{ data.$warehouses.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Draft moves",
+                  "value": "{{ (data.moves || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status === 'draft')).length }}",
+                  "icon": "arrow-left-right",
+                  "loading": "{{ data.$moves.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Draft adjustments",
+                  "value": "{{ (data.adjustments || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status === 'draft')).length }}",
+                  "icon": "clipboard-check",
+                  "loading": "{{ data.$adjustments.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /products folder could not be read. Reinstall Inventory to recreate it."
+            },
+            "rules": {
+              "visible": "data.$products.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /warehouses folder could not be read. Reinstall Inventory to recreate it."
+            },
+            "rules": {
+              "visible": "data.$warehouses.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /stock-moves folder could not be read. Reinstall Inventory to recreate it."
+            },
+            "rules": {
+              "visible": "data.$moves.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /inventory-adjustments folder could not be read. Reinstall Inventory to recreate it."
+            },
+            "rules": {
+              "visible": "data.$adjustments.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.tabs",
+            "props": {
+              "items": [
+                {
+                  "value": "moves",
+                  "label": "Stock moves",
+                  "icon": "arrow-left-right"
+                },
+                {
+                  "value": "adjustments",
+                  "label": "Adjustments",
+                  "icon": "clipboard-check"
+                },
+                {
+                  "value": "products",
+                  "label": "Products",
+                  "icon": "package"
+                },
+                {
+                  "value": "warehouses",
+                  "label": "Warehouses",
+                  "icon": "warehouse"
+                }
+              ]
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Open /stock-moves",
+                          "variant": "outline",
+                          "icon": "folder-open",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "open-file": {
+                                "path": "/stock-moves"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.files",
+                    "props": {
+                      "path": "/stock-moves/",
+                      "mimeTypes": [
+                        "application/vnd.verentis.inventory.move+json"
+                      ],
+                      "showFolders": false,
+                      "navigable": false,
+                      "columns": [
+                        {
+                          "key": "name",
+                          "label": "Code"
+                        },
+                        {
+                          "key": "data.date",
+                          "label": "Date"
+                        },
+                        {
+                          "key": "data.reference",
+                          "label": "Reference"
+                        },
+                        {
+                          "key": "data.quantity",
+                          "label": "Quantity",
+                          "align": "end"
+                        },
+                        {
+                          "key": "data.status",
+                          "label": "Status"
+                        }
+                      ],
+                      "emptyText": "No stock moves yet. Use New in /stock-moves."
+                    }
+                  }
+                ],
+                "slot": "moves"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Open /inventory-adjustments",
+                          "variant": "outline",
+                          "icon": "folder-open",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "open-file": {
+                                "path": "/inventory-adjustments"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.files",
+                    "props": {
+                      "path": "/inventory-adjustments/",
+                      "mimeTypes": [
+                        "application/vnd.verentis.inventory.adjustment+json"
+                      ],
+                      "showFolders": false,
+                      "navigable": false,
+                      "columns": [
+                        {
+                          "key": "name",
+                          "label": "Code"
+                        },
+                        {
+                          "key": "data.date",
+                          "label": "Date"
+                        },
+                        {
+                          "key": "data.countedQty",
+                          "label": "Counted",
+                          "align": "end"
+                        },
+                        {
+                          "key": "data.status",
+                          "label": "Status"
+                        }
+                      ],
+                      "emptyText": "No inventory adjustments yet. Use New in /inventory-adjustments."
+                    }
+                  }
+                ],
+                "slot": "adjustments"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Open /products",
+                          "variant": "outline",
+                          "icon": "folder-open",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "open-file": {
+                                "path": "/products"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.files",
+                    "props": {
+                      "path": "/products/",
+                      "mimeTypes": [
+                        "application/vnd.verentis.inventory.product+json"
+                      ],
+                      "showFolders": false,
+                      "navigable": false,
+                      "columns": [
+                        {
+                          "key": "name",
+                          "label": "Code"
+                        },
+                        {
+                          "key": "data.name",
+                          "label": "Name"
+                        },
+                        {
+                          "key": "data.sku",
+                          "label": "SKU"
+                        },
+                        {
+                          "key": "data.unit",
+                          "label": "Unit"
+                        },
+                        {
+                          "key": "data.category",
+                          "label": "Category"
+                        }
+                      ],
+                      "emptyText": "No products yet. Use New in /products."
+                    }
+                  }
+                ],
+                "slot": "products"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Open /warehouses",
+                          "variant": "outline",
+                          "icon": "folder-open",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "open-file": {
+                                "path": "/warehouses"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.files",
+                    "props": {
+                      "path": "/warehouses/",
+                      "mimeTypes": [
+                        "application/vnd.verentis.inventory.warehouse+json"
+                      ],
+                      "showFolders": false,
+                      "navigable": false,
+                      "columns": [
+                        {
+                          "key": "name",
+                          "label": "Code"
+                        },
+                        {
+                          "key": "data.name",
+                          "label": "Name"
+                        }
+                      ],
+                      "emptyText": "No warehouses yet. Use New in /warehouses."
+                    }
+                  }
+                ],
+                "slot": "warehouses"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

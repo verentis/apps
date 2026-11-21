@@ -1,0 +1,515 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "sales-home",
+    "name": "Sales",
+    "description": "Sales overview.",
+    "icon": "package"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/products",
+        "reason": "List products"
+      },
+      {
+        "path": "/quotations",
+        "reason": "List quotations"
+      },
+      {
+        "path": "/sales-orders",
+        "reason": "List sales orders"
+      }
+    ],
+    "data": {
+      "products": {
+        "kind": "folder",
+        "path": "/products",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.sales.product+json"
+      },
+      "quotations": {
+        "kind": "folder",
+        "path": "/quotations",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.sales.quotation+json"
+      },
+      "orders": {
+        "kind": "folder",
+        "path": "/sales-orders",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.sales.order+json"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Sales"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Products, quotations and sales orders are files in your workspace. Draft quotations in their folder, then confirm them from their forms into sales orders.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Quotations",
+                      "variant": "outline",
+                      "icon": "file-text",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/applications/sales/canvas/quotations.page.yaml"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Sales orders",
+                      "variant": "outline",
+                      "icon": "package-check",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/applications/sales/canvas/orders.page.yaml"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Summary",
+                      "variant": "outline",
+                      "icon": "chart-no-axes-combined",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/applications/sales/canvas/summary.page.yaml"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Settings",
+                      "variant": "ghost",
+                      "icon": "settings",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/settings/sales.json",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 4
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Products",
+                  "value": "{{ (data.products || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).length }}",
+                  "icon": "package",
+                  "loading": "{{ data.$products.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Open quotations",
+                  "value": "{{ (data.quotations || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status === 'draft' || e.data.status === 'sent')).length }}",
+                  "icon": "file-pen",
+                  "loading": "{{ data.$quotations.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Confirmed value",
+                  "value": "{{ ((data.quotations || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && e.data.status === 'confirmed' && e.data.totals).reduce((s, e) => s + Math.round(Number(e.data.totals.total || 0) * 10000), 0) / 10000).toFixed(2) }}",
+                  "icon": "receipt",
+                  "loading": "{{ data.$quotations.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Undelivered orders",
+                  "value": "{{ (data.orders || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.deliveryStatus !== 'delivered')).length }}",
+                  "icon": "truck",
+                  "loading": "{{ data.$orders.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /products folder could not be read. Reinstall Sales to recreate it."
+            },
+            "rules": {
+              "visible": "data.$products.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /quotations folder could not be read. Reinstall Sales to recreate it."
+            },
+            "rules": {
+              "visible": "data.$quotations.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /sales-orders folder could not be read. Reinstall Sales to recreate it."
+            },
+            "rules": {
+              "visible": "data.$orders.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.tabs",
+            "props": {
+              "items": [
+                {
+                  "value": "products",
+                  "label": "Products",
+                  "icon": "package"
+                },
+                {
+                  "value": "quotations",
+                  "label": "Quotations",
+                  "icon": "file-text"
+                },
+                {
+                  "value": "orders",
+                  "label": "Sales orders",
+                  "icon": "package-check"
+                }
+              ]
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Open /products",
+                          "variant": "outline",
+                          "icon": "folder-open",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "open-file": {
+                                "path": "/products"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.files",
+                    "props": {
+                      "path": "/products/",
+                      "mimeTypes": [
+                        "application/vnd.verentis.sales.product+json"
+                      ],
+                      "showFolders": false,
+                      "navigable": false,
+                      "columns": [
+                        {
+                          "key": "name",
+                          "label": "Number"
+                        },
+                        {
+                          "key": "data.name",
+                          "label": "Name"
+                        },
+                        {
+                          "key": "data.unit",
+                          "label": "Unit"
+                        },
+                        {
+                          "key": "data.listPrice",
+                          "label": "List price",
+                          "align": "end"
+                        }
+                      ],
+                      "emptyText": "No products yet. Use New in /products."
+                    }
+                  }
+                ],
+                "slot": "products"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Open /quotations",
+                          "variant": "outline",
+                          "icon": "folder-open",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "open-file": {
+                                "path": "/quotations"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.files",
+                    "props": {
+                      "path": "/quotations/",
+                      "mimeTypes": [
+                        "application/vnd.verentis.sales.quotation+json"
+                      ],
+                      "showFolders": false,
+                      "navigable": false,
+                      "columns": [
+                        {
+                          "key": "name",
+                          "label": "Number"
+                        },
+                        {
+                          "key": "data.customer.name",
+                          "label": "Customer"
+                        },
+                        {
+                          "key": "data.date",
+                          "label": "Date"
+                        },
+                        {
+                          "key": "data.totals.total",
+                          "label": "Total",
+                          "align": "end"
+                        },
+                        {
+                          "key": "data.status",
+                          "label": "Status"
+                        }
+                      ],
+                      "emptyText": "No quotations yet. Use New in /quotations."
+                    }
+                  }
+                ],
+                "slot": "quotations"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Open /sales-orders",
+                          "variant": "outline",
+                          "icon": "folder-open",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "open-file": {
+                                "path": "/sales-orders"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.files",
+                    "props": {
+                      "path": "/sales-orders/",
+                      "mimeTypes": [
+                        "application/vnd.verentis.sales.order+json"
+                      ],
+                      "showFolders": false,
+                      "navigable": false,
+                      "columns": [
+                        {
+                          "key": "name",
+                          "label": "Number"
+                        },
+                        {
+                          "key": "data.customer.name",
+                          "label": "Customer"
+                        },
+                        {
+                          "key": "data.date",
+                          "label": "Date"
+                        },
+                        {
+                          "key": "data.totals.total",
+                          "label": "Total",
+                          "align": "end"
+                        },
+                        {
+                          "key": "data.deliveryStatus",
+                          "label": "Delivery"
+                        }
+                      ],
+                      "emptyText": "No sales orders yet. Use New in /sales-orders."
+                    }
+                  }
+                ],
+                "slot": "orders"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
