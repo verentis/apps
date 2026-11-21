@@ -1,0 +1,5 @@
+{
+  "$schema": "https://schemas.verentis.io/knowledge/v1/settings.schema.json",
+  "schemaVersion": 1,
+  "defaultSpace": "/knowledge-spaces/KS-0001"
+}

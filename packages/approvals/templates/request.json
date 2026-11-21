@@ -1,0 +1,19 @@
+{
+  "$schema": "https://schemas.verentis.io/approvals/v1/request.schema.json",
+  "schemaVersion": 1,
+  "kind": "request",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "type": "",
+  "title": "{{ name }}",
+  "requester": "",
+  "amount": "",
+  "date": "",
+  "reference": "",
+  "reason": "",
+  "status": "draft",
+  "approvals": []
+}

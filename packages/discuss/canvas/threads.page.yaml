@@ -1,0 +1,364 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "discuss-threads",
+    "name": "Threads",
+    "description": "Every thread by last activity, grouped by status.",
+    "icon": "messages-square"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/channels",
+        "reason": "List threads by last activity with their channel names"
+      },
+      {
+        "path": "/threads",
+        "reason": "List threads by last activity with their channel names"
+      }
+    ],
+    "data": {
+      "threads": {
+        "kind": "folder",
+        "path": "/threads",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.discuss.thread+json"
+      },
+      "channels": {
+        "kind": "folder",
+        "path": "/channels",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.discuss.channel+json"
+      },
+      "rows": {
+        "kind": "computed",
+        "expr": "(data.threads || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, subject: e.data.subject || '', channelPath: e.data.channel || '', channel: ((((data.channels || []).find(c => c.kind === 'file' && c.data && c.path === e.data.channel) || {}).data || {}).name) || '', status: e.data.status || '', startedBy: e.data.startedBy || '', messages: (e.data.messages || []).length, lastActivityAt: e.data.lastActivityAt || '' }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Threads by activity"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Every active thread, most recent activity first. Click a row to open the thread and its message trail.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Discuss",
+                  "variant": "ghost",
+                  "icon": "messages-square",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/applications/discuss/canvas/home.page.yaml"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /channels folder could not be read. Reinstall Discuss to recreate it."
+            },
+            "rules": {
+              "visible": "data.$channels.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /threads folder could not be read. Reinstall Discuss to recreate it."
+            },
+            "rules": {
+              "visible": "data.$threads.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 3
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Open",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'open').length }}",
+                  "icon": "messages-square",
+                  "loading": "{{ data.$threads.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Resolved",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'resolved').length }}",
+                  "icon": "messages-square",
+                  "loading": "{{ data.$threads.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Locked",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'locked').length }}",
+                  "icon": "messages-square",
+                  "loading": "{{ data.$threads.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.tabs",
+            "props": {
+              "items": [
+                {
+                  "value": "open",
+                  "label": "Open",
+                  "icon": "messages-square"
+                },
+                {
+                  "value": "resolved",
+                  "label": "Resolved",
+                  "icon": "messages-square"
+                },
+                {
+                  "value": "locked",
+                  "label": "Locked",
+                  "icon": "messages-square"
+                }
+              ]
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.rows || []).filter(r => r.status === 'open').sort((a, b) => ((a.lastActivityAt || '') < (b.lastActivityAt || '') ? 1 : (a.lastActivityAt || '') > (b.lastActivityAt || '') ? -1 : 0)) }}",
+                      "columns": [
+                        {
+                          "key": "code",
+                          "label": "Thread"
+                        },
+                        {
+                          "key": "subject",
+                          "label": "Subject"
+                        },
+                        {
+                          "key": "channel",
+                          "label": "Channel"
+                        },
+                        {
+                          "key": "status",
+                          "label": "Status"
+                        },
+                        {
+                          "key": "messages",
+                          "label": "Messages",
+                          "align": "end"
+                        },
+                        {
+                          "key": "lastActivityAt",
+                          "label": "Last activity"
+                        }
+                      ],
+                      "emptyText": "No open threads",
+                      "clickable": true
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "open"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.rows || []).filter(r => r.status === 'resolved').sort((a, b) => ((a.lastActivityAt || '') < (b.lastActivityAt || '') ? 1 : (a.lastActivityAt || '') > (b.lastActivityAt || '') ? -1 : 0)) }}",
+                      "columns": [
+                        {
+                          "key": "code",
+                          "label": "Thread"
+                        },
+                        {
+                          "key": "subject",
+                          "label": "Subject"
+                        },
+                        {
+                          "key": "channel",
+                          "label": "Channel"
+                        },
+                        {
+                          "key": "status",
+                          "label": "Status"
+                        },
+                        {
+                          "key": "messages",
+                          "label": "Messages",
+                          "align": "end"
+                        },
+                        {
+                          "key": "lastActivityAt",
+                          "label": "Last activity"
+                        }
+                      ],
+                      "emptyText": "No resolved threads",
+                      "clickable": true
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "resolved"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.rows || []).filter(r => r.status === 'locked').sort((a, b) => ((a.lastActivityAt || '') < (b.lastActivityAt || '') ? 1 : (a.lastActivityAt || '') > (b.lastActivityAt || '') ? -1 : 0)) }}",
+                      "columns": [
+                        {
+                          "key": "code",
+                          "label": "Thread"
+                        },
+                        {
+                          "key": "subject",
+                          "label": "Subject"
+                        },
+                        {
+                          "key": "channel",
+                          "label": "Channel"
+                        },
+                        {
+                          "key": "status",
+                          "label": "Status"
+                        },
+                        {
+                          "key": "messages",
+                          "label": "Messages",
+                          "align": "end"
+                        },
+                        {
+                          "key": "lastActivityAt",
+                          "label": "Last activity"
+                        }
+                      ],
+                      "emptyText": "No locked threads",
+                      "clickable": true
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "locked"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

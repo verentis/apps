@@ -1,0 +1,397 @@
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "knowledge",
+    "name": "Knowledge",
+    "description": "Spaces and Markdown articles as files in your workspace, nested into a hierarchy and published, archived and restored by script.",
+    "icon": "./icons/app.svg",
+    "version": "0.1.0",
+    "author": "Verentis"
+  },
+  "marketplace": {
+    "readme": "./README.md",
+    "keywords": [
+      "knowledge",
+      "wiki",
+      "articles",
+      "documentation",
+      "markdown",
+      "spaces",
+      "handbook"
+    ]
+  },
+  "spec": {
+    "install-root": "/applications/knowledge",
+    "entry": "https://canvas.apps.localtest.me",
+    "scope": "global",
+    "entry-points": [
+      {
+        "id": "home",
+        "display-name": "Knowledge",
+        "route": "/render?document=.%2Fcanvas%2Fhome.page.yaml",
+        "order": 10
+      },
+      {
+        "id": "spaces",
+        "display-name": "Spaces",
+        "route": "/render?document=.%2Fcanvas%2Fspaces.page.yaml",
+        "order": 20
+      },
+      {
+        "id": "recent",
+        "display-name": "Recently updated",
+        "route": "/render?document=.%2Fcanvas%2Frecent.page.yaml",
+        "order": 30
+      },
+      {
+        "id": "tags",
+        "display-name": "Tags",
+        "route": "/render?document=.%2Fcanvas%2Ftags.page.yaml",
+        "order": 40
+      }
+    ],
+    "launch": {
+      "enabled": true,
+      "entry-point": "home",
+      "pinnable": true
+    },
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run"
+    ],
+    "scopes": [
+      "knowledge.default"
+    ],
+    "settings": [
+      {
+        "key": "space-code-prefix",
+        "display-name": "Space code prefix",
+        "type": "string",
+        "default": "KS-",
+        "description": "Prefix of generated space codes, e.g. KS-0001."
+      },
+      {
+        "key": "article-code-prefix",
+        "display-name": "Article code prefix",
+        "type": "string",
+        "default": "KA-",
+        "description": "Prefix of generated article codes, e.g. KA-0001."
+      },
+      {
+        "key": "code-digits",
+        "display-name": "Code digits",
+        "type": "number",
+        "default": 4,
+        "description": "Minimum number of digits in generated codes (zero-padded)."
+      }
+    ],
+    "dependencies": [
+      {
+        "package": "verentis/canvas",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/nodejs",
+        "version": "latest"
+      }
+    ],
+    "engine": "verentis/nodejs",
+    "scripts": [
+      "scripts/create",
+      "scripts/post"
+    ],
+    "install": [
+      {
+        "from": "canvas/*.form.yaml",
+        "to": "/applications/knowledge/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.form+yaml"
+      },
+      {
+        "from": "canvas/*.page.yaml",
+        "to": "/applications/knowledge/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.page+yaml"
+      },
+      {
+        "from": "schemas/*.schema.json",
+        "to": "/applications/knowledge/schemas/",
+        "mode": "managed",
+        "mime": "application/schema+json"
+      },
+      {
+        "from": "templates/*.json",
+        "to": "/applications/knowledge/templates/",
+        "mode": "managed",
+        "mime": "application/json"
+      },
+      {
+        "from": "seed/spaces",
+        "to": "/knowledge-spaces",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.knowledge.spaces"
+      },
+      {
+        "from": "seed/articles",
+        "to": "/articles",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.knowledge.articles"
+      },
+      {
+        "from": "seed/starter/KS-0001.json",
+        "to": "/knowledge-spaces/KS-0001",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.knowledge.space+json"
+      },
+      {
+        "from": "seed/starter/KA-0001.json",
+        "to": "/articles/KA-0001",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.knowledge.article+json"
+      },
+      {
+        "from": "seed/starter/KA-0002.json",
+        "to": "/articles/KA-0002",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.knowledge.article+json"
+      },
+      {
+        "from": "seed/starter/KA-0003.json",
+        "to": "/articles/KA-0003",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.knowledge.article+json"
+      },
+      {
+        "from": "seed/settings.json",
+        "to": "/settings/knowledge.json",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.knowledge.settings+json"
+      }
+    ],
+    "creatables": [
+      {
+        "id": "space",
+        "display-name": "Space",
+        "description": "A new knowledge space",
+        "icon": "lucide:library",
+        "mime": "application/vnd.verentis.knowledge.space+json",
+        "parents": [
+          "application/vnd.verentis.knowledge.spaces"
+        ],
+        "folder-names": [
+          "knowledge-spaces",
+          "spaces",
+          "knowledge"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/space.json"
+      },
+      {
+        "id": "article",
+        "display-name": "Article",
+        "description": "A new knowledge article",
+        "icon": "lucide:file-text",
+        "mime": "application/vnd.verentis.knowledge.article+json",
+        "parents": [
+          "application/vnd.verentis.knowledge.articles"
+        ],
+        "folder-names": [
+          "articles",
+          "knowledge"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/article.json"
+      }
+    ],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-forms": true,
+      "allow-popups": false
+    },
+    "file-access": [
+      {
+        "path": "/knowledge-spaces",
+        "mode": "read",
+        "reason": "Count articles and show the spaces and articles",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/articles",
+        "mode": "read",
+        "reason": "Count articles and show the spaces and articles",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/knowledge-spaces",
+        "mode": "read",
+        "reason": "Group articles by space with their parent hierarchy",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/spaces.page.yaml"
+        }
+      },
+      {
+        "path": "/articles",
+        "mode": "read",
+        "reason": "Group articles by space with their parent hierarchy",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/spaces.page.yaml"
+        }
+      },
+      {
+        "path": "/knowledge-spaces",
+        "mode": "read",
+        "reason": "List articles by their last update",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/recent.page.yaml"
+        }
+      },
+      {
+        "path": "/articles",
+        "mode": "read",
+        "reason": "List articles by their last update",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/recent.page.yaml"
+        }
+      },
+      {
+        "path": "/knowledge-spaces",
+        "mode": "read",
+        "reason": "Sum articles per tag",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/tags.page.yaml"
+        }
+      },
+      {
+        "path": "/articles",
+        "mode": "read",
+        "reason": "Sum articles per tag",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/tags.page.yaml"
+        }
+      },
+      {
+        "path": "/applications/knowledge/",
+        "mode": "read",
+        "reason": "Read the Knowledge schemas and run the article action script",
+        "origin": {
+          "kind": "document",
+          "id": "knowledge-space"
+        }
+      },
+      {
+        "path": "/knowledge-spaces",
+        "mode": "read",
+        "reason": "Choose the space an article belongs to",
+        "origin": {
+          "kind": "document",
+          "id": "knowledge-article"
+        }
+      },
+      {
+        "path": "/articles",
+        "mode": "read",
+        "reason": "Choose the parent article an article nests beneath",
+        "origin": {
+          "kind": "document",
+          "id": "knowledge-article"
+        }
+      },
+      {
+        "path": "/applications/knowledge/",
+        "mode": "read",
+        "reason": "Read the Knowledge schemas and run the article action script",
+        "origin": {
+          "kind": "document",
+          "id": "knowledge-article"
+        }
+      },
+      {
+        "path": "/knowledge-spaces",
+        "mode": "read",
+        "reason": "Choose the default space for new articles",
+        "origin": {
+          "kind": "document",
+          "id": "knowledge-settings"
+        }
+      },
+      {
+        "path": "/applications/knowledge/",
+        "mode": "read",
+        "reason": "Read the Knowledge schemas and run the article action script",
+        "origin": {
+          "kind": "document",
+          "id": "knowledge-settings"
+        }
+      },
+      {
+        "path": "/knowledge-spaces",
+        "mode": "write",
+        "reason": "Create spaces with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "knowledge-create"
+        }
+      },
+      {
+        "path": "/articles",
+        "mode": "write",
+        "reason": "Create articles with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "knowledge-create"
+        }
+      },
+      {
+        "path": "/settings/knowledge.json",
+        "mode": "read",
+        "reason": "Default new articles to the default space",
+        "origin": {
+          "kind": "script",
+          "id": "knowledge-create"
+        }
+      },
+      {
+        "path": "/articles",
+        "mode": "write",
+        "reason": "Mark articles published, archived or back in draft",
+        "origin": {
+          "kind": "script",
+          "id": "knowledge-post"
+        }
+      }
+    ]
+  },
+  "packaging": {
+    "publisher": "verentis",
+    "files": [
+      "canvas/**",
+      "schemas/**",
+      "templates/**",
+      "seed/**",
+      "scripts/**",
+      "README.md"
+    ],
+    "templates": [
+      "canvas/*.yaml"
+    ],
+    "variables": {
+      "canvas-origin": "https://canvas.apps.localtest.me"
+    },
+    "encryption": "none"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://schemas.verentis.io/knowledge/v1/space.schema.json",
+  "schemaVersion": 1,
+  "kind": "space",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "name": "{{ name }}",
+  "description": "",
+  "icon": ""
+}

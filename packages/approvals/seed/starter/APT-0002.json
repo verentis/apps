@@ -1,0 +1,16 @@
+{
+  "$schema": "https://schemas.verentis.io/approvals/v1/type.schema.json",
+  "schemaVersion": 1,
+  "kind": "type",
+  "id": "8c2d3e4f-5a6b-4c7d-9e8f-1a2b3c4d5e02",
+  "state": "active",
+  "createdAt": "2026-01-01T00:00:00Z",
+  "updatedAt": "2026-01-01T00:00:00Z",
+  "code": "APT-0002",
+  "name": "Travel",
+  "description": "Business travel is approved before anything is booked.",
+  "requiredApprovers": 1,
+  "requiresAmount": true,
+  "requiresDate": true,
+  "requiresReference": false
+}

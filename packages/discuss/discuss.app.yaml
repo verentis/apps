@@ -1,0 +1,360 @@
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "discuss",
+    "name": "Discuss",
+    "description": "Team discussion channels and threaded messages as files in your workspace: a durable, auditable record with scripted post, resolve, lock and archive actions. Realtime delivery is the platform's concern.",
+    "icon": "./icons/app.svg",
+    "version": "0.1.0",
+    "author": "Verentis"
+  },
+  "marketplace": {
+    "readme": "./README.md",
+    "keywords": [
+      "discuss",
+      "discussion",
+      "channels",
+      "threads",
+      "messages",
+      "team communication",
+      "collaboration"
+    ]
+  },
+  "spec": {
+    "install-root": "/applications/discuss",
+    "entry": "https://canvas.apps.localtest.me",
+    "scope": "global",
+    "entry-points": [
+      {
+        "id": "home",
+        "display-name": "Discuss",
+        "route": "/render?document=.%2Fcanvas%2Fhome.page.yaml",
+        "order": 10
+      },
+      {
+        "id": "channels",
+        "display-name": "Channels",
+        "route": "/render?document=.%2Fcanvas%2Fchannels.page.yaml",
+        "order": 20
+      },
+      {
+        "id": "threads",
+        "display-name": "Threads",
+        "route": "/render?document=.%2Fcanvas%2Fthreads.page.yaml",
+        "order": 30
+      }
+    ],
+    "launch": {
+      "enabled": true,
+      "entry-point": "home",
+      "pinnable": true
+    },
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run"
+    ],
+    "scopes": [
+      "discuss.default"
+    ],
+    "settings": [
+      {
+        "key": "channel-code-prefix",
+        "display-name": "Channel code prefix",
+        "type": "string",
+        "default": "CH-",
+        "description": "Prefix of generated channel codes, e.g. CH-0001."
+      },
+      {
+        "key": "thread-code-prefix",
+        "display-name": "Thread code prefix",
+        "type": "string",
+        "default": "TH-",
+        "description": "Prefix of generated thread codes, e.g. TH-0001."
+      },
+      {
+        "key": "code-digits",
+        "display-name": "Code digits",
+        "type": "number",
+        "default": 4,
+        "description": "Minimum number of digits in generated codes (zero-padded)."
+      }
+    ],
+    "dependencies": [
+      {
+        "package": "verentis/canvas",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/nodejs",
+        "version": "latest"
+      }
+    ],
+    "engine": "verentis/nodejs",
+    "scripts": [
+      "scripts/create",
+      "scripts/post"
+    ],
+    "install": [
+      {
+        "from": "canvas/*.form.yaml",
+        "to": "/applications/discuss/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.form+yaml"
+      },
+      {
+        "from": "canvas/*.page.yaml",
+        "to": "/applications/discuss/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.page+yaml"
+      },
+      {
+        "from": "schemas/*.schema.json",
+        "to": "/applications/discuss/schemas/",
+        "mode": "managed",
+        "mime": "application/schema+json"
+      },
+      {
+        "from": "templates/*.json",
+        "to": "/applications/discuss/templates/",
+        "mode": "managed",
+        "mime": "application/json"
+      },
+      {
+        "from": "seed/channels",
+        "to": "/channels",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.discuss.channels"
+      },
+      {
+        "from": "seed/threads",
+        "to": "/threads",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.discuss.threads"
+      },
+      {
+        "from": "seed/starter/CH-0001.json",
+        "to": "/channels/CH-0001",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.discuss.channel+json"
+      },
+      {
+        "from": "seed/starter/TH-0001.json",
+        "to": "/threads/TH-0001",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.discuss.thread+json"
+      },
+      {
+        "from": "seed/settings.json",
+        "to": "/settings/discuss.json",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.discuss.settings+json"
+      }
+    ],
+    "creatables": [
+      {
+        "id": "channel",
+        "display-name": "Channel",
+        "description": "A new discussion channel",
+        "icon": "lucide:hash",
+        "mime": "application/vnd.verentis.discuss.channel+json",
+        "parents": [
+          "application/vnd.verentis.discuss.channels"
+        ],
+        "folder-names": [
+          "channels",
+          "discuss"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/channel.json"
+      },
+      {
+        "id": "thread",
+        "display-name": "Thread",
+        "description": "A new discussion thread",
+        "icon": "lucide:messages-square",
+        "mime": "application/vnd.verentis.discuss.thread+json",
+        "parents": [
+          "application/vnd.verentis.discuss.threads"
+        ],
+        "folder-names": [
+          "threads",
+          "discuss"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/thread.json"
+      }
+    ],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-forms": true,
+      "allow-popups": false
+    },
+    "file-access": [
+      {
+        "path": "/channels",
+        "mode": "read",
+        "reason": "Count threads and show the channels and threads",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/threads",
+        "mode": "read",
+        "reason": "Count threads and show the channels and threads",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/channels",
+        "mode": "read",
+        "reason": "List channels with their open threads and last activity",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/channels.page.yaml"
+        }
+      },
+      {
+        "path": "/threads",
+        "mode": "read",
+        "reason": "List channels with their open threads and last activity",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/channels.page.yaml"
+        }
+      },
+      {
+        "path": "/channels",
+        "mode": "read",
+        "reason": "List threads by last activity with their channel names",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/threads.page.yaml"
+        }
+      },
+      {
+        "path": "/threads",
+        "mode": "read",
+        "reason": "List threads by last activity with their channel names",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/threads.page.yaml"
+        }
+      },
+      {
+        "path": "/applications/discuss/",
+        "mode": "read",
+        "reason": "Read the Discuss schemas and run the discussion action script",
+        "origin": {
+          "kind": "document",
+          "id": "discuss-channel"
+        }
+      },
+      {
+        "path": "/channels",
+        "mode": "read",
+        "reason": "Choose the channel a thread belongs to",
+        "origin": {
+          "kind": "document",
+          "id": "discuss-thread"
+        }
+      },
+      {
+        "path": "/applications/discuss/",
+        "mode": "read",
+        "reason": "Read the Discuss schemas and run the discussion action script",
+        "origin": {
+          "kind": "document",
+          "id": "discuss-thread"
+        }
+      },
+      {
+        "path": "/channels",
+        "mode": "read",
+        "reason": "Choose the default channel for new threads",
+        "origin": {
+          "kind": "document",
+          "id": "discuss-settings"
+        }
+      },
+      {
+        "path": "/applications/discuss/",
+        "mode": "read",
+        "reason": "Read the Discuss schemas and run the discussion action script",
+        "origin": {
+          "kind": "document",
+          "id": "discuss-settings"
+        }
+      },
+      {
+        "path": "/channels",
+        "mode": "write",
+        "reason": "Create channels with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "discuss-create"
+        }
+      },
+      {
+        "path": "/threads",
+        "mode": "write",
+        "reason": "Create threads with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "discuss-create"
+        }
+      },
+      {
+        "path": "/settings/discuss.json",
+        "mode": "read",
+        "reason": "Default new threads to the default channel",
+        "origin": {
+          "kind": "script",
+          "id": "discuss-create"
+        }
+      },
+      {
+        "path": "/threads",
+        "mode": "write",
+        "reason": "Post messages and resolve, lock or reopen threads",
+        "origin": {
+          "kind": "script",
+          "id": "discuss-post"
+        }
+      },
+      {
+        "path": "/channels",
+        "mode": "write",
+        "reason": "Archive channels and refuse posts into archived ones",
+        "origin": {
+          "kind": "script",
+          "id": "discuss-post"
+        }
+      }
+    ]
+  },
+  "packaging": {
+    "publisher": "verentis",
+    "files": [
+      "canvas/**",
+      "schemas/**",
+      "templates/**",
+      "seed/**",
+      "scripts/**",
+      "README.md"
+    ],
+    "templates": [
+      "canvas/*.yaml"
+    ],
+    "variables": {
+      "canvas-origin": "https://canvas.apps.localtest.me"
+    },
+    "encryption": "none"
+  }
+}

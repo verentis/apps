@@ -1,0 +1,183 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "approvals-pending",
+    "name": "To decide",
+    "description": "Submitted requests awaiting a decision.",
+    "icon": "hourglass"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/approval-types",
+        "reason": "List submitted requests awaiting an approver's decision"
+      },
+      {
+        "path": "/approval-requests",
+        "reason": "List submitted requests awaiting an approver's decision"
+      }
+    ],
+    "data": {
+      "requests": {
+        "kind": "folder",
+        "path": "/approval-requests",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.approvals.request+json"
+      },
+      "types": {
+        "kind": "folder",
+        "path": "/approval-types",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.approvals.type+json"
+      },
+      "rows": {
+        "kind": "computed",
+        "expr": "(data.requests || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, title: e.data.title || '', requester: e.data.requester || '', type: e.data.type || '', typeName: (((data.types || []).find(t => t.path === e.data.type) || {}).data || {}).name || '', required: (((data.types || []).find(t => t.path === e.data.type) || {}).data || {}).requiredApprovers || 0, approvers: (e.data.approvals || []).filter(a => a.decision === 'approve').map(a => a.approver), deciders: (e.data.approvals || []).map(a => a.approver), amount: e.data.amount || '', date: e.data.date || '', status: e.data.status || 'draft' }))"
+      }
+    },
+    "state": {
+      "me": ""
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "To decide"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Submitted requests awaiting approval. Give your name to hide the ones you already decided.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Approvals",
+                  "variant": "ghost",
+                  "icon": "file-check",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/applications/approvals/canvas/home.page.yaml"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$requests.error }}"
+            },
+            "rules": {
+              "visible": "data.$requests.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.form.input",
+            "props": {
+              "label": "Your name",
+              "placeholder": "Hide requests you already decided",
+              "value": "{{ state.me }}"
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.rows || []).filter(r => r.status === 'submitted' && (!state.me || !r.deciders.includes(state.me))).map(r => ({ path: r.path, code: r.code, title: r.title, requester: r.requester, typeName: r.typeName, amount: r.amount, date: r.date, approvals: r.approvers.length + \" / \" + (r.required || \"?\") })) }}",
+              "columns": [
+                {
+                  "key": "code",
+                  "label": "Request"
+                },
+                {
+                  "key": "title",
+                  "label": "Title"
+                },
+                {
+                  "key": "requester",
+                  "label": "Requester"
+                },
+                {
+                  "key": "typeName",
+                  "label": "Type"
+                },
+                {
+                  "key": "amount",
+                  "label": "Amount",
+                  "align": "end"
+                },
+                {
+                  "key": "date",
+                  "label": "Date"
+                },
+                {
+                  "key": "approvals",
+                  "label": "Approvals",
+                  "align": "end"
+                }
+              ],
+              "emptyText": "Nothing to decide",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

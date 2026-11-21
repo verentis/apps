@@ -1,0 +1,394 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "discuss-home",
+    "name": "Discuss",
+    "description": "Discuss overview.",
+    "icon": "messages-square"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/channels",
+        "reason": "Count threads and show the channels and threads"
+      },
+      {
+        "path": "/threads",
+        "reason": "Count threads and show the channels and threads"
+      }
+    ],
+    "data": {
+      "threads": {
+        "kind": "folder",
+        "path": "/threads",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.discuss.thread+json"
+      },
+      "channels": {
+        "kind": "folder",
+        "path": "/channels",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.discuss.channel+json"
+      },
+      "rows": {
+        "kind": "computed",
+        "expr": "(data.threads || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, subject: e.data.subject || '', channelPath: e.data.channel || '', channel: ((((data.channels || []).find(c => c.kind === 'file' && c.data && c.path === e.data.channel) || {}).data || {}).name) || '', status: e.data.status || '', startedBy: e.data.startedBy || '', messages: (e.data.messages || []).length, lastActivityAt: e.data.lastActivityAt || '' }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Discuss"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Channels and threads are files in your workspace: the durable, auditable discussion record. Realtime delivery and notifications are the platform's concern, not this app's.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Channels",
+                      "variant": "outline",
+                      "icon": "hash",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/applications/discuss/canvas/channels.page.yaml"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Threads",
+                      "variant": "outline",
+                      "icon": "messages-square",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/applications/discuss/canvas/threads.page.yaml"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Settings",
+                      "variant": "ghost",
+                      "icon": "settings",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/settings/discuss.json",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 4
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Open threads",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'open').length }}",
+                  "icon": "messages-square",
+                  "loading": "{{ data.$threads.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Resolved",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'resolved').length }}",
+                  "icon": "check",
+                  "loading": "{{ data.$threads.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Locked",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'locked').length }}",
+                  "icon": "lock",
+                  "loading": "{{ data.$threads.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Messages",
+                  "value": "{{ (data.rows || []).reduce((sum, r) => sum + r.messages, 0) }}",
+                  "icon": "mail",
+                  "loading": "{{ data.$threads.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /channels folder could not be read. Reinstall Discuss to recreate it."
+            },
+            "rules": {
+              "visible": "data.$channels.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /threads folder could not be read. Reinstall Discuss to recreate it."
+            },
+            "rules": {
+              "visible": "data.$threads.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.tabs",
+            "props": {
+              "items": [
+                {
+                  "value": "threads",
+                  "label": "Threads",
+                  "icon": "messages-square"
+                },
+                {
+                  "value": "channels",
+                  "label": "Channels",
+                  "icon": "hash"
+                }
+              ]
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Open /threads",
+                          "variant": "outline",
+                          "icon": "folder-open",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "open-file": {
+                                "path": "/threads"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.files",
+                    "props": {
+                      "path": "/threads/",
+                      "mimeTypes": [
+                        "application/vnd.verentis.discuss.thread+json"
+                      ],
+                      "showFolders": false,
+                      "navigable": false,
+                      "columns": [
+                        {
+                          "key": "name",
+                          "label": "Thread"
+                        },
+                        {
+                          "key": "data.subject",
+                          "label": "Subject"
+                        },
+                        {
+                          "key": "data.status",
+                          "label": "Status"
+                        },
+                        {
+                          "key": "data.lastActivityAt",
+                          "label": "Last activity"
+                        }
+                      ],
+                      "emptyText": "No threads yet. Use New in /threads."
+                    }
+                  }
+                ],
+                "slot": "threads"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Open /channels",
+                          "variant": "outline",
+                          "icon": "folder-open",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "open-file": {
+                                "path": "/channels"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.files",
+                    "props": {
+                      "path": "/channels/",
+                      "mimeTypes": [
+                        "application/vnd.verentis.discuss.channel+json"
+                      ],
+                      "showFolders": false,
+                      "navigable": false,
+                      "columns": [
+                        {
+                          "key": "name",
+                          "label": "Channel"
+                        },
+                        {
+                          "key": "data.name",
+                          "label": "Name"
+                        },
+                        {
+                          "key": "data.visibility",
+                          "label": "Kind"
+                        },
+                        {
+                          "key": "data.status",
+                          "label": "Status"
+                        }
+                      ],
+                      "emptyText": "No channels yet. Use New in /channels."
+                    }
+                  }
+                ],
+                "slot": "channels"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

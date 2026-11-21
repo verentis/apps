@@ -1,0 +1,238 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "knowledge-spaces",
+    "name": "Spaces",
+    "description": "Articles grouped by space, with their hierarchy.",
+    "icon": "library"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/knowledge-spaces",
+        "reason": "Group articles by space with their parent hierarchy"
+      },
+      {
+        "path": "/articles",
+        "reason": "Group articles by space with their parent hierarchy"
+      }
+    ],
+    "data": {
+      "articles": {
+        "kind": "folder",
+        "path": "/articles",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.knowledge.article+json"
+      },
+      "spaces": {
+        "kind": "folder",
+        "path": "/knowledge-spaces",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.knowledge.space+json"
+      },
+      "rows": {
+        "kind": "computed",
+        "expr": "(data.articles || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, title: e.data.title || '', spacePath: e.data.space || '', space: ((((data.spaces || []).find(s => s.kind === 'file' && s.data && s.path === e.data.space) || {}).data || {}).name) || '', parent: e.data.parent || '', parentCode: ((((data.articles || []).find(p => p.kind === 'file' && p.data && p.path === e.data.parent) || {}).data || {}).code) || '', status: e.data.status || '', tags: e.data.tags || [], tagList: (e.data.tags || []).join(', '), owner: e.data.owner || '', updatedAt: e.data.updatedAt || '' }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Spaces"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Every active article grouped by its space. Nested articles are indented beneath their parent. Click a row to open it.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Knowledge",
+                  "variant": "ghost",
+                  "icon": "book-open",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/applications/knowledge/canvas/home.page.yaml"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /knowledge-spaces folder could not be read. Reinstall Knowledge to recreate it."
+            },
+            "rules": {
+              "visible": "data.$spaces.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /articles folder could not be read. Reinstall Knowledge to recreate it."
+            },
+            "rules": {
+              "visible": "data.$articles.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Spaces"
+            },
+            "children": [
+              {
+                "type": "canvas.table",
+                "props": {
+                  "rows": "{{ (data.spaces || []).filter(s => s.kind === 'file' && s.data && s.data.state !== 'archived').map(s => ({ path: s.path, space: s.data.name || s.name, icon: s.data.icon || '', description: s.data.description || '', articles: (data.rows || []).filter(r => r.spacePath === s.path).length, published: (data.rows || []).filter(r => r.spacePath === s.path && r.status === 'published').length, drafts: (data.rows || []).filter(r => r.spacePath === s.path && r.status === 'draft').length })) }}",
+                  "columns": [
+                    {
+                      "key": "space",
+                      "label": "Space"
+                    },
+                    {
+                      "key": "icon",
+                      "label": "Icon"
+                    },
+                    {
+                      "key": "description",
+                      "label": "Description"
+                    },
+                    {
+                      "key": "articles",
+                      "label": "Articles",
+                      "align": "end"
+                    },
+                    {
+                      "key": "published",
+                      "label": "Published",
+                      "align": "end"
+                    },
+                    {
+                      "key": "drafts",
+                      "label": "Drafts",
+                      "align": "end"
+                    }
+                  ],
+                  "emptyText": "No spaces yet",
+                  "clickable": true
+                },
+                "on": {
+                  "row-click": [
+                    {
+                      "open-file": {
+                        "path": "{{ event.path }}",
+                        "mode": "edit"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Articles by space"
+            },
+            "children": [
+              {
+                "type": "canvas.table",
+                "props": {
+                  "rows": "{{ (data.rows || []).map(r => ({ path: r.path, space: r.space || 'No space', article: (r.parentCode ? '↳ ' : '') + (r.title || r.code), code: r.code, parent: r.parentCode, status: r.status, updatedAt: r.updatedAt, sort: (r.space || '~') + '|' + (r.parentCode ? r.parentCode + '|1|' : '') + r.code })).sort((a, b) => a.sort < b.sort ? -1 : a.sort > b.sort ? 1 : 0) }}",
+                  "columns": [
+                    {
+                      "key": "space",
+                      "label": "Space"
+                    },
+                    {
+                      "key": "article",
+                      "label": "Article"
+                    },
+                    {
+                      "key": "code",
+                      "label": "Code"
+                    },
+                    {
+                      "key": "parent",
+                      "label": "Parent"
+                    },
+                    {
+                      "key": "status",
+                      "label": "Status"
+                    },
+                    {
+                      "key": "updatedAt",
+                      "label": "Updated"
+                    }
+                  ],
+                  "emptyText": "No articles yet",
+                  "clickable": true
+                },
+                "on": {
+                  "row-click": [
+                    {
+                      "open-file": {
+                        "path": "{{ event.path }}",
+                        "mode": "edit"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

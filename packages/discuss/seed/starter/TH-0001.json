@@ -1,0 +1,26 @@
+{
+  "$schema": "https://schemas.verentis.io/discuss/v1/thread.schema.json",
+  "schemaVersion": 1,
+  "kind": "thread",
+  "id": "9e4f5a6b-7c8d-4e9f-8a0b-1c2d3e4f5a02",
+  "state": "active",
+  "createdAt": "2026-01-01T00:00:00Z",
+  "updatedAt": "2026-01-01T00:00:00Z",
+  "code": "TH-0001",
+  "channel": "/channels/CH-0001",
+  "subject": "Welcome to Discuss",
+  "startedBy": "Avery Adams",
+  "status": "open",
+  "messages": [
+    {
+      "sequence": 1,
+      "author": "Avery Adams",
+      "date": "2026-01-01T00:00:00Z",
+      "edited": false,
+      "body": "Welcome! Discuss keeps your team's conversations as **files**: channels hold threads, threads hold an auditable message trail. Post below to say hello."
+    }
+  ],
+  "draft": "",
+  "postAs": "",
+  "lastActivityAt": "2026-01-01T00:00:00Z"
+}
