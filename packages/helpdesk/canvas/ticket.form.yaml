@@ -626,6 +626,14 @@
                 ]
               }
             ]
+          },
+          {
+            "type": "canvas.collab.discussion",
+            "props": {
+              "reference": "vfs:{{ ctx.file.path }}",
+              "title": "Ticket {{ form.values.code }}",
+              "placeholder": "Message the team about this ticket…"
+            }
           }
         ]
       }

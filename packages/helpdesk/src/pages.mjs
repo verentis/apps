@@ -88,6 +88,18 @@ function recordForm(kind) {
     badge(`This ${entity.singular.toLowerCase()} is archived. Restore it to edit.`, 'warning', { visible: archived }, 'archive'),
     ...extras.notices,
     grid(sectionCards(entity.sections, readOnly)),
+    // Record discussion: a hidden chat channel attached to this ticket file (canvas.collab.discussion
+    // resolves it by reference through the workspace chat service; shown only where chat is available).
+    ...(kind === 'ticket'
+      ? [{
+          type: 'canvas.collab.discussion',
+          props: {
+            reference: 'vfs:{{ ctx.file.path }}',
+            title: 'Ticket {{ form.values.code }}',
+            placeholder: 'Message the team about this ticket…',
+          },
+        }]
+      : []),
   ]
   return {
     file: `${kind}.form.yaml`,
