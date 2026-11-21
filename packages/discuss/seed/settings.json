@@ -1,5 +1,0 @@
-{
-  "$schema": "https://schemas.verentis.io/discuss/v1/settings.schema.json",
-  "schemaVersion": 1,
-  "defaultChannel": "/channels/CH-0001"
-}

@@ -39,7 +39,6 @@ are deployed separately; Canvas-backed business packages contain declarative ass
 | `knowledge` | Productivity: spaces and Markdown articles nested into a hierarchy, published, archived and restored by script. |
 | `approvals` | Productivity: approval types and requests, submitted, approved, refused or cancelled by script with multi-approver thresholds. |
 | `documents` | Productivity: tagging and review workflow over existing workspace files, moved through inbox/review/validated/archived by script. |
-| `discuss` | Productivity: discussion channels and threaded messages as a durable record with scripted post, resolve, lock and archive; realtime delivery is the platform's concern. |
 | `spreadsheet-bi` | Finance: saved BI dashboards and snapshots computed live from the record files of CRM, Invoicing, Accounting and Helpdesk. |
 | `expenses` | Finance: expense categories and employee expense reports, submitted, approved and posted to the Accounting ledger by script. |
 | `excalidraw` | Infinite-canvas diagrams and wireframes, portable Excalidraw files, and a platform-native collaboration adapter; installed multiplayer release acceptance remains gated. |
@@ -66,10 +65,11 @@ All three depend on the `latest` Canvas and nodejs engine; Invoicing also depend
 The same file-based pattern now spans the whole business suite — Sales (sales, rental), Supply Chain
 (purchase, inventory, manufacturing, plm, quality, maintenance, fleet), HR (employees, time-off, recruitment,
 appraisals, referrals, payroll), Services (project, timesheets, helpdesk, field-service, planning, appointments),
-Marketing (events, surveys, social-marketing), Productivity (knowledge, approvals, documents, discuss) and
+Marketing (events, surveys, social-marketing), Productivity (knowledge, approvals, documents) and
 Finance (expenses, spreadsheet-bi) — each a Canvas UI over vendor-MIME JSON files with nodejs action scripts
 and no custom runtime dependencies. Email/SMS campaign delivery and marketing automation are deliberately
-deferred to the platform notification service design.
+deferred to the platform notification service design, and record-attached discussions are deferred to the
+chat service (a Canvas chat component bound to a per-record, possibly hidden, channel) rather than a file-based app.
 
 Excalidraw is a wrapper around the upstream MIT-licensed editor, not the platform's existing Canvas
 dynamic form renderer. It is an installed, authenticated workspace application, not an anonymous
