@@ -1,0 +1,16 @@
+{
+  "$schema": "https://schemas.verentis.io/quality/v1/check.schema.json",
+  "schemaVersion": 1,
+  "kind": "check",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "point": "",
+  "date": "",
+  "reference": "",
+  "result": "pending",
+  "measuredValue": "",
+  "notes": ""
+}

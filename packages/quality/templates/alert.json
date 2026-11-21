@@ -1,0 +1,16 @@
+{
+  "$schema": "https://schemas.verentis.io/quality/v1/alert.schema.json",
+  "schemaVersion": 1,
+  "kind": "alert",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "title": "{{ name }}",
+  "sourceCheck": "",
+  "severity": "medium",
+  "stage": "new",
+  "rootCause": "",
+  "correctiveAction": ""
+}

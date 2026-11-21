@@ -1,0 +1,15 @@
+{
+  "$schema": "https://schemas.verentis.io/events/v1/registration.schema.json",
+  "schemaVersion": 1,
+  "kind": "registration",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "event": "",
+  "attendeeName": "{{ name }}",
+  "attendeeEmail": "",
+  "qty": 1,
+  "status": "draft"
+}

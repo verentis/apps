@@ -1,0 +1,421 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "quality-alerts",
+    "name": "Quality alerts",
+    "description": "Every quality alert, boarded by stage.",
+    "icon": "siren"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/quality-control-points",
+        "reason": "Board alerts by stage"
+      },
+      {
+        "path": "/quality-checks",
+        "reason": "Board alerts by stage"
+      },
+      {
+        "path": "/quality-alerts",
+        "reason": "Board alerts by stage"
+      }
+    ],
+    "data": {
+      "points": {
+        "kind": "folder",
+        "path": "/quality-control-points",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.quality.point+json"
+      },
+      "checks": {
+        "kind": "folder",
+        "path": "/quality-checks",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.quality.check+json"
+      },
+      "alerts": {
+        "kind": "folder",
+        "path": "/quality-alerts",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.quality.alert+json"
+      },
+      "checkrows": {
+        "kind": "computed",
+        "expr": "(data.checks || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, point: ((((data.points || []).find(p => p.kind === 'file' && p.data && p.path === e.data.point) || {}).data || {}).title) || '', date: e.data.date || '', reference: e.data.reference || '', result: e.data.result || 'pending', measuredValue: e.data.measuredValue || '' }))"
+      },
+      "alertrows": {
+        "kind": "computed",
+        "expr": "(data.alerts || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, title: e.data.title || '', severity: e.data.severity || '', stage: e.data.stage || 'new' }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Alerts by stage"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Every active quality alert, grouped by its stage. Click a row to open the alert.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Quality",
+                  "variant": "ghost",
+                  "icon": "badge-check",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/applications/quality/canvas/home.page.yaml"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /quality-control-points folder could not be read. Reinstall Quality to recreate it."
+            },
+            "rules": {
+              "visible": "data.$points.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /quality-checks folder could not be read. Reinstall Quality to recreate it."
+            },
+            "rules": {
+              "visible": "data.$checks.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /quality-alerts folder could not be read. Reinstall Quality to recreate it."
+            },
+            "rules": {
+              "visible": "data.$alerts.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 4
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "New",
+                  "value": "{{ (data.alertrows || []).filter(r => r.stage === 'new').length }}",
+                  "icon": "siren",
+                  "loading": "{{ data.$alerts.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Investigation",
+                  "value": "{{ (data.alertrows || []).filter(r => r.stage === 'investigation').length }}",
+                  "icon": "siren",
+                  "loading": "{{ data.$alerts.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Action",
+                  "value": "{{ (data.alertrows || []).filter(r => r.stage === 'action').length }}",
+                  "icon": "siren",
+                  "loading": "{{ data.$alerts.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Resolved",
+                  "value": "{{ (data.alertrows || []).filter(r => r.stage === 'resolved').length }}",
+                  "icon": "siren",
+                  "loading": "{{ data.$alerts.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.tabs",
+            "props": {
+              "items": [
+                {
+                  "value": "new",
+                  "label": "New",
+                  "icon": "siren"
+                },
+                {
+                  "value": "investigation",
+                  "label": "Investigation",
+                  "icon": "siren"
+                },
+                {
+                  "value": "action",
+                  "label": "Action",
+                  "icon": "siren"
+                },
+                {
+                  "value": "resolved",
+                  "label": "Resolved",
+                  "icon": "siren"
+                }
+              ]
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.alertrows || []).filter(r => r.stage === 'new') }}",
+                      "columns": [
+                        {
+                          "key": "code",
+                          "label": "Alert"
+                        },
+                        {
+                          "key": "title",
+                          "label": "Title"
+                        },
+                        {
+                          "key": "severity",
+                          "label": "Severity"
+                        },
+                        {
+                          "key": "stage",
+                          "label": "Stage"
+                        }
+                      ],
+                      "emptyText": "No new alerts",
+                      "clickable": true
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "new"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.alertrows || []).filter(r => r.stage === 'investigation') }}",
+                      "columns": [
+                        {
+                          "key": "code",
+                          "label": "Alert"
+                        },
+                        {
+                          "key": "title",
+                          "label": "Title"
+                        },
+                        {
+                          "key": "severity",
+                          "label": "Severity"
+                        },
+                        {
+                          "key": "stage",
+                          "label": "Stage"
+                        }
+                      ],
+                      "emptyText": "No investigation alerts",
+                      "clickable": true
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "investigation"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.alertrows || []).filter(r => r.stage === 'action') }}",
+                      "columns": [
+                        {
+                          "key": "code",
+                          "label": "Alert"
+                        },
+                        {
+                          "key": "title",
+                          "label": "Title"
+                        },
+                        {
+                          "key": "severity",
+                          "label": "Severity"
+                        },
+                        {
+                          "key": "stage",
+                          "label": "Stage"
+                        }
+                      ],
+                      "emptyText": "No action alerts",
+                      "clickable": true
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "action"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.alertrows || []).filter(r => r.stage === 'resolved') }}",
+                      "columns": [
+                        {
+                          "key": "code",
+                          "label": "Alert"
+                        },
+                        {
+                          "key": "title",
+                          "label": "Title"
+                        },
+                        {
+                          "key": "severity",
+                          "label": "Severity"
+                        },
+                        {
+                          "key": "stage",
+                          "label": "Stage"
+                        }
+                      ],
+                      "emptyText": "No resolved alerts",
+                      "clickable": true
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "resolved"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

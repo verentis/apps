@@ -1,0 +1,356 @@
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "surveys",
+    "name": "Surveys",
+    "description": "Surveys and responses as files in your workspace, with validated questionnaires, scripted open, close and submit actions and a results summary.",
+    "icon": "./icons/app.svg",
+    "version": "0.1.0",
+    "author": "Verentis"
+  },
+  "marketplace": {
+    "readme": "./README.md",
+    "keywords": [
+      "surveys",
+      "questionnaires",
+      "responses",
+      "feedback",
+      "polls",
+      "ratings"
+    ]
+  },
+  "spec": {
+    "install-root": "/applications/surveys",
+    "entry": "https://canvas.apps.localtest.me",
+    "scope": "global",
+    "entry-points": [
+      {
+        "id": "home",
+        "display-name": "Surveys",
+        "route": "/render?document=.%2Fcanvas%2Fhome.page.yaml",
+        "order": 10
+      },
+      {
+        "id": "surveys",
+        "display-name": "All surveys",
+        "route": "/render?document=.%2Fcanvas%2Fsurveys.page.yaml",
+        "order": 20
+      },
+      {
+        "id": "results",
+        "display-name": "Results",
+        "route": "/render?document=.%2Fcanvas%2Fresults.page.yaml",
+        "order": 30
+      }
+    ],
+    "launch": {
+      "enabled": true,
+      "entry-point": "home",
+      "pinnable": true
+    },
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run"
+    ],
+    "scopes": [
+      "surveys.default"
+    ],
+    "settings": [
+      {
+        "key": "survey-code-prefix",
+        "display-name": "Survey code prefix",
+        "type": "string",
+        "default": "SUR-",
+        "description": "Prefix of generated survey codes, e.g. SUR-0001."
+      },
+      {
+        "key": "response-code-prefix",
+        "display-name": "Response code prefix",
+        "type": "string",
+        "default": "SRS-",
+        "description": "Prefix of generated response codes, e.g. SRS-0001."
+      },
+      {
+        "key": "code-digits",
+        "display-name": "Code digits",
+        "type": "number",
+        "default": 4,
+        "description": "Minimum number of digits in generated codes (zero-padded)."
+      }
+    ],
+    "dependencies": [
+      {
+        "package": "verentis/canvas",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/nodejs",
+        "version": "latest"
+      }
+    ],
+    "engine": "verentis/nodejs",
+    "scripts": [
+      "scripts/create",
+      "scripts/post"
+    ],
+    "install": [
+      {
+        "from": "canvas/*.form.yaml",
+        "to": "/applications/surveys/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.form+yaml"
+      },
+      {
+        "from": "canvas/*.page.yaml",
+        "to": "/applications/surveys/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.page+yaml"
+      },
+      {
+        "from": "schemas/*.schema.json",
+        "to": "/applications/surveys/schemas/",
+        "mode": "managed",
+        "mime": "application/schema+json"
+      },
+      {
+        "from": "templates/*.json",
+        "to": "/applications/surveys/templates/",
+        "mode": "managed",
+        "mime": "application/json"
+      },
+      {
+        "from": "seed/surveys",
+        "to": "/surveys",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.surveys.surveys"
+      },
+      {
+        "from": "seed/responses",
+        "to": "/survey-responses",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.surveys.responses"
+      },
+      {
+        "from": "seed/settings.json",
+        "to": "/settings/surveys.json",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.surveys.settings+json"
+      }
+    ],
+    "creatables": [
+      {
+        "id": "survey",
+        "display-name": "Survey",
+        "description": "A new survey",
+        "icon": "lucide:clipboard-list",
+        "mime": "application/vnd.verentis.surveys.survey+json",
+        "parents": [
+          "application/vnd.verentis.surveys.surveys"
+        ],
+        "folder-names": [
+          "surveys"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/survey.json"
+      },
+      {
+        "id": "response",
+        "display-name": "Response",
+        "description": "A new response",
+        "icon": "lucide:message-square-text",
+        "mime": "application/vnd.verentis.surveys.response+json",
+        "parents": [
+          "application/vnd.verentis.surveys.responses"
+        ],
+        "folder-names": [
+          "survey-responses",
+          "responses",
+          "surveys"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/response.json"
+      }
+    ],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-forms": true,
+      "allow-popups": false
+    },
+    "file-access": [
+      {
+        "path": "/surveys",
+        "mode": "read",
+        "reason": "Count surveys and responses and show them",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/survey-responses",
+        "mode": "read",
+        "reason": "Count surveys and responses and show them",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/surveys",
+        "mode": "read",
+        "reason": "List surveys by status with their response counts",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/surveys.page.yaml"
+        }
+      },
+      {
+        "path": "/survey-responses",
+        "mode": "read",
+        "reason": "List surveys by status with their response counts",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/surveys.page.yaml"
+        }
+      },
+      {
+        "path": "/surveys",
+        "mode": "read",
+        "reason": "Tally choices and average ratings over the submitted responses",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/results.page.yaml"
+        }
+      },
+      {
+        "path": "/survey-responses",
+        "mode": "read",
+        "reason": "Tally choices and average ratings over the submitted responses",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/results.page.yaml"
+        }
+      },
+      {
+        "path": "/survey-responses",
+        "mode": "read",
+        "reason": "Count submitted responses against this survey",
+        "origin": {
+          "kind": "document",
+          "id": "surveys-survey"
+        }
+      },
+      {
+        "path": "/applications/surveys/",
+        "mode": "read",
+        "reason": "Read the Surveys schemas and run the action script",
+        "origin": {
+          "kind": "document",
+          "id": "surveys-survey"
+        }
+      },
+      {
+        "path": "/surveys",
+        "mode": "read",
+        "reason": "Choose the survey a response answers",
+        "origin": {
+          "kind": "document",
+          "id": "surveys-response"
+        }
+      },
+      {
+        "path": "/applications/surveys/",
+        "mode": "read",
+        "reason": "Read the Surveys schemas and run the action script",
+        "origin": {
+          "kind": "document",
+          "id": "surveys-response"
+        }
+      },
+      {
+        "path": "/surveys",
+        "mode": "read",
+        "reason": "Choose the default survey for new responses",
+        "origin": {
+          "kind": "document",
+          "id": "surveys-settings"
+        }
+      },
+      {
+        "path": "/applications/surveys/",
+        "mode": "read",
+        "reason": "Read the Surveys schemas and run the action script",
+        "origin": {
+          "kind": "document",
+          "id": "surveys-settings"
+        }
+      },
+      {
+        "path": "/surveys",
+        "mode": "write",
+        "reason": "Create surveys with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "surveys-create"
+        }
+      },
+      {
+        "path": "/survey-responses",
+        "mode": "write",
+        "reason": "Create responses with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "surveys-create"
+        }
+      },
+      {
+        "path": "/settings/surveys.json",
+        "mode": "read",
+        "reason": "Default new responses to the default survey",
+        "origin": {
+          "kind": "script",
+          "id": "surveys-create"
+        }
+      },
+      {
+        "path": "/surveys",
+        "mode": "write",
+        "reason": "Open and close surveys, and read their questions when submitting",
+        "origin": {
+          "kind": "script",
+          "id": "surveys-post"
+        }
+      },
+      {
+        "path": "/survey-responses",
+        "mode": "write",
+        "reason": "Submit responses after validating their answers",
+        "origin": {
+          "kind": "script",
+          "id": "surveys-post"
+        }
+      }
+    ]
+  },
+  "packaging": {
+    "publisher": "verentis",
+    "files": [
+      "canvas/**",
+      "schemas/**",
+      "templates/**",
+      "seed/**",
+      "scripts/**",
+      "README.md"
+    ],
+    "templates": [
+      "canvas/*.yaml"
+    ],
+    "variables": {
+      "canvas-origin": "https://canvas.apps.localtest.me"
+    },
+    "encryption": "none"
+  }
+}

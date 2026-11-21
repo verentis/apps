@@ -1,0 +1,17 @@
+{
+  "$schema": "https://schemas.verentis.io/maintenance/v1/request.schema.json",
+  "schemaVersion": 1,
+  "kind": "request",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "equipment": "",
+  "type": "corrective",
+  "priority": "normal",
+  "description": "",
+  "stage": "new",
+  "scheduledDate": "",
+  "durationHours": ""
+}

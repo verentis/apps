@@ -1,0 +1,386 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "surveys-home",
+    "name": "Surveys",
+    "description": "Surveys overview.",
+    "icon": "clipboard-list"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/surveys",
+        "reason": "Count surveys and responses and show them"
+      },
+      {
+        "path": "/survey-responses",
+        "reason": "Count surveys and responses and show them"
+      }
+    ],
+    "data": {
+      "surveys": {
+        "kind": "folder",
+        "path": "/surveys",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.surveys.survey+json"
+      },
+      "responses": {
+        "kind": "folder",
+        "path": "/survey-responses",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.surveys.response+json"
+      },
+      "rows": {
+        "kind": "computed",
+        "expr": "(data.surveys || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, title: e.data.title || '', status: e.data.status || '', questions: (e.data.questions || []).length, submitted: (data.responses || []).filter(r => r.kind === 'file' && r.data && r.data.state !== 'archived' && r.data.status === 'submitted' && r.data.survey === e.path).length, drafts: (data.responses || []).filter(r => r.kind === 'file' && r.data && r.data.state !== 'archived' && r.data.status === 'draft' && r.data.survey === e.path).length }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Surveys"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Surveys and responses are files in your workspace. Draft a questionnaire in /surveys, open it, then submit responses from their forms.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "All surveys",
+                      "variant": "outline",
+                      "icon": "clipboard-list",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/applications/surveys/canvas/surveys.page.yaml"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Results",
+                      "variant": "outline",
+                      "icon": "bar-chart",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/applications/surveys/canvas/results.page.yaml"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Settings",
+                      "variant": "ghost",
+                      "icon": "settings",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/settings/surveys.json",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 4
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Open surveys",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'open').length }}",
+                  "icon": "megaphone",
+                  "loading": "{{ data.$surveys.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Draft surveys",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'draft').length }}",
+                  "icon": "pencil",
+                  "loading": "{{ data.$surveys.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Closed surveys",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'closed').length }}",
+                  "icon": "lock",
+                  "loading": "{{ data.$surveys.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Submitted responses",
+                  "value": "{{ (data.rows || []).reduce((total, r) => total + r.submitted, 0) }}",
+                  "icon": "send",
+                  "loading": "{{ data.$responses.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /surveys folder could not be read. Reinstall Surveys to recreate it."
+            },
+            "rules": {
+              "visible": "data.$surveys.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /survey-responses folder could not be read. Reinstall Surveys to recreate it."
+            },
+            "rules": {
+              "visible": "data.$responses.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.tabs",
+            "props": {
+              "items": [
+                {
+                  "value": "surveys",
+                  "label": "Surveys",
+                  "icon": "clipboard-list"
+                },
+                {
+                  "value": "responses",
+                  "label": "Responses",
+                  "icon": "message-square-text"
+                }
+              ]
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Open /surveys",
+                          "variant": "outline",
+                          "icon": "folder-open",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "open-file": {
+                                "path": "/surveys"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.files",
+                    "props": {
+                      "path": "/surveys/",
+                      "mimeTypes": [
+                        "application/vnd.verentis.surveys.survey+json"
+                      ],
+                      "showFolders": false,
+                      "navigable": false,
+                      "columns": [
+                        {
+                          "key": "name",
+                          "label": "Survey"
+                        },
+                        {
+                          "key": "data.title",
+                          "label": "Title"
+                        },
+                        {
+                          "key": "data.status",
+                          "label": "Status"
+                        }
+                      ],
+                      "emptyText": "No surveys yet. Use New in /surveys."
+                    }
+                  }
+                ],
+                "slot": "surveys"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Open /survey-responses",
+                          "variant": "outline",
+                          "icon": "folder-open",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "open-file": {
+                                "path": "/survey-responses"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.files",
+                    "props": {
+                      "path": "/survey-responses/",
+                      "mimeTypes": [
+                        "application/vnd.verentis.surveys.response+json"
+                      ],
+                      "showFolders": false,
+                      "navigable": false,
+                      "columns": [
+                        {
+                          "key": "name",
+                          "label": "Response"
+                        },
+                        {
+                          "key": "data.respondentName",
+                          "label": "Respondent"
+                        },
+                        {
+                          "key": "data.status",
+                          "label": "Status"
+                        }
+                      ],
+                      "emptyText": "No responses yet. Use New in /survey-responses."
+                    }
+                  }
+                ],
+                "slot": "responses"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

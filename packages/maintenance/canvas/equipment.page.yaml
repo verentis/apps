@@ -1,0 +1,260 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "maintenance-equipment",
+    "name": "Equipment",
+    "description": "Every piece of equipment with its status and open requests.",
+    "icon": "wrench"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/equipment",
+        "reason": "List equipment with their open request counts"
+      },
+      {
+        "path": "/maintenance-requests",
+        "reason": "List equipment with their open request counts"
+      }
+    ],
+    "data": {
+      "equipment": {
+        "kind": "folder",
+        "path": "/equipment",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.maintenance.equipment+json"
+      },
+      "requests": {
+        "kind": "folder",
+        "path": "/maintenance-requests",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.maintenance.request+json"
+      },
+      "rows": {
+        "kind": "computed",
+        "expr": "(data.requests || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, equipmentPath: e.data.equipment || '', equipment: ((((data.equipment || []).find(q => q.kind === 'file' && q.data && q.path === e.data.equipment) || {}).data || {}).name) || '', type: e.data.type || '', priority: e.data.priority || '', stage: e.data.stage || 'new', scheduledDate: e.data.scheduledDate || '', durationHours: e.data.durationHours || '' }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Equipment"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Every active piece of equipment. The status follows its maintenance requests.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Open /equipment",
+                      "variant": "outline",
+                      "icon": "folder-open",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/equipment"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Maintenance",
+                      "variant": "ghost",
+                      "icon": "wrench",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/applications/maintenance/canvas/home.page.yaml"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /equipment folder could not be read. Reinstall Maintenance to recreate it."
+            },
+            "rules": {
+              "visible": "data.$equipment.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /maintenance-requests folder could not be read. Reinstall Maintenance to recreate it."
+            },
+            "rules": {
+              "visible": "data.$requests.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 3
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Operational",
+                  "value": "{{ (data.equipment || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && ((e.data.status || 'operational') === 'operational')).length }}",
+                  "icon": "wrench",
+                  "loading": "{{ data.$equipment.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Under Maintenance",
+                  "value": "{{ (data.equipment || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && ((e.data.status || 'operational') === 'under-maintenance')).length }}",
+                  "icon": "wrench",
+                  "loading": "{{ data.$equipment.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Scrapped",
+                  "value": "{{ (data.equipment || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && ((e.data.status || 'operational') === 'scrapped')).length }}",
+                  "icon": "wrench",
+                  "loading": "{{ data.$equipment.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.equipment || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, name: e.data.name || '', category: e.data.category || '', serial: e.data.serial || '', location: e.data.location || '', assignedTo: e.data.assignedTo || '', status: e.data.status || 'operational', warrantyEnd: e.data.warrantyEnd || '', open: (data.rows || []).filter(r => r.equipmentPath === e.path && (r.stage === 'new' || r.stage === 'in-progress')).length })) }}",
+              "columns": [
+                {
+                  "key": "code",
+                  "label": "Equipment"
+                },
+                {
+                  "key": "name",
+                  "label": "Name"
+                },
+                {
+                  "key": "category",
+                  "label": "Category"
+                },
+                {
+                  "key": "serial",
+                  "label": "Serial"
+                },
+                {
+                  "key": "location",
+                  "label": "Location"
+                },
+                {
+                  "key": "assignedTo",
+                  "label": "Assigned to"
+                },
+                {
+                  "key": "status",
+                  "label": "Status"
+                },
+                {
+                  "key": "warrantyEnd",
+                  "label": "Warranty end"
+                },
+                {
+                  "key": "open",
+                  "label": "Open requests",
+                  "align": "end"
+                }
+              ],
+              "emptyText": "No equipment yet. Use New in /equipment.",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

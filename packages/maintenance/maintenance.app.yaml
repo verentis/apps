@@ -1,0 +1,338 @@
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "maintenance",
+    "name": "Maintenance",
+    "description": "Equipment and maintenance requests as files in your workspace, moved through their stages by script with the equipment status kept in sync.",
+    "icon": "./icons/app.svg",
+    "version": "0.1.0",
+    "author": "Verentis"
+  },
+  "marketplace": {
+    "readme": "./README.md",
+    "keywords": [
+      "maintenance",
+      "equipment",
+      "preventive maintenance",
+      "corrective maintenance",
+      "repairs",
+      "cmms"
+    ]
+  },
+  "spec": {
+    "install-root": "/applications/maintenance",
+    "entry": "https://canvas.apps.localtest.me",
+    "scope": "global",
+    "entry-points": [
+      {
+        "id": "home",
+        "display-name": "Maintenance",
+        "route": "/render?document=.%2Fcanvas%2Fhome.page.yaml",
+        "order": 10
+      },
+      {
+        "id": "requests",
+        "display-name": "Maintenance requests",
+        "route": "/render?document=.%2Fcanvas%2Frequests.page.yaml",
+        "order": 20
+      },
+      {
+        "id": "equipment",
+        "display-name": "Equipment",
+        "route": "/render?document=.%2Fcanvas%2Fequipment.page.yaml",
+        "order": 30
+      },
+      {
+        "id": "preventive",
+        "display-name": "Preventive plan",
+        "route": "/render?document=.%2Fcanvas%2Fpreventive.page.yaml",
+        "order": 40
+      }
+    ],
+    "launch": {
+      "enabled": true,
+      "entry-point": "home",
+      "pinnable": true
+    },
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run"
+    ],
+    "scopes": [
+      "maintenance.default"
+    ],
+    "settings": [
+      {
+        "key": "equipment-code-prefix",
+        "display-name": "Equipment code prefix",
+        "type": "string",
+        "default": "EQP-",
+        "description": "Prefix of generated equipment codes, e.g. EQP-0001."
+      },
+      {
+        "key": "request-code-prefix",
+        "display-name": "Maintenance request number prefix",
+        "type": "string",
+        "default": "MREQ-",
+        "description": "Prefix of generated maintenance request codes, e.g. MREQ-0001."
+      },
+      {
+        "key": "code-digits",
+        "display-name": "Code digits",
+        "type": "number",
+        "default": 4,
+        "description": "Minimum number of digits in generated codes (zero-padded)."
+      }
+    ],
+    "dependencies": [
+      {
+        "package": "verentis/canvas",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/nodejs",
+        "version": "latest"
+      }
+    ],
+    "engine": "verentis/nodejs",
+    "scripts": [
+      "scripts/create",
+      "scripts/post"
+    ],
+    "install": [
+      {
+        "from": "canvas/*.form.yaml",
+        "to": "/applications/maintenance/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.form+yaml"
+      },
+      {
+        "from": "canvas/*.page.yaml",
+        "to": "/applications/maintenance/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.page+yaml"
+      },
+      {
+        "from": "schemas/*.schema.json",
+        "to": "/applications/maintenance/schemas/",
+        "mode": "managed",
+        "mime": "application/schema+json"
+      },
+      {
+        "from": "templates/*.json",
+        "to": "/applications/maintenance/templates/",
+        "mode": "managed",
+        "mime": "application/json"
+      },
+      {
+        "from": "seed/equipments",
+        "to": "/equipment",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.maintenance.equipments"
+      },
+      {
+        "from": "seed/requests",
+        "to": "/maintenance-requests",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.maintenance.requests"
+      }
+    ],
+    "creatables": [
+      {
+        "id": "equipment",
+        "display-name": "Equipment",
+        "description": "A new equipment",
+        "icon": "lucide:wrench",
+        "mime": "application/vnd.verentis.maintenance.equipment+json",
+        "parents": [
+          "application/vnd.verentis.maintenance.equipments"
+        ],
+        "folder-names": [
+          "equipment",
+          "maintenance"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/equipment.json"
+      },
+      {
+        "id": "request",
+        "display-name": "Maintenance request",
+        "description": "A new maintenance request",
+        "icon": "lucide:hammer",
+        "mime": "application/vnd.verentis.maintenance.request+json",
+        "parents": [
+          "application/vnd.verentis.maintenance.requests"
+        ],
+        "folder-names": [
+          "maintenance-requests",
+          "maintenance"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/request.json"
+      }
+    ],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-forms": true,
+      "allow-popups": false
+    },
+    "file-access": [
+      {
+        "path": "/equipment",
+        "mode": "read",
+        "reason": "Count equipment and requests and show the maintenance containers",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/maintenance-requests",
+        "mode": "read",
+        "reason": "Count equipment and requests and show the maintenance containers",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/equipment",
+        "mode": "read",
+        "reason": "Board requests by stage with their equipment names",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/requests.page.yaml"
+        }
+      },
+      {
+        "path": "/maintenance-requests",
+        "mode": "read",
+        "reason": "Board requests by stage with their equipment names",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/requests.page.yaml"
+        }
+      },
+      {
+        "path": "/equipment",
+        "mode": "read",
+        "reason": "List equipment with their open request counts",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/equipment.page.yaml"
+        }
+      },
+      {
+        "path": "/maintenance-requests",
+        "mode": "read",
+        "reason": "List equipment with their open request counts",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/equipment.page.yaml"
+        }
+      },
+      {
+        "path": "/equipment",
+        "mode": "read",
+        "reason": "Compare open preventive requests against their scheduled dates",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/preventive.page.yaml"
+        }
+      },
+      {
+        "path": "/maintenance-requests",
+        "mode": "read",
+        "reason": "Compare open preventive requests against their scheduled dates",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/preventive.page.yaml"
+        }
+      },
+      {
+        "path": "/applications/maintenance/",
+        "mode": "read",
+        "reason": "Read the Maintenance schemas and run the maintenance action script",
+        "origin": {
+          "kind": "document",
+          "id": "maintenance-equipment"
+        }
+      },
+      {
+        "path": "/equipment",
+        "mode": "read",
+        "reason": "Choose the equipment a request maintains",
+        "origin": {
+          "kind": "document",
+          "id": "maintenance-request"
+        }
+      },
+      {
+        "path": "/applications/maintenance/",
+        "mode": "read",
+        "reason": "Read the Maintenance schemas and run the maintenance action script",
+        "origin": {
+          "kind": "document",
+          "id": "maintenance-request"
+        }
+      },
+      {
+        "path": "/equipment",
+        "mode": "write",
+        "reason": "Create equipment records with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "maintenance-create"
+        }
+      },
+      {
+        "path": "/maintenance-requests",
+        "mode": "write",
+        "reason": "Create maintenance requests with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "maintenance-create"
+        }
+      },
+      {
+        "path": "/maintenance-requests",
+        "mode": "write",
+        "reason": "Start, complete and scrap maintenance requests",
+        "origin": {
+          "kind": "script",
+          "id": "maintenance-post"
+        }
+      },
+      {
+        "path": "/equipment",
+        "mode": "write",
+        "reason": "Keep the equipment status in sync with its maintenance requests",
+        "origin": {
+          "kind": "script",
+          "id": "maintenance-post"
+        }
+      }
+    ]
+  },
+  "packaging": {
+    "publisher": "verentis",
+    "files": [
+      "canvas/**",
+      "schemas/**",
+      "templates/**",
+      "seed/**",
+      "scripts/**",
+      "README.md"
+    ],
+    "templates": [
+      "canvas/*.yaml"
+    ],
+    "variables": {
+      "canvas-origin": "https://canvas.apps.localtest.me"
+    },
+    "encryption": "none"
+  }
+}
