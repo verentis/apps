@@ -1,0 +1,299 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "fleet-contracts",
+    "name": "Contracts",
+    "description": "Fleet contracts with the ones expiring soon.",
+    "icon": "file-signature"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/fleet-contracts",
+        "reason": "List the fleet contracts and their end dates"
+      },
+      {
+        "path": "/settings/fleet.json",
+        "reason": "Read how soon an ending contract counts as expiring"
+      }
+    ],
+    "data": {
+      "contracts": {
+        "kind": "folder",
+        "path": "/fleet-contracts",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.fleet.contract+json"
+      },
+      "settings": {
+        "kind": "file",
+        "path": "/settings/fleet.json",
+        "parse": "json"
+      },
+      "rows": {
+        "kind": "computed",
+        "expr": "(data.contracts || []).filter(e => e.kind === 'file' && e.data && e.data.kind === 'contract' && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, vehicle: (e.data.vehicle || '').split('/').pop(), type: e.data.type || '', vendor: e.data.vendor || '', startDate: e.data.startDate || '', endDate: e.data.endDate || '', monthlyCost: e.data.monthlyCost || '', monthlyUnits: Math.round(Number(e.data.monthlyCost || 0) * 10000), status: e.data.status || '' })).sort((a, b) => ((a.endDate || '9999-99-99') < (b.endDate || '9999-99-99') ? -1 : 1))"
+      },
+      "expiring": {
+        "kind": "computed",
+        "expr": "(data.rows || []).filter(c => c.status === 'active' && c.endDate && c.endDate <= Date(Date.now() + (((data.settings || {}).expiringSoonDays || 60) * 86400000)).slice(0, 10))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Contracts"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Lease, insurance and service contracts per vehicle. Active contracts ending within the expiring-soon window are flagged below.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Fleet",
+                  "variant": "ghost",
+                  "icon": "car",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/applications/fleet/canvas/home.page.yaml"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$contracts.error }}"
+            },
+            "rules": {
+              "visible": "data.$contracts.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$contracts.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 3
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Active contracts",
+                  "value": "{{ (data.rows || []).filter(c => c.status === 'active').length }}",
+                  "icon": "file-signature",
+                  "loading": "{{ data.$contracts.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Expiring soon",
+                  "value": "{{ (data.expiring || []).length }}",
+                  "icon": "hourglass",
+                  "loading": "{{ data.$contracts.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Active monthly cost",
+                  "value": "{{ ((data.rows || []).reduce((sum, c) => sum + (c.status === 'active' ? c.monthlyUnits : 0), 0) / 10000).toFixed(2) }}",
+                  "icon": "wallet",
+                  "loading": "{{ data.$contracts.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Expiring soon",
+              "description": "Active contracts whose end date falls within the configured window, soonest first."
+            },
+            "children": [
+              {
+                "type": "canvas.table",
+                "props": {
+                  "rows": "{{ data.expiring || [] }}",
+                  "columns": [
+                    {
+                      "key": "code",
+                      "label": "Contract"
+                    },
+                    {
+                      "key": "vehicle",
+                      "label": "Vehicle"
+                    },
+                    {
+                      "key": "type",
+                      "label": "Type"
+                    },
+                    {
+                      "key": "vendor",
+                      "label": "Vendor"
+                    },
+                    {
+                      "key": "startDate",
+                      "label": "Starts"
+                    },
+                    {
+                      "key": "endDate",
+                      "label": "Ends"
+                    },
+                    {
+                      "key": "monthlyCost",
+                      "label": "Monthly cost",
+                      "align": "end"
+                    },
+                    {
+                      "key": "status",
+                      "label": "Status"
+                    }
+                  ],
+                  "emptyText": "No active contract ends within the window",
+                  "clickable": true
+                },
+                "on": {
+                  "row-click": [
+                    {
+                      "open-file": {
+                        "path": "{{ event.path }}",
+                        "mode": "edit"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "All contracts"
+            },
+            "children": [
+              {
+                "type": "canvas.table",
+                "props": {
+                  "rows": "{{ data.rows || [] }}",
+                  "columns": [
+                    {
+                      "key": "code",
+                      "label": "Contract"
+                    },
+                    {
+                      "key": "vehicle",
+                      "label": "Vehicle"
+                    },
+                    {
+                      "key": "type",
+                      "label": "Type"
+                    },
+                    {
+                      "key": "vendor",
+                      "label": "Vendor"
+                    },
+                    {
+                      "key": "startDate",
+                      "label": "Starts"
+                    },
+                    {
+                      "key": "endDate",
+                      "label": "Ends"
+                    },
+                    {
+                      "key": "monthlyCost",
+                      "label": "Monthly cost",
+                      "align": "end"
+                    },
+                    {
+                      "key": "status",
+                      "label": "Status"
+                    }
+                  ],
+                  "emptyText": "No contracts yet. Use New in /fleet-contracts.",
+                  "clickable": true
+                },
+                "on": {
+                  "row-click": [
+                    {
+                      "open-file": {
+                        "path": "{{ event.path }}",
+                        "mode": "edit"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

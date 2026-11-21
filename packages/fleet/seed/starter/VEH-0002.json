@@ -1,0 +1,18 @@
+{
+  "$schema": "https://schemas.verentis.io/fleet/v1/vehicle.schema.json",
+  "schemaVersion": 1,
+  "kind": "vehicle",
+  "id": "9c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e02",
+  "state": "active",
+  "createdAt": "2026-01-01T00:00:00Z",
+  "updatedAt": "2026-01-01T00:00:00Z",
+  "code": "VEH-0002",
+  "make": "Ford",
+  "model": "Transit",
+  "year": "2021",
+  "licensePlate": "CA 789-012",
+  "vin": "WF0XXXTTGXKY54321",
+  "driverName": "Sipho Dlamini",
+  "status": "active",
+  "odometerKm": "88100"
+}

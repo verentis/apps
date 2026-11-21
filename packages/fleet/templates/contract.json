@@ -1,0 +1,17 @@
+{
+  "$schema": "https://schemas.verentis.io/fleet/v1/contract.schema.json",
+  "schemaVersion": 1,
+  "kind": "contract",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "vehicle": "",
+  "type": "lease",
+  "vendor": "{{ name }}",
+  "startDate": "",
+  "endDate": "",
+  "monthlyCost": "",
+  "status": "active"
+}

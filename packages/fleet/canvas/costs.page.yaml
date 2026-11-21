@@ -1,0 +1,267 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "fleet-costs",
+    "name": "Costs",
+    "description": "Cost summary per vehicle: active contracts’ monthly cost plus done service costs.",
+    "icon": "chart-column"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/vehicles",
+        "reason": "Report costs per vehicle"
+      },
+      {
+        "path": "/fleet-contracts",
+        "reason": "Sum the active contracts’ monthly cost"
+      },
+      {
+        "path": "/service-logs",
+        "reason": "Sum the done service logs’ cost"
+      }
+    ],
+    "data": {
+      "vehicles": {
+        "kind": "folder",
+        "path": "/vehicles",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.fleet.vehicle+json"
+      },
+      "contracts": {
+        "kind": "folder",
+        "path": "/fleet-contracts",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.fleet.contract+json"
+      },
+      "services": {
+        "kind": "folder",
+        "path": "/service-logs",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.fleet.service+json"
+      },
+      "costs": {
+        "kind": "computed",
+        "expr": "(data.vehicles || []).filter(v => v.kind === 'file' && v.data && v.data.kind === 'vehicle' && v.data.state !== 'archived').map(v => ({ path: v.path, code: v.data.code || v.name, vehicle: ((v.data.make || '') + ' ' + (v.data.model || '')).trim(), licensePlate: v.data.licensePlate || '', status: v.data.status || '', monthlyUnits: (data.contracts || []).filter(c => c.kind === 'file' && c.data && c.data.kind === 'contract' && c.data.state !== 'archived' && c.data.status === 'active' && c.data.vehicle === v.path).reduce((sum, c) => sum + Math.round(Number(c.data.monthlyCost || 0) * 10000), 0), serviceUnits: (data.services || []).filter(s => s.kind === 'file' && s.data && s.data.kind === 'service' && s.data.state !== 'archived' && s.data.status === 'done' && s.data.vehicle === v.path).reduce((sum, s) => sum + Math.round(Number(s.data.cost || 0) * 10000), 0) })).sort((a, b) => (a.code < b.code ? -1 : 1))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Costs"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Per vehicle: the monthly cost of its active contracts and the total cost of its done service logs. Draft service logs and inactive contracts are ignored.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Fleet",
+                  "variant": "ghost",
+                  "icon": "car",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/applications/fleet/canvas/home.page.yaml"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$vehicles.error }}"
+            },
+            "rules": {
+              "visible": "data.$vehicles.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$vehicles.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$contracts.error }}"
+            },
+            "rules": {
+              "visible": "data.$contracts.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$contracts.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$services.error }}"
+            },
+            "rules": {
+              "visible": "data.$services.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$services.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 3
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Vehicles",
+                  "value": "{{ (data.costs || []).length }}",
+                  "icon": "car",
+                  "loading": "{{ data.$vehicles.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Fleet monthly cost",
+                  "value": "{{ ((data.costs || []).reduce((sum, t) => sum + t.monthlyUnits, 0) / 10000).toFixed(2) }}",
+                  "icon": "wallet",
+                  "loading": "{{ data.$contracts.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Service spend (done)",
+                  "value": "{{ ((data.costs || []).reduce((sum, t) => sum + t.serviceUnits, 0) / 10000).toFixed(2) }}",
+                  "icon": "wrench",
+                  "loading": "{{ data.$services.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.costs || []).map(t => ({ path: t.path, code: t.code, vehicle: t.vehicle, licensePlate: t.licensePlate, status: t.status, monthly: (t.monthlyUnits / 10000).toFixed(2), service: (t.serviceUnits / 10000).toFixed(2) })) }}",
+              "columns": [
+                {
+                  "key": "code",
+                  "label": "Code"
+                },
+                {
+                  "key": "vehicle",
+                  "label": "Vehicle"
+                },
+                {
+                  "key": "licensePlate",
+                  "label": "Plate"
+                },
+                {
+                  "key": "status",
+                  "label": "Status"
+                },
+                {
+                  "key": "monthly",
+                  "label": "Contracts / month",
+                  "align": "end"
+                },
+                {
+                  "key": "service",
+                  "label": "Service (done)",
+                  "align": "end"
+                }
+              ],
+              "emptyText": "No vehicles yet",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

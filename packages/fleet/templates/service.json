@@ -1,0 +1,17 @@
+{
+  "$schema": "https://schemas.verentis.io/fleet/v1/service.schema.json",
+  "schemaVersion": 1,
+  "kind": "service",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "vehicle": "",
+  "date": "",
+  "odometerKm": "",
+  "type": "maintenance",
+  "description": "{{ name }}",
+  "cost": "",
+  "status": "draft"
+}

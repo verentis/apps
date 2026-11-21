@@ -1,0 +1,18 @@
+{
+  "$schema": "https://schemas.verentis.io/fleet/v1/vehicle.schema.json",
+  "schemaVersion": 1,
+  "kind": "vehicle",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "make": "{{ name }}",
+  "model": "",
+  "year": "",
+  "licensePlate": "",
+  "vin": "",
+  "driverName": "",
+  "status": "active",
+  "odometerKm": ""
+}

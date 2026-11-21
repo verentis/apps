@@ -1,0 +1,18 @@
+{
+  "$schema": "https://schemas.verentis.io/fleet/v1/vehicle.schema.json",
+  "schemaVersion": 1,
+  "kind": "vehicle",
+  "id": "9c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e01",
+  "state": "active",
+  "createdAt": "2026-01-01T00:00:00Z",
+  "updatedAt": "2026-01-01T00:00:00Z",
+  "code": "VEH-0001",
+  "make": "Toyota",
+  "model": "Corolla",
+  "year": "2022",
+  "licensePlate": "CA 123-456",
+  "vin": "JTDBR32E720045671",
+  "driverName": "Thandi Mokoena",
+  "status": "active",
+  "odometerKm": "45200"
+}
