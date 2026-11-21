@@ -1,0 +1,274 @@
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "referrals",
+    "name": "Referrals",
+    "description": "Employee referrals as files in your workspace, with a points leaderboard and scripted hire decisions that award points from the settings.",
+    "icon": "./icons/app.svg",
+    "version": "0.1.0",
+    "author": "Verentis"
+  },
+  "marketplace": {
+    "readme": "./README.md",
+    "keywords": [
+      "referrals",
+      "recruitment",
+      "hiring",
+      "points",
+      "leaderboard",
+      "hr"
+    ]
+  },
+  "spec": {
+    "install-root": "/applications/referrals",
+    "entry": "https://canvas.apps.localtest.me",
+    "scope": "global",
+    "entry-points": [
+      {
+        "id": "home",
+        "display-name": "Referrals",
+        "route": "/render?document=.%2Fcanvas%2Fhome.page.yaml",
+        "order": 10
+      },
+      {
+        "id": "referrals",
+        "display-name": "By status",
+        "route": "/render?document=.%2Fcanvas%2Freferrals.page.yaml",
+        "order": 20
+      },
+      {
+        "id": "leaderboard",
+        "display-name": "Leaderboard",
+        "route": "/render?document=.%2Fcanvas%2Fleaderboard.page.yaml",
+        "order": 30
+      }
+    ],
+    "launch": {
+      "enabled": true,
+      "entry-point": "home",
+      "pinnable": true
+    },
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run"
+    ],
+    "scopes": [
+      "referrals.default"
+    ],
+    "settings": [
+      {
+        "key": "referral-code-prefix",
+        "display-name": "Referral number prefix",
+        "type": "string",
+        "default": "REF-",
+        "description": "Prefix of generated referral codes, e.g. REF-0001."
+      },
+      {
+        "key": "code-digits",
+        "display-name": "Code digits",
+        "type": "number",
+        "default": 4,
+        "description": "Minimum number of digits in generated codes (zero-padded)."
+      }
+    ],
+    "dependencies": [
+      {
+        "package": "verentis/canvas",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/nodejs",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/recruitment",
+        "version": "latest",
+        "optional": true
+      },
+      {
+        "package": "verentis/employees",
+        "version": "latest",
+        "optional": true
+      }
+    ],
+    "engine": "verentis/nodejs",
+    "scripts": [
+      "scripts/create",
+      "scripts/post"
+    ],
+    "install": [
+      {
+        "from": "canvas/*.form.yaml",
+        "to": "/applications/referrals/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.form+yaml"
+      },
+      {
+        "from": "canvas/*.page.yaml",
+        "to": "/applications/referrals/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.page+yaml"
+      },
+      {
+        "from": "schemas/*.schema.json",
+        "to": "/applications/referrals/schemas/",
+        "mode": "managed",
+        "mime": "application/schema+json"
+      },
+      {
+        "from": "templates/*.json",
+        "to": "/applications/referrals/templates/",
+        "mode": "managed",
+        "mime": "application/json"
+      },
+      {
+        "from": "seed/referrals",
+        "to": "/referrals",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.referrals.referrals"
+      },
+      {
+        "from": "seed/settings.json",
+        "to": "/settings/referrals.json",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.referrals.settings+json"
+      }
+    ],
+    "creatables": [
+      {
+        "id": "referral",
+        "display-name": "Referral",
+        "description": "A new referral",
+        "icon": "lucide:gift",
+        "mime": "application/vnd.verentis.referrals.referral+json",
+        "parents": [
+          "application/vnd.verentis.referrals.referrals"
+        ],
+        "folder-names": [
+          "referrals",
+          "hr"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/referral.json"
+      }
+    ],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-forms": true,
+      "allow-popups": false
+    },
+    "file-access": [
+      {
+        "path": "/referrals",
+        "mode": "read",
+        "reason": "Count referrals and show them",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/referrals",
+        "mode": "read",
+        "reason": "List referrals by status",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/referrals.page.yaml"
+        }
+      },
+      {
+        "path": "/referrals",
+        "mode": "read",
+        "reason": "Sum referral points per referrer",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/leaderboard.page.yaml"
+        }
+      },
+      {
+        "path": "/job-positions",
+        "mode": "read",
+        "reason": "Offer Recruitment job positions on referrals (when Recruitment is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "referrals-referral"
+        }
+      },
+      {
+        "path": "/employees",
+        "mode": "read",
+        "reason": "Offer Employees records on referrals (when Employees is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "referrals-referral"
+        }
+      },
+      {
+        "path": "/applications/referrals/",
+        "mode": "read",
+        "reason": "Read the Referrals schemas and run the referral action script",
+        "origin": {
+          "kind": "document",
+          "id": "referrals-referral"
+        }
+      },
+      {
+        "path": "/applications/referrals/",
+        "mode": "read",
+        "reason": "Read the Referrals schemas and run the referral action script",
+        "origin": {
+          "kind": "document",
+          "id": "referrals-settings"
+        }
+      },
+      {
+        "path": "/referrals",
+        "mode": "write",
+        "reason": "Create referrals with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "referrals-create"
+        }
+      },
+      {
+        "path": "/referrals",
+        "mode": "write",
+        "reason": "Mark referrals hired or not hired",
+        "origin": {
+          "kind": "script",
+          "id": "referrals-post"
+        }
+      },
+      {
+        "path": "/settings/referrals.json",
+        "mode": "read",
+        "reason": "Read the points a hire awards",
+        "origin": {
+          "kind": "script",
+          "id": "referrals-post"
+        }
+      }
+    ]
+  },
+  "packaging": {
+    "publisher": "verentis",
+    "files": [
+      "canvas/**",
+      "schemas/**",
+      "templates/**",
+      "seed/**",
+      "scripts/**",
+      "README.md"
+    ],
+    "templates": [
+      "canvas/*.yaml"
+    ],
+    "variables": {
+      "canvas-origin": "https://canvas.apps.localtest.me"
+    },
+    "encryption": "none"
+  }
+}

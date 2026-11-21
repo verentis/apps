@@ -1,0 +1,19 @@
+{
+  "$schema": "https://schemas.verentis.io/appraisals/v1/appraisal.schema.json",
+  "schemaVersion": 1,
+  "kind": "appraisal",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "employeeName": "{{ name }}",
+  "employeeRef": "",
+  "period": "",
+  "manager": "",
+  "status": "draft",
+  "scheduledAt": "",
+  "ratings": [],
+  "overallScore": "",
+  "summary": ""
+}

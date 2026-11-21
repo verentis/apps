@@ -1,0 +1,415 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "appraisals-list",
+    "name": "Appraisals by status",
+    "description": "Every appraisal, listed by status.",
+    "icon": "list"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/appraisals",
+        "reason": "List appraisals by status"
+      }
+    ],
+    "data": {
+      "appraisals": {
+        "kind": "folder",
+        "path": "/appraisals",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.appraisals.appraisal+json"
+      },
+      "rows": {
+        "kind": "computed",
+        "expr": "(data.appraisals || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, employee: e.data.employeeName || '', period: e.data.period || '', manager: e.data.manager || '', status: e.data.status || '', scheduledAt: e.data.scheduledAt || '', ratings: (e.data.ratings || []).length, overallScore: e.data.overallScore || '' }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Appraisals by status"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Every active appraisal, grouped by its status. Click a row to open the appraisal.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Appraisals",
+                  "variant": "ghost",
+                  "icon": "clipboard-check",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/applications/appraisals/canvas/home.page.yaml"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /appraisals folder could not be read. Reinstall Appraisals to recreate it."
+            },
+            "rules": {
+              "visible": "data.$appraisals.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 4
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Draft",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'draft').length }}",
+                  "icon": "clipboard-check",
+                  "loading": "{{ data.$appraisals.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Scheduled",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'scheduled').length }}",
+                  "icon": "clipboard-check",
+                  "loading": "{{ data.$appraisals.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Done",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'done').length }}",
+                  "icon": "clipboard-check",
+                  "loading": "{{ data.$appraisals.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Cancelled",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'cancelled').length }}",
+                  "icon": "clipboard-check",
+                  "loading": "{{ data.$appraisals.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.tabs",
+            "props": {
+              "items": [
+                {
+                  "value": "draft",
+                  "label": "Draft",
+                  "icon": "clipboard-check"
+                },
+                {
+                  "value": "scheduled",
+                  "label": "Scheduled",
+                  "icon": "clipboard-check"
+                },
+                {
+                  "value": "done",
+                  "label": "Done",
+                  "icon": "clipboard-check"
+                },
+                {
+                  "value": "cancelled",
+                  "label": "Cancelled",
+                  "icon": "clipboard-check"
+                }
+              ]
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.rows || []).filter(r => r.status === 'draft') }}",
+                      "columns": [
+                        {
+                          "key": "code",
+                          "label": "Appraisal"
+                        },
+                        {
+                          "key": "employee",
+                          "label": "Employee"
+                        },
+                        {
+                          "key": "period",
+                          "label": "Period"
+                        },
+                        {
+                          "key": "manager",
+                          "label": "Manager"
+                        },
+                        {
+                          "key": "scheduledAt",
+                          "label": "Scheduled"
+                        },
+                        {
+                          "key": "overallScore",
+                          "label": "Overall score",
+                          "align": "end"
+                        }
+                      ],
+                      "emptyText": "No draft appraisals",
+                      "clickable": true
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "draft"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.rows || []).filter(r => r.status === 'scheduled') }}",
+                      "columns": [
+                        {
+                          "key": "code",
+                          "label": "Appraisal"
+                        },
+                        {
+                          "key": "employee",
+                          "label": "Employee"
+                        },
+                        {
+                          "key": "period",
+                          "label": "Period"
+                        },
+                        {
+                          "key": "manager",
+                          "label": "Manager"
+                        },
+                        {
+                          "key": "scheduledAt",
+                          "label": "Scheduled"
+                        },
+                        {
+                          "key": "overallScore",
+                          "label": "Overall score",
+                          "align": "end"
+                        }
+                      ],
+                      "emptyText": "No scheduled appraisals",
+                      "clickable": true
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "scheduled"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.rows || []).filter(r => r.status === 'done') }}",
+                      "columns": [
+                        {
+                          "key": "code",
+                          "label": "Appraisal"
+                        },
+                        {
+                          "key": "employee",
+                          "label": "Employee"
+                        },
+                        {
+                          "key": "period",
+                          "label": "Period"
+                        },
+                        {
+                          "key": "manager",
+                          "label": "Manager"
+                        },
+                        {
+                          "key": "scheduledAt",
+                          "label": "Scheduled"
+                        },
+                        {
+                          "key": "overallScore",
+                          "label": "Overall score",
+                          "align": "end"
+                        }
+                      ],
+                      "emptyText": "No done appraisals",
+                      "clickable": true
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "done"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.rows || []).filter(r => r.status === 'cancelled') }}",
+                      "columns": [
+                        {
+                          "key": "code",
+                          "label": "Appraisal"
+                        },
+                        {
+                          "key": "employee",
+                          "label": "Employee"
+                        },
+                        {
+                          "key": "period",
+                          "label": "Period"
+                        },
+                        {
+                          "key": "manager",
+                          "label": "Manager"
+                        },
+                        {
+                          "key": "scheduledAt",
+                          "label": "Scheduled"
+                        },
+                        {
+                          "key": "overallScore",
+                          "label": "Overall score",
+                          "align": "end"
+                        }
+                      ],
+                      "emptyText": "No cancelled appraisals",
+                      "clickable": true
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "cancelled"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

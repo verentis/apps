@@ -1,0 +1,18 @@
+{
+  "$schema": "https://schemas.verentis.io/employees/v1/employee.schema.json",
+  "schemaVersion": 1,
+  "kind": "employee",
+  "id": "8d2e3f4a-5b6c-4d7e-9f0a-1b2c3d4e5f02",
+  "state": "active",
+  "createdAt": "2026-01-01T00:00:00Z",
+  "updatedAt": "2026-01-01T00:00:00Z",
+  "code": "EMP-0001",
+  "name": "Avery Adams",
+  "jobTitle": "Operations manager",
+  "department": "/departments/DEP-0001",
+  "manager": "",
+  "workEmail": "avery.adams@example.com",
+  "workPhone": "+27 21 555 0101",
+  "startDate": "2023-02-01",
+  "status": "active"
+}

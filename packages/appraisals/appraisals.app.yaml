@@ -1,0 +1,260 @@
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "appraisals",
+    "name": "Appraisals",
+    "description": "Employee appraisals as files in your workspace, with criteria ratings, a computed overall score and scripted schedule and complete actions.",
+    "icon": "./icons/app.svg",
+    "version": "0.1.0",
+    "author": "Verentis"
+  },
+  "marketplace": {
+    "readme": "./README.md",
+    "keywords": [
+      "appraisals",
+      "performance",
+      "reviews",
+      "ratings",
+      "employees",
+      "hr"
+    ]
+  },
+  "spec": {
+    "install-root": "/applications/appraisals",
+    "entry": "https://canvas.apps.localtest.me",
+    "scope": "global",
+    "entry-points": [
+      {
+        "id": "home",
+        "display-name": "Appraisals",
+        "route": "/render?document=.%2Fcanvas%2Fhome.page.yaml",
+        "order": 10
+      },
+      {
+        "id": "appraisals",
+        "display-name": "By status",
+        "route": "/render?document=.%2Fcanvas%2Fappraisals.page.yaml",
+        "order": 20
+      },
+      {
+        "id": "scores",
+        "display-name": "Scores",
+        "route": "/render?document=.%2Fcanvas%2Fscores.page.yaml",
+        "order": 30
+      }
+    ],
+    "launch": {
+      "enabled": true,
+      "entry-point": "home",
+      "pinnable": true
+    },
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run"
+    ],
+    "scopes": [
+      "appraisals.default"
+    ],
+    "settings": [
+      {
+        "key": "appraisal-code-prefix",
+        "display-name": "Appraisal number prefix",
+        "type": "string",
+        "default": "APR-",
+        "description": "Prefix of generated appraisal codes, e.g. APR-0001."
+      },
+      {
+        "key": "code-digits",
+        "display-name": "Code digits",
+        "type": "number",
+        "default": 4,
+        "description": "Minimum number of digits in generated codes (zero-padded)."
+      }
+    ],
+    "dependencies": [
+      {
+        "package": "verentis/canvas",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/nodejs",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/employees",
+        "version": "latest",
+        "optional": true
+      }
+    ],
+    "engine": "verentis/nodejs",
+    "scripts": [
+      "scripts/create",
+      "scripts/post"
+    ],
+    "install": [
+      {
+        "from": "canvas/*.form.yaml",
+        "to": "/applications/appraisals/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.form+yaml"
+      },
+      {
+        "from": "canvas/*.page.yaml",
+        "to": "/applications/appraisals/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.page+yaml"
+      },
+      {
+        "from": "schemas/*.schema.json",
+        "to": "/applications/appraisals/schemas/",
+        "mode": "managed",
+        "mime": "application/schema+json"
+      },
+      {
+        "from": "templates/*.json",
+        "to": "/applications/appraisals/templates/",
+        "mode": "managed",
+        "mime": "application/json"
+      },
+      {
+        "from": "seed/appraisals",
+        "to": "/appraisals",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.appraisals.appraisals"
+      },
+      {
+        "from": "seed/settings.json",
+        "to": "/settings/appraisals.json",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.appraisals.settings+json"
+      }
+    ],
+    "creatables": [
+      {
+        "id": "appraisal",
+        "display-name": "Appraisal",
+        "description": "A new appraisal",
+        "icon": "lucide:clipboard-check",
+        "mime": "application/vnd.verentis.appraisals.appraisal+json",
+        "parents": [
+          "application/vnd.verentis.appraisals.appraisals"
+        ],
+        "folder-names": [
+          "appraisals",
+          "hr"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/appraisal.json"
+      }
+    ],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-forms": true,
+      "allow-popups": false
+    },
+    "file-access": [
+      {
+        "path": "/appraisals",
+        "mode": "read",
+        "reason": "Count appraisals and show them",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/appraisals",
+        "mode": "read",
+        "reason": "List appraisals by status",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/appraisals.page.yaml"
+        }
+      },
+      {
+        "path": "/appraisals",
+        "mode": "read",
+        "reason": "Summarise completed appraisals' overall scores",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/scores.page.yaml"
+        }
+      },
+      {
+        "path": "/employees",
+        "mode": "read",
+        "reason": "Offer Employees records on appraisals (when Employees is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "appraisals-appraisal"
+        }
+      },
+      {
+        "path": "/applications/appraisals/",
+        "mode": "read",
+        "reason": "Read the Appraisals schemas and run the appraisal action script",
+        "origin": {
+          "kind": "document",
+          "id": "appraisals-appraisal"
+        }
+      },
+      {
+        "path": "/applications/appraisals/",
+        "mode": "read",
+        "reason": "Read the Appraisals schemas and run the appraisal action script",
+        "origin": {
+          "kind": "document",
+          "id": "appraisals-settings"
+        }
+      },
+      {
+        "path": "/appraisals",
+        "mode": "write",
+        "reason": "Create appraisals with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "appraisals-create"
+        }
+      },
+      {
+        "path": "/settings/appraisals.json",
+        "mode": "read",
+        "reason": "Default new appraisals to the default manager",
+        "origin": {
+          "kind": "script",
+          "id": "appraisals-create"
+        }
+      },
+      {
+        "path": "/appraisals",
+        "mode": "write",
+        "reason": "Schedule and complete appraisals",
+        "origin": {
+          "kind": "script",
+          "id": "appraisals-post"
+        }
+      }
+    ]
+  },
+  "packaging": {
+    "publisher": "verentis",
+    "files": [
+      "canvas/**",
+      "schemas/**",
+      "templates/**",
+      "seed/**",
+      "scripts/**",
+      "README.md"
+    ],
+    "templates": [
+      "canvas/*.yaml"
+    ],
+    "variables": {
+      "canvas-origin": "https://canvas.apps.localtest.me"
+    },
+    "encryption": "none"
+  }
+}

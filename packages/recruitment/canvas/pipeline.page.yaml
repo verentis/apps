@@ -1,0 +1,550 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "recruitment-pipeline",
+    "name": "Pipeline",
+    "description": "Every candidate, listed by stage.",
+    "icon": "kanban"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/job-positions",
+        "reason": "List candidates by stage with their job position titles"
+      },
+      {
+        "path": "/candidates",
+        "reason": "List candidates by stage with their job position titles"
+      }
+    ],
+    "data": {
+      "candidates": {
+        "kind": "folder",
+        "path": "/candidates",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.recruitment.candidate+json"
+      },
+      "jobs": {
+        "kind": "folder",
+        "path": "/job-positions",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.recruitment.job+json"
+      },
+      "rows": {
+        "kind": "computed",
+        "expr": "(data.candidates || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, name: e.data.name || '', jobPath: e.data.job || '', job: ((((data.jobs || []).find(j => j.kind === 'file' && j.data && j.path === e.data.job) || {}).data || {}).title) || '', source: e.data.source || '', stage: e.data.stage || '', expectedSalary: e.data.expectedSalary || '' }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Hiring pipeline"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Every active candidate, grouped by stage. Click a row to open the application.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Recruitment",
+                  "variant": "ghost",
+                  "icon": "briefcase",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/applications/recruitment/canvas/home.page.yaml"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /job-positions folder could not be read. Reinstall Recruitment to recreate it."
+            },
+            "rules": {
+              "visible": "data.$jobs.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /candidates folder could not be read. Reinstall Recruitment to recreate it."
+            },
+            "rules": {
+              "visible": "data.$candidates.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 6
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "New",
+                  "value": "{{ (data.rows || []).filter(r => r.stage === 'new').length }}",
+                  "icon": "user-round",
+                  "loading": "{{ data.$candidates.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Screening",
+                  "value": "{{ (data.rows || []).filter(r => r.stage === 'screening').length }}",
+                  "icon": "user-round",
+                  "loading": "{{ data.$candidates.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Interview",
+                  "value": "{{ (data.rows || []).filter(r => r.stage === 'interview').length }}",
+                  "icon": "user-round",
+                  "loading": "{{ data.$candidates.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Offer",
+                  "value": "{{ (data.rows || []).filter(r => r.stage === 'offer').length }}",
+                  "icon": "user-round",
+                  "loading": "{{ data.$candidates.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Hired",
+                  "value": "{{ (data.rows || []).filter(r => r.stage === 'hired').length }}",
+                  "icon": "user-round",
+                  "loading": "{{ data.$candidates.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Refused",
+                  "value": "{{ (data.rows || []).filter(r => r.stage === 'refused').length }}",
+                  "icon": "user-round",
+                  "loading": "{{ data.$candidates.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.tabs",
+            "props": {
+              "items": [
+                {
+                  "value": "new",
+                  "label": "New",
+                  "icon": "user-round"
+                },
+                {
+                  "value": "screening",
+                  "label": "Screening",
+                  "icon": "user-round"
+                },
+                {
+                  "value": "interview",
+                  "label": "Interview",
+                  "icon": "user-round"
+                },
+                {
+                  "value": "offer",
+                  "label": "Offer",
+                  "icon": "user-round"
+                },
+                {
+                  "value": "hired",
+                  "label": "Hired",
+                  "icon": "user-round"
+                },
+                {
+                  "value": "refused",
+                  "label": "Refused",
+                  "icon": "user-round"
+                }
+              ]
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.rows || []).filter(r => r.stage === 'new') }}",
+                      "columns": [
+                        {
+                          "key": "code",
+                          "label": "Application"
+                        },
+                        {
+                          "key": "name",
+                          "label": "Candidate"
+                        },
+                        {
+                          "key": "job",
+                          "label": "Job position"
+                        },
+                        {
+                          "key": "source",
+                          "label": "Source"
+                        },
+                        {
+                          "key": "expectedSalary",
+                          "label": "Expected salary",
+                          "align": "end"
+                        }
+                      ],
+                      "emptyText": "No new candidates",
+                      "clickable": true
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "new"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.rows || []).filter(r => r.stage === 'screening') }}",
+                      "columns": [
+                        {
+                          "key": "code",
+                          "label": "Application"
+                        },
+                        {
+                          "key": "name",
+                          "label": "Candidate"
+                        },
+                        {
+                          "key": "job",
+                          "label": "Job position"
+                        },
+                        {
+                          "key": "source",
+                          "label": "Source"
+                        },
+                        {
+                          "key": "expectedSalary",
+                          "label": "Expected salary",
+                          "align": "end"
+                        }
+                      ],
+                      "emptyText": "No screening candidates",
+                      "clickable": true
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "screening"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.rows || []).filter(r => r.stage === 'interview') }}",
+                      "columns": [
+                        {
+                          "key": "code",
+                          "label": "Application"
+                        },
+                        {
+                          "key": "name",
+                          "label": "Candidate"
+                        },
+                        {
+                          "key": "job",
+                          "label": "Job position"
+                        },
+                        {
+                          "key": "source",
+                          "label": "Source"
+                        },
+                        {
+                          "key": "expectedSalary",
+                          "label": "Expected salary",
+                          "align": "end"
+                        }
+                      ],
+                      "emptyText": "No interview candidates",
+                      "clickable": true
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "interview"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.rows || []).filter(r => r.stage === 'offer') }}",
+                      "columns": [
+                        {
+                          "key": "code",
+                          "label": "Application"
+                        },
+                        {
+                          "key": "name",
+                          "label": "Candidate"
+                        },
+                        {
+                          "key": "job",
+                          "label": "Job position"
+                        },
+                        {
+                          "key": "source",
+                          "label": "Source"
+                        },
+                        {
+                          "key": "expectedSalary",
+                          "label": "Expected salary",
+                          "align": "end"
+                        }
+                      ],
+                      "emptyText": "No offer candidates",
+                      "clickable": true
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "offer"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.rows || []).filter(r => r.stage === 'hired') }}",
+                      "columns": [
+                        {
+                          "key": "code",
+                          "label": "Application"
+                        },
+                        {
+                          "key": "name",
+                          "label": "Candidate"
+                        },
+                        {
+                          "key": "job",
+                          "label": "Job position"
+                        },
+                        {
+                          "key": "source",
+                          "label": "Source"
+                        },
+                        {
+                          "key": "expectedSalary",
+                          "label": "Expected salary",
+                          "align": "end"
+                        }
+                      ],
+                      "emptyText": "No hired candidates",
+                      "clickable": true
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "hired"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.rows || []).filter(r => r.stage === 'refused') }}",
+                      "columns": [
+                        {
+                          "key": "code",
+                          "label": "Application"
+                        },
+                        {
+                          "key": "name",
+                          "label": "Candidate"
+                        },
+                        {
+                          "key": "job",
+                          "label": "Job position"
+                        },
+                        {
+                          "key": "source",
+                          "label": "Source"
+                        },
+                        {
+                          "key": "expectedSalary",
+                          "label": "Expected salary",
+                          "align": "end"
+                        }
+                      ],
+                      "emptyText": "No refused candidates",
+                      "clickable": true
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "refused"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.verentis.io/referrals/v1/settings.schema.json",
+  "title": "Referrals settings",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "const": "https://schemas.verentis.io/referrals/v1/settings.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "hirePoints": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100000
+    }
+  },
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "hirePoints"
+  ],
+  "additionalProperties": false
+}

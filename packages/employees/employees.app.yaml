@@ -1,0 +1,382 @@
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "employees",
+    "name": "Employees",
+    "description": "Departments and employees as files in your workspace, with a company directory, an organization summary and a scripted terminate action.",
+    "icon": "./icons/app.svg",
+    "version": "0.1.0",
+    "author": "Verentis"
+  },
+  "marketplace": {
+    "readme": "./README.md",
+    "keywords": [
+      "employees",
+      "hr",
+      "human resources",
+      "departments",
+      "directory",
+      "staff"
+    ]
+  },
+  "spec": {
+    "install-root": "/applications/employees",
+    "entry": "https://canvas.apps.localtest.me",
+    "scope": "global",
+    "entry-points": [
+      {
+        "id": "home",
+        "display-name": "Employees",
+        "route": "/render?document=.%2Fcanvas%2Fhome.page.yaml",
+        "order": 10
+      },
+      {
+        "id": "directory",
+        "display-name": "Directory",
+        "route": "/render?document=.%2Fcanvas%2Fdirectory.page.yaml",
+        "order": 20
+      },
+      {
+        "id": "departments",
+        "display-name": "Departments",
+        "route": "/render?document=.%2Fcanvas%2Fdepartments.page.yaml",
+        "order": 30
+      }
+    ],
+    "launch": {
+      "enabled": true,
+      "entry-point": "home",
+      "pinnable": true
+    },
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run"
+    ],
+    "scopes": [
+      "employees.default"
+    ],
+    "settings": [
+      {
+        "key": "department-code-prefix",
+        "display-name": "Department code prefix",
+        "type": "string",
+        "default": "DEP-",
+        "description": "Prefix of generated department codes, e.g. DEP-0001."
+      },
+      {
+        "key": "employee-code-prefix",
+        "display-name": "Employee number prefix",
+        "type": "string",
+        "default": "EMP-",
+        "description": "Prefix of generated employee codes, e.g. EMP-0001."
+      },
+      {
+        "key": "code-digits",
+        "display-name": "Code digits",
+        "type": "number",
+        "default": 4,
+        "description": "Minimum number of digits in generated codes (zero-padded)."
+      }
+    ],
+    "dependencies": [
+      {
+        "package": "verentis/canvas",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/nodejs",
+        "version": "latest"
+      }
+    ],
+    "engine": "verentis/nodejs",
+    "scripts": [
+      "scripts/create",
+      "scripts/post"
+    ],
+    "install": [
+      {
+        "from": "canvas/*.form.yaml",
+        "to": "/applications/employees/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.form+yaml"
+      },
+      {
+        "from": "canvas/*.page.yaml",
+        "to": "/applications/employees/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.page+yaml"
+      },
+      {
+        "from": "schemas/*.schema.json",
+        "to": "/applications/employees/schemas/",
+        "mode": "managed",
+        "mime": "application/schema+json"
+      },
+      {
+        "from": "templates/*.json",
+        "to": "/applications/employees/templates/",
+        "mode": "managed",
+        "mime": "application/json"
+      },
+      {
+        "from": "seed/departments",
+        "to": "/departments",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.employees.departments"
+      },
+      {
+        "from": "seed/employees",
+        "to": "/employees",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.employees.employees"
+      },
+      {
+        "from": "seed/starter/DEP-0001.json",
+        "to": "/departments/DEP-0001",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.employees.department+json"
+      },
+      {
+        "from": "seed/starter/EMP-0001.json",
+        "to": "/employees/EMP-0001",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.employees.employee+json"
+      },
+      {
+        "from": "seed/starter/EMP-0002.json",
+        "to": "/employees/EMP-0002",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.employees.employee+json"
+      },
+      {
+        "from": "seed/starter/EMP-0003.json",
+        "to": "/employees/EMP-0003",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.employees.employee+json"
+      },
+      {
+        "from": "seed/settings.json",
+        "to": "/settings/employees.json",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.employees.settings+json"
+      }
+    ],
+    "creatables": [
+      {
+        "id": "department",
+        "display-name": "Department",
+        "description": "A new department",
+        "icon": "lucide:building-2",
+        "mime": "application/vnd.verentis.employees.department+json",
+        "parents": [
+          "application/vnd.verentis.employees.departments"
+        ],
+        "folder-names": [
+          "departments",
+          "employees",
+          "hr"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/department.json"
+      },
+      {
+        "id": "employee",
+        "display-name": "Employee",
+        "description": "A new employee",
+        "icon": "lucide:user-round",
+        "mime": "application/vnd.verentis.employees.employee+json",
+        "parents": [
+          "application/vnd.verentis.employees.employees"
+        ],
+        "folder-names": [
+          "employees",
+          "hr",
+          "staff"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/employee.json"
+      }
+    ],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-forms": true,
+      "allow-popups": false
+    },
+    "file-access": [
+      {
+        "path": "/departments",
+        "mode": "read",
+        "reason": "Count employees and show the departments and the directory",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/employees",
+        "mode": "read",
+        "reason": "Count employees and show the departments and the directory",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/departments",
+        "mode": "read",
+        "reason": "List employees with their departments and managers",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/directory.page.yaml"
+        }
+      },
+      {
+        "path": "/employees",
+        "mode": "read",
+        "reason": "List employees with their departments and managers",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/directory.page.yaml"
+        }
+      },
+      {
+        "path": "/departments",
+        "mode": "read",
+        "reason": "Sum employees per department with their managers",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/departments.page.yaml"
+        }
+      },
+      {
+        "path": "/employees",
+        "mode": "read",
+        "reason": "Sum employees per department with their managers",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/departments.page.yaml"
+        }
+      },
+      {
+        "path": "/employees",
+        "mode": "read",
+        "reason": "Choose the employee who manages the department",
+        "origin": {
+          "kind": "document",
+          "id": "employees-department"
+        }
+      },
+      {
+        "path": "/applications/employees/",
+        "mode": "read",
+        "reason": "Read the Employees schemas and run the employee action script",
+        "origin": {
+          "kind": "document",
+          "id": "employees-department"
+        }
+      },
+      {
+        "path": "/departments",
+        "mode": "read",
+        "reason": "Choose the department an employee belongs to",
+        "origin": {
+          "kind": "document",
+          "id": "employees-employee"
+        }
+      },
+      {
+        "path": "/employees",
+        "mode": "read",
+        "reason": "Choose an employee's manager",
+        "origin": {
+          "kind": "document",
+          "id": "employees-employee"
+        }
+      },
+      {
+        "path": "/applications/employees/",
+        "mode": "read",
+        "reason": "Read the Employees schemas and run the employee action script",
+        "origin": {
+          "kind": "document",
+          "id": "employees-employee"
+        }
+      },
+      {
+        "path": "/departments",
+        "mode": "read",
+        "reason": "Choose the default department for new employees",
+        "origin": {
+          "kind": "document",
+          "id": "employees-settings"
+        }
+      },
+      {
+        "path": "/applications/employees/",
+        "mode": "read",
+        "reason": "Read the Employees schemas and run the employee action script",
+        "origin": {
+          "kind": "document",
+          "id": "employees-settings"
+        }
+      },
+      {
+        "path": "/departments",
+        "mode": "write",
+        "reason": "Create departments with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "employees-create"
+        }
+      },
+      {
+        "path": "/employees",
+        "mode": "write",
+        "reason": "Create employees with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "employees-create"
+        }
+      },
+      {
+        "path": "/settings/employees.json",
+        "mode": "read",
+        "reason": "Default new employees to the default department",
+        "origin": {
+          "kind": "script",
+          "id": "employees-create"
+        }
+      },
+      {
+        "path": "/employees",
+        "mode": "write",
+        "reason": "Mark active employees terminated with their termination date",
+        "origin": {
+          "kind": "script",
+          "id": "employees-post"
+        }
+      }
+    ]
+  },
+  "packaging": {
+    "publisher": "verentis",
+    "files": [
+      "canvas/**",
+      "schemas/**",
+      "templates/**",
+      "seed/**",
+      "scripts/**",
+      "README.md"
+    ],
+    "templates": [
+      "canvas/*.yaml"
+    ],
+    "variables": {
+      "canvas-origin": "https://canvas.apps.localtest.me"
+    },
+    "encryption": "none"
+  }
+}

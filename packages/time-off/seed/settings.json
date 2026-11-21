@@ -1,0 +1,5 @@
+{
+  "$schema": "https://schemas.verentis.io/time-off/v1/settings.schema.json",
+  "schemaVersion": 1,
+  "defaultType": "/leave-types/LT-0001"
+}

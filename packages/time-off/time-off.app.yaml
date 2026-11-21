@@ -1,0 +1,387 @@
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "time-off",
+    "name": "Time Off",
+    "description": "Leave types and leave requests as files in your workspace, with weekday-counted days, scripted submit, approve and refuse actions and a remaining-allocation report.",
+    "icon": "./icons/app.svg",
+    "version": "0.1.0",
+    "author": "Verentis"
+  },
+  "marketplace": {
+    "readme": "./README.md",
+    "keywords": [
+      "time off",
+      "leave",
+      "vacation",
+      "pto",
+      "holidays",
+      "approvals",
+      "hr"
+    ]
+  },
+  "spec": {
+    "install-root": "/applications/time-off",
+    "entry": "https://canvas.apps.localtest.me",
+    "scope": "global",
+    "entry-points": [
+      {
+        "id": "home",
+        "display-name": "Time Off",
+        "route": "/render?document=.%2Fcanvas%2Fhome.page.yaml",
+        "order": 10
+      },
+      {
+        "id": "requests",
+        "display-name": "Requests",
+        "route": "/render?document=.%2Fcanvas%2Frequests.page.yaml",
+        "order": 20
+      },
+      {
+        "id": "allocations",
+        "display-name": "Allocations",
+        "route": "/render?document=.%2Fcanvas%2Fallocations.page.yaml",
+        "order": 30
+      }
+    ],
+    "launch": {
+      "enabled": true,
+      "entry-point": "home",
+      "pinnable": true
+    },
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run"
+    ],
+    "scopes": [
+      "time-off.default"
+    ],
+    "settings": [
+      {
+        "key": "type-code-prefix",
+        "display-name": "Leave type code prefix",
+        "type": "string",
+        "default": "LT-",
+        "description": "Prefix of generated leave type codes, e.g. LT-0001."
+      },
+      {
+        "key": "request-code-prefix",
+        "display-name": "Leave request number prefix",
+        "type": "string",
+        "default": "TO-",
+        "description": "Prefix of generated leave request codes, e.g. TO-0001."
+      },
+      {
+        "key": "code-digits",
+        "display-name": "Code digits",
+        "type": "number",
+        "default": 4,
+        "description": "Minimum number of digits in generated codes (zero-padded)."
+      }
+    ],
+    "dependencies": [
+      {
+        "package": "verentis/canvas",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/nodejs",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/employees",
+        "version": "latest",
+        "optional": true
+      }
+    ],
+    "engine": "verentis/nodejs",
+    "scripts": [
+      "scripts/create",
+      "scripts/post"
+    ],
+    "install": [
+      {
+        "from": "canvas/*.form.yaml",
+        "to": "/applications/time-off/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.form+yaml"
+      },
+      {
+        "from": "canvas/*.page.yaml",
+        "to": "/applications/time-off/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.page+yaml"
+      },
+      {
+        "from": "schemas/*.schema.json",
+        "to": "/applications/time-off/schemas/",
+        "mode": "managed",
+        "mime": "application/schema+json"
+      },
+      {
+        "from": "templates/*.json",
+        "to": "/applications/time-off/templates/",
+        "mode": "managed",
+        "mime": "application/json"
+      },
+      {
+        "from": "seed/types",
+        "to": "/leave-types",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.time-off.types"
+      },
+      {
+        "from": "seed/requests",
+        "to": "/leave-requests",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.time-off.requests"
+      },
+      {
+        "from": "seed/starter/LT-0001.json",
+        "to": "/leave-types/LT-0001",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.time-off.type+json"
+      },
+      {
+        "from": "seed/starter/LT-0002.json",
+        "to": "/leave-types/LT-0002",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.time-off.type+json"
+      },
+      {
+        "from": "seed/starter/LT-0003.json",
+        "to": "/leave-types/LT-0003",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.time-off.type+json"
+      },
+      {
+        "from": "seed/starter/TO-0001.json",
+        "to": "/leave-requests/TO-0001",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.time-off.request+json"
+      },
+      {
+        "from": "seed/settings.json",
+        "to": "/settings/time-off.json",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.time-off.settings+json"
+      }
+    ],
+    "creatables": [
+      {
+        "id": "type",
+        "display-name": "Leave type",
+        "description": "A new leave type",
+        "icon": "lucide:tags",
+        "mime": "application/vnd.verentis.time-off.type+json",
+        "parents": [
+          "application/vnd.verentis.time-off.types"
+        ],
+        "folder-names": [
+          "leave-types",
+          "time-off"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/type.json"
+      },
+      {
+        "id": "request",
+        "display-name": "Leave request",
+        "description": "A new leave request",
+        "icon": "lucide:calendar-off",
+        "mime": "application/vnd.verentis.time-off.request+json",
+        "parents": [
+          "application/vnd.verentis.time-off.requests"
+        ],
+        "folder-names": [
+          "leave-requests",
+          "time-off",
+          "leave"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/request.json"
+      }
+    ],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-forms": true,
+      "allow-popups": false
+    },
+    "file-access": [
+      {
+        "path": "/leave-types",
+        "mode": "read",
+        "reason": "Count leave requests and show the leave types and requests",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/leave-requests",
+        "mode": "read",
+        "reason": "Count leave requests and show the leave types and requests",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/leave-types",
+        "mode": "read",
+        "reason": "List leave requests by status with their leave type names",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/requests.page.yaml"
+        }
+      },
+      {
+        "path": "/leave-requests",
+        "mode": "read",
+        "reason": "List leave requests by status with their leave type names",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/requests.page.yaml"
+        }
+      },
+      {
+        "path": "/leave-types",
+        "mode": "read",
+        "reason": "Compare approved leave days against each leave type's yearly allocation",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/allocations.page.yaml"
+        }
+      },
+      {
+        "path": "/leave-requests",
+        "mode": "read",
+        "reason": "Compare approved leave days against each leave type's yearly allocation",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/allocations.page.yaml"
+        }
+      },
+      {
+        "path": "/applications/time-off/",
+        "mode": "read",
+        "reason": "Read the Time Off schemas and run the request action script",
+        "origin": {
+          "kind": "document",
+          "id": "time-off-type"
+        }
+      },
+      {
+        "path": "/leave-types",
+        "mode": "read",
+        "reason": "Choose the leave type a request draws on",
+        "origin": {
+          "kind": "document",
+          "id": "time-off-request"
+        }
+      },
+      {
+        "path": "/employees",
+        "mode": "read",
+        "reason": "Offer Employees records on requests (when Employees is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "time-off-request"
+        }
+      },
+      {
+        "path": "/applications/time-off/",
+        "mode": "read",
+        "reason": "Read the Time Off schemas and run the request action script",
+        "origin": {
+          "kind": "document",
+          "id": "time-off-request"
+        }
+      },
+      {
+        "path": "/leave-types",
+        "mode": "read",
+        "reason": "Choose the default leave type for new requests",
+        "origin": {
+          "kind": "document",
+          "id": "time-off-settings"
+        }
+      },
+      {
+        "path": "/applications/time-off/",
+        "mode": "read",
+        "reason": "Read the Time Off schemas and run the request action script",
+        "origin": {
+          "kind": "document",
+          "id": "time-off-settings"
+        }
+      },
+      {
+        "path": "/leave-types",
+        "mode": "write",
+        "reason": "Create leave types with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "time-off-create"
+        }
+      },
+      {
+        "path": "/leave-requests",
+        "mode": "write",
+        "reason": "Create leave requests with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "time-off-create"
+        }
+      },
+      {
+        "path": "/settings/time-off.json",
+        "mode": "read",
+        "reason": "Default new requests to the default leave type",
+        "origin": {
+          "kind": "script",
+          "id": "time-off-create"
+        }
+      },
+      {
+        "path": "/leave-types",
+        "mode": "read",
+        "reason": "Check whether the request's leave type requires approval",
+        "origin": {
+          "kind": "script",
+          "id": "time-off-post"
+        }
+      },
+      {
+        "path": "/leave-requests",
+        "mode": "write",
+        "reason": "Mark requests submitted, approved or refused",
+        "origin": {
+          "kind": "script",
+          "id": "time-off-post"
+        }
+      }
+    ]
+  },
+  "packaging": {
+    "publisher": "verentis",
+    "files": [
+      "canvas/**",
+      "schemas/**",
+      "templates/**",
+      "seed/**",
+      "scripts/**",
+      "README.md"
+    ],
+    "templates": [
+      "canvas/*.yaml"
+    ],
+    "variables": {
+      "canvas-origin": "https://canvas.apps.localtest.me"
+    },
+    "encryption": "none"
+  }
+}

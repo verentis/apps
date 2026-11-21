@@ -1,0 +1,5 @@
+{
+  "$schema": "https://schemas.verentis.io/employees/v1/settings.schema.json",
+  "schemaVersion": 1,
+  "defaultDepartment": "/departments/DEP-0001"
+}

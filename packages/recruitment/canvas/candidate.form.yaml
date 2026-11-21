@@ -1,0 +1,772 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Form",
+  "metadata": {
+    "id": "recruitment-candidate",
+    "name": "Recruitment candidate",
+    "description": "View and edit a Recruitment candidate.",
+    "icon": "user-round"
+  },
+  "spec": {
+    "binds": [
+      {
+        "pattern": "application/vnd.verentis.recruitment.candidate+json",
+        "mode": "edit",
+        "priority": 200,
+        "scope": "global",
+        "json-schema": {
+          "id": "https://schemas.verentis.io/recruitment/v1/candidate.schema.json",
+          "source": "/applications/recruitment/schemas/candidate.schema.json",
+          "title": "Recruitment candidate",
+          "version": "1"
+        }
+      }
+    ],
+    "entry": "${var:canvas-origin}/render?document=%2Fapplications%2Frecruitment%2Fcanvas%2Fcandidate.form.yaml",
+    "scope": "global",
+    "mime-types": [
+      {
+        "pattern": "application/vnd.verentis.recruitment.candidate+json",
+        "mode": "edit",
+        "priority": 200,
+        "json-schema": {
+          "id": "https://schemas.verentis.io/recruitment/v1/candidate.schema.json",
+          "source": "/applications/recruitment/schemas/candidate.schema.json",
+          "title": "Recruitment candidate",
+          "version": "1"
+        }
+      }
+    ],
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run",
+      "execution.read"
+    ],
+    "capabilities": [],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-popups": false,
+      "allow-forms": true
+    },
+    "file-access": [
+      {
+        "path": "/job-positions",
+        "mode": "read",
+        "reason": "Choose the job position a candidate applies for"
+      },
+      {
+        "path": "/applications/recruitment/",
+        "mode": "read",
+        "reason": "Read the Recruitment schemas and run the candidate action script"
+      }
+    ],
+    "access": [
+      {
+        "path": "/job-positions",
+        "reason": "Choose the job position a candidate applies for"
+      },
+      {
+        "path": "/applications/recruitment/",
+        "reason": "Read the Recruitment schemas and run the candidate action script"
+      }
+    ],
+    "data": {
+      "record": {
+        "kind": "document",
+        "consistency": "conditional"
+      },
+      "jobs": {
+        "kind": "folder",
+        "path": "/job-positions",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.recruitment.job+json"
+      },
+      "joboptions": {
+        "kind": "computed",
+        "expr": "(data.jobs || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + (e.data.title || ''), value: e.path }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.heading",
+                        "props": {
+                          "level": 2,
+                          "text": "{{ form.values.name || 'New candidate' }}"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.badge",
+                        "props": {
+                          "text": "{{ String(form.values.stage || '').split('-').join(' ') }}",
+                          "tone": "{{ [\"hired\",\"offer\"].includes(form.values.stage) ? 'success' : [\"screening\",\"interview\"].includes(form.values.stage) ? 'warning' : [\"refused\"].includes(form.values.stage) ? 'danger' : 'neutral' }}"
+                        },
+                        "rules": {
+                          "visible": "!!form.values.stage"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.badge",
+                        "props": {
+                          "text": "Archived",
+                          "tone": "warning",
+                          "icon": "archive"
+                        },
+                        "rules": {
+                          "visible": "form.values.state === 'archived'"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Candidate {{ form.values.code || '' }} · {{ ctx.file.path }}",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Advance",
+                      "icon": "arrow-right",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "advance"
+                    },
+                    "rules": {
+                      "visible": "[\"new\",\"screening\",\"interview\"].includes(form.values.stage) && !(form.values.state === 'archived')",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Hire",
+                      "icon": "check",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "hire"
+                    },
+                    "rules": {
+                      "visible": "form.values.stage === 'offer' && !(form.values.state === 'archived')",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Refuse",
+                      "variant": "outline",
+                      "icon": "x",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "refuse"
+                    },
+                    "rules": {
+                      "visible": "[\"new\",\"screening\",\"interview\",\"offer\"].includes(form.values.stage) && !(form.values.state === 'archived')",
+                      "disabled": "form.saving || form.dirty || !String(form.values.refusalReason || '').trim()"
+                    }
+                  },
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Archive",
+                          "variant": "ghost",
+                          "icon": "archive",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "archive"
+                        },
+                        "rules": {
+                          "visible": "!(form.values.state === 'archived') && !([\"hired\",\"refused\"].includes(form.values.stage))",
+                          "disabled": "form.saving || form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Restore",
+                          "variant": "outline",
+                          "icon": "archive-restore",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "restore"
+                        },
+                        "rules": {
+                          "visible": "form.values.state === 'archived'",
+                          "disabled": "form.saving || form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Reset",
+                          "variant": "ghost",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "reset"
+                        },
+                        "rules": {
+                          "disabled": "form.saving || !form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Save",
+                          "icon": "save",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "save"
+                        },
+                        "rules": {
+                          "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || ([\"hired\",\"refused\"].includes(form.values.stage))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$record.error }}"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.dashboard.badge",
+            "props": {
+              "text": "This candidate is archived. Restore it to edit.",
+              "tone": "warning",
+              "icon": "archive"
+            },
+            "rules": {
+              "visible": "form.values.state === 'archived'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Hired on {{ form.values.hiredAt }}. This candidate is locked.",
+              "tone": "success"
+            },
+            "rules": {
+              "visible": "form.values.stage === 'hired'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Refused: {{ form.values.refusalReason }}. This candidate is locked.",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "form.values.stage === 'refused'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 1,
+                "gap": 4
+              },
+              "tablet": {
+                "columns": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Candidate"
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Name",
+                          "value": "{{ form.values.name }}",
+                          "required": true
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || ([\"hired\",\"refused\"].includes(form.values.stage)))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Job position",
+                          "value": "{{ form.values.job }}",
+                          "options": "{{ data.joboptions }}"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || ([\"hired\",\"refused\"].includes(form.values.stage)))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Source",
+                          "value": "{{ form.values.source }}",
+                          "options": [
+                            {
+                              "value": "website",
+                              "label": "Website"
+                            },
+                            {
+                              "value": "referral",
+                              "label": "Referral"
+                            },
+                            {
+                              "value": "linkedin",
+                              "label": "Linkedin"
+                            },
+                            {
+                              "value": "email",
+                              "label": "Email"
+                            },
+                            {
+                              "value": "agency",
+                              "label": "Agency"
+                            },
+                            {
+                              "value": "other",
+                              "label": "Other"
+                            }
+                          ]
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || ([\"hired\",\"refused\"].includes(form.values.stage)))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Email",
+                          "value": "{{ form.values.email }}",
+                          "inputType": "email"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || ([\"hired\",\"refused\"].includes(form.values.stage)))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Phone",
+                          "value": "{{ form.values.phone }}"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || ([\"hired\",\"refused\"].includes(form.values.stage)))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Stage",
+                          "value": "{{ form.values.stage }}",
+                          "description": "Hired and Refused are set by Hire and Refuse.",
+                          "options": [
+                            {
+                              "value": "new",
+                              "label": "New"
+                            },
+                            {
+                              "value": "screening",
+                              "label": "Screening"
+                            },
+                            {
+                              "value": "interview",
+                              "label": "Interview"
+                            },
+                            {
+                              "value": "offer",
+                              "label": "Offer"
+                            },
+                            {
+                              "value": "hired",
+                              "label": "Hired"
+                            },
+                            {
+                              "value": "refused",
+                              "label": "Refused"
+                            }
+                          ]
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || ([\"hired\",\"refused\"].includes(form.values.stage)))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Expected salary",
+                          "value": "{{ form.values.expectedSalary }}",
+                          "placeholder": "e.g. 45000.00"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || ([\"hired\",\"refused\"].includes(form.values.stage)))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Notes"
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.textarea",
+                        "props": {
+                          "label": "Notes",
+                          "value": "{{ form.values.notes }}",
+                          "rows": 6
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || ([\"hired\",\"refused\"].includes(form.values.stage)))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.textarea",
+                        "props": {
+                          "label": "Refusal reason",
+                          "value": "{{ form.values.refusalReason }}",
+                          "description": "Required before a candidate can be refused.",
+                          "rows": 4
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || ([\"hired\",\"refused\"].includes(form.values.stage)))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "actions": {
+      "save": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Saved",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "reset": {
+        "steps": [
+          {
+            "reset-form": {}
+          }
+        ]
+      },
+      "archive": {
+        "steps": [
+          {
+            "confirm": {
+              "title": "Archive",
+              "message": "Archive this record? It stays in the workspace and can be restored."
+            }
+          },
+          {
+            "patch-form": {
+              "values": {
+                "state": "archived",
+                "archivedAt": "{{ Date() }}",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Archived",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "restore": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "state": "active",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Restored",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "advance": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Advance candidate",
+              "message": "Move this candidate to the next pipeline stage?"
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/recruitment/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "advance",
+                "path": "{{ ctx.file.path }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "hire": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Hire candidate",
+              "message": "Hire this candidate? Hired candidates are locked and cannot be edited."
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/recruitment/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "hire",
+                "path": "{{ ctx.file.path }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "refuse": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Refuse candidate",
+              "message": "Refuse this candidate with the refusal reason? Refused candidates are locked."
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/recruitment/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "refuse",
+                "path": "{{ ctx.file.path }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      }
+    }
+  }
+}
