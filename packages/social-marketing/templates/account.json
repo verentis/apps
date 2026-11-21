@@ -1,0 +1,13 @@
+{
+  "$schema": "https://schemas.verentis.io/social-marketing/v1/account.schema.json",
+  "schemaVersion": 1,
+  "kind": "account",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "network": "other",
+  "handle": "{{ name }}",
+  "active": true
+}

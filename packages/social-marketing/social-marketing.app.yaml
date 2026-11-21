@@ -1,0 +1,347 @@
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "social-marketing",
+    "name": "Social Marketing",
+    "description": "Social accounts and posts as files in your workspace, with scripted schedule, publish and cancel transitions and hand-recorded engagement. Actual delivery to the networks is a platform integration concern.",
+    "icon": "./icons/app.svg",
+    "version": "0.1.0",
+    "author": "Verentis"
+  },
+  "marketplace": {
+    "readme": "./README.md",
+    "keywords": [
+      "social media",
+      "marketing",
+      "posts",
+      "publishing",
+      "engagement",
+      "scheduling"
+    ]
+  },
+  "spec": {
+    "install-root": "/applications/social-marketing",
+    "entry": "https://canvas.apps.localtest.me",
+    "scope": "global",
+    "entry-points": [
+      {
+        "id": "home",
+        "display-name": "Social Marketing",
+        "route": "/render?document=.%2Fcanvas%2Fhome.page.yaml",
+        "order": 10
+      },
+      {
+        "id": "upcoming",
+        "display-name": "Upcoming posts",
+        "route": "/render?document=.%2Fcanvas%2Fupcoming.page.yaml",
+        "order": 20
+      },
+      {
+        "id": "engagement",
+        "display-name": "Engagement",
+        "route": "/render?document=.%2Fcanvas%2Fengagement.page.yaml",
+        "order": 30
+      }
+    ],
+    "launch": {
+      "enabled": true,
+      "entry-point": "home",
+      "pinnable": true
+    },
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run"
+    ],
+    "scopes": [
+      "social-marketing.default"
+    ],
+    "settings": [
+      {
+        "key": "account-code-prefix",
+        "display-name": "Social account code prefix",
+        "type": "string",
+        "default": "SOA-",
+        "description": "Prefix of generated social account codes, e.g. SOA-0001."
+      },
+      {
+        "key": "post-code-prefix",
+        "display-name": "Post number prefix",
+        "type": "string",
+        "default": "SOP-",
+        "description": "Prefix of generated post codes, e.g. SOP-0001."
+      },
+      {
+        "key": "code-digits",
+        "display-name": "Code digits",
+        "type": "number",
+        "default": 4,
+        "description": "Minimum number of digits in generated codes (zero-padded)."
+      }
+    ],
+    "dependencies": [
+      {
+        "package": "verentis/canvas",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/nodejs",
+        "version": "latest"
+      }
+    ],
+    "engine": "verentis/nodejs",
+    "scripts": [
+      "scripts/create",
+      "scripts/post"
+    ],
+    "install": [
+      {
+        "from": "canvas/*.form.yaml",
+        "to": "/applications/social-marketing/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.form+yaml"
+      },
+      {
+        "from": "canvas/*.page.yaml",
+        "to": "/applications/social-marketing/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.page+yaml"
+      },
+      {
+        "from": "schemas/*.schema.json",
+        "to": "/applications/social-marketing/schemas/",
+        "mode": "managed",
+        "mime": "application/schema+json"
+      },
+      {
+        "from": "templates/*.json",
+        "to": "/applications/social-marketing/templates/",
+        "mode": "managed",
+        "mime": "application/json"
+      },
+      {
+        "from": "seed/accounts",
+        "to": "/social-accounts",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.social-marketing.accounts"
+      },
+      {
+        "from": "seed/posts",
+        "to": "/social-posts",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.social-marketing.posts"
+      },
+      {
+        "from": "seed/settings.json",
+        "to": "/settings/social-marketing.json",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.social-marketing.settings+json"
+      }
+    ],
+    "creatables": [
+      {
+        "id": "account",
+        "display-name": "Social account",
+        "description": "A new social marketing social account",
+        "icon": "lucide:at-sign",
+        "mime": "application/vnd.verentis.social-marketing.account+json",
+        "parents": [
+          "application/vnd.verentis.social-marketing.accounts"
+        ],
+        "folder-names": [
+          "social-accounts",
+          "social-marketing"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/account.json"
+      },
+      {
+        "id": "post",
+        "display-name": "Post",
+        "description": "A new social marketing post",
+        "icon": "lucide:megaphone",
+        "mime": "application/vnd.verentis.social-marketing.post+json",
+        "parents": [
+          "application/vnd.verentis.social-marketing.posts"
+        ],
+        "folder-names": [
+          "social-posts",
+          "social-marketing"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/post.json"
+      }
+    ],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-forms": true,
+      "allow-popups": false
+    },
+    "file-access": [
+      {
+        "path": "/social-accounts",
+        "mode": "read",
+        "reason": "Count posts and engagement and show the social accounts and posts",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/social-posts",
+        "mode": "read",
+        "reason": "Count posts and engagement and show the social accounts and posts",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/social-accounts",
+        "mode": "read",
+        "reason": "List scheduled posts in calendar order with their account handles",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/upcoming.page.yaml"
+        }
+      },
+      {
+        "path": "/social-posts",
+        "mode": "read",
+        "reason": "List scheduled posts in calendar order with their account handles",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/upcoming.page.yaml"
+        }
+      },
+      {
+        "path": "/social-accounts",
+        "mode": "read",
+        "reason": "Sum published posts and engagement per social account",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/engagement.page.yaml"
+        }
+      },
+      {
+        "path": "/social-posts",
+        "mode": "read",
+        "reason": "Sum published posts and engagement per social account",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/engagement.page.yaml"
+        }
+      },
+      {
+        "path": "/applications/social-marketing/",
+        "mode": "read",
+        "reason": "Read the Social Marketing schemas and run the post action script",
+        "origin": {
+          "kind": "document",
+          "id": "social-marketing-account"
+        }
+      },
+      {
+        "path": "/social-accounts",
+        "mode": "read",
+        "reason": "Choose the social account a post is published through",
+        "origin": {
+          "kind": "document",
+          "id": "social-marketing-post"
+        }
+      },
+      {
+        "path": "/applications/social-marketing/",
+        "mode": "read",
+        "reason": "Read the Social Marketing schemas and run the post action script",
+        "origin": {
+          "kind": "document",
+          "id": "social-marketing-post"
+        }
+      },
+      {
+        "path": "/social-accounts",
+        "mode": "read",
+        "reason": "Choose the default social account for new posts",
+        "origin": {
+          "kind": "document",
+          "id": "social-marketing-settings"
+        }
+      },
+      {
+        "path": "/applications/social-marketing/",
+        "mode": "read",
+        "reason": "Read the Social Marketing schemas and run the post action script",
+        "origin": {
+          "kind": "document",
+          "id": "social-marketing-settings"
+        }
+      },
+      {
+        "path": "/social-accounts",
+        "mode": "write",
+        "reason": "Create social accounts with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "social-marketing-create"
+        }
+      },
+      {
+        "path": "/social-posts",
+        "mode": "write",
+        "reason": "Create posts with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "social-marketing-create"
+        }
+      },
+      {
+        "path": "/settings/social-marketing.json",
+        "mode": "read",
+        "reason": "Default new posts' social account",
+        "origin": {
+          "kind": "script",
+          "id": "social-marketing-create"
+        }
+      },
+      {
+        "path": "/social-posts",
+        "mode": "write",
+        "reason": "Schedule, publish and cancel posts",
+        "origin": {
+          "kind": "script",
+          "id": "social-marketing-post"
+        }
+      },
+      {
+        "path": "/social-accounts",
+        "mode": "read",
+        "reason": "Check a post's social account is active at publish",
+        "origin": {
+          "kind": "script",
+          "id": "social-marketing-post"
+        }
+      }
+    ]
+  },
+  "packaging": {
+    "publisher": "verentis",
+    "files": [
+      "canvas/**",
+      "schemas/**",
+      "templates/**",
+      "seed/**",
+      "scripts/**",
+      "README.md"
+    ],
+    "templates": [
+      "canvas/*.yaml"
+    ],
+    "variables": {
+      "canvas-origin": "https://canvas.apps.localtest.me"
+    },
+    "encryption": "none"
+  }
+}

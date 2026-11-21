@@ -1,0 +1,20 @@
+{
+  "$schema": "https://schemas.verentis.io/social-marketing/v1/post.schema.json",
+  "schemaVersion": 1,
+  "kind": "post",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "account": "",
+  "content": "{{ name }}",
+  "mediaNote": "",
+  "status": "draft",
+  "scheduledDate": "",
+  "engagement": {
+    "likes": 0,
+    "shares": 0,
+    "comments": 0
+  }
+}
