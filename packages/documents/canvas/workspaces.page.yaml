@@ -1,0 +1,269 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "documents-workspaces",
+    "name": "Workspaces",
+    "description": "Document cards per workspace, grouped by tags.",
+    "icon": "folder-kanban"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/document-cards",
+        "reason": "Browse document cards per workspace, grouped by their tags"
+      },
+      {
+        "path": "/document-workspaces",
+        "reason": "Browse document cards per workspace, grouped by their tags"
+      }
+    ],
+    "data": {
+      "cards": {
+        "kind": "folder",
+        "path": "/document-cards",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.documents.document+json"
+      },
+      "workspaces": {
+        "kind": "folder",
+        "path": "/document-workspaces",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.documents.workspace+json"
+      },
+      "rows": {
+        "kind": "computed",
+        "expr": "(data.cards || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, title: e.data.title || '', filePath: e.data.filePath || '', workspacePath: e.data.workspace || '', workspace: ((((data.workspaces || []).find(w => w.kind === 'file' && w.data && w.path === e.data.workspace) || {}).data || {}).name) || '', tagList: e.data.tags || [], tags: (e.data.tags || []).join(', '), owner: e.data.owner || '', status: e.data.status || '', validatedAt: e.data.validatedAt || '' }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Workspace browser"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Every workspace with its document cards, grouped by tags. Click a workspace to open it.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Documents",
+                  "variant": "ghost",
+                  "icon": "folder-kanban",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/applications/documents/canvas/home.page.yaml"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /document-cards folder could not be read. Reinstall Documents to recreate it."
+            },
+            "rules": {
+              "visible": "data.$cards.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /document-workspaces folder could not be read. Reinstall Documents to recreate it."
+            },
+            "rules": {
+              "visible": "data.$workspaces.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Workspaces"
+            },
+            "children": [
+              {
+                "type": "canvas.table",
+                "props": {
+                  "rows": "{{ (data.workspaces || []).filter(w => w.kind === 'file' && w.data && w.data.state !== 'archived').map(w => ({ path: w.path, code: w.data.code || w.name, name: w.data.name || '', defaultTags: (w.data.defaultTags || []).join(', '), documents: (data.rows || []).filter(r => r.workspacePath === w.path).length, inbox: (data.rows || []).filter(r => r.workspacePath === w.path && r.status === 'inbox').length, inReview: (data.rows || []).filter(r => r.workspacePath === w.path && r.status === 'in-review').length, validated: (data.rows || []).filter(r => r.workspacePath === w.path && r.status === 'validated').length })) }}",
+                  "columns": [
+                    {
+                      "key": "code",
+                      "label": "Workspace"
+                    },
+                    {
+                      "key": "name",
+                      "label": "Name"
+                    },
+                    {
+                      "key": "defaultTags",
+                      "label": "Default tags"
+                    },
+                    {
+                      "key": "documents",
+                      "label": "Documents",
+                      "align": "end"
+                    },
+                    {
+                      "key": "inbox",
+                      "label": "Inbox",
+                      "align": "end"
+                    },
+                    {
+                      "key": "inReview",
+                      "label": "In review",
+                      "align": "end"
+                    },
+                    {
+                      "key": "validated",
+                      "label": "Validated",
+                      "align": "end"
+                    }
+                  ],
+                  "emptyText": "No workspaces yet",
+                  "clickable": true
+                },
+                "on": {
+                  "row-click": [
+                    {
+                      "open-file": {
+                        "path": "{{ event.path }}",
+                        "mode": "edit"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Tag groups"
+            },
+            "children": [
+              {
+                "type": "canvas.table",
+                "props": {
+                  "rows": "{{ (data.rows || []).map(r => (r.tagList.length ? r.tagList : ['untagged']).map(t => ({ group: (r.workspace || 'No workspace') + ' / ' + t }))).reduce((a, b) => a.concat(b), []).map(p => p.group).filter((v, i, a) => a.indexOf(v) === i).sort().map(g => ({ group: g, documents: (data.rows || []).map(r => (r.tagList.length ? r.tagList : ['untagged']).map(t => ({ group: (r.workspace || 'No workspace') + ' / ' + t }))).reduce((a, b) => a.concat(b), []).filter(p => p.group === g).length })) }}",
+                  "columns": [
+                    {
+                      "key": "group",
+                      "label": "Workspace / tag"
+                    },
+                    {
+                      "key": "documents",
+                      "label": "Documents",
+                      "align": "end"
+                    }
+                  ],
+                  "emptyText": "No document cards yet"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Documents by workspace and tags"
+            },
+            "children": [
+              {
+                "type": "canvas.table",
+                "props": {
+                  "rows": "{{ (data.rows || []).map(r => ({ workspace: r.workspace || 'No workspace', tags: r.tags || 'untagged', path: r.path, code: r.code, title: r.title, status: r.status, filePath: r.filePath })).sort((a, b) => (a.workspace < b.workspace ? -1 : a.workspace > b.workspace ? 1 : a.tags < b.tags ? -1 : a.tags > b.tags ? 1 : a.code < b.code ? -1 : 1)) }}",
+                  "columns": [
+                    {
+                      "key": "workspace",
+                      "label": "Workspace"
+                    },
+                    {
+                      "key": "tags",
+                      "label": "Tags"
+                    },
+                    {
+                      "key": "code",
+                      "label": "Document"
+                    },
+                    {
+                      "key": "title",
+                      "label": "Title"
+                    },
+                    {
+                      "key": "status",
+                      "label": "Status"
+                    },
+                    {
+                      "key": "filePath",
+                      "label": "File"
+                    }
+                  ],
+                  "emptyText": "No document cards yet",
+                  "clickable": true
+                },
+                "on": {
+                  "row-click": [
+                    {
+                      "open-file": {
+                        "path": "{{ event.path }}",
+                        "mode": "edit"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

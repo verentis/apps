@@ -1,0 +1,474 @@
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "documents",
+    "name": "Documents",
+    "description": "A tagging and review workflow over files already in your workspace: document cards reference VFS paths, grouped into workspaces with tags, moved through inbox, review, validated and archived by scripted actions.",
+    "icon": "./icons/app.svg",
+    "version": "0.1.0",
+    "author": "Verentis"
+  },
+  "marketplace": {
+    "readme": "./README.md",
+    "keywords": [
+      "documents",
+      "dms",
+      "tags",
+      "workspaces",
+      "review",
+      "validation",
+      "filing"
+    ]
+  },
+  "spec": {
+    "install-root": "/applications/documents",
+    "entry": "https://canvas.apps.localtest.me",
+    "scope": "global",
+    "entry-points": [
+      {
+        "id": "home",
+        "display-name": "Documents",
+        "route": "/render?document=.%2Fcanvas%2Fhome.page.yaml",
+        "order": 10
+      },
+      {
+        "id": "inbox",
+        "display-name": "Inbox",
+        "route": "/render?document=.%2Fcanvas%2Finbox.page.yaml",
+        "order": 20
+      },
+      {
+        "id": "workspaces",
+        "display-name": "Workspaces",
+        "route": "/render?document=.%2Fcanvas%2Fworkspaces.page.yaml",
+        "order": 30
+      },
+      {
+        "id": "library",
+        "display-name": "Library",
+        "route": "/render?document=.%2Fcanvas%2Flibrary.page.yaml",
+        "order": 40
+      }
+    ],
+    "launch": {
+      "enabled": true,
+      "entry-point": "home",
+      "pinnable": true
+    },
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run"
+    ],
+    "scopes": [
+      "documents.default"
+    ],
+    "settings": [
+      {
+        "key": "workspace-code-prefix",
+        "display-name": "Workspace code prefix",
+        "type": "string",
+        "default": "DWS-",
+        "description": "Prefix of generated workspace codes, e.g. DWS-0001."
+      },
+      {
+        "key": "document-code-prefix",
+        "display-name": "Document number prefix",
+        "type": "string",
+        "default": "DOC-",
+        "description": "Prefix of generated document codes, e.g. DOC-0001."
+      },
+      {
+        "key": "tag-code-prefix",
+        "display-name": "Tag code prefix",
+        "type": "string",
+        "default": "DTG-",
+        "description": "Prefix of generated tag codes, e.g. DTG-0001."
+      },
+      {
+        "key": "code-digits",
+        "display-name": "Code digits",
+        "type": "number",
+        "default": 4,
+        "description": "Minimum number of digits in generated codes (zero-padded)."
+      }
+    ],
+    "dependencies": [
+      {
+        "package": "verentis/canvas",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/nodejs",
+        "version": "latest"
+      }
+    ],
+    "engine": "verentis/nodejs",
+    "scripts": [
+      "scripts/create",
+      "scripts/post"
+    ],
+    "install": [
+      {
+        "from": "canvas/*.form.yaml",
+        "to": "/applications/documents/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.form+yaml"
+      },
+      {
+        "from": "canvas/*.page.yaml",
+        "to": "/applications/documents/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.page+yaml"
+      },
+      {
+        "from": "schemas/*.schema.json",
+        "to": "/applications/documents/schemas/",
+        "mode": "managed",
+        "mime": "application/schema+json"
+      },
+      {
+        "from": "templates/*.json",
+        "to": "/applications/documents/templates/",
+        "mode": "managed",
+        "mime": "application/json"
+      },
+      {
+        "from": "seed/workspaces",
+        "to": "/document-workspaces",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.documents.workspaces"
+      },
+      {
+        "from": "seed/cards",
+        "to": "/document-cards",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.documents.cards"
+      },
+      {
+        "from": "seed/tags",
+        "to": "/document-tags",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.documents.tags"
+      },
+      {
+        "from": "seed/starter/DWS-0001.json",
+        "to": "/document-workspaces/DWS-0001",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.documents.workspace+json"
+      },
+      {
+        "from": "seed/starter/DWS-0002.json",
+        "to": "/document-workspaces/DWS-0002",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.documents.workspace+json"
+      },
+      {
+        "from": "seed/starter/DTG-0001.json",
+        "to": "/document-tags/DTG-0001",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.documents.tag+json"
+      },
+      {
+        "from": "seed/starter/DTG-0002.json",
+        "to": "/document-tags/DTG-0002",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.documents.tag+json"
+      },
+      {
+        "from": "seed/starter/DTG-0003.json",
+        "to": "/document-tags/DTG-0003",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.documents.tag+json"
+      },
+      {
+        "from": "seed/starter/DTG-0004.json",
+        "to": "/document-tags/DTG-0004",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.documents.tag+json"
+      },
+      {
+        "from": "seed/starter/DOC-0001.json",
+        "to": "/document-cards/DOC-0001",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.documents.document+json"
+      },
+      {
+        "from": "seed/starter/DOC-0002.json",
+        "to": "/document-cards/DOC-0002",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.documents.document+json"
+      },
+      {
+        "from": "seed/starter/DOC-0003.json",
+        "to": "/document-cards/DOC-0003",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.documents.document+json"
+      },
+      {
+        "from": "seed/settings.json",
+        "to": "/settings/documents.json",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.documents.settings+json"
+      }
+    ],
+    "creatables": [
+      {
+        "id": "workspace",
+        "display-name": "Workspace",
+        "description": "A new Documents workspace",
+        "icon": "lucide:folder-kanban",
+        "mime": "application/vnd.verentis.documents.workspace+json",
+        "parents": [
+          "application/vnd.verentis.documents.workspaces"
+        ],
+        "folder-names": [
+          "document-workspaces",
+          "workspaces",
+          "documents"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/workspace.json"
+      },
+      {
+        "id": "document",
+        "display-name": "Document",
+        "description": "A new Documents document",
+        "icon": "lucide:file-text",
+        "mime": "application/vnd.verentis.documents.document+json",
+        "parents": [
+          "application/vnd.verentis.documents.cards"
+        ],
+        "folder-names": [
+          "document-cards",
+          "documents"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/document.json"
+      },
+      {
+        "id": "tag",
+        "display-name": "Tag",
+        "description": "A new Documents tag",
+        "icon": "lucide:tag",
+        "mime": "application/vnd.verentis.documents.tag+json",
+        "parents": [
+          "application/vnd.verentis.documents.tags"
+        ],
+        "folder-names": [
+          "document-tags",
+          "tags"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/tag.json"
+      }
+    ],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-forms": true,
+      "allow-popups": false
+    },
+    "file-access": [
+      {
+        "path": "/document-cards",
+        "mode": "read",
+        "reason": "Count document cards and show the workspaces and cards",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/document-workspaces",
+        "mode": "read",
+        "reason": "Count document cards and show the workspaces and cards",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/document-tags",
+        "mode": "read",
+        "reason": "Show the curated tag set",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/document-cards",
+        "mode": "read",
+        "reason": "List inbox document cards with their workspace names",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/inbox.page.yaml"
+        }
+      },
+      {
+        "path": "/document-workspaces",
+        "mode": "read",
+        "reason": "List inbox document cards with their workspace names",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/inbox.page.yaml"
+        }
+      },
+      {
+        "path": "/document-cards",
+        "mode": "read",
+        "reason": "Browse document cards per workspace, grouped by their tags",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/workspaces.page.yaml"
+        }
+      },
+      {
+        "path": "/document-workspaces",
+        "mode": "read",
+        "reason": "Browse document cards per workspace, grouped by their tags",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/workspaces.page.yaml"
+        }
+      },
+      {
+        "path": "/document-cards",
+        "mode": "read",
+        "reason": "List validated and archived document cards",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/library.page.yaml"
+        }
+      },
+      {
+        "path": "/document-workspaces",
+        "mode": "read",
+        "reason": "List validated and archived document cards",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/library.page.yaml"
+        }
+      },
+      {
+        "path": "/applications/documents/",
+        "mode": "read",
+        "reason": "Read the Documents schemas and run the document workflow script",
+        "origin": {
+          "kind": "document",
+          "id": "documents-workspace"
+        }
+      },
+      {
+        "path": "/document-workspaces",
+        "mode": "read",
+        "reason": "Choose the workspace a document card belongs to",
+        "origin": {
+          "kind": "document",
+          "id": "documents-document"
+        }
+      },
+      {
+        "path": "/applications/documents/",
+        "mode": "read",
+        "reason": "Read the Documents schemas and run the document workflow script",
+        "origin": {
+          "kind": "document",
+          "id": "documents-document"
+        }
+      },
+      {
+        "path": "/applications/documents/",
+        "mode": "read",
+        "reason": "Read the Documents schemas and run the document workflow script",
+        "origin": {
+          "kind": "document",
+          "id": "documents-tag"
+        }
+      },
+      {
+        "path": "/document-workspaces",
+        "mode": "read",
+        "reason": "Choose the default workspace for new document cards",
+        "origin": {
+          "kind": "document",
+          "id": "documents-settings"
+        }
+      },
+      {
+        "path": "/applications/documents/",
+        "mode": "read",
+        "reason": "Read the Documents schemas and run the document workflow script",
+        "origin": {
+          "kind": "document",
+          "id": "documents-settings"
+        }
+      },
+      {
+        "path": "/document-workspaces",
+        "mode": "write",
+        "reason": "Create workspaces with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "documents-create"
+        }
+      },
+      {
+        "path": "/document-cards",
+        "mode": "write",
+        "reason": "Create document cards with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "documents-create"
+        }
+      },
+      {
+        "path": "/document-tags",
+        "mode": "write",
+        "reason": "Create tags with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "documents-create"
+        }
+      },
+      {
+        "path": "/settings/documents.json",
+        "mode": "read",
+        "reason": "Default new document cards to the default workspace",
+        "origin": {
+          "kind": "script",
+          "id": "documents-create"
+        }
+      },
+      {
+        "path": "/document-cards",
+        "mode": "write",
+        "reason": "Send document cards to review, validate, archive or return them",
+        "origin": {
+          "kind": "script",
+          "id": "documents-post"
+        }
+      }
+    ]
+  },
+  "packaging": {
+    "publisher": "verentis",
+    "files": [
+      "canvas/**",
+      "schemas/**",
+      "templates/**",
+      "seed/**",
+      "scripts/**",
+      "README.md"
+    ],
+    "templates": [
+      "canvas/*.yaml"
+    ],
+    "variables": {
+      "canvas-origin": "https://canvas.apps.localtest.me"
+    },
+    "encryption": "none"
+  }
+}

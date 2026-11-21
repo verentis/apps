@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.verentis.io/spreadsheet-bi/v1/settings.schema.json",
+  "title": "Spreadsheet BI settings",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "const": "https://schemas.verentis.io/spreadsheet-bi/v1/settings.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "defaultDashboard": {
+      "type": "string",
+      "maxLength": 4096,
+      "pattern": "^(/.*)?$"
+    }
+  },
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "defaultDashboard"
+  ],
+  "additionalProperties": false
+}

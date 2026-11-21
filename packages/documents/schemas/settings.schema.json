@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.verentis.io/documents/v1/settings.schema.json",
+  "title": "Documents settings",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "const": "https://schemas.verentis.io/documents/v1/settings.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "defaultWorkspace": {
+      "type": "string",
+      "maxLength": 4096,
+      "pattern": "^(/.*)?$"
+    }
+  },
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "defaultWorkspace"
+  ],
+  "additionalProperties": false
+}

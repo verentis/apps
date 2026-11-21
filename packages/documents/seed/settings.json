@@ -1,0 +1,5 @@
+{
+  "$schema": "https://schemas.verentis.io/documents/v1/settings.schema.json",
+  "schemaVersion": 1,
+  "defaultWorkspace": "/document-workspaces/DWS-0001"
+}

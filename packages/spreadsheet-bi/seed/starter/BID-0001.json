@@ -1,0 +1,38 @@
+{
+  "$schema": "https://schemas.verentis.io/spreadsheet-bi/v1/dashboard.schema.json",
+  "schemaVersion": 1,
+  "kind": "dashboard",
+  "id": "6b2e4f1a-3c5d-4e7f-9a0b-1c2d3e4f5a01",
+  "state": "active",
+  "createdAt": "2026-01-01T00:00:00Z",
+  "updatedAt": "2026-01-01T00:00:00Z",
+  "code": "BID-0001",
+  "name": "Sales overview",
+  "description": "Customers by type from CRM and issued invoice revenue from Invoicing.",
+  "tiles": [
+    {
+      "sequence": "1",
+      "title": "Customers by type",
+      "source": "/customers",
+      "kind": "group-count",
+      "valueField": "",
+      "groupByField": "type",
+      "filter": {
+        "field": "",
+        "equals": ""
+      }
+    },
+    {
+      "sequence": "2",
+      "title": "Issued invoice revenue",
+      "source": "/invoices",
+      "kind": "sum",
+      "valueField": "totals.gross",
+      "groupByField": "",
+      "filter": {
+        "field": "status",
+        "equals": "issued"
+      }
+    }
+  ]
+}

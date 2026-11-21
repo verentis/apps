@@ -1,0 +1,21 @@
+{
+  "$schema": "https://schemas.verentis.io/documents/v1/document.schema.json",
+  "schemaVersion": 1,
+  "kind": "document",
+  "id": "9d2e3f4a-5b6c-4d7e-9f0a-1b2c3d4e5f07",
+  "state": "active",
+  "createdAt": "2026-01-01T00:00:00Z",
+  "updatedAt": "2026-01-01T00:00:00Z",
+  "code": "DOC-0001",
+  "title": "Acme invoice March",
+  "filePath": "/shared/finance/acme-invoice-march.pdf",
+  "workspace": "/document-workspaces/DWS-0001",
+  "tags": [
+    "finance",
+    "invoice"
+  ],
+  "owner": "Avery Adams",
+  "status": "inbox",
+  "notes": "Dropped off by procurement.",
+  "reviewComment": ""
+}

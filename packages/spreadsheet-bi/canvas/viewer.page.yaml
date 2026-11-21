@@ -1,0 +1,291 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "spreadsheet-bi-viewer",
+    "name": "Dashboard viewer",
+    "description": "A saved dashboard computed live from its source containers.",
+    "icon": "monitor"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/bi-dashboards",
+        "reason": "Read the dashboard tile definitions"
+      },
+      {
+        "path": "/customers",
+        "reason": "Compute tile values over /customers (when the owning app is installed)"
+      },
+      {
+        "path": "/invoices",
+        "reason": "Compute tile values over /invoices (when the owning app is installed)"
+      },
+      {
+        "path": "/tickets",
+        "reason": "Compute tile values over /tickets (when the owning app is installed)"
+      },
+      {
+        "path": "/journals",
+        "reason": "Compute tile values over /journals (when the owning app is installed)"
+      },
+      {
+        "path": "/expenses",
+        "reason": "Compute tile values over /expenses (when the owning app is installed)"
+      }
+    ],
+    "data": {
+      "dashboards": {
+        "kind": "folder",
+        "path": "/bi-dashboards",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.spreadsheet-bi.dashboard+json"
+      },
+      "customers": {
+        "kind": "folder",
+        "path": "/customers",
+        "contents": true
+      },
+      "invoices": {
+        "kind": "folder",
+        "path": "/invoices",
+        "contents": true
+      },
+      "tickets": {
+        "kind": "folder",
+        "path": "/tickets",
+        "contents": true
+      },
+      "journals": {
+        "kind": "folder",
+        "path": "/journals",
+        "contents": true
+      },
+      "expenses": {
+        "kind": "folder",
+        "path": "/expenses",
+        "contents": true
+      },
+      "dashboardoptions": {
+        "kind": "computed",
+        "expr": "(data.dashboards || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + (e.data.name || ''), value: e.path }))"
+      },
+      "selected": {
+        "kind": "computed",
+        "expr": "(((data.dashboards || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && e.path === state.dashboard)[0] || {}).data || null)"
+      },
+      "tilerows": {
+        "kind": "computed",
+        "expr": "(((((data.dashboards || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && e.path === state.dashboard)[0] || {}).data || null) || {}).tiles || []).slice().sort((a, b) => Number(a.sequence || 0) - Number(b.sequence || 0)).map(t => ({ t: t, entries: ({ '/customers': data.customers, '/invoices': data.invoices, '/tickets': data.tickets, '/journals': data.journals, '/expenses': data.expenses })[t.source] })).map(c => ({ t: c.t, note: ([\"/customers\",\"/invoices\",\"/tickets\",\"/journals\",\"/expenses\"].indexOf(c.t.source) < 0 ? 'Source ' + (c.t.source || '(none)') + ' is not readable from this viewer; tile skipped.' : (!Array.isArray(c.entries) ? 'Container ' + c.t.source + ' is unavailable; tile skipped. Is its app installed?' : '')), items: (Array.isArray(c.entries) ? c.entries : []).filter(x => x.kind === 'file' && x.data && x.data.state !== 'archived').filter(x => (!c.t.filter || !c.t.filter.field || String(String(c.t.filter.field || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data)) === String(c.t.filter.equals === undefined || c.t.filter.equals === null ? '' : c.t.filter.equals))).map(x => ({ key: (String(c.t.groupByField || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data) === undefined || String(c.t.groupByField || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data) === null || String(c.t.groupByField || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data) === '' ? '(none)' : String(String(c.t.groupByField || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data))), raw: String(c.t.valueField || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data) })) })).map(c => ({ c: c, numeric: c.items.filter(i => (typeof i.raw === 'number' || typeof i.raw === 'string') && i.raw !== '' && isFinite(Number(i.raw))), keys: c.items.map(i => i.key).filter((v, idx, a) => a.indexOf(v) === idx).sort() })).reduce((all, s) => all.concat(s.c.note ? [({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: '', value: '', note: s.c.note })] : s.c.t.kind === 'count' ? [({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: '', value: String(s.c.items.length), note: '' })] : s.c.t.kind === 'sum' ? [({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: '', value: (s.numeric.reduce((m, i) => m + Math.round(Number(i.raw) * 10000), 0) / 10000).toFixed(2), note: (s.c.items.length > s.numeric.length ? (s.c.items.length - s.numeric.length) + ' non-numeric value(s) skipped' : '') })] : s.c.t.kind === 'group-count' ? (s.keys.length ? s.keys.map(k => ({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: k, value: String(s.c.items.filter(i => i.key === k).length), note: '' })) : [({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: '', value: '0', note: 'No matching records.' })]) : s.c.t.kind === 'group-sum' ? (s.keys.length ? s.keys.map(k => ({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: k, value: (s.numeric.filter(i => i.key === k).reduce((m, i) => m + Math.round(Number(i.raw) * 10000), 0) / 10000).toFixed(2), note: (s.c.items.length > s.numeric.length ? (s.c.items.length - s.numeric.length) + ' non-numeric value(s) skipped' : '') })) : [({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: '', value: '0', note: 'No matching records.' })]) : [({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: '', value: '', note: 'Unknown tile kind ' + JSON.stringify(s.c.t.kind || '') + '; tile skipped.' })]), [])"
+      }
+    },
+    "state": {
+      "dashboard": ""
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Dashboard viewer"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Tile values are computed live from the source containers each time this page loads. Take a snapshot to freeze them.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Dashboards",
+                      "variant": "ghost",
+                      "icon": "layout-dashboard",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/applications/spreadsheet-bi/canvas/home.page.yaml"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Snapshots",
+                      "variant": "outline",
+                      "icon": "camera",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/applications/spreadsheet-bi/canvas/snapshots.page.yaml"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /bi-dashboards folder could not be read. Reinstall Spreadsheet BI to recreate it."
+            },
+            "rules": {
+              "visible": "data.$dashboards.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$dashboards.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 1,
+                "gap": 4
+              },
+              "tablet": {
+                "columns": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.form.select",
+                "props": {
+                  "label": "Dashboard",
+                  "value": "{{ state.dashboard }}",
+                  "options": "{{ data.dashboardoptions }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Choose a dashboard to compute its tiles.",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "!state.dashboard"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ (data.selected && data.selected.name) || '' }} — {{ (data.selected && data.selected.description) || '' }}",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "!!data.selected"
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ data.tilerows }}",
+              "columns": [
+                {
+                  "key": "title",
+                  "label": "Tile"
+                },
+                {
+                  "key": "kind",
+                  "label": "Kind"
+                },
+                {
+                  "key": "detail",
+                  "label": "Group"
+                },
+                {
+                  "key": "value",
+                  "label": "Value",
+                  "align": "end"
+                },
+                {
+                  "key": "note",
+                  "label": "Note"
+                }
+              ],
+              "emptyText": "This dashboard has no tiles yet. Add tiles in its form."
+            },
+            "rules": {
+              "visible": "!!state.dashboard"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Sums are computed from decimal-string amounts; non-numeric values and unavailable containers are skipped with a note. Spreadsheet editing itself is provided by the platform's Office integration.",
+              "tone": "muted"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
