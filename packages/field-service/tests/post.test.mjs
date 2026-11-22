@@ -94,12 +94,19 @@ describe('Field Service task actions', () => {
     expect(files.nodes.get('/invoices/FST-0001').contentType).toBe('application/vnd.verentis.invoicing.invoice+json')
   })
 
-  it('never drafts twice: an existing draft is kept when completion is retried', async () => {
-    const existing = { kind: 'invoice', status: 'draft', marker: 'first run' }
+  it('never drafts twice: this task\'s own draft is kept when completion is retried', async () => {
+    const existing = { kind: 'invoice', status: 'draft', marker: 'first run', notes: 'Drafted from Field Service task FST-0001.' }
     const files = memoryFiles({ '/field-tasks/FST-0001': task(), '/invoices': '', '/invoices/FST-0001': existing })
     expect(await call(files, 'complete')).toMatchObject({ message: expect.stringContaining('drafted invoice') })
     expect(files.json('/invoices/FST-0001')).toEqual(existing)
     expect(files.json('/field-tasks/FST-0001')).toMatchObject({ stage: 'done', invoice: '/invoices/FST-0001' })
+  })
+
+  it('refuses to link an unrelated invoice occupying the task\'s code', async () => {
+    const foreign = { kind: 'invoice', status: 'draft', notes: 'Monthly retainer.' }
+    const files = memoryFiles({ '/field-tasks/FST-0001': task(), '/invoices': '', '/invoices/FST-0001': foreign })
+    await expect(call(files, 'complete')).rejects.toThrow(/already exists and was not drafted from FST-0001/)
+    expect(files.json('/field-tasks/FST-0001')).toMatchObject({ stage: 'on-site' })
   })
 
   it('cancels open tasks and refuses done ones, idempotently', async () => {

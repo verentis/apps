@@ -14,7 +14,7 @@ export { collectSteps, documentFileAccess, projectRegistration } from '../../../
 
 const statusTones = { success: ['confirmed', 'done'], warning: ['cancelled', 'no-show'] }
 const schemaAccess = { path: `${installRoot}/`, reason: 'Read the Appointments schemas and run the appointment action script' }
-const locked = "['done', 'cancelled', 'no-show'].includes(form.values.status)"
+const locked = "['confirmed', 'done', 'cancelled', 'no-show'].includes(form.values.status)"
 const idle = 'form.saving || form.dirty'
 const open = activeStatuses.map(value => `form.values.status === '${value}'`).join(' || ')
 
@@ -36,7 +36,7 @@ function recordExtras(kind) {
     ],
     data: typeSources,
     notices: [
-      { ...text('This appointment is finished and can no longer be edited.', 'muted'), rules: { visible: locked } },
+      { ...text('This appointment is confirmed or finished and can no longer be edited.', 'muted'), rules: { visible: locked } },
     ],
     buttons: [
       button('Confirm', 'confirm', { visible: `form.values.status === 'booked' && !(${archived})`,

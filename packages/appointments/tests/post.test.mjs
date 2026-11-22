@@ -67,7 +67,10 @@ describe('Appointments actions', () => {
     })
     // 09:00–09:30 with a 15-minute buffer reaches 09:45, into the 09:35 booking.
     await expect(call(files, 'confirm')).rejects.toThrow(/conflicts with APMT-0002/)
-    expect(await findConflict(files, { ...appointment({ endTime: '09:30', host: 'robin' }) }, 0)).toBeUndefined()
+    // The existing booking's own type buffer also counts: 09:35 reaches back to 09:20, into a buffer-less 09:00–09:30.
+    expect(await findConflict(files, { ...appointment({ endTime: '09:30', host: 'robin' }) }, 0)).toMatchObject({ path: '/appointments/APMT-0002' })
+    // Half-open against the buffered edge: ending exactly at 09:35 minus its 15-minute buffer stays free.
+    expect(await findConflict(files, { ...appointment({ endTime: '09:20', host: 'robin' }) }, 0)).toBeUndefined()
   })
 
   it('ignores other dates, other hosts, finished appointments and back-to-back appointments', async () => {

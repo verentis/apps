@@ -116,12 +116,17 @@ export async function publishShift(files, path, { now }) {
   return { message: `Published ${label(record)} for ${record.employee} on ${record.date}`, path }
 }
 
-/** published → confirmed; the shift form locks itself once confirmed. */
+/** published → confirmed, after re-running the schedule and overlap checks (the shift may have been edited since publishing); the shift form locks itself once confirmed. */
 export async function confirmShift(files, path, { now }) {
   const shift = await readShift(files, path)
   const { record } = shift
   if (record.status === 'confirmed') return { message: `${label(record)} is already confirmed`, path }
   if (record.status !== 'published') fail(`${label(record)} is ${record.status ?? 'in no status'}; only published shifts can be confirmed.`)
+  checkSchedule(record)
+  const overlap = await findOverlap(files, record)
+  if (overlap) {
+    fail(`${label(record)} overlaps ${overlap.record.code || overlap.path} (${overlap.record.startTime}–${overlap.record.endTime}) for ${record.employee} on ${record.date}.`)
+  }
   Object.assign(record, { status: 'confirmed', confirmedAt: now, updatedAt: now })
   await saveShift(files, shift)
   return { message: `Confirmed ${label(record)}`, path }

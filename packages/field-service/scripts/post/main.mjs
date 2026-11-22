@@ -166,8 +166,18 @@ export async function completeTask(files, path, { now, uuid }) {
       await files.write(invoicePath, JSON.stringify(draftInvoice(record, { now, uuid }), null, 2),
         { contentType: invoicing.invoiceMime, ifNoneMatch: '*' })
     } catch (error) {
-      // Already drafted by an earlier, interrupted run: completing continues with the existing draft.
       if (statusOf(error) !== 412) throw error
+      // A file already exists under this task's code: accept it only when it is this task's own draft
+      // from an earlier, interrupted run — never silently link an unrelated invoice.
+      let existing
+      try {
+        existing = await files.readJson(invoicePath)
+      } catch {
+        existing = undefined
+      }
+      if (existing?.notes !== `Drafted from Field Service task ${record.code}.`) {
+        fail(`Invoice ${invoicePath} already exists and was not drafted from ${label(record)}; move it aside or change the task code, then complete again.`)
+      }
     }
   }
   Object.assign(record, { stage: 'done', completedAt: now, updatedAt: now, ...(invoicePath ? { invoice: invoicePath } : {}) })

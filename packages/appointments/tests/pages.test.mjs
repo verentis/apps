@@ -56,7 +56,7 @@ describe('Appointments Canvas documents', () => {
     // A script reloads the record afterwards, which a dirty form would refuse.
     expect(JSON.stringify(document.spec.tree)).toMatch(/form\.saving \|\| form\.dirty/)
     // Finished appointments lock their form.
-    expect(JSON.stringify(document.spec.tree)).toContain("['done', 'cancelled', 'no-show'].includes(form.values.status)")
+    expect(JSON.stringify(document.spec.tree)).toContain("['confirmed', 'done', 'cancelled', 'no-show'].includes(form.values.status)")
   })
 
   it.each(Object.keys(containers))('leaves the %s container to the file browser and offers its records in New', name => {

@@ -268,7 +268,7 @@
                           "click": "archive"
                         },
                         "rules": {
-                          "visible": "!(form.values.state === 'archived') && !(['done', 'cancelled', 'no-show'].includes(form.values.status))",
+                          "visible": "!(form.values.state === 'archived') && !(['confirmed', 'done', 'cancelled', 'no-show'].includes(form.values.status))",
                           "disabled": "form.saving || form.dirty"
                         }
                       },
@@ -313,7 +313,7 @@
                           "click": "save"
                         },
                         "rules": {
-                          "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (['done', 'cancelled', 'no-show'].includes(form.values.status))"
+                          "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (['confirmed', 'done', 'cancelled', 'no-show'].includes(form.values.status))"
                         }
                       }
                     ]
@@ -355,11 +355,11 @@
           {
             "type": "canvas.text",
             "props": {
-              "text": "This appointment is finished and can no longer be edited.",
+              "text": "This appointment is confirmed or finished and can no longer be edited.",
               "tone": "muted"
             },
             "rules": {
-              "visible": "['done', 'cancelled', 'no-show'].includes(form.values.status)"
+              "visible": "['confirmed', 'done', 'cancelled', 'no-show'].includes(form.values.status)"
             }
           },
           {
@@ -400,7 +400,7 @@
                           "required": true
                         },
                         "rules": {
-                          "disabled": "(form.values.state === 'archived' || (['done', 'cancelled', 'no-show'].includes(form.values.status)))"
+                          "disabled": "(form.values.state === 'archived' || (['confirmed', 'done', 'cancelled', 'no-show'].includes(form.values.status)))"
                         }
                       },
                       {
@@ -411,7 +411,7 @@
                           "inputType": "email"
                         },
                         "rules": {
-                          "disabled": "(form.values.state === 'archived' || (['done', 'cancelled', 'no-show'].includes(form.values.status)))"
+                          "disabled": "(form.values.state === 'archived' || (['confirmed', 'done', 'cancelled', 'no-show'].includes(form.values.status)))"
                         }
                       },
                       {
@@ -423,7 +423,7 @@
                           "options": "{{ data.typeoptions }}"
                         },
                         "rules": {
-                          "disabled": "(form.values.state === 'archived' || (['done', 'cancelled', 'no-show'].includes(form.values.status)))"
+                          "disabled": "(form.values.state === 'archived' || (['confirmed', 'done', 'cancelled', 'no-show'].includes(form.values.status)))"
                         }
                       },
                       {
@@ -456,7 +456,7 @@
                           ]
                         },
                         "rules": {
-                          "disabled": "(form.values.state === 'archived' || (['done', 'cancelled', 'no-show'].includes(form.values.status))) || (true)"
+                          "disabled": "(form.values.state === 'archived' || (['confirmed', 'done', 'cancelled', 'no-show'].includes(form.values.status))) || (true)"
                         }
                       }
                     ]
@@ -489,7 +489,7 @@
                           "required": true
                         },
                         "rules": {
-                          "disabled": "(form.values.state === 'archived' || (['done', 'cancelled', 'no-show'].includes(form.values.status)))"
+                          "disabled": "(form.values.state === 'archived' || (['confirmed', 'done', 'cancelled', 'no-show'].includes(form.values.status)))"
                         }
                       },
                       {
@@ -501,7 +501,7 @@
                           "placeholder": "Name or email"
                         },
                         "rules": {
-                          "disabled": "(form.values.state === 'archived' || (['done', 'cancelled', 'no-show'].includes(form.values.status)))"
+                          "disabled": "(form.values.state === 'archived' || (['confirmed', 'done', 'cancelled', 'no-show'].includes(form.values.status)))"
                         }
                       },
                       {
@@ -513,7 +513,7 @@
                           "placeholder": "09:00"
                         },
                         "rules": {
-                          "disabled": "(form.values.state === 'archived' || (['done', 'cancelled', 'no-show'].includes(form.values.status)))"
+                          "disabled": "(form.values.state === 'archived' || (['confirmed', 'done', 'cancelled', 'no-show'].includes(form.values.status)))"
                         }
                       },
                       {
@@ -525,7 +525,7 @@
                           "placeholder": "09:30"
                         },
                         "rules": {
-                          "disabled": "(form.values.state === 'archived' || (['done', 'cancelled', 'no-show'].includes(form.values.status)))"
+                          "disabled": "(form.values.state === 'archived' || (['confirmed', 'done', 'cancelled', 'no-show'].includes(form.values.status)))"
                         }
                       },
                       {
@@ -541,7 +541,7 @@
                           }
                         },
                         "rules": {
-                          "disabled": "(form.values.state === 'archived' || (['done', 'cancelled', 'no-show'].includes(form.values.status)))"
+                          "disabled": "(form.values.state === 'archived' || (['confirmed', 'done', 'cancelled', 'no-show'].includes(form.values.status)))"
                         }
                       }
                     ]

@@ -113,6 +113,17 @@ export async function findConflict(files, record, bufferMinutes = 0) {
   if (!String(record.host ?? '').trim()) return undefined
   const start = toMinutes(record.startTime) - bufferMinutes
   const end = toMinutes(record.endTime) + bufferMinutes
+  // Each existing appointment also reserves its own type's buffer around it (cached per type file).
+  const typeBuffers = new Map()
+  const bufferOf = async other => {
+    const typePath = typeof other.type === 'string' ? other.type : ''
+    if (!typePath) return 0
+    if (!typeBuffers.has(typePath)) {
+      const buffer = Number((await readType(files, other))?.bufferMinutes)
+      typeBuffers.set(typePath, Number.isInteger(buffer) && buffer > 0 ? buffer : 0)
+    }
+    return typeBuffers.get(typePath)
+  }
   for (const child of await listFolder(files, appointments.appointments)) {
     if (child.mimeType && child.mimeType !== appointments.mime) continue
     let other
@@ -125,7 +136,8 @@ export async function findConflict(files, record, bufferMinutes = 0) {
     if (!activeStatuses.includes(other.status)) continue
     if (other.date !== record.date || !sameHost(other.host, record.host)) continue
     if (!timePattern.test(other.startTime ?? '') || !timePattern.test(other.endTime ?? '')) continue
-    if (start < toMinutes(other.endTime) && toMinutes(other.startTime) < end) return { path: child.path, record: other }
+    const otherBuffer = await bufferOf(other)
+    if (start < toMinutes(other.endTime) + otherBuffer && toMinutes(other.startTime) - otherBuffer < end) return { path: child.path, record: other }
   }
   return undefined
 }
