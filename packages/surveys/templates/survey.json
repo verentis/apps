@@ -1,0 +1,14 @@
+{
+  "$schema": "https://schemas.verentis.io/surveys/v1/survey.schema.json",
+  "schemaVersion": 1,
+  "kind": "survey",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "title": "{{ name }}",
+  "description": "",
+  "status": "draft",
+  "questions": []
+}

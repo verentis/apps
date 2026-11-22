@@ -1,0 +1,246 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Form",
+  "metadata": {
+    "id": "approvals-settings",
+    "name": "Approvals settings",
+    "description": "Edit the Approvals settings file.",
+    "icon": "settings"
+  },
+  "spec": {
+    "binds": [
+      {
+        "pattern": "application/vnd.verentis.approvals.settings+json",
+        "mode": "edit",
+        "priority": 200,
+        "scope": "global",
+        "json-schema": {
+          "id": "https://schemas.verentis.io/approvals/v1/settings.schema.json",
+          "source": "/applications/approvals/schemas/settings.schema.json",
+          "title": "Approvals settings",
+          "version": "1"
+        }
+      }
+    ],
+    "entry": "${var:canvas-origin}/render?document=%2Fapplications%2Fapprovals%2Fcanvas%2Fsettings.form.yaml",
+    "scope": "global",
+    "mime-types": [
+      {
+        "pattern": "application/vnd.verentis.approvals.settings+json",
+        "mode": "edit",
+        "priority": 200,
+        "json-schema": {
+          "id": "https://schemas.verentis.io/approvals/v1/settings.schema.json",
+          "source": "/applications/approvals/schemas/settings.schema.json",
+          "title": "Approvals settings",
+          "version": "1"
+        }
+      }
+    ],
+    "permissions": [
+      "file.read",
+      "file.write"
+    ],
+    "capabilities": [],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-popups": false,
+      "allow-forms": true
+    },
+    "file-access": [
+      {
+        "path": "/applications/approvals/",
+        "mode": "read",
+        "reason": "Read the Approvals schemas and run the decision script"
+      }
+    ],
+    "access": [
+      {
+        "path": "/applications/approvals/",
+        "reason": "Read the Approvals schemas and run the decision script"
+      }
+    ],
+    "data": {
+      "record": {
+        "kind": "document",
+        "consistency": "conditional"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Approvals settings"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "New requests are prefilled with the default requester. Number prefixes are app settings, managed with the installed app.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Reset",
+                      "variant": "ghost",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "reset-form": {}
+                        }
+                      ]
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Save",
+                      "icon": "save",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "save": {}
+                        },
+                        {
+                          "toast": {
+                            "message": "Saved",
+                            "variant": "success"
+                          }
+                        }
+                      ]
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty || form.invalid"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$record.error }}"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 1,
+                "gap": 4
+              },
+              "tablet": {
+                "columns": 1
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Requests",
+                  "description": "New requests are prefilled with the default requester; number prefixes are app settings, managed with the installed app."
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Default requester",
+                          "value": "{{ form.values.defaultRequester }}",
+                          "placeholder": "Who usually raises requests here?"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "actions": {}
+  }
+}

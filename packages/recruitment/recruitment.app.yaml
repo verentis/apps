@@ -1,0 +1,341 @@
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "recruitment",
+    "name": "Recruitment",
+    "description": "Job positions and candidates as files in your workspace, with a hiring pipeline and scripted advance, refuse and hire actions.",
+    "icon": "./icons/app.svg",
+    "version": "0.1.0",
+    "author": "Verentis"
+  },
+  "marketplace": {
+    "readme": "./README.md",
+    "keywords": [
+      "recruitment",
+      "hiring",
+      "candidates",
+      "jobs",
+      "applications",
+      "hr",
+      "pipeline"
+    ]
+  },
+  "spec": {
+    "install-root": "/applications/recruitment",
+    "entry": "https://canvas.apps.localtest.me",
+    "scope": "global",
+    "entry-points": [
+      {
+        "id": "home",
+        "display-name": "Recruitment",
+        "route": "/render?document=.%2Fcanvas%2Fhome.page.yaml",
+        "order": 10
+      },
+      {
+        "id": "pipeline",
+        "display-name": "Pipeline",
+        "route": "/render?document=.%2Fcanvas%2Fpipeline.page.yaml",
+        "order": 20
+      },
+      {
+        "id": "positions",
+        "display-name": "Positions",
+        "route": "/render?document=.%2Fcanvas%2Fpositions.page.yaml",
+        "order": 30
+      }
+    ],
+    "launch": {
+      "enabled": true,
+      "entry-point": "home",
+      "pinnable": true
+    },
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run"
+    ],
+    "scopes": [
+      "recruitment.default"
+    ],
+    "settings": [
+      {
+        "key": "job-code-prefix",
+        "display-name": "Job position code prefix",
+        "type": "string",
+        "default": "JOB-",
+        "description": "Prefix of generated job position codes, e.g. JOB-0001."
+      },
+      {
+        "key": "candidate-code-prefix",
+        "display-name": "Application number prefix",
+        "type": "string",
+        "default": "APP-",
+        "description": "Prefix of generated candidate codes, e.g. APP-0001."
+      },
+      {
+        "key": "code-digits",
+        "display-name": "Code digits",
+        "type": "number",
+        "default": 4,
+        "description": "Minimum number of digits in generated codes (zero-padded)."
+      }
+    ],
+    "dependencies": [
+      {
+        "package": "verentis/canvas",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/nodejs",
+        "version": "latest"
+      }
+    ],
+    "engine": "verentis/nodejs",
+    "scripts": [
+      "scripts/create",
+      "scripts/post"
+    ],
+    "install": [
+      {
+        "from": "canvas/*.form.yaml",
+        "to": "/applications/recruitment/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.form+yaml"
+      },
+      {
+        "from": "canvas/*.page.yaml",
+        "to": "/applications/recruitment/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.page+yaml"
+      },
+      {
+        "from": "schemas/*.schema.json",
+        "to": "/applications/recruitment/schemas/",
+        "mode": "managed",
+        "mime": "application/schema+json"
+      },
+      {
+        "from": "templates/*.json",
+        "to": "/applications/recruitment/templates/",
+        "mode": "managed",
+        "mime": "application/json"
+      },
+      {
+        "from": "seed/jobs",
+        "to": "/job-positions",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.recruitment.jobs"
+      },
+      {
+        "from": "seed/candidates",
+        "to": "/candidates",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.recruitment.candidates"
+      },
+      {
+        "from": "seed/settings.json",
+        "to": "/settings/recruitment.json",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.recruitment.settings+json"
+      }
+    ],
+    "creatables": [
+      {
+        "id": "job",
+        "display-name": "Job position",
+        "description": "A new recruitment job position",
+        "icon": "lucide:briefcase",
+        "mime": "application/vnd.verentis.recruitment.job+json",
+        "parents": [
+          "application/vnd.verentis.recruitment.jobs"
+        ],
+        "folder-names": [
+          "job-positions",
+          "jobs",
+          "recruitment"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/job.json"
+      },
+      {
+        "id": "candidate",
+        "display-name": "Candidate",
+        "description": "A new recruitment candidate",
+        "icon": "lucide:user-round",
+        "mime": "application/vnd.verentis.recruitment.candidate+json",
+        "parents": [
+          "application/vnd.verentis.recruitment.candidates"
+        ],
+        "folder-names": [
+          "candidates",
+          "applications",
+          "recruitment"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/candidate.json"
+      }
+    ],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-forms": true,
+      "allow-popups": false
+    },
+    "file-access": [
+      {
+        "path": "/job-positions",
+        "mode": "read",
+        "reason": "Count candidates and show the job positions and candidates",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/candidates",
+        "mode": "read",
+        "reason": "Count candidates and show the job positions and candidates",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/job-positions",
+        "mode": "read",
+        "reason": "List candidates by stage with their job position titles",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/pipeline.page.yaml"
+        }
+      },
+      {
+        "path": "/candidates",
+        "mode": "read",
+        "reason": "List candidates by stage with their job position titles",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/pipeline.page.yaml"
+        }
+      },
+      {
+        "path": "/job-positions",
+        "mode": "read",
+        "reason": "List job positions with candidate and hire counts",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/positions.page.yaml"
+        }
+      },
+      {
+        "path": "/candidates",
+        "mode": "read",
+        "reason": "List job positions with candidate and hire counts",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/positions.page.yaml"
+        }
+      },
+      {
+        "path": "/applications/recruitment/",
+        "mode": "read",
+        "reason": "Read the Recruitment schemas and run the candidate action script",
+        "origin": {
+          "kind": "document",
+          "id": "recruitment-job"
+        }
+      },
+      {
+        "path": "/job-positions",
+        "mode": "read",
+        "reason": "Choose the job position a candidate applies for",
+        "origin": {
+          "kind": "document",
+          "id": "recruitment-candidate"
+        }
+      },
+      {
+        "path": "/applications/recruitment/",
+        "mode": "read",
+        "reason": "Read the Recruitment schemas and run the candidate action script",
+        "origin": {
+          "kind": "document",
+          "id": "recruitment-candidate"
+        }
+      },
+      {
+        "path": "/job-positions",
+        "mode": "read",
+        "reason": "Choose the default job position for new candidates",
+        "origin": {
+          "kind": "document",
+          "id": "recruitment-settings"
+        }
+      },
+      {
+        "path": "/applications/recruitment/",
+        "mode": "read",
+        "reason": "Read the Recruitment schemas and run the candidate action script",
+        "origin": {
+          "kind": "document",
+          "id": "recruitment-settings"
+        }
+      },
+      {
+        "path": "/job-positions",
+        "mode": "write",
+        "reason": "Create job positions with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "recruitment-create"
+        }
+      },
+      {
+        "path": "/candidates",
+        "mode": "write",
+        "reason": "Create candidates with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "recruitment-create"
+        }
+      },
+      {
+        "path": "/settings/recruitment.json",
+        "mode": "read",
+        "reason": "Default new candidates to the default job position",
+        "origin": {
+          "kind": "script",
+          "id": "recruitment-create"
+        }
+      },
+      {
+        "path": "/candidates",
+        "mode": "write",
+        "reason": "Advance, refuse and hire candidates",
+        "origin": {
+          "kind": "script",
+          "id": "recruitment-post"
+        }
+      }
+    ]
+  },
+  "packaging": {
+    "publisher": "verentis",
+    "files": [
+      "canvas/**",
+      "schemas/**",
+      "templates/**",
+      "seed/**",
+      "scripts/**",
+      "README.md"
+    ],
+    "templates": [
+      "canvas/*.yaml"
+    ],
+    "variables": {
+      "canvas-origin": "https://canvas.apps.localtest.me"
+    },
+    "encryption": "none"
+  }
+}

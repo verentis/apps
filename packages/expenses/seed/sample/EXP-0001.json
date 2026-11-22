@@ -1,0 +1,22 @@
+{
+  "$schema": "https://schemas.verentis.io/expenses/v1/report.schema.json",
+  "schemaVersion": 1,
+  "kind": "report",
+  "id": "7a1b2c3d-4e5f-4a6b-8c9d-0e1f2a3b4c10",
+  "state": "active",
+  "createdAt": "2026-01-01T00:00:00Z",
+  "updatedAt": "2026-01-01T00:00:00Z",
+  "code": "EXP-0001",
+  "employeeName": "Alex Example",
+  "employeeRef": "",
+  "date": "",
+  "lines": [
+    {
+      "category": "/expense-categories/CAT-0001",
+      "description": "Taxi from the airport",
+      "amount": "250.00",
+      "date": ""
+    }
+  ],
+  "status": "draft"
+}

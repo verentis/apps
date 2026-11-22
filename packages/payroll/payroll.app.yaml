@@ -1,0 +1,467 @@
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "payroll",
+    "name": "Payroll",
+    "description": "A region-agnostic payroll engine: salary structures, pay profiles and pay runs as files in your workspace, computed and posted to the Accounting ledger by script.",
+    "icon": "./icons/app.svg",
+    "version": "0.1.0",
+    "author": "Verentis"
+  },
+  "marketplace": {
+    "readme": "./README.md",
+    "keywords": [
+      "payroll",
+      "salaries",
+      "payslips",
+      "pay runs",
+      "wages",
+      "hr",
+      "accounting"
+    ]
+  },
+  "spec": {
+    "install-root": "/applications/payroll",
+    "entry": "https://canvas.apps.localtest.me",
+    "scope": "global",
+    "entry-points": [
+      {
+        "id": "home",
+        "display-name": "Payroll",
+        "route": "/render?document=.%2Fcanvas%2Fhome.page.yaml",
+        "order": 10
+      },
+      {
+        "id": "structures",
+        "display-name": "Structures",
+        "route": "/render?document=.%2Fcanvas%2Fstructures.page.yaml",
+        "order": 20
+      }
+    ],
+    "launch": {
+      "enabled": true,
+      "entry-point": "home",
+      "pinnable": true
+    },
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run"
+    ],
+    "scopes": [
+      "payroll.default"
+    ],
+    "settings": [
+      {
+        "key": "structure-code-prefix",
+        "display-name": "Salary structure code prefix",
+        "type": "string",
+        "default": "PAYSTR-",
+        "description": "Prefix of generated salary structure codes, e.g. PAYSTR-0001."
+      },
+      {
+        "key": "profile-code-prefix",
+        "display-name": "Pay profile code prefix",
+        "type": "string",
+        "default": "PAYEMP-",
+        "description": "Prefix of generated pay profile codes, e.g. PAYEMP-0001."
+      },
+      {
+        "key": "payrun-code-prefix",
+        "display-name": "Pay run code prefix",
+        "type": "string",
+        "default": "PAYRUN-",
+        "description": "Prefix of generated pay run codes, e.g. PAYRUN-0001."
+      },
+      {
+        "key": "code-digits",
+        "display-name": "Code digits",
+        "type": "number",
+        "default": 4,
+        "description": "Minimum number of digits in generated codes (zero-padded)."
+      }
+    ],
+    "dependencies": [
+      {
+        "package": "verentis/canvas",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/nodejs",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/accounting",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/employees",
+        "version": "latest",
+        "optional": true
+      }
+    ],
+    "engine": "verentis/nodejs",
+    "scripts": [
+      "scripts/create",
+      "scripts/post"
+    ],
+    "install": [
+      {
+        "from": "canvas/*.form.yaml",
+        "to": "/applications/payroll/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.form+yaml"
+      },
+      {
+        "from": "canvas/*.page.yaml",
+        "to": "/applications/payroll/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.page+yaml"
+      },
+      {
+        "from": "schemas/*.schema.json",
+        "to": "/applications/payroll/schemas/",
+        "mode": "managed",
+        "mime": "application/schema+json"
+      },
+      {
+        "from": "templates/*.json",
+        "to": "/applications/payroll/templates/",
+        "mode": "managed",
+        "mime": "application/json"
+      },
+      {
+        "from": "seed/structures",
+        "to": "/salary-structures",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.payroll.structures"
+      },
+      {
+        "from": "seed/profiles",
+        "to": "/pay-profiles",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.payroll.profiles"
+      },
+      {
+        "from": "seed/runs",
+        "to": "/pay-runs",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.payroll.payruns"
+      },
+      {
+        "from": "seed/sample/PAYSTR-0001.json",
+        "to": "/salary-structures/PAYSTR-0001",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.payroll.structure+json"
+      },
+      {
+        "from": "seed/sample/PAYEMP-0001.json",
+        "to": "/pay-profiles/PAYEMP-0001",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.payroll.profile+json"
+      },
+      {
+        "from": "seed/sample/PAYEMP-0002.json",
+        "to": "/pay-profiles/PAYEMP-0002",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.payroll.profile+json"
+      },
+      {
+        "from": "seed/sample/PAYRUN-0001.json",
+        "to": "/pay-runs/PAYRUN-0001",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.payroll.payrun+json"
+      },
+      {
+        "from": "seed/settings.json",
+        "to": "/settings/payroll.json",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.payroll.settings+json"
+      }
+    ],
+    "creatables": [
+      {
+        "id": "structure",
+        "display-name": "Salary structure",
+        "description": "A new salary structure",
+        "icon": "lucide:layers",
+        "mime": "application/vnd.verentis.payroll.structure+json",
+        "parents": [
+          "application/vnd.verentis.payroll.structures"
+        ],
+        "folder-names": [
+          "salary-structures",
+          "payroll"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/structure.json"
+      },
+      {
+        "id": "profile",
+        "display-name": "Pay profile",
+        "description": "A new pay profile",
+        "icon": "lucide:id-card",
+        "mime": "application/vnd.verentis.payroll.profile+json",
+        "parents": [
+          "application/vnd.verentis.payroll.profiles"
+        ],
+        "folder-names": [
+          "pay-profiles",
+          "payroll"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/profile.json"
+      },
+      {
+        "id": "payrun",
+        "display-name": "Pay run",
+        "description": "A new pay run",
+        "icon": "lucide:calendar-check",
+        "mime": "application/vnd.verentis.payroll.payrun+json",
+        "parents": [
+          "application/vnd.verentis.payroll.payruns"
+        ],
+        "folder-names": [
+          "pay-runs",
+          "payroll"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/payrun.json"
+      }
+    ],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-forms": true,
+      "allow-popups": false
+    },
+    "file-access": [
+      {
+        "path": "/pay-runs",
+        "mode": "read",
+        "reason": "List pay runs",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/salary-structures",
+        "mode": "read",
+        "reason": "List salary structures",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/structures.page.yaml"
+        }
+      },
+      {
+        "path": "/pay-profiles",
+        "mode": "read",
+        "reason": "List pay profiles",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/structures.page.yaml"
+        }
+      },
+      {
+        "path": "/applications/payroll/",
+        "mode": "read",
+        "reason": "Read the Payroll schemas and run the pay run script",
+        "origin": {
+          "kind": "document",
+          "id": "payroll-structure"
+        }
+      },
+      {
+        "path": "/employees",
+        "mode": "read",
+        "reason": "Offer employee records to link (when Employees is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "payroll-profile"
+        }
+      },
+      {
+        "path": "/salary-structures",
+        "mode": "read",
+        "reason": "Choose the salary structure this profile is paid by",
+        "origin": {
+          "kind": "document",
+          "id": "payroll-profile"
+        }
+      },
+      {
+        "path": "/applications/payroll/",
+        "mode": "read",
+        "reason": "Read the Payroll schemas and run the pay run script",
+        "origin": {
+          "kind": "document",
+          "id": "payroll-profile"
+        }
+      },
+      {
+        "path": "/applications/payroll/",
+        "mode": "read",
+        "reason": "Read the Payroll schemas and run the pay run script",
+        "origin": {
+          "kind": "document",
+          "id": "payroll-payrun"
+        }
+      },
+      {
+        "path": "/chart-of-accounts",
+        "mode": "read",
+        "reason": "Choose the accounts pay runs post to",
+        "origin": {
+          "kind": "document",
+          "id": "payroll-settings"
+        }
+      },
+      {
+        "path": "/applications/payroll/",
+        "mode": "read",
+        "reason": "Read the Payroll schemas and run the pay run script",
+        "origin": {
+          "kind": "document",
+          "id": "payroll-settings"
+        }
+      },
+      {
+        "path": "/salary-structures",
+        "mode": "write",
+        "reason": "Create salary structures with the next number",
+        "origin": {
+          "kind": "script",
+          "id": "payroll-create"
+        }
+      },
+      {
+        "path": "/pay-profiles",
+        "mode": "write",
+        "reason": "Create pay profiles with the next number",
+        "origin": {
+          "kind": "script",
+          "id": "payroll-create"
+        }
+      },
+      {
+        "path": "/pay-runs",
+        "mode": "write",
+        "reason": "Create pay runs with the next number",
+        "origin": {
+          "kind": "script",
+          "id": "payroll-create"
+        }
+      },
+      {
+        "path": "/settings/payroll.json",
+        "mode": "read",
+        "reason": "Read the Payroll defaults for new records",
+        "origin": {
+          "kind": "script",
+          "id": "payroll-create"
+        }
+      },
+      {
+        "path": "/settings/accounting.json",
+        "mode": "read",
+        "reason": "Default new records to the ledger's base currency",
+        "origin": {
+          "kind": "script",
+          "id": "payroll-create"
+        }
+      },
+      {
+        "path": "/settings/payroll.json",
+        "mode": "read",
+        "reason": "Read the accounts pay runs post to",
+        "origin": {
+          "kind": "script",
+          "id": "payroll-post"
+        }
+      },
+      {
+        "path": "/settings/accounting.json",
+        "mode": "read",
+        "reason": "Read the ledger's base currency and precision",
+        "origin": {
+          "kind": "script",
+          "id": "payroll-post"
+        }
+      },
+      {
+        "path": "/chart-of-accounts",
+        "mode": "read",
+        "reason": "Check that posted accounts exist and are active",
+        "origin": {
+          "kind": "script",
+          "id": "payroll-post"
+        }
+      },
+      {
+        "path": "/periods",
+        "mode": "read",
+        "reason": "Find the open period a pay run posts in",
+        "origin": {
+          "kind": "script",
+          "id": "payroll-post"
+        }
+      },
+      {
+        "path": "/journals",
+        "mode": "write",
+        "reason": "Post one journal per pay run",
+        "origin": {
+          "kind": "script",
+          "id": "payroll-post"
+        }
+      },
+      {
+        "path": "/salary-structures",
+        "mode": "read",
+        "reason": "Read the salary structures payslips are computed from",
+        "origin": {
+          "kind": "script",
+          "id": "payroll-post"
+        }
+      },
+      {
+        "path": "/pay-profiles",
+        "mode": "read",
+        "reason": "Read the active pay profiles a run pays",
+        "origin": {
+          "kind": "script",
+          "id": "payroll-post"
+        }
+      },
+      {
+        "path": "/pay-runs",
+        "mode": "write",
+        "reason": "Store computed payslips and mark runs computed, approved or posted",
+        "origin": {
+          "kind": "script",
+          "id": "payroll-post"
+        }
+      }
+    ]
+  },
+  "packaging": {
+    "publisher": "verentis",
+    "files": [
+      "canvas/**",
+      "schemas/**",
+      "templates/**",
+      "seed/**",
+      "scripts/**",
+      "README.md"
+    ],
+    "templates": [
+      "canvas/*.yaml"
+    ],
+    "variables": {
+      "canvas-origin": "https://canvas.apps.localtest.me"
+    },
+    "encryption": "none"
+  }
+}

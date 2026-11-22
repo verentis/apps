@@ -1,0 +1,283 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.verentis.io/rental/v1/booking.schema.json",
+  "title": "Rental booking",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "const": "https://schemas.verentis.io/rental/v1/booking.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "kind": {
+      "const": "booking"
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "state": {
+      "enum": [
+        "active",
+        "archived"
+      ]
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "archivedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "code": {
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "customerRef": {
+      "type": "string",
+      "maxLength": 4096,
+      "pattern": "^(/.*)?$"
+    },
+    "customerName": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "product": {
+      "type": "string",
+      "maxLength": 4096,
+      "pattern": "^(/.*)?$"
+    },
+    "quantity": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100000
+    },
+    "startDate": {
+      "type": "string",
+      "pattern": "^([0-9]{4}-[0-9]{2}-[0-9]{2})?$"
+    },
+    "endDate": {
+      "type": "string",
+      "pattern": "^([0-9]{4}-[0-9]{2}-[0-9]{2})?$"
+    },
+    "dailyRate": {
+      "type": "string",
+      "pattern": "^((0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?)?$"
+    },
+    "deposit": {
+      "type": "string",
+      "pattern": "^((0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?)?$"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 10000
+    },
+    "status": {
+      "enum": [
+        "draft",
+        "confirmed",
+        "picked-up",
+        "returned",
+        "cancelled"
+      ]
+    },
+    "confirmedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "total": {
+      "type": "string",
+      "pattern": "^((0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?)?$"
+    },
+    "pickedUpAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "returnedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "lateFee": {
+      "type": "string",
+      "pattern": "^((0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?)?$"
+    },
+    "invoice": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^/",
+          "maxLength": 4096
+        },
+        "nodeId": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": false
+    },
+    "cancelledAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    }
+  },
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "kind",
+    "id",
+    "state",
+    "createdAt",
+    "updatedAt",
+    "code",
+    "customerRef",
+    "customerName",
+    "product",
+    "quantity",
+    "startDate",
+    "endDate",
+    "dailyRate",
+    "deposit",
+    "notes",
+    "status"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "archived"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "archivedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          }
+        },
+        "required": [
+          "archivedAt"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "confirmed",
+              "picked-up",
+              "returned"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "confirmedAt": true,
+          "total": true
+        },
+        "required": [
+          "confirmedAt",
+          "total"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "picked-up",
+              "returned"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "pickedUpAt": true
+        },
+        "required": [
+          "pickedUpAt"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "returned"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "returnedAt": true,
+          "lateFee": true
+        },
+        "required": [
+          "returnedAt",
+          "lateFee"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "cancelled"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "cancelledAt": true
+        },
+        "required": [
+          "cancelledAt"
+        ]
+      }
+    }
+  ]
+}

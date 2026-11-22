@@ -1,0 +1,607 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Form",
+  "metadata": {
+    "id": "surveys-response",
+    "name": "Surveys response",
+    "description": "View and edit a Surveys response.",
+    "icon": "message-square-text"
+  },
+  "spec": {
+    "binds": [
+      {
+        "pattern": "application/vnd.verentis.surveys.response+json",
+        "mode": "edit",
+        "priority": 200,
+        "scope": "global",
+        "json-schema": {
+          "id": "https://schemas.verentis.io/surveys/v1/response.schema.json",
+          "source": "/applications/surveys/schemas/response.schema.json",
+          "title": "Surveys response",
+          "version": "1"
+        }
+      }
+    ],
+    "entry": "${var:canvas-origin}/render?document=%2Fapplications%2Fsurveys%2Fcanvas%2Fresponse.form.yaml",
+    "scope": "global",
+    "mime-types": [
+      {
+        "pattern": "application/vnd.verentis.surveys.response+json",
+        "mode": "edit",
+        "priority": 200,
+        "json-schema": {
+          "id": "https://schemas.verentis.io/surveys/v1/response.schema.json",
+          "source": "/applications/surveys/schemas/response.schema.json",
+          "title": "Surveys response",
+          "version": "1"
+        }
+      }
+    ],
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run",
+      "execution.read"
+    ],
+    "capabilities": [],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-popups": false,
+      "allow-forms": true
+    },
+    "file-access": [
+      {
+        "path": "/surveys",
+        "mode": "read",
+        "reason": "Choose the survey a response answers"
+      },
+      {
+        "path": "/applications/surveys/",
+        "mode": "read",
+        "reason": "Read the Surveys schemas and run the action script"
+      }
+    ],
+    "access": [
+      {
+        "path": "/surveys",
+        "reason": "Choose the survey a response answers"
+      },
+      {
+        "path": "/applications/surveys/",
+        "reason": "Read the Surveys schemas and run the action script"
+      }
+    ],
+    "data": {
+      "record": {
+        "kind": "document",
+        "consistency": "conditional"
+      },
+      "surveys": {
+        "kind": "folder",
+        "path": "/surveys",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.surveys.survey+json"
+      },
+      "surveyoptions": {
+        "kind": "computed",
+        "expr": "(data.surveys || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + (e.data.title || ''), value: e.path }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.heading",
+                        "props": {
+                          "level": 2,
+                          "text": "{{ form.values.respondentName || 'New response' }}"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.badge",
+                        "props": {
+                          "text": "{{ String(form.values.status || '').split('-').join(' ') }}",
+                          "tone": "{{ [\"submitted\"].includes(form.values.status) ? 'success' : 'neutral' }}"
+                        },
+                        "rules": {
+                          "visible": "!!form.values.status"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.badge",
+                        "props": {
+                          "text": "Archived",
+                          "tone": "warning",
+                          "icon": "archive"
+                        },
+                        "rules": {
+                          "visible": "form.values.state === 'archived'"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Response {{ form.values.code || '' }} · {{ ctx.file.path }}",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Submit",
+                      "icon": "send",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "submit"
+                    },
+                    "rules": {
+                      "visible": "form.values.status === 'draft' && !(form.values.state === 'archived')",
+                      "disabled": "form.saving || form.dirty || !form.values.survey"
+                    }
+                  },
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Archive",
+                          "variant": "ghost",
+                          "icon": "archive",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "archive"
+                        },
+                        "rules": {
+                          "visible": "!(form.values.state === 'archived') && !(form.values.status === 'submitted')",
+                          "disabled": "form.saving || form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Restore",
+                          "variant": "outline",
+                          "icon": "archive-restore",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "restore"
+                        },
+                        "rules": {
+                          "visible": "form.values.state === 'archived'",
+                          "disabled": "form.saving || form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Reset",
+                          "variant": "ghost",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "reset"
+                        },
+                        "rules": {
+                          "disabled": "form.saving || !form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Save",
+                          "icon": "save",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "save"
+                        },
+                        "rules": {
+                          "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (form.values.status === 'submitted')"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$record.error }}"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.dashboard.badge",
+            "props": {
+              "text": "This response is archived. Restore it to edit.",
+              "tone": "warning",
+              "icon": "archive"
+            },
+            "rules": {
+              "visible": "form.values.state === 'archived'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "This response has been submitted and is locked.",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "form.values.status === 'submitted'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 1,
+                "gap": 4
+              },
+              "tablet": {
+                "columns": 1
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Response"
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Survey",
+                          "value": "{{ form.values.survey }}",
+                          "description": "The survey this response answers.",
+                          "options": "{{ data.surveyoptions }}"
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'submitted'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Respondent name",
+                          "value": "{{ form.values.respondentName }}"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'submitted'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Respondent email",
+                          "value": "{{ form.values.respondentEmail }}",
+                          "inputType": "email"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'submitted'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Status",
+                          "value": "{{ form.values.status }}",
+                          "description": "Submitted is set by Submit, which locks the response.",
+                          "options": [
+                            {
+                              "value": "draft",
+                              "label": "Draft"
+                            },
+                            {
+                              "value": "submitted",
+                              "label": "Submitted"
+                            }
+                          ]
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'submitted'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Submitted at",
+                          "value": "{{ form.values.submittedAt }}",
+                          "description": "Stamped by Submit."
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'submitted')) || (true)"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Answers",
+                  "description": "One row per answered question sequence. Use value for text, ratings (1-5) and single choices; values for multiple choices."
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.array",
+                        "props": {
+                          "label": "Answers",
+                          "value": "{{ form.values.answers }}",
+                          "fields": [
+                            {
+                              "key": "sequence",
+                              "label": "Question sequence",
+                              "type": "number",
+                              "required": true
+                            },
+                            {
+                              "key": "value",
+                              "label": "Value"
+                            },
+                            {
+                              "key": "values",
+                              "label": "Values",
+                              "type": "text-list"
+                            }
+                          ],
+                          "defaultRow": {
+                            "sequence": 1,
+                            "value": "",
+                            "values": []
+                          },
+                          "rowIds": false,
+                          "minimum": 0,
+                          "maximum": 100,
+                          "addLabel": "Add answer",
+                          "removeLabel": "Remove row"
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'submitted'))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "actions": {
+      "save": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Saved",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "reset": {
+        "steps": [
+          {
+            "reset-form": {}
+          }
+        ]
+      },
+      "archive": {
+        "steps": [
+          {
+            "confirm": {
+              "title": "Archive",
+              "message": "Archive this record? It stays in the workspace and can be restored."
+            }
+          },
+          {
+            "patch-form": {
+              "values": {
+                "state": "archived",
+                "archivedAt": "{{ Date() }}",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Archived",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "restore": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "state": "active",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Restored",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "submit": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Submit response",
+              "message": "Submit this response? The answers are validated against the survey and the response is locked."
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/surveys/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "submit",
+                "path": "{{ ctx.file.path }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

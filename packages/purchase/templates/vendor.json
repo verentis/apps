@@ -1,0 +1,26 @@
+{
+  "$schema": "https://schemas.verentis.io/purchase/v1/vendor.schema.json",
+  "schemaVersion": 1,
+  "kind": "vendor",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "name": "{{ name }}",
+  "legalName": "",
+  "contactName": "",
+  "email": "",
+  "phone": "",
+  "taxIdentifier": "",
+  "address": {
+    "lines": [],
+    "city": "",
+    "region": "",
+    "postalCode": "",
+    "country": ""
+  },
+  "paymentTermsDays": 30,
+  "currency": "",
+  "notes": ""
+}

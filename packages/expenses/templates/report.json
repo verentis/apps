@@ -1,0 +1,22 @@
+{
+  "$schema": "https://schemas.verentis.io/expenses/v1/report.schema.json",
+  "schemaVersion": 1,
+  "kind": "report",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "employeeName": "{{ name }}",
+  "employeeRef": "",
+  "date": "",
+  "lines": [
+    {
+      "category": "",
+      "description": "",
+      "amount": "",
+      "date": ""
+    }
+  ],
+  "status": "draft"
+}

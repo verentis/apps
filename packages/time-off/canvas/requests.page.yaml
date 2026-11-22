@@ -1,0 +1,450 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "time-off-requests",
+    "name": "Leave requests",
+    "description": "Every leave request, listed by status.",
+    "icon": "calendar-off"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/leave-types",
+        "reason": "List leave requests by status with their leave type names"
+      },
+      {
+        "path": "/leave-requests",
+        "reason": "List leave requests by status with their leave type names"
+      }
+    ],
+    "data": {
+      "requests": {
+        "kind": "folder",
+        "path": "/leave-requests",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.time-off.request+json"
+      },
+      "types": {
+        "kind": "folder",
+        "path": "/leave-types",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.time-off.type+json"
+      },
+      "rows": {
+        "kind": "computed",
+        "expr": "(data.requests || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, employee: e.data.employeeName || '', typePath: e.data.type || '', type: ((((data.types || []).find(t => t.kind === 'file' && t.data && t.path === e.data.type) || {}).data || {})).name || '', startDate: e.data.startDate || '', endDate: e.data.endDate || '', days: Math.round(Number(e.data.days || 0) * 10000), status: e.data.status || 'draft', approver: e.data.approver || '' }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Leave requests by status"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Every active leave request, grouped by its status. Click a row to open the request.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Time Off",
+                  "variant": "ghost",
+                  "icon": "calendar-off",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/applications/time-off/canvas/home.page.yaml"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /leave-types folder could not be read. Reinstall Time Off to recreate it."
+            },
+            "rules": {
+              "visible": "data.$types.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /leave-requests folder could not be read. Reinstall Time Off to recreate it."
+            },
+            "rules": {
+              "visible": "data.$requests.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 4
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Draft",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'draft').length }}",
+                  "icon": "calendar-off",
+                  "loading": "{{ data.$requests.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Submitted",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'submitted').length }}",
+                  "icon": "calendar-off",
+                  "loading": "{{ data.$requests.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Approved",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'approved').length }}",
+                  "icon": "calendar-off",
+                  "loading": "{{ data.$requests.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Refused",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'refused').length }}",
+                  "icon": "calendar-off",
+                  "loading": "{{ data.$requests.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.tabs",
+            "props": {
+              "items": [
+                {
+                  "value": "draft",
+                  "label": "Draft",
+                  "icon": "calendar-off"
+                },
+                {
+                  "value": "submitted",
+                  "label": "Submitted",
+                  "icon": "calendar-off"
+                },
+                {
+                  "value": "approved",
+                  "label": "Approved",
+                  "icon": "calendar-off"
+                },
+                {
+                  "value": "refused",
+                  "label": "Refused",
+                  "icon": "calendar-off"
+                }
+              ]
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.rows || []).filter(r => r.status === 'draft').map(r => ({ path: r.path, code: r.code, employee: r.employee, type: r.type, startDate: r.startDate, endDate: r.endDate, daysText: r.days ? (r.days / 10000).toFixed(2) : '', approver: r.approver })) }}",
+                      "columns": [
+                        {
+                          "key": "code",
+                          "label": "Request"
+                        },
+                        {
+                          "key": "employee",
+                          "label": "Employee"
+                        },
+                        {
+                          "key": "type",
+                          "label": "Leave type"
+                        },
+                        {
+                          "key": "startDate",
+                          "label": "First day"
+                        },
+                        {
+                          "key": "endDate",
+                          "label": "Last day"
+                        },
+                        {
+                          "key": "daysText",
+                          "label": "Days",
+                          "align": "end"
+                        },
+                        {
+                          "key": "approver",
+                          "label": "Approver"
+                        }
+                      ],
+                      "emptyText": "No draft requests",
+                      "clickable": true
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "draft"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.rows || []).filter(r => r.status === 'submitted').map(r => ({ path: r.path, code: r.code, employee: r.employee, type: r.type, startDate: r.startDate, endDate: r.endDate, daysText: r.days ? (r.days / 10000).toFixed(2) : '', approver: r.approver })) }}",
+                      "columns": [
+                        {
+                          "key": "code",
+                          "label": "Request"
+                        },
+                        {
+                          "key": "employee",
+                          "label": "Employee"
+                        },
+                        {
+                          "key": "type",
+                          "label": "Leave type"
+                        },
+                        {
+                          "key": "startDate",
+                          "label": "First day"
+                        },
+                        {
+                          "key": "endDate",
+                          "label": "Last day"
+                        },
+                        {
+                          "key": "daysText",
+                          "label": "Days",
+                          "align": "end"
+                        },
+                        {
+                          "key": "approver",
+                          "label": "Approver"
+                        }
+                      ],
+                      "emptyText": "No submitted requests",
+                      "clickable": true
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "submitted"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.rows || []).filter(r => r.status === 'approved').map(r => ({ path: r.path, code: r.code, employee: r.employee, type: r.type, startDate: r.startDate, endDate: r.endDate, daysText: r.days ? (r.days / 10000).toFixed(2) : '', approver: r.approver })) }}",
+                      "columns": [
+                        {
+                          "key": "code",
+                          "label": "Request"
+                        },
+                        {
+                          "key": "employee",
+                          "label": "Employee"
+                        },
+                        {
+                          "key": "type",
+                          "label": "Leave type"
+                        },
+                        {
+                          "key": "startDate",
+                          "label": "First day"
+                        },
+                        {
+                          "key": "endDate",
+                          "label": "Last day"
+                        },
+                        {
+                          "key": "daysText",
+                          "label": "Days",
+                          "align": "end"
+                        },
+                        {
+                          "key": "approver",
+                          "label": "Approver"
+                        }
+                      ],
+                      "emptyText": "No approved requests",
+                      "clickable": true
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "approved"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.rows || []).filter(r => r.status === 'refused').map(r => ({ path: r.path, code: r.code, employee: r.employee, type: r.type, startDate: r.startDate, endDate: r.endDate, daysText: r.days ? (r.days / 10000).toFixed(2) : '', approver: r.approver })) }}",
+                      "columns": [
+                        {
+                          "key": "code",
+                          "label": "Request"
+                        },
+                        {
+                          "key": "employee",
+                          "label": "Employee"
+                        },
+                        {
+                          "key": "type",
+                          "label": "Leave type"
+                        },
+                        {
+                          "key": "startDate",
+                          "label": "First day"
+                        },
+                        {
+                          "key": "endDate",
+                          "label": "Last day"
+                        },
+                        {
+                          "key": "daysText",
+                          "label": "Days",
+                          "align": "end"
+                        },
+                        {
+                          "key": "approver",
+                          "label": "Approver"
+                        }
+                      ],
+                      "emptyText": "No refused requests",
+                      "clickable": true
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "refused"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

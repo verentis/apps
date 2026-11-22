@@ -1,0 +1,335 @@
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "purchase",
+    "name": "Purchase",
+    "description": "Vendors and purchase orders as files in your workspace, confirmed and received by script, with draft vendor bills handed to Invoicing.",
+    "icon": "./icons/app.svg",
+    "version": "0.1.0",
+    "author": "Verentis"
+  },
+  "marketplace": {
+    "readme": "./README.md",
+    "keywords": [
+      "purchase",
+      "purchasing",
+      "procurement",
+      "vendors",
+      "purchase orders",
+      "rfq",
+      "vendor bills"
+    ]
+  },
+  "spec": {
+    "install-root": "/applications/purchase",
+    "entry": "https://canvas.apps.localtest.me",
+    "scope": "global",
+    "entry-points": [
+      {
+        "id": "home",
+        "display-name": "Purchase",
+        "route": "/render?document=.%2Fcanvas%2Fhome.page.yaml",
+        "order": 10
+      },
+      {
+        "id": "vendors",
+        "display-name": "Vendors",
+        "route": "/render?document=.%2Fcanvas%2Fvendors.page.yaml",
+        "order": 20
+      },
+      {
+        "id": "orders",
+        "display-name": "Purchase orders",
+        "route": "/render?document=.%2Fcanvas%2Forders.page.yaml",
+        "order": 30
+      }
+    ],
+    "launch": {
+      "enabled": true,
+      "entry-point": "home",
+      "pinnable": true
+    },
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run"
+    ],
+    "scopes": [
+      "purchase.default"
+    ],
+    "settings": [
+      {
+        "key": "vendor-code-prefix",
+        "display-name": "Vendor number prefix",
+        "type": "string",
+        "default": "VEND-",
+        "description": "Prefix of generated vendor numbers, e.g. VEND-0001."
+      },
+      {
+        "key": "order-code-prefix",
+        "display-name": "Purchase order number prefix",
+        "type": "string",
+        "default": "PO-",
+        "description": "Prefix of generated purchase order numbers, e.g. PO-0001."
+      },
+      {
+        "key": "code-digits",
+        "display-name": "Code digits",
+        "type": "number",
+        "default": 4,
+        "description": "Minimum number of digits in generated numbers (zero-padded)."
+      }
+    ],
+    "dependencies": [
+      {
+        "package": "verentis/canvas",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/nodejs",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/invoicing",
+        "version": "latest",
+        "optional": true
+      }
+    ],
+    "engine": "verentis/nodejs",
+    "scripts": [
+      "scripts/create",
+      "scripts/post"
+    ],
+    "install": [
+      {
+        "from": "canvas/*.form.yaml",
+        "to": "/applications/purchase/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.form+yaml"
+      },
+      {
+        "from": "canvas/*.page.yaml",
+        "to": "/applications/purchase/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.page+yaml"
+      },
+      {
+        "from": "schemas/*.schema.json",
+        "to": "/applications/purchase/schemas/",
+        "mode": "managed",
+        "mime": "application/schema+json"
+      },
+      {
+        "from": "templates/*.json",
+        "to": "/applications/purchase/templates/",
+        "mode": "managed",
+        "mime": "application/json"
+      },
+      {
+        "from": "seed/vendors",
+        "to": "/vendors",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.purchase.vendors"
+      },
+      {
+        "from": "seed/orders",
+        "to": "/purchase-orders",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.purchase.orders"
+      },
+      {
+        "from": "seed/settings.json",
+        "to": "/settings/purchase.json",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.purchase.settings+json"
+      }
+    ],
+    "creatables": [
+      {
+        "id": "vendor",
+        "display-name": "Vendor",
+        "description": "A new vendor",
+        "icon": "lucide:building-2",
+        "mime": "application/vnd.verentis.purchase.vendor+json",
+        "parents": [
+          "application/vnd.verentis.purchase.vendors"
+        ],
+        "folder-names": [
+          "vendors",
+          "purchase"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/vendor.json"
+      },
+      {
+        "id": "order",
+        "display-name": "Purchase order",
+        "description": "A new purchase order",
+        "icon": "lucide:shopping-cart",
+        "mime": "application/vnd.verentis.purchase.order+json",
+        "parents": [
+          "application/vnd.verentis.purchase.orders"
+        ],
+        "folder-names": [
+          "purchase-orders",
+          "purchase"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/order.json"
+      }
+    ],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-forms": true,
+      "allow-popups": false
+    },
+    "file-access": [
+      {
+        "path": "/vendors",
+        "mode": "read",
+        "reason": "List vendors",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/purchase-orders",
+        "mode": "read",
+        "reason": "List purchase orders",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/vendors",
+        "mode": "read",
+        "reason": "List vendors",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/vendors.page.yaml"
+        }
+      },
+      {
+        "path": "/purchase-orders",
+        "mode": "read",
+        "reason": "List purchase orders",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/orders.page.yaml"
+        }
+      },
+      {
+        "path": "/applications/purchase/",
+        "mode": "read",
+        "reason": "Read the Purchase schemas and run the order script",
+        "origin": {
+          "kind": "document",
+          "id": "purchase-vendor"
+        }
+      },
+      {
+        "path": "/vendors",
+        "mode": "read",
+        "reason": "Choose the vendor to buy from",
+        "origin": {
+          "kind": "document",
+          "id": "purchase-order"
+        }
+      },
+      {
+        "path": "/applications/purchase/",
+        "mode": "read",
+        "reason": "Read the Purchase schemas and run the order script",
+        "origin": {
+          "kind": "document",
+          "id": "purchase-order"
+        }
+      },
+      {
+        "path": "/applications/purchase/",
+        "mode": "read",
+        "reason": "Read the Purchase schemas and run the order script",
+        "origin": {
+          "kind": "document",
+          "id": "purchase-settings"
+        }
+      },
+      {
+        "path": "/vendors",
+        "mode": "write",
+        "reason": "Create vendors with the next number",
+        "origin": {
+          "kind": "script",
+          "id": "purchase-create"
+        }
+      },
+      {
+        "path": "/purchase-orders",
+        "mode": "write",
+        "reason": "Create purchase orders with the next number",
+        "origin": {
+          "kind": "script",
+          "id": "purchase-create"
+        }
+      },
+      {
+        "path": "/settings/purchase.json",
+        "mode": "read",
+        "reason": "Default new purchase orders' dates, currency and notes",
+        "origin": {
+          "kind": "script",
+          "id": "purchase-create"
+        }
+      },
+      {
+        "path": "/vendors",
+        "mode": "read",
+        "reason": "Check the vendor a confirmed order buys from",
+        "origin": {
+          "kind": "script",
+          "id": "purchase-post"
+        }
+      },
+      {
+        "path": "/purchase-orders",
+        "mode": "write",
+        "reason": "Mark purchase orders confirmed or received",
+        "origin": {
+          "kind": "script",
+          "id": "purchase-post"
+        }
+      },
+      {
+        "path": "/invoices",
+        "mode": "write",
+        "reason": "Draft a vendor bill for a received order when Invoicing is installed",
+        "origin": {
+          "kind": "script",
+          "id": "purchase-post"
+        }
+      }
+    ]
+  },
+  "packaging": {
+    "publisher": "verentis",
+    "files": [
+      "canvas/**",
+      "schemas/**",
+      "templates/**",
+      "seed/**",
+      "scripts/**",
+      "README.md"
+    ],
+    "templates": [
+      "canvas/*.yaml"
+    ],
+    "variables": {
+      "canvas-origin": "https://canvas.apps.localtest.me"
+    },
+    "encryption": "none"
+  }
+}

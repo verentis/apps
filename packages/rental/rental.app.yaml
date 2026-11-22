@@ -1,0 +1,382 @@
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "rental",
+    "name": "Rental",
+    "description": "Rental products and bookings as files in your workspace; bookings are confirmed, picked up and returned by script.",
+    "icon": "./icons/app.svg",
+    "version": "0.1.0",
+    "author": "Verentis"
+  },
+  "marketplace": {
+    "readme": "./README.md",
+    "keywords": [
+      "rental",
+      "rentals",
+      "bookings",
+      "hire",
+      "equipment",
+      "availability",
+      "invoicing"
+    ]
+  },
+  "spec": {
+    "install-root": "/applications/rental",
+    "entry": "https://canvas.apps.localtest.me",
+    "scope": "global",
+    "entry-points": [
+      {
+        "id": "home",
+        "display-name": "Rental",
+        "route": "/render?document=.%2Fcanvas%2Fhome.page.yaml",
+        "order": 10
+      },
+      {
+        "id": "bookings",
+        "display-name": "Bookings",
+        "route": "/render?document=.%2Fcanvas%2Fbookings.page.yaml",
+        "order": 20
+      },
+      {
+        "id": "availability",
+        "display-name": "Availability",
+        "route": "/render?document=.%2Fcanvas%2Favailability.page.yaml",
+        "order": 30
+      },
+      {
+        "id": "revenue",
+        "display-name": "Revenue",
+        "route": "/render?document=.%2Fcanvas%2Frevenue.page.yaml",
+        "order": 40
+      }
+    ],
+    "launch": {
+      "enabled": true,
+      "entry-point": "home",
+      "pinnable": true
+    },
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run"
+    ],
+    "scopes": [
+      "rental.default"
+    ],
+    "settings": [
+      {
+        "key": "product-code-prefix",
+        "display-name": "Rental product code prefix",
+        "type": "string",
+        "default": "RPRD-",
+        "description": "Prefix of generated rental product numbers, e.g. RPRD-0001."
+      },
+      {
+        "key": "booking-code-prefix",
+        "display-name": "Booking number prefix",
+        "type": "string",
+        "default": "RENT-",
+        "description": "Prefix of generated booking numbers, e.g. RENT-0001."
+      },
+      {
+        "key": "code-digits",
+        "display-name": "Code digits",
+        "type": "number",
+        "default": 4,
+        "description": "Minimum number of digits in generated numbers (zero-padded)."
+      }
+    ],
+    "dependencies": [
+      {
+        "package": "verentis/canvas",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/nodejs",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/crm",
+        "version": "latest",
+        "optional": true
+      },
+      {
+        "package": "verentis/invoicing",
+        "version": "latest",
+        "optional": true
+      }
+    ],
+    "engine": "verentis/nodejs",
+    "scripts": [
+      "scripts/create",
+      "scripts/post"
+    ],
+    "install": [
+      {
+        "from": "canvas/*.form.yaml",
+        "to": "/applications/rental/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.form+yaml"
+      },
+      {
+        "from": "canvas/*.page.yaml",
+        "to": "/applications/rental/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.page+yaml"
+      },
+      {
+        "from": "schemas/*.schema.json",
+        "to": "/applications/rental/schemas/",
+        "mode": "managed",
+        "mime": "application/schema+json"
+      },
+      {
+        "from": "templates/*.json",
+        "to": "/applications/rental/templates/",
+        "mode": "managed",
+        "mime": "application/json"
+      },
+      {
+        "from": "seed/products",
+        "to": "/rental-products",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.rental.products"
+      },
+      {
+        "from": "seed/bookings",
+        "to": "/rental-bookings",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.rental.bookings"
+      },
+      {
+        "from": "seed/settings.json",
+        "to": "/settings/rental.json",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.rental.settings+json"
+      }
+    ],
+    "creatables": [
+      {
+        "id": "product",
+        "display-name": "Rental product",
+        "description": "A new rental product",
+        "icon": "lucide:package",
+        "mime": "application/vnd.verentis.rental.product+json",
+        "parents": [
+          "application/vnd.verentis.rental.products"
+        ],
+        "folder-names": [
+          "rental-products",
+          "rental"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/product.json"
+      },
+      {
+        "id": "booking",
+        "display-name": "Booking",
+        "description": "A new booking",
+        "icon": "lucide:calendar-check",
+        "mime": "application/vnd.verentis.rental.booking+json",
+        "parents": [
+          "application/vnd.verentis.rental.bookings"
+        ],
+        "folder-names": [
+          "rental-bookings",
+          "rental"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/booking.json"
+      }
+    ],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-forms": true,
+      "allow-popups": false
+    },
+    "file-access": [
+      {
+        "path": "/rental-products",
+        "mode": "read",
+        "reason": "List rental products",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/rental-bookings",
+        "mode": "read",
+        "reason": "List rental bookings",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/rental-bookings",
+        "mode": "read",
+        "reason": "List bookings by status",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/bookings.page.yaml"
+        }
+      },
+      {
+        "path": "/rental-products",
+        "mode": "read",
+        "reason": "List rental products and the quantity owned",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/availability.page.yaml"
+        }
+      },
+      {
+        "path": "/rental-bookings",
+        "mode": "read",
+        "reason": "Subtract overlapping confirmed and picked-up bookings",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/availability.page.yaml"
+        }
+      },
+      {
+        "path": "/rental-bookings",
+        "mode": "read",
+        "reason": "Sum booking totals, late fees and deposits",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/revenue.page.yaml"
+        }
+      },
+      {
+        "path": "/applications/rental/",
+        "mode": "read",
+        "reason": "Read the Rental schemas and run the booking script",
+        "origin": {
+          "kind": "document",
+          "id": "rental-product"
+        }
+      },
+      {
+        "path": "/customers",
+        "mode": "read",
+        "reason": "Offer CRM customers to book for (when CRM is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "rental-booking"
+        }
+      },
+      {
+        "path": "/rental-products",
+        "mode": "read",
+        "reason": "Offer rental products and their daily rates",
+        "origin": {
+          "kind": "document",
+          "id": "rental-booking"
+        }
+      },
+      {
+        "path": "/applications/rental/",
+        "mode": "read",
+        "reason": "Read the Rental schemas and run the booking script",
+        "origin": {
+          "kind": "document",
+          "id": "rental-booking"
+        }
+      },
+      {
+        "path": "/applications/rental/",
+        "mode": "read",
+        "reason": "Read the Rental schemas and run the booking script",
+        "origin": {
+          "kind": "document",
+          "id": "rental-settings"
+        }
+      },
+      {
+        "path": "/rental-products",
+        "mode": "write",
+        "reason": "Create rental products with the next number",
+        "origin": {
+          "kind": "script",
+          "id": "rental-create"
+        }
+      },
+      {
+        "path": "/rental-bookings",
+        "mode": "write",
+        "reason": "Create bookings with the next number",
+        "origin": {
+          "kind": "script",
+          "id": "rental-create"
+        }
+      },
+      {
+        "path": "/settings/rental.json",
+        "mode": "read",
+        "reason": "Default new bookings' notes",
+        "origin": {
+          "kind": "script",
+          "id": "rental-create"
+        }
+      },
+      {
+        "path": "/settings/rental.json",
+        "mode": "read",
+        "reason": "Read the currency and the daily late rate",
+        "origin": {
+          "kind": "script",
+          "id": "rental-post"
+        }
+      },
+      {
+        "path": "/rental-products",
+        "mode": "read",
+        "reason": "Check booked products, their rates and the quantity owned",
+        "origin": {
+          "kind": "script",
+          "id": "rental-post"
+        }
+      },
+      {
+        "path": "/rental-bookings",
+        "mode": "write",
+        "reason": "Confirm, pick up, return and cancel bookings, checking overlapping bookings",
+        "origin": {
+          "kind": "script",
+          "id": "rental-post"
+        }
+      },
+      {
+        "path": "/invoices",
+        "mode": "write",
+        "reason": "Draft an invoice for a returned booking when Invoicing is installed",
+        "origin": {
+          "kind": "script",
+          "id": "rental-post"
+        }
+      }
+    ]
+  },
+  "packaging": {
+    "publisher": "verentis",
+    "files": [
+      "canvas/**",
+      "schemas/**",
+      "templates/**",
+      "seed/**",
+      "scripts/**",
+      "README.md"
+    ],
+    "templates": [
+      "canvas/*.yaml"
+    ],
+    "variables": {
+      "canvas-origin": "https://canvas.apps.localtest.me"
+    },
+    "encryption": "none"
+  }
+}

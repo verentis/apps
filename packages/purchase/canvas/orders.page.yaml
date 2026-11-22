@@ -1,0 +1,262 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "purchase-orders",
+    "name": "Purchase orders",
+    "description": "Purchase orders by status.",
+    "icon": "shopping-cart"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/purchase-orders",
+        "reason": "List purchase orders"
+      }
+    ],
+    "data": {
+      "orders": {
+        "kind": "folder",
+        "path": "/purchase-orders",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.purchase.order+json"
+      },
+      "orderrows": {
+        "kind": "computed",
+        "expr": "(data.orders || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, vendorName: e.data.vendorName || '', reference: e.data.reference || '', orderDate: e.data.orderDate || '', expectedDate: e.data.expectedDate || '', status: e.data.status || 'draft', total: e.data.total ? [e.data.currency, e.data.total].filter(Boolean).join(' ') : '', open: e.data.status === 'confirmed', units: Math.round(Number(e.data.total || 0) * 10000) }))"
+      }
+    },
+    "state": {
+      "showclosed": false
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Purchase orders"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "RFQs and purchase orders. Confirmed orders are locked until they are received.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Open /purchase-orders",
+                      "variant": "outline",
+                      "icon": "folder-open",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/purchase-orders"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Purchase",
+                      "variant": "ghost",
+                      "icon": "shopping-cart",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/applications/purchase/canvas/home.page.yaml"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$orders.error }}"
+            },
+            "rules": {
+              "visible": "data.$orders.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$orders.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 4
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Draft",
+                  "value": "{{ (data.orders || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && ((e.data.status || 'draft') === 'draft')).length }}",
+                  "icon": "file-pen",
+                  "loading": "{{ data.$orders.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Sent",
+                  "value": "{{ (data.orders || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status === 'sent')).length }}",
+                  "icon": "send",
+                  "loading": "{{ data.$orders.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Awaiting receipt",
+                  "value": "{{ (data.orders || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status === 'confirmed')).length }}",
+                  "icon": "package",
+                  "loading": "{{ data.$orders.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "On order",
+                  "value": "{{ ((data.orderrows || []).filter(r => r.open).reduce((s, r) => s + r.units, 0) / 10000).toFixed(2) }}",
+                  "icon": "receipt",
+                  "loading": "{{ data.$orders.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.form.switch",
+            "props": {
+              "label": "Show received and cancelled orders",
+              "value": "{{ state.showclosed }}"
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.orderrows || []).filter(r => state.showclosed || (r.status !== 'received' && r.status !== 'cancelled')) }}",
+              "columns": [
+                {
+                  "key": "code",
+                  "label": "Order"
+                },
+                {
+                  "key": "vendorName",
+                  "label": "Vendor"
+                },
+                {
+                  "key": "reference",
+                  "label": "Reference"
+                },
+                {
+                  "key": "orderDate",
+                  "label": "Ordered"
+                },
+                {
+                  "key": "expectedDate",
+                  "label": "Expected"
+                },
+                {
+                  "key": "total",
+                  "label": "Total",
+                  "align": "end"
+                },
+                {
+                  "key": "status",
+                  "label": "Status"
+                }
+              ],
+              "emptyText": "No open purchase orders",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,223 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "expenses-reports",
+    "name": "Expense reports",
+    "description": "Expense reports by status.",
+    "icon": "receipt"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/expense-categories",
+        "reason": "List expense reports with their totals and statuses"
+      },
+      {
+        "path": "/expense-reports",
+        "reason": "List expense reports with their totals and statuses"
+      }
+    ],
+    "data": {
+      "reports": {
+        "kind": "folder",
+        "path": "/expense-reports",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.expenses.report+json"
+      },
+      "categories": {
+        "kind": "folder",
+        "path": "/expense-categories",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.expenses.category+json"
+      },
+      "rows": {
+        "kind": "computed",
+        "expr": "(data.reports || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, employee: e.data.employeeName || '', date: e.data.date || '', lineCount: (e.data.lines || []).length, total: e.data.total ? Math.round(Number(e.data.total || 0) * 10000) : (e.data.lines || []).reduce((s, l) => s + Math.round(Number(l.amount || 0) * 10000), 0), status: e.data.status || 'draft', approver: e.data.approver || '' }))"
+      }
+    },
+    "state": {
+      "showall": false
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Expense reports"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Draft reports are estimates; submitting computes the exact total.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Expenses",
+                  "variant": "ghost",
+                  "icon": "receipt",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/applications/expenses/canvas/home.page.yaml"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$reports.error }}"
+            },
+            "rules": {
+              "visible": "data.$reports.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 3
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Awaiting approval",
+                  "value": "{{ (data.reports || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status === 'submitted')).length }}",
+                  "icon": "hourglass",
+                  "loading": "{{ data.$reports.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Approved, unposted",
+                  "value": "{{ (data.reports || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status === 'approved')).length }}",
+                  "icon": "check",
+                  "loading": "{{ data.$reports.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "To reimburse",
+                  "value": "{{ ((data.rows || []).filter(r => r.status === 'submitted' || r.status === 'approved').reduce((s, r) => s + r.total, 0) / 10000).toFixed(2) }}",
+                  "icon": "banknote",
+                  "loading": "{{ data.$reports.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.form.switch",
+            "props": {
+              "label": "Show posted and refused reports",
+              "value": "{{ state.showall }}"
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.rows || []).filter(r => state.showall || (r.status !== 'posted' && r.status !== 'refused')).map(r => ({ path: r.path, code: r.code, employee: r.employee, date: r.date, lineCount: r.lineCount, total: (r.total / 10000).toFixed(2), status: r.status, approver: r.approver })) }}",
+              "columns": [
+                {
+                  "key": "code",
+                  "label": "Report"
+                },
+                {
+                  "key": "employee",
+                  "label": "Employee"
+                },
+                {
+                  "key": "date",
+                  "label": "Date"
+                },
+                {
+                  "key": "lineCount",
+                  "label": "Lines",
+                  "align": "end"
+                },
+                {
+                  "key": "total",
+                  "label": "Total",
+                  "align": "end"
+                },
+                {
+                  "key": "status",
+                  "label": "Status"
+                },
+                {
+                  "key": "approver",
+                  "label": "Approver"
+                }
+              ],
+              "emptyText": "No expense reports",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

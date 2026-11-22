@@ -1,0 +1,266 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "timesheets-home",
+    "name": "Timesheets",
+    "description": "Timesheet entries overview.",
+    "icon": "clock"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/timesheets",
+        "reason": "List timesheet entries"
+      },
+      {
+        "path": "/projects",
+        "reason": "Show project names (when Project is installed)"
+      }
+    ],
+    "data": {
+      "entries": {
+        "kind": "folder",
+        "path": "/timesheets",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.timesheets.entry+json"
+      },
+      "projects": {
+        "kind": "folder",
+        "path": "/projects",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.project.project+json"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Timesheets"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Timesheet entries are files in your workspace. Draft them in /timesheets, then validate them from their forms.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "This week",
+                      "variant": "outline",
+                      "icon": "calendar-days",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/applications/timesheets/canvas/week.page.yaml"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Settings",
+                      "variant": "ghost",
+                      "icon": "settings",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/settings/timesheets.json",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 4
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Draft entries",
+                  "value": "{{ (data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status === 'draft')).length }}",
+                  "icon": "file-pen",
+                  "loading": "{{ data.$entries.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Validated entries",
+                  "value": "{{ (data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status === 'validated')).length }}",
+                  "icon": "check",
+                  "loading": "{{ data.$entries.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Draft hours",
+                  "value": "{{ ((data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status === 'draft')).reduce((s, e) => s + Math.round(Number(e.data.hours || 0) * 10000), 0) / 10000).toFixed(2) }}",
+                  "icon": "hourglass",
+                  "loading": "{{ data.$entries.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Validated hours",
+                  "value": "{{ ((data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status === 'validated')).reduce((s, e) => s + Math.round(Number(e.data.hours || 0) * 10000), 0) / 10000).toFixed(2) }}",
+                  "icon": "clock",
+                  "loading": "{{ data.$entries.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /timesheets folder could not be read. Reinstall Timesheets to recreate it."
+            },
+            "rules": {
+              "visible": "data.$entries.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Open /timesheets",
+                  "variant": "outline",
+                  "icon": "folder-open",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/timesheets"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.files",
+            "props": {
+              "path": "/timesheets/",
+              "mimeTypes": [
+                "application/vnd.verentis.timesheets.entry+json"
+              ],
+              "showFolders": false,
+              "navigable": false,
+              "columns": [
+                {
+                  "key": "name",
+                  "label": "Code"
+                },
+                {
+                  "key": "data.employee",
+                  "label": "Employee"
+                },
+                {
+                  "key": "data.date",
+                  "label": "Date"
+                },
+                {
+                  "key": "data.hours",
+                  "label": "Hours",
+                  "align": "end"
+                },
+                {
+                  "key": "data.status",
+                  "label": "Status"
+                }
+              ],
+              "emptyText": "No entries yet. Use New in /timesheets."
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

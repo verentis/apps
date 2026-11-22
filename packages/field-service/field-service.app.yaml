@@ -1,0 +1,276 @@
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "field-service",
+    "name": "Field Service",
+    "description": "Field tasks as files in your workspace: schedule technicians, log hours and materials on site, and draft invoices for completed work.",
+    "icon": "./icons/app.svg",
+    "version": "0.1.0",
+    "author": "Verentis"
+  },
+  "marketplace": {
+    "readme": "./README.md",
+    "keywords": [
+      "field service",
+      "tasks",
+      "technicians",
+      "onsite",
+      "install",
+      "repair",
+      "inspection",
+      "work orders"
+    ]
+  },
+  "spec": {
+    "install-root": "/applications/field-service",
+    "entry": "https://canvas.apps.localtest.me",
+    "scope": "global",
+    "entry-points": [
+      {
+        "id": "home",
+        "display-name": "Field Service",
+        "route": "/render?document=.%2Fcanvas%2Fhome.page.yaml",
+        "order": 10
+      },
+      {
+        "id": "tasks",
+        "display-name": "Tasks",
+        "route": "/render?document=.%2Fcanvas%2Ftasks.page.yaml",
+        "order": 20
+      },
+      {
+        "id": "schedule",
+        "display-name": "Day schedule",
+        "route": "/render?document=.%2Fcanvas%2Fschedule.page.yaml",
+        "order": 30
+      }
+    ],
+    "launch": {
+      "enabled": true,
+      "entry-point": "home",
+      "pinnable": true
+    },
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run"
+    ],
+    "scopes": [
+      "field-service.default"
+    ],
+    "settings": [
+      {
+        "key": "task-code-prefix",
+        "display-name": "Task number prefix",
+        "type": "string",
+        "default": "FST-",
+        "description": "Prefix of generated field task codes, e.g. FST-0001."
+      },
+      {
+        "key": "code-digits",
+        "display-name": "Code digits",
+        "type": "number",
+        "default": 4,
+        "description": "Minimum number of digits in generated codes (zero-padded)."
+      }
+    ],
+    "dependencies": [
+      {
+        "package": "verentis/canvas",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/nodejs",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/crm",
+        "version": "latest",
+        "optional": true
+      },
+      {
+        "package": "verentis/invoicing",
+        "version": "latest",
+        "optional": true
+      }
+    ],
+    "engine": "verentis/nodejs",
+    "scripts": [
+      "scripts/create",
+      "scripts/post"
+    ],
+    "install": [
+      {
+        "from": "canvas/*.form.yaml",
+        "to": "/applications/field-service/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.form+yaml"
+      },
+      {
+        "from": "canvas/*.page.yaml",
+        "to": "/applications/field-service/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.page+yaml"
+      },
+      {
+        "from": "schemas/*.schema.json",
+        "to": "/applications/field-service/schemas/",
+        "mode": "managed",
+        "mime": "application/schema+json"
+      },
+      {
+        "from": "templates/*.json",
+        "to": "/applications/field-service/templates/",
+        "mode": "managed",
+        "mime": "application/json"
+      },
+      {
+        "from": "seed/tasks",
+        "to": "/field-tasks",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.field-service.tasks"
+      },
+      {
+        "from": "seed/settings.json",
+        "to": "/settings/field-service.json",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.field-service.settings+json"
+      }
+    ],
+    "creatables": [
+      {
+        "id": "task",
+        "display-name": "Field task",
+        "description": "A new field task",
+        "icon": "lucide:wrench",
+        "mime": "application/vnd.verentis.field-service.task+json",
+        "parents": [
+          "application/vnd.verentis.field-service.tasks"
+        ],
+        "folder-names": [
+          "field-tasks",
+          "field-service"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/task.json"
+      }
+    ],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-forms": true,
+      "allow-popups": false
+    },
+    "file-access": [
+      {
+        "path": "/field-tasks",
+        "mode": "read",
+        "reason": "Count tasks and show the task list",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/field-tasks",
+        "mode": "read",
+        "reason": "List tasks by stage",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/tasks.page.yaml"
+        }
+      },
+      {
+        "path": "/field-tasks",
+        "mode": "read",
+        "reason": "List today's tasks per technician",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/schedule.page.yaml"
+        }
+      },
+      {
+        "path": "/customers",
+        "mode": "read",
+        "reason": "Offer CRM customers on tasks (when CRM is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "field-service-task"
+        }
+      },
+      {
+        "path": "/applications/field-service/",
+        "mode": "read",
+        "reason": "Read the Field Service schemas and run the task action script",
+        "origin": {
+          "kind": "document",
+          "id": "field-service-task"
+        }
+      },
+      {
+        "path": "/applications/field-service/",
+        "mode": "read",
+        "reason": "Read the Field Service schemas and run the task action script",
+        "origin": {
+          "kind": "document",
+          "id": "field-service-settings"
+        }
+      },
+      {
+        "path": "/field-tasks",
+        "mode": "write",
+        "reason": "Create field tasks with the next number",
+        "origin": {
+          "kind": "script",
+          "id": "field-service-create"
+        }
+      },
+      {
+        "path": "/settings/field-service.json",
+        "mode": "read",
+        "reason": "Default new tasks' technician",
+        "origin": {
+          "kind": "script",
+          "id": "field-service-create"
+        }
+      },
+      {
+        "path": "/field-tasks",
+        "mode": "write",
+        "reason": "Schedule, start, complete and cancel field tasks",
+        "origin": {
+          "kind": "script",
+          "id": "field-service-post"
+        }
+      },
+      {
+        "path": "/invoices",
+        "mode": "write",
+        "reason": "Draft an invoice for a completed task (when Invoicing is installed)",
+        "origin": {
+          "kind": "script",
+          "id": "field-service-post"
+        }
+      }
+    ]
+  },
+  "packaging": {
+    "publisher": "verentis",
+    "files": [
+      "canvas/**",
+      "schemas/**",
+      "templates/**",
+      "seed/**",
+      "scripts/**",
+      "README.md"
+    ],
+    "templates": [
+      "canvas/*.yaml"
+    ],
+    "variables": {
+      "canvas-origin": "https://canvas.apps.localtest.me"
+    },
+    "encryption": "none"
+  }
+}

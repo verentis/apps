@@ -1,0 +1,613 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Form",
+  "metadata": {
+    "id": "quality-alert",
+    "name": "Quality quality alert",
+    "description": "View and edit a Quality quality alert.",
+    "icon": "siren"
+  },
+  "spec": {
+    "binds": [
+      {
+        "pattern": "application/vnd.verentis.quality.alert+json",
+        "mode": "edit",
+        "priority": 200,
+        "scope": "global",
+        "json-schema": {
+          "id": "https://schemas.verentis.io/quality/v1/alert.schema.json",
+          "source": "/applications/quality/schemas/alert.schema.json",
+          "title": "Quality quality alert",
+          "version": "1"
+        }
+      }
+    ],
+    "entry": "${var:canvas-origin}/render?document=%2Fapplications%2Fquality%2Fcanvas%2Falert.form.yaml",
+    "scope": "global",
+    "mime-types": [
+      {
+        "pattern": "application/vnd.verentis.quality.alert+json",
+        "mode": "edit",
+        "priority": 200,
+        "json-schema": {
+          "id": "https://schemas.verentis.io/quality/v1/alert.schema.json",
+          "source": "/applications/quality/schemas/alert.schema.json",
+          "title": "Quality quality alert",
+          "version": "1"
+        }
+      }
+    ],
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run",
+      "execution.read"
+    ],
+    "capabilities": [],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-popups": false,
+      "allow-forms": true
+    },
+    "file-access": [
+      {
+        "path": "/applications/quality/",
+        "mode": "read",
+        "reason": "Read the Quality schemas and run the quality action script"
+      }
+    ],
+    "access": [
+      {
+        "path": "/applications/quality/",
+        "reason": "Read the Quality schemas and run the quality action script"
+      }
+    ],
+    "data": {
+      "record": {
+        "kind": "document",
+        "consistency": "conditional"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.heading",
+                        "props": {
+                          "level": 2,
+                          "text": "{{ form.values.title || 'New quality alert' }}"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.badge",
+                        "props": {
+                          "text": "{{ String(form.values.stage || '').split('-').join(' ') }}",
+                          "tone": "{{ [\"resolved\"].includes(form.values.stage) ? 'success' : [\"investigation\",\"action\"].includes(form.values.stage) ? 'warning' : 'neutral' }}"
+                        },
+                        "rules": {
+                          "visible": "!!form.values.stage"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.badge",
+                        "props": {
+                          "text": "Archived",
+                          "tone": "warning",
+                          "icon": "archive"
+                        },
+                        "rules": {
+                          "visible": "form.values.state === 'archived'"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Quality alert {{ form.values.code || '' }} · {{ ctx.file.path }}",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Resolve",
+                      "icon": "check",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "resolve"
+                    },
+                    "rules": {
+                      "visible": "[\"investigation\",\"action\"].includes(form.values.stage) && !(form.values.state === 'archived')",
+                      "disabled": "form.saving || form.dirty || !String(form.values.rootCause || '').trim() || !String(form.values.correctiveAction || '').trim()"
+                    }
+                  },
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Archive",
+                          "variant": "ghost",
+                          "icon": "archive",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "archive"
+                        },
+                        "rules": {
+                          "visible": "!(form.values.state === 'archived') && !(form.values.stage === 'resolved')",
+                          "disabled": "form.saving || form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Restore",
+                          "variant": "outline",
+                          "icon": "archive-restore",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "restore"
+                        },
+                        "rules": {
+                          "visible": "form.values.state === 'archived'",
+                          "disabled": "form.saving || form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Reset",
+                          "variant": "ghost",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "reset"
+                        },
+                        "rules": {
+                          "disabled": "form.saving || !form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Save",
+                          "icon": "save",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "save"
+                        },
+                        "rules": {
+                          "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (form.values.stage === 'resolved')"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$record.error }}"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.dashboard.badge",
+            "props": {
+              "text": "This quality alert is archived. Restore it to edit.",
+              "tone": "warning",
+              "icon": "archive"
+            },
+            "rules": {
+              "visible": "form.values.state === 'archived'"
+            }
+          },
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Source check",
+                  "variant": "ghost",
+                  "icon": "clipboard-check",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "{{ form.values.sourceCheck }}",
+                        "mode": "edit"
+                      }
+                    }
+                  ]
+                },
+                "rules": {
+                  "visible": "!!(form.values.sourceCheck)"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "This alert is resolved and can no longer be edited.",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "form.values.stage === 'resolved'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 1,
+                "gap": 4
+              },
+              "tablet": {
+                "columns": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Alert"
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Title",
+                          "value": "{{ form.values.title }}",
+                          "required": true
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.stage === 'resolved'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Severity",
+                          "value": "{{ form.values.severity }}",
+                          "options": [
+                            {
+                              "value": "low",
+                              "label": "Low"
+                            },
+                            {
+                              "value": "medium",
+                              "label": "Medium"
+                            },
+                            {
+                              "value": "high",
+                              "label": "High"
+                            }
+                          ]
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.stage === 'resolved'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Stage",
+                          "value": "{{ form.values.stage }}",
+                          "description": "Resolved is set by the Resolve action.",
+                          "options": [
+                            {
+                              "value": "new",
+                              "label": "New"
+                            },
+                            {
+                              "value": "investigation",
+                              "label": "Investigation"
+                            },
+                            {
+                              "value": "action",
+                              "label": "Action"
+                            },
+                            {
+                              "value": "resolved",
+                              "label": "Resolved"
+                            }
+                          ]
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.stage === 'resolved'))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Analysis"
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.textarea",
+                        "props": {
+                          "label": "Root cause",
+                          "value": "{{ form.values.rootCause }}",
+                          "description": "Required before an alert can be resolved.",
+                          "rows": 4
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.stage === 'resolved'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.textarea",
+                        "props": {
+                          "label": "Corrective action",
+                          "value": "{{ form.values.correctiveAction }}",
+                          "description": "Required before an alert can be resolved.",
+                          "rows": 4
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.stage === 'resolved'))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "actions": {
+      "save": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Saved",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "reset": {
+        "steps": [
+          {
+            "reset-form": {}
+          }
+        ]
+      },
+      "archive": {
+        "steps": [
+          {
+            "confirm": {
+              "title": "Archive",
+              "message": "Archive this record? It stays in the workspace and can be restored."
+            }
+          },
+          {
+            "patch-form": {
+              "values": {
+                "state": "archived",
+                "archivedAt": "{{ Date() }}",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Archived",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "restore": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "state": "active",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Restored",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "resolve": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Resolve alert",
+              "message": "Resolve this alert with its root cause and corrective action? Resolved alerts are locked."
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/quality/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "resolve-alert",
+                "path": "{{ ctx.file.path }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

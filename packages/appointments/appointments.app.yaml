@@ -1,0 +1,347 @@
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "appointments",
+    "name": "Appointments",
+    "description": "Appointment scheduling as files in your workspace: appointment types with durations and buffers, and bookings with conflict-checked confirmation.",
+    "icon": "./icons/app.svg",
+    "version": "0.1.0",
+    "author": "Verentis"
+  },
+  "marketplace": {
+    "readme": "./README.md",
+    "keywords": [
+      "appointments",
+      "booking",
+      "scheduling",
+      "calendar",
+      "meetings"
+    ]
+  },
+  "spec": {
+    "install-root": "/applications/appointments",
+    "entry": "https://canvas.apps.localtest.me",
+    "scope": "global",
+    "entry-points": [
+      {
+        "id": "home",
+        "display-name": "Appointments",
+        "route": "/render?document=.%2Fcanvas%2Fhome.page.yaml",
+        "order": 10
+      },
+      {
+        "id": "upcoming",
+        "display-name": "Upcoming",
+        "route": "/render?document=.%2Fcanvas%2Fupcoming.page.yaml",
+        "order": 20
+      },
+      {
+        "id": "types",
+        "display-name": "Types",
+        "route": "/render?document=.%2Fcanvas%2Ftypes.page.yaml",
+        "order": 30
+      }
+    ],
+    "launch": {
+      "enabled": true,
+      "entry-point": "home",
+      "pinnable": true
+    },
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run"
+    ],
+    "scopes": [
+      "appointments.default"
+    ],
+    "settings": [
+      {
+        "key": "type-code-prefix",
+        "display-name": "Appointment type code prefix",
+        "type": "string",
+        "default": "APT-",
+        "description": "Prefix of generated appointment type codes, e.g. APT-0001."
+      },
+      {
+        "key": "appointment-code-prefix",
+        "display-name": "Appointment code prefix",
+        "type": "string",
+        "default": "APMT-",
+        "description": "Prefix of generated appointment codes, e.g. APMT-0001."
+      },
+      {
+        "key": "code-digits",
+        "display-name": "Code digits",
+        "type": "number",
+        "default": 4,
+        "description": "Minimum number of digits in generated codes (zero-padded)."
+      }
+    ],
+    "dependencies": [
+      {
+        "package": "verentis/canvas",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/nodejs",
+        "version": "latest"
+      }
+    ],
+    "engine": "verentis/nodejs",
+    "scripts": [
+      "scripts/create",
+      "scripts/post"
+    ],
+    "install": [
+      {
+        "from": "canvas/*.form.yaml",
+        "to": "/applications/appointments/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.form+yaml"
+      },
+      {
+        "from": "canvas/*.page.yaml",
+        "to": "/applications/appointments/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.page+yaml"
+      },
+      {
+        "from": "schemas/*.schema.json",
+        "to": "/applications/appointments/schemas/",
+        "mode": "managed",
+        "mime": "application/schema+json"
+      },
+      {
+        "from": "templates/*.json",
+        "to": "/applications/appointments/templates/",
+        "mode": "managed",
+        "mime": "application/json"
+      },
+      {
+        "from": "seed/types",
+        "to": "/appointment-types",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.appointments.types"
+      },
+      {
+        "from": "seed/appointments",
+        "to": "/appointments",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.appointments.appointments"
+      },
+      {
+        "from": "seed/settings.json",
+        "to": "/settings/appointments.json",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.appointments.settings+json"
+      }
+    ],
+    "creatables": [
+      {
+        "id": "type",
+        "display-name": "Appointment type",
+        "description": "A new appointment type",
+        "icon": "lucide:calendar-clock",
+        "mime": "application/vnd.verentis.appointments.type+json",
+        "parents": [
+          "application/vnd.verentis.appointments.types"
+        ],
+        "folder-names": [
+          "appointment-types",
+          "types",
+          "appointments"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/type.json"
+      },
+      {
+        "id": "appointment",
+        "display-name": "Appointment",
+        "description": "A new appointment",
+        "icon": "lucide:calendar-check",
+        "mime": "application/vnd.verentis.appointments.appointment+json",
+        "parents": [
+          "application/vnd.verentis.appointments.appointments"
+        ],
+        "folder-names": [
+          "appointments",
+          "bookings"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/appointment.json"
+      }
+    ],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-forms": true,
+      "allow-popups": false
+    },
+    "file-access": [
+      {
+        "path": "/appointment-types",
+        "mode": "read",
+        "reason": "Count appointments and show the types and appointments",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/appointments",
+        "mode": "read",
+        "reason": "Count appointments and show the types and appointments",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/appointment-types",
+        "mode": "read",
+        "reason": "List the upcoming booked and confirmed appointments",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/upcoming.page.yaml"
+        }
+      },
+      {
+        "path": "/appointments",
+        "mode": "read",
+        "reason": "List the upcoming booked and confirmed appointments",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/upcoming.page.yaml"
+        }
+      },
+      {
+        "path": "/appointment-types",
+        "mode": "read",
+        "reason": "Summarise the appointments booked per type",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/types.page.yaml"
+        }
+      },
+      {
+        "path": "/appointments",
+        "mode": "read",
+        "reason": "Summarise the appointments booked per type",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/types.page.yaml"
+        }
+      },
+      {
+        "path": "/applications/appointments/",
+        "mode": "read",
+        "reason": "Read the Appointments schemas and run the appointment action script",
+        "origin": {
+          "kind": "document",
+          "id": "appointments-type"
+        }
+      },
+      {
+        "path": "/appointment-types",
+        "mode": "read",
+        "reason": "Choose the appointment type that sets the duration, buffer and host",
+        "origin": {
+          "kind": "document",
+          "id": "appointments-appointment"
+        }
+      },
+      {
+        "path": "/applications/appointments/",
+        "mode": "read",
+        "reason": "Read the Appointments schemas and run the appointment action script",
+        "origin": {
+          "kind": "document",
+          "id": "appointments-appointment"
+        }
+      },
+      {
+        "path": "/appointment-types",
+        "mode": "read",
+        "reason": "Choose the default type for new appointments",
+        "origin": {
+          "kind": "document",
+          "id": "appointments-settings"
+        }
+      },
+      {
+        "path": "/applications/appointments/",
+        "mode": "read",
+        "reason": "Read the Appointments schemas and run the appointment action script",
+        "origin": {
+          "kind": "document",
+          "id": "appointments-settings"
+        }
+      },
+      {
+        "path": "/appointment-types",
+        "mode": "write",
+        "reason": "Create appointment types with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "appointments-create"
+        }
+      },
+      {
+        "path": "/appointments",
+        "mode": "write",
+        "reason": "Create appointments with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "appointments-create"
+        }
+      },
+      {
+        "path": "/settings/appointments.json",
+        "mode": "read",
+        "reason": "Default new appointments to the default type",
+        "origin": {
+          "kind": "script",
+          "id": "appointments-create"
+        }
+      },
+      {
+        "path": "/appointments",
+        "mode": "write",
+        "reason": "Confirm, complete, cancel and mark appointments as no-show",
+        "origin": {
+          "kind": "script",
+          "id": "appointments-post"
+        }
+      },
+      {
+        "path": "/appointment-types",
+        "mode": "read",
+        "reason": "Read the appointment type's duration and buffer for the schedule and conflict check",
+        "origin": {
+          "kind": "script",
+          "id": "appointments-post"
+        }
+      }
+    ]
+  },
+  "packaging": {
+    "publisher": "verentis",
+    "files": [
+      "canvas/**",
+      "schemas/**",
+      "templates/**",
+      "seed/**",
+      "scripts/**",
+      "README.md"
+    ],
+    "templates": [
+      "canvas/*.yaml"
+    ],
+    "variables": {
+      "canvas-origin": "https://canvas.apps.localtest.me"
+    },
+    "encryption": "none"
+  }
+}

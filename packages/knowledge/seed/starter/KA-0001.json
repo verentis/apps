@@ -1,0 +1,21 @@
+{
+  "$schema": "https://schemas.verentis.io/knowledge/v1/article.schema.json",
+  "schemaVersion": 1,
+  "kind": "article",
+  "id": "9e2a4b6c-1d3f-4a5b-8c7d-0e1f2a3b4c02",
+  "state": "active",
+  "createdAt": "2026-01-01T00:00:00Z",
+  "updatedAt": "2026-01-01T00:00:00Z",
+  "code": "KA-0001",
+  "title": "Welcome to the handbook",
+  "space": "/knowledge-spaces/KS-0001",
+  "parent": "",
+  "body": "# Welcome\n\nThis handbook collects everything the team needs to know.\n\n- Articles are **Markdown** files you edit in their form.\n- Draft articles become visible to everyone once **published**.\n- Outdated articles are **archived**, never deleted.\n",
+  "tags": [
+    "handbook",
+    "welcome"
+  ],
+  "status": "published",
+  "owner": "Avery Adams",
+  "publishedAt": "2026-01-01T00:00:00Z"
+}

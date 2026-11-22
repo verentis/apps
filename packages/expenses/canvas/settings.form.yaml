@@ -1,0 +1,285 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Form",
+  "metadata": {
+    "id": "expenses-settings",
+    "name": "Expenses settings",
+    "description": "Edit the Expenses settings file.",
+    "icon": "settings"
+  },
+  "spec": {
+    "binds": [
+      {
+        "pattern": "application/vnd.verentis.expenses.settings+json",
+        "mode": "edit",
+        "priority": 200,
+        "scope": "global",
+        "json-schema": {
+          "id": "https://schemas.verentis.io/expenses/v1/settings.schema.json",
+          "source": "/applications/expenses/schemas/settings.schema.json",
+          "title": "Expenses settings",
+          "version": "1"
+        }
+      }
+    ],
+    "entry": "${var:canvas-origin}/render?document=%2Fapplications%2Fexpenses%2Fcanvas%2Fsettings.form.yaml",
+    "scope": "global",
+    "mime-types": [
+      {
+        "pattern": "application/vnd.verentis.expenses.settings+json",
+        "mode": "edit",
+        "priority": 200,
+        "json-schema": {
+          "id": "https://schemas.verentis.io/expenses/v1/settings.schema.json",
+          "source": "/applications/expenses/schemas/settings.schema.json",
+          "title": "Expenses settings",
+          "version": "1"
+        }
+      }
+    ],
+    "permissions": [
+      "file.read",
+      "file.write"
+    ],
+    "capabilities": [],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-popups": false,
+      "allow-forms": true
+    },
+    "file-access": [
+      {
+        "path": "/chart-of-accounts",
+        "mode": "read",
+        "reason": "Choose the account posted reports credit"
+      },
+      {
+        "path": "/applications/expenses/",
+        "mode": "read",
+        "reason": "Read the Expenses schemas and run the posting script"
+      }
+    ],
+    "access": [
+      {
+        "path": "/chart-of-accounts",
+        "reason": "Choose the account posted reports credit"
+      },
+      {
+        "path": "/applications/expenses/",
+        "reason": "Read the Expenses schemas and run the posting script"
+      }
+    ],
+    "data": {
+      "record": {
+        "kind": "document",
+        "consistency": "conditional"
+      },
+      "accounts": {
+        "kind": "folder",
+        "path": "/chart-of-accounts",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.accounting.account+json"
+      },
+      "accountoptions": {
+        "kind": "computed",
+        "expr": "(data.accounts || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + ((e.data.number ? e.data.number + ' ' : '') + (e.data.name || '')), value: e.path }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Expenses settings"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "The account posted reports credit (what the business owes back). The currency is the Accounting base currency; number prefixes are app settings, managed with the installed app.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Reset",
+                      "variant": "ghost",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "reset-form": {}
+                        }
+                      ]
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Save",
+                      "icon": "save",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "save": {}
+                        },
+                        {
+                          "toast": {
+                            "message": "Saved",
+                            "variant": "success"
+                          }
+                        }
+                      ]
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty || form.invalid"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$record.error }}"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The Accounting chart of accounts (/chart-of-accounts) could not be read. Install Accounting to post expense reports."
+            },
+            "rules": {
+              "visible": "data.$accounts.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$accounts.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 1,
+                "gap": 4
+              },
+              "tablet": {
+                "columns": 1
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Posting",
+                  "description": "Posted reports credit the reimbursement account and debit each line's category expense account."
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Reimbursement account",
+                          "value": "{{ form.values.reimbursementAccount }}",
+                          "required": true,
+                          "options": "{{ data.accountoptions }}"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "actions": {}
+  }
+}

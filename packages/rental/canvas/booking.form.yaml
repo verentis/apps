@@ -1,0 +1,1002 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Form",
+  "metadata": {
+    "id": "rental-booking",
+    "name": "Rental booking",
+    "description": "View and edit a rental booking.",
+    "icon": "calendar-check"
+  },
+  "spec": {
+    "binds": [
+      {
+        "pattern": "application/vnd.verentis.rental.booking+json",
+        "mode": "edit",
+        "priority": 200,
+        "scope": "global",
+        "json-schema": {
+          "id": "https://schemas.verentis.io/rental/v1/booking.schema.json",
+          "source": "/applications/rental/schemas/booking.schema.json",
+          "title": "Rental booking",
+          "version": "1"
+        }
+      }
+    ],
+    "entry": "${var:canvas-origin}/render?document=%2Fapplications%2Frental%2Fcanvas%2Fbooking.form.yaml",
+    "scope": "global",
+    "mime-types": [
+      {
+        "pattern": "application/vnd.verentis.rental.booking+json",
+        "mode": "edit",
+        "priority": 200,
+        "json-schema": {
+          "id": "https://schemas.verentis.io/rental/v1/booking.schema.json",
+          "source": "/applications/rental/schemas/booking.schema.json",
+          "title": "Rental booking",
+          "version": "1"
+        }
+      }
+    ],
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run",
+      "execution.read"
+    ],
+    "capabilities": [],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-popups": false,
+      "allow-forms": true
+    },
+    "file-access": [
+      {
+        "path": "/customers",
+        "mode": "read",
+        "reason": "Offer CRM customers to book for (when CRM is installed)"
+      },
+      {
+        "path": "/rental-products",
+        "mode": "read",
+        "reason": "Offer rental products and their daily rates"
+      },
+      {
+        "path": "/applications/rental/",
+        "mode": "read",
+        "reason": "Read the Rental schemas and run the booking script"
+      }
+    ],
+    "access": [
+      {
+        "path": "/customers",
+        "reason": "Offer CRM customers to book for (when CRM is installed)"
+      },
+      {
+        "path": "/rental-products",
+        "reason": "Offer rental products and their daily rates"
+      },
+      {
+        "path": "/applications/rental/",
+        "reason": "Read the Rental schemas and run the booking script"
+      }
+    ],
+    "data": {
+      "record": {
+        "kind": "document",
+        "consistency": "conditional"
+      },
+      "companies": {
+        "kind": "folder",
+        "path": "/customers",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.crm.company+json"
+      },
+      "contacts": {
+        "kind": "folder",
+        "path": "/customers",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.crm.contact+json"
+      },
+      "customeroptions": {
+        "kind": "computed",
+        "expr": "(data.companies || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + (e.data.name || ''), value: e.path })).concat((data.contacts || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + ([e.data.givenName, e.data.familyName].filter(Boolean).join(' ')), value: e.path })))"
+      },
+      "products": {
+        "kind": "folder",
+        "path": "/rental-products",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.rental.product+json"
+      },
+      "productoptions": {
+        "kind": "computed",
+        "expr": "(data.products || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + ((e.data.name || '') + ' · ' + (e.data.dailyRate || '') + '/day'), value: e.path }))"
+      }
+    },
+    "state": {
+      "returndate": ""
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.heading",
+                        "props": {
+                          "level": 2,
+                          "text": "{{ form.values.customerName || 'New booking' }}"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.badge",
+                        "props": {
+                          "text": "{{ String(form.values.status || '').split('-').join(' ') }}",
+                          "tone": "{{ [\"confirmed\",\"returned\",\"available\"].includes(form.values.status) ? 'success' : [\"draft\",\"picked-up\"].includes(form.values.status) ? 'warning' : [\"cancelled\",\"unavailable\"].includes(form.values.status) ? 'danger' : 'neutral' }}"
+                        },
+                        "rules": {
+                          "visible": "!!form.values.status"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.badge",
+                        "props": {
+                          "text": "Archived",
+                          "tone": "warning",
+                          "icon": "archive"
+                        },
+                        "rules": {
+                          "visible": "form.values.state === 'archived'"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Booking {{ form.values.code || '' }} · {{ ctx.file.path }}",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Copy name",
+                      "variant": "outline",
+                      "icon": "copy",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "copy-name"
+                    },
+                    "rules": {
+                      "visible": "form.values.status === 'draft' && !!form.values.customerRef",
+                      "disabled": "form.saving || form.values.state === 'archived'"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Confirm",
+                      "icon": "check",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "confirm"
+                    },
+                    "rules": {
+                      "visible": "form.values.status === 'draft' && !(form.values.state === 'archived')",
+                      "disabled": "form.saving || form.dirty || form.invalid"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Pick up",
+                      "icon": "package-open",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "pickup"
+                    },
+                    "rules": {
+                      "visible": "form.values.status === 'confirmed'",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Return",
+                      "icon": "package-check",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "return"
+                    },
+                    "rules": {
+                      "visible": "form.values.status === 'picked-up'",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Cancel",
+                      "variant": "ghost",
+                      "icon": "x",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "cancel"
+                    },
+                    "rules": {
+                      "visible": "(form.values.status === 'draft' || form.values.status === 'confirmed') && !(form.values.state === 'archived')",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Reopen",
+                      "variant": "outline",
+                      "icon": "rotate-ccw",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "reopen"
+                    },
+                    "rules": {
+                      "visible": "form.values.status === 'cancelled' && !(form.values.state === 'archived')",
+                      "disabled": "form.saving"
+                    }
+                  },
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Archive",
+                          "variant": "ghost",
+                          "icon": "archive",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "archive"
+                        },
+                        "rules": {
+                          "visible": "!(form.values.state === 'archived') && !(['confirmed', 'picked-up', 'returned'].includes(form.values.status))",
+                          "disabled": "form.saving || form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Restore",
+                          "variant": "outline",
+                          "icon": "archive-restore",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "restore"
+                        },
+                        "rules": {
+                          "visible": "form.values.state === 'archived'",
+                          "disabled": "form.saving || form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Reset",
+                          "variant": "ghost",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "reset"
+                        },
+                        "rules": {
+                          "disabled": "form.saving || !form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Save",
+                          "icon": "save",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "save"
+                        },
+                        "rules": {
+                          "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (['confirmed', 'picked-up', 'returned'].includes(form.values.status))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$record.error }}"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.dashboard.badge",
+            "props": {
+              "text": "This booking is archived. Restore it to edit.",
+              "tone": "warning",
+              "icon": "archive"
+            },
+            "rules": {
+              "visible": "form.values.state === 'archived'"
+            }
+          },
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Product",
+                  "variant": "ghost",
+                  "icon": "package",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "{{ form.values.product }}",
+                        "mode": "edit"
+                      }
+                    }
+                  ]
+                },
+                "rules": {
+                  "visible": "!!(form.values.product)"
+                }
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Invoice",
+                  "variant": "ghost",
+                  "icon": "file-text",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "{{ form.values.invoice && form.values.invoice.path }}",
+                        "mode": "edit"
+                      }
+                    }
+                  ]
+                },
+                "rules": {
+                  "visible": "!!(form.values.invoice && form.values.invoice.path)"
+                }
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "CRM customer",
+                  "variant": "ghost",
+                  "icon": "building-2",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "{{ form.values.customerRef }}",
+                        "mode": "edit"
+                      }
+                    }
+                  ]
+                },
+                "rules": {
+                  "visible": "!!(form.values.customerRef)"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 3
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Total",
+                  "value": "{{ form.values.total }}",
+                  "icon": "receipt"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Deposit",
+                  "value": "{{ form.values.deposit || '0.00' }}",
+                  "icon": "piggy-bank"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Late fee",
+                  "value": "{{ form.values.lateFee || '—' }}",
+                  "icon": "alarm-clock"
+                }
+              }
+            ],
+            "rules": {
+              "visible": "!!form.values.total"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Confirming checks availability and computes the exact total (days × daily rate × quantity).",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "form.values.status === 'draft'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 1,
+                "gap": 4
+              },
+              "tablet": {
+                "columns": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.form.date",
+                "props": {
+                  "label": "Return date",
+                  "description": "Defaults to today; late fees count days past the end date.",
+                  "value": "{{ state.returndate }}"
+                },
+                "rules": {
+                  "visible": "form.values.status === 'picked-up'"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 1,
+                "gap": 4
+              },
+              "tablet": {
+                "columns": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Customer"
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "CRM customer",
+                          "value": "{{ form.values.customerRef }}",
+                          "description": "Optional. Choose a CRM customer, then Copy name.",
+                          "options": "{{ data.customeroptions }}"
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (['confirmed', 'picked-up', 'returned'].includes(form.values.status)))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Customer name",
+                          "value": "{{ form.values.customerName }}",
+                          "required": true
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (['confirmed', 'picked-up', 'returned'].includes(form.values.status)))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Booking"
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Rental product",
+                          "value": "{{ form.values.product }}",
+                          "required": true,
+                          "options": "{{ data.productoptions }}"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (['confirmed', 'picked-up', 'returned'].includes(form.values.status)))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.number",
+                        "props": {
+                          "label": "Quantity",
+                          "value": "{{ form.values.quantity }}",
+                          "required": true,
+                          "min": 1,
+                          "max": 100000,
+                          "step": 1
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (['confirmed', 'picked-up', 'returned'].includes(form.values.status)))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.date",
+                        "props": {
+                          "label": "Start date",
+                          "value": "{{ form.values.startDate }}",
+                          "required": true
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (['confirmed', 'picked-up', 'returned'].includes(form.values.status)))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.date",
+                        "props": {
+                          "label": "End date",
+                          "value": "{{ form.values.endDate }}",
+                          "required": true
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (['confirmed', 'picked-up', 'returned'].includes(form.values.status)))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Daily rate",
+                          "value": "{{ form.values.dailyRate }}",
+                          "description": "Leave empty to take the product's daily rate when confirming.",
+                          "placeholder": "Product rate"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (['confirmed', 'picked-up', 'returned'].includes(form.values.status)))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Deposit",
+                          "value": "{{ form.values.deposit }}",
+                          "description": "Leave empty to take the product's deposit when confirming.",
+                          "placeholder": "Product deposit"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (['confirmed', 'picked-up', 'returned'].includes(form.values.status)))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.textarea",
+                        "props": {
+                          "label": "Notes",
+                          "value": "{{ form.values.notes }}",
+                          "rows": 4
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (['confirmed', 'picked-up', 'returned'].includes(form.values.status)))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "actions": {
+      "save": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Saved",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "reset": {
+        "steps": [
+          {
+            "reset-form": {}
+          }
+        ]
+      },
+      "archive": {
+        "steps": [
+          {
+            "confirm": {
+              "title": "Archive",
+              "message": "Archive this record? It stays in the workspace and can be restored."
+            }
+          },
+          {
+            "patch-form": {
+              "values": {
+                "state": "archived",
+                "archivedAt": "{{ Date() }}",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Archived",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "restore": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "state": "active",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Restored",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "copy-name": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "customerName": "{{ (data.companies || []).concat(data.contacts || []).filter(e => e.kind === 'file' && e.data && e.path === form.values.customerRef).map(e => e.data.name || [e.data.givenName, e.data.familyName].filter(Boolean).join(' '))[0] || form.values.customerName }}"
+              }
+            }
+          }
+        ]
+      },
+      "confirm": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Confirm booking",
+              "message": "Confirm this booking? Availability is checked against overlapping bookings and the exact total is computed. Confirmed bookings cannot be edited."
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/rental/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "confirm-booking",
+                "path": "{{ ctx.file.path }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "pickup": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Pick up",
+              "message": "Mark this booking picked up? The rented units leave with the customer."
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/rental/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "pickup-booking",
+                "path": "{{ ctx.file.path }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "return": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Return",
+              "message": "Mark this booking returned? Days past the end date are charged at the daily late rate, and an invoice is drafted when Invoicing is installed."
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/rental/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "return-booking",
+                "path": "{{ ctx.file.path }}",
+                "date": "{{ state.returndate }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "cancel": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Cancel booking",
+              "message": "Cancel this booking? Its units become available again. It can be reopened later."
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/rental/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "cancel-booking",
+                "path": "{{ ctx.file.path }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "reopen": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "status": "draft",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Reopened as a draft",
+              "variant": "success"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

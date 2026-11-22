@@ -1,0 +1,898 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Form",
+  "metadata": {
+    "id": "plm-eco",
+    "name": "PLM engineering change order",
+    "description": "View and review a PLM engineering change order.",
+    "icon": "file-cog"
+  },
+  "spec": {
+    "binds": [
+      {
+        "pattern": "application/vnd.verentis.plm.eco+json",
+        "mode": "edit",
+        "priority": 200,
+        "scope": "global",
+        "json-schema": {
+          "id": "https://schemas.verentis.io/plm/v1/eco.schema.json",
+          "source": "/applications/plm/schemas/eco.schema.json",
+          "title": "PLM engineering change order",
+          "version": "1"
+        }
+      }
+    ],
+    "entry": "${var:canvas-origin}/render?document=%2Fapplications%2Fplm%2Fcanvas%2Feco.form.yaml",
+    "scope": "global",
+    "mime-types": [
+      {
+        "pattern": "application/vnd.verentis.plm.eco+json",
+        "mode": "edit",
+        "priority": 200,
+        "json-schema": {
+          "id": "https://schemas.verentis.io/plm/v1/eco.schema.json",
+          "source": "/applications/plm/schemas/eco.schema.json",
+          "title": "PLM engineering change order",
+          "version": "1"
+        }
+      }
+    ],
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run",
+      "execution.read"
+    ],
+    "capabilities": [],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-popups": false,
+      "allow-forms": true
+    },
+    "file-access": [
+      {
+        "path": "/bills-of-materials",
+        "mode": "read",
+        "reason": "Offer Manufacturing bills of materials to reference (when Manufacturing is installed)"
+      },
+      {
+        "path": "/applications/plm/",
+        "mode": "read",
+        "reason": "Read the PLM schemas and run the review script"
+      }
+    ],
+    "access": [
+      {
+        "path": "/bills-of-materials",
+        "reason": "Offer Manufacturing bills of materials to reference (when Manufacturing is installed)"
+      },
+      {
+        "path": "/applications/plm/",
+        "reason": "Read the PLM schemas and run the review script"
+      }
+    ],
+    "data": {
+      "record": {
+        "kind": "document",
+        "consistency": "conditional"
+      },
+      "boms": {
+        "kind": "folder",
+        "path": "/bills-of-materials",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.manufacturing.bom+json"
+      },
+      "bomoptions": {
+        "kind": "computed",
+        "expr": "(data.boms || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + ((e.data.productName || '') + (e.data.code ? ' (' + e.data.code + ')' : '')), value: e.path }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.heading",
+                        "props": {
+                          "level": 2,
+                          "text": "{{ form.values.title || 'New engineering change order' }}"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.badge",
+                        "props": {
+                          "text": "{{ String(form.values.stage || '').split('-').join(' ') }}",
+                          "tone": "{{ [\"approved\",\"applied\"].includes(form.values.stage) ? 'success' : [\"draft\",\"in-review\"].includes(form.values.stage) ? 'warning' : [\"rejected\"].includes(form.values.stage) ? 'danger' : 'neutral' }}"
+                        },
+                        "rules": {
+                          "visible": "!!form.values.stage"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.badge",
+                        "props": {
+                          "text": "Archived",
+                          "tone": "warning",
+                          "icon": "archive"
+                        },
+                        "rules": {
+                          "visible": "form.values.state === 'archived'"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Engineering change order {{ form.values.code || '' }} · {{ ctx.file.path }}",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Submit for review",
+                      "icon": "send",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "submit"
+                    },
+                    "rules": {
+                      "visible": "(!form.values.stage || form.values.stage === 'draft') && !(form.values.state === 'archived')",
+                      "disabled": "form.saving || form.dirty || form.invalid"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Approve",
+                      "icon": "check",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "approve"
+                    },
+                    "rules": {
+                      "visible": "form.values.stage === 'in-review'",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Reject",
+                      "variant": "ghost",
+                      "icon": "x",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "reject"
+                    },
+                    "rules": {
+                      "visible": "form.values.stage === 'in-review'",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Apply",
+                      "icon": "check-check",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "apply"
+                    },
+                    "rules": {
+                      "visible": "form.values.stage === 'approved'",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Reopen",
+                      "variant": "ghost",
+                      "icon": "rotate-ccw",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "reopen"
+                    },
+                    "rules": {
+                      "visible": "form.values.stage === 'rejected' && !(form.values.state === 'archived')",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Archive",
+                          "variant": "ghost",
+                          "icon": "archive",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "archive"
+                        },
+                        "rules": {
+                          "visible": "!(form.values.state === 'archived') && !(!(!form.values.stage || form.values.stage === 'draft' || form.values.stage === 'in-review'))",
+                          "disabled": "form.saving || form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Restore",
+                          "variant": "outline",
+                          "icon": "archive-restore",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "restore"
+                        },
+                        "rules": {
+                          "visible": "form.values.state === 'archived'",
+                          "disabled": "form.saving || form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Reset",
+                          "variant": "ghost",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "reset"
+                        },
+                        "rules": {
+                          "disabled": "form.saving || !form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Save",
+                          "icon": "save",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "save"
+                        },
+                        "rules": {
+                          "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (!(!form.values.stage || form.values.stage === 'draft' || form.values.stage === 'in-review'))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$record.error }}"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.dashboard.badge",
+            "props": {
+              "text": "This engineering change order is archived. Restore it to edit.",
+              "tone": "warning",
+              "icon": "archive"
+            },
+            "rules": {
+              "visible": "form.values.state === 'archived'"
+            }
+          },
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Product / BoM",
+                  "variant": "ghost",
+                  "icon": "list-tree",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "{{ form.values.product }}",
+                        "mode": "edit"
+                      }
+                    }
+                  ]
+                },
+                "rules": {
+                  "visible": "!!(form.values.product)"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 3
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Stage",
+                  "value": "{{ form.values.stage || 'draft' }}",
+                  "icon": "milestone"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Priority",
+                  "value": "{{ form.values.priority || 'normal' }}",
+                  "icon": "flag"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Effective",
+                  "value": "{{ form.values.effectiveDate || '—' }}",
+                  "icon": "calendar"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 1,
+                "gap": 4
+              },
+              "tablet": {
+                "columns": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Change"
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Title",
+                          "value": "{{ form.values.title }}",
+                          "required": true
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (!(!form.values.stage || form.values.stage === 'draft' || form.values.stage === 'in-review')))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Type",
+                          "value": "{{ form.values.type }}",
+                          "required": true,
+                          "options": [
+                            {
+                              "label": "New product",
+                              "value": "new-product"
+                            },
+                            {
+                              "label": "Change",
+                              "value": "change"
+                            },
+                            {
+                              "label": "Obsolete",
+                              "value": "obsolete"
+                            }
+                          ]
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (!(!form.values.stage || form.values.stage === 'draft' || form.values.stage === 'in-review')))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Priority",
+                          "value": "{{ form.values.priority }}",
+                          "required": true,
+                          "options": [
+                            {
+                              "label": "Low",
+                              "value": "low"
+                            },
+                            {
+                              "label": "Normal",
+                              "value": "normal"
+                            },
+                            {
+                              "label": "High",
+                              "value": "high"
+                            },
+                            {
+                              "label": "Urgent",
+                              "value": "urgent"
+                            }
+                          ]
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (!(!form.values.stage || form.values.stage === 'draft' || form.values.stage === 'in-review')))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Product / BoM",
+                          "value": "{{ form.values.product }}",
+                          "description": "The bill of materials (or product) this change affects, from Manufacturing when it is installed.",
+                          "options": "{{ data.bomoptions }}"
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (!(!form.values.stage || form.values.stage === 'draft' || form.values.stage === 'in-review')))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.textarea",
+                        "props": {
+                          "label": "Description",
+                          "value": "{{ form.values.description }}",
+                          "rows": 4
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (!(!form.values.stage || form.values.stage === 'draft' || form.values.stage === 'in-review')))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Review",
+                  "description": "Fill in the approver during review; applying stamps the effective date."
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Approver",
+                          "value": "{{ form.values.approver }}",
+                          "placeholder": "Who signs this change off"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (!(!form.values.stage || form.values.stage === 'draft' || form.values.stage === 'in-review')))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.date",
+                        "props": {
+                          "label": "Effective date",
+                          "value": "{{ form.values.effectiveDate }}"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (!(!form.values.stage || form.values.stage === 'draft' || form.values.stage === 'in-review')))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.textarea",
+                        "props": {
+                          "label": "Rejection reason",
+                          "value": "{{ form.values.rejectionReason }}",
+                          "description": "Required to reject.",
+                          "rows": 4
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (!(!form.values.stage || form.values.stage === 'draft' || form.values.stage === 'in-review')))",
+                          "visible": "form.values.stage === 'in-review' || form.values.stage === 'rejected'"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "actions": {
+      "save": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Saved",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "reset": {
+        "steps": [
+          {
+            "reset-form": {}
+          }
+        ]
+      },
+      "archive": {
+        "steps": [
+          {
+            "confirm": {
+              "title": "Archive",
+              "message": "Archive this record? It stays in the workspace and can be restored."
+            }
+          },
+          {
+            "patch-form": {
+              "values": {
+                "state": "archived",
+                "archivedAt": "{{ Date() }}",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Archived",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "restore": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "state": "active",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Restored",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "submit": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Submit for review",
+              "message": "Submit this engineering change order for review?"
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/plm/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "submit-review",
+                "path": "{{ ctx.file.path }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "approve": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Approve change",
+              "message": "Approve this engineering change order? Fill in the approver first; approved ECOs can only be applied."
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/plm/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "approve",
+                "path": "{{ ctx.file.path }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "reject": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Reject change",
+              "message": "Reject this engineering change order? Fill in the rejection reason first. Rejected ECOs are locked until reopened."
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/plm/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "reject",
+                "path": "{{ ctx.file.path }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "apply": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Apply change",
+              "message": "Apply this engineering change order? The effective date is stamped and the ECO is locked."
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/plm/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "apply",
+                "path": "{{ ctx.file.path }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "reopen": {
+        "steps": [
+          {
+            "confirm": {
+              "title": "Reopen change",
+              "message": "Reopen this rejected engineering change order as a draft?"
+            }
+          },
+          {
+            "patch-form": {
+              "values": {
+                "stage": "draft",
+                "rejectionReason": "",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Reopened as draft",
+              "variant": "success"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

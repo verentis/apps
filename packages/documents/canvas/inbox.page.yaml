@@ -1,0 +1,225 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "documents-inbox",
+    "name": "Inbox",
+    "description": "Document cards waiting to be filed and sent to review.",
+    "icon": "inbox"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/document-cards",
+        "reason": "List inbox document cards with their workspace names"
+      },
+      {
+        "path": "/document-workspaces",
+        "reason": "List inbox document cards with their workspace names"
+      }
+    ],
+    "data": {
+      "cards": {
+        "kind": "folder",
+        "path": "/document-cards",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.documents.document+json"
+      },
+      "workspaces": {
+        "kind": "folder",
+        "path": "/document-workspaces",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.documents.workspace+json"
+      },
+      "rows": {
+        "kind": "computed",
+        "expr": "(data.cards || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, title: e.data.title || '', filePath: e.data.filePath || '', workspacePath: e.data.workspace || '', workspace: ((((data.workspaces || []).find(w => w.kind === 'file' && w.data && w.path === e.data.workspace) || {}).data || {}).name) || '', tagList: e.data.tags || [], tags: (e.data.tags || []).join(', '), owner: e.data.owner || '', status: e.data.status || '', validatedAt: e.data.validatedAt || '' }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Inbox"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "New document cards land here. File them into a workspace, tag them and send them to review from their form.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Documents",
+                  "variant": "ghost",
+                  "icon": "folder-kanban",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/applications/documents/canvas/home.page.yaml"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /document-cards folder could not be read. Reinstall Documents to recreate it."
+            },
+            "rules": {
+              "visible": "data.$cards.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /document-workspaces folder could not be read. Reinstall Documents to recreate it."
+            },
+            "rules": {
+              "visible": "data.$workspaces.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 4
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "In the inbox",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'inbox').length }}",
+                  "icon": "inbox",
+                  "loading": "{{ data.$cards.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Without a file",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'inbox' && !r.filePath).length }}",
+                  "icon": "file-x",
+                  "loading": "{{ data.$cards.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Untagged",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'inbox' && r.tagList.length === 0).length }}",
+                  "icon": "tag",
+                  "loading": "{{ data.$cards.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Unowned",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'inbox' && !r.owner).length }}",
+                  "icon": "user-x",
+                  "loading": "{{ data.$cards.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.rows || []).filter(r => r.status === 'inbox').sort((a, b) => (a.code < b.code ? -1 : a.code > b.code ? 1 : 0)) }}",
+              "columns": [
+                {
+                  "key": "code",
+                  "label": "Document"
+                },
+                {
+                  "key": "title",
+                  "label": "Title"
+                },
+                {
+                  "key": "workspace",
+                  "label": "Workspace"
+                },
+                {
+                  "key": "tags",
+                  "label": "Tags"
+                },
+                {
+                  "key": "owner",
+                  "label": "Owner"
+                },
+                {
+                  "key": "filePath",
+                  "label": "File"
+                }
+              ],
+              "emptyText": "The inbox is empty",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

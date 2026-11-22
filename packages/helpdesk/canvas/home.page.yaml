@@ -1,0 +1,416 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "helpdesk-home",
+    "name": "Helpdesk",
+    "description": "Helpdesk overview.",
+    "icon": "ticket"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/helpdesk-teams",
+        "reason": "Count tickets and show the teams and tickets"
+      },
+      {
+        "path": "/tickets",
+        "reason": "Count tickets and show the teams and tickets"
+      }
+    ],
+    "data": {
+      "tickets": {
+        "kind": "folder",
+        "path": "/tickets",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.helpdesk.ticket+json"
+      },
+      "teams": {
+        "kind": "folder",
+        "path": "/helpdesk-teams",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.helpdesk.team+json"
+      },
+      "rows": {
+        "kind": "computed",
+        "expr": "(data.tickets || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, subject: e.data.subject || '', teamPath: e.data.team || '', team: ((((data.teams || []).find(t => t.kind === 'file' && t.data && t.path === e.data.team) || {}).data || {}).name) || '', priority: e.data.priority || '', stage: e.data.stage || '', assignee: e.data.assignee || '', deadline: e.data.slaDeadline || '', overdue: ['new', 'in-progress', 'waiting'].includes(e.data.stage) && !!e.data.slaDeadline && e.data.slaDeadline < Date() }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Helpdesk"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Teams and tickets are files in your workspace. Draft tickets in /tickets, work them by stage, then resolve and close them from their forms.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Tickets",
+                      "variant": "outline",
+                      "icon": "ticket",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/applications/helpdesk/canvas/tickets.page.yaml"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "SLA report",
+                      "variant": "outline",
+                      "icon": "alarm-clock",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/applications/helpdesk/canvas/sla.page.yaml"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Workload",
+                      "variant": "outline",
+                      "icon": "users",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/applications/helpdesk/canvas/workload.page.yaml"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Settings",
+                      "variant": "ghost",
+                      "icon": "settings",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/settings/helpdesk.json",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 4
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Open tickets",
+                  "value": "{{ (data.rows || []).filter(r => ['new', 'in-progress', 'waiting'].includes(r.stage)).length }}",
+                  "icon": "ticket",
+                  "loading": "{{ data.$tickets.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Overdue",
+                  "value": "{{ (data.rows || []).filter(r => r.overdue).length }}",
+                  "icon": "alarm-clock",
+                  "loading": "{{ data.$tickets.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "New",
+                  "value": "{{ (data.rows || []).filter(r => r.stage === 'new').length }}",
+                  "icon": "inbox",
+                  "loading": "{{ data.$tickets.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Solved",
+                  "value": "{{ (data.rows || []).filter(r => r.stage === 'solved').length }}",
+                  "icon": "check",
+                  "loading": "{{ data.$tickets.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /helpdesk-teams folder could not be read. Reinstall Helpdesk to recreate it."
+            },
+            "rules": {
+              "visible": "data.$teams.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /tickets folder could not be read. Reinstall Helpdesk to recreate it."
+            },
+            "rules": {
+              "visible": "data.$tickets.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.tabs",
+            "props": {
+              "items": [
+                {
+                  "value": "tickets",
+                  "label": "Tickets",
+                  "icon": "ticket"
+                },
+                {
+                  "value": "teams",
+                  "label": "Teams",
+                  "icon": "users"
+                }
+              ]
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Open /tickets",
+                          "variant": "outline",
+                          "icon": "folder-open",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "open-file": {
+                                "path": "/tickets"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.files",
+                    "props": {
+                      "path": "/tickets/",
+                      "mimeTypes": [
+                        "application/vnd.verentis.helpdesk.ticket+json"
+                      ],
+                      "showFolders": false,
+                      "navigable": false,
+                      "columns": [
+                        {
+                          "key": "name",
+                          "label": "Ticket"
+                        },
+                        {
+                          "key": "data.subject",
+                          "label": "Subject"
+                        },
+                        {
+                          "key": "data.priority",
+                          "label": "Priority"
+                        },
+                        {
+                          "key": "data.stage",
+                          "label": "Stage"
+                        },
+                        {
+                          "key": "data.assignee",
+                          "label": "Assignee"
+                        },
+                        {
+                          "key": "data.slaDeadline",
+                          "label": "SLA deadline"
+                        }
+                      ],
+                      "emptyText": "No tickets yet. Use New in /tickets."
+                    }
+                  }
+                ],
+                "slot": "tickets"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Open /helpdesk-teams",
+                          "variant": "outline",
+                          "icon": "folder-open",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "open-file": {
+                                "path": "/helpdesk-teams"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.files",
+                    "props": {
+                      "path": "/helpdesk-teams/",
+                      "mimeTypes": [
+                        "application/vnd.verentis.helpdesk.team+json"
+                      ],
+                      "showFolders": false,
+                      "navigable": false,
+                      "columns": [
+                        {
+                          "key": "name",
+                          "label": "Team"
+                        },
+                        {
+                          "key": "data.name",
+                          "label": "Name"
+                        },
+                        {
+                          "key": "data.slaHours",
+                          "label": "SLA hours"
+                        }
+                      ],
+                      "emptyText": "No teams yet. Use New in /helpdesk-teams."
+                    }
+                  }
+                ],
+                "slot": "teams"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

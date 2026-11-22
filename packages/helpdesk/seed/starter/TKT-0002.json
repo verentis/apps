@@ -1,0 +1,20 @@
+{
+  "$schema": "https://schemas.verentis.io/helpdesk/v1/ticket.schema.json",
+  "schemaVersion": 1,
+  "kind": "ticket",
+  "id": "7c1d2e3f-4a5b-4c6d-8e9f-0a1b2c3d4e03",
+  "state": "active",
+  "createdAt": "2026-01-01T00:00:00Z",
+  "updatedAt": "2026-01-01T00:00:00Z",
+  "code": "TKT-0002",
+  "team": "/helpdesk-teams/TEAM-0001",
+  "subject": "Invoice totals look wrong",
+  "customerRef": "",
+  "customerName": "Initech",
+  "priority": "normal",
+  "stage": "in-progress",
+  "slaDeadline": "2026-01-02T00:00:00Z",
+  "assignee": "Avery Adams",
+  "description": "The March invoice is missing a credit.",
+  "resolution": ""
+}

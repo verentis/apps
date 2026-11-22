@@ -1,0 +1,229 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "helpdesk-sla",
+    "name": "SLA report",
+    "description": "Open tickets against their SLA deadlines.",
+    "icon": "alarm-clock"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/helpdesk-teams",
+        "reason": "Compare open tickets against their SLA deadlines"
+      },
+      {
+        "path": "/tickets",
+        "reason": "Compare open tickets against their SLA deadlines"
+      }
+    ],
+    "data": {
+      "tickets": {
+        "kind": "folder",
+        "path": "/tickets",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.helpdesk.ticket+json"
+      },
+      "teams": {
+        "kind": "folder",
+        "path": "/helpdesk-teams",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.helpdesk.team+json"
+      },
+      "rows": {
+        "kind": "computed",
+        "expr": "(data.tickets || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, subject: e.data.subject || '', teamPath: e.data.team || '', team: ((((data.teams || []).find(t => t.kind === 'file' && t.data && t.path === e.data.team) || {}).data || {}).name) || '', priority: e.data.priority || '', stage: e.data.stage || '', assignee: e.data.assignee || '', deadline: e.data.slaDeadline || '', overdue: ['new', 'in-progress', 'waiting'].includes(e.data.stage) && !!e.data.slaDeadline && e.data.slaDeadline < Date() }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "SLA report"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Open tickets by SLA deadline. The deadline is computed from the team's SLA hours when a ticket is created.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Helpdesk",
+                  "variant": "ghost",
+                  "icon": "ticket",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/applications/helpdesk/canvas/home.page.yaml"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /helpdesk-teams folder could not be read. Reinstall Helpdesk to recreate it."
+            },
+            "rules": {
+              "visible": "data.$teams.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /tickets folder could not be read. Reinstall Helpdesk to recreate it."
+            },
+            "rules": {
+              "visible": "data.$tickets.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 4
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Open",
+                  "value": "{{ (data.rows || []).filter(r => ['new', 'in-progress', 'waiting'].includes(r.stage)).length }}",
+                  "icon": "ticket",
+                  "loading": "{{ data.$tickets.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Overdue",
+                  "value": "{{ (data.rows || []).filter(r => ['new', 'in-progress', 'waiting'].includes(r.stage)).filter(r => r.overdue).length }}",
+                  "icon": "alarm-clock",
+                  "loading": "{{ data.$tickets.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Due in 24 h",
+                  "value": "{{ (data.rows || []).filter(r => ['new', 'in-progress', 'waiting'].includes(r.stage)).filter(r => !r.overdue && !!r.deadline && r.deadline < Date(Date.now() + 86400000)).length }}",
+                  "icon": "hourglass",
+                  "loading": "{{ data.$tickets.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Unassigned",
+                  "value": "{{ (data.rows || []).filter(r => ['new', 'in-progress', 'waiting'].includes(r.stage)).filter(r => !r.assignee).length }}",
+                  "icon": "user-x",
+                  "loading": "{{ data.$tickets.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.rows || []).filter(r => ['new', 'in-progress', 'waiting'].includes(r.stage)).sort((a, b) => ((a.deadline || '9999') < (b.deadline || '9999') ? -1 : (a.deadline || '9999') > (b.deadline || '9999') ? 1 : 0)).map(r => ({ path: r.path, code: r.code, subject: r.subject, team: r.team, priority: r.priority, assignee: r.assignee, deadline: r.deadline, state: r.overdue ? 'Overdue' : (!r.overdue && !!r.deadline && r.deadline < Date(Date.now() + 86400000) ? 'Due soon' : 'On track') })) }}",
+              "columns": [
+                {
+                  "key": "code",
+                  "label": "Ticket"
+                },
+                {
+                  "key": "subject",
+                  "label": "Subject"
+                },
+                {
+                  "key": "team",
+                  "label": "Team"
+                },
+                {
+                  "key": "priority",
+                  "label": "Priority"
+                },
+                {
+                  "key": "assignee",
+                  "label": "Assignee"
+                },
+                {
+                  "key": "deadline",
+                  "label": "SLA deadline"
+                },
+                {
+                  "key": "state",
+                  "label": "State"
+                }
+              ],
+              "emptyText": "No open tickets",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

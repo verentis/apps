@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.verentis.io/fleet/v1/settings.schema.json",
+  "title": "Fleet settings",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "const": "https://schemas.verentis.io/fleet/v1/settings.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "expiringSoonDays": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 365
+    }
+  },
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "expiringSoonDays"
+  ],
+  "additionalProperties": false
+}

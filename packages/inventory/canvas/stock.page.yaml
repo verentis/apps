@@ -1,0 +1,353 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "inventory-stock",
+    "name": "Stock levels",
+    "description": "On-hand stock per product and warehouse, computed from done stock moves.",
+    "icon": "chart-column"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/products",
+        "reason": "Report on the products"
+      },
+      {
+        "path": "/warehouses",
+        "reason": "Break stock down per warehouse"
+      },
+      {
+        "path": "/stock-moves",
+        "reason": "Sum the done stock moves"
+      }
+    ],
+    "data": {
+      "products": {
+        "kind": "folder",
+        "path": "/products",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.inventory.product+json"
+      },
+      "warehouses": {
+        "kind": "folder",
+        "path": "/warehouses",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.inventory.warehouse+json"
+      },
+      "moves": {
+        "kind": "folder",
+        "path": "/stock-moves",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.inventory.move+json"
+      },
+      "totals": {
+        "kind": "computed",
+        "expr": "(data.products || []).filter(e => e.kind === 'file' && e.data && e.data.kind === 'product').map(e => ({ path: e.path, code: e.data.code || e.name, product: e.data.name || '', sku: e.data.sku || '', unit: e.data.unit || '', reorderPoint: e.data.reorderPoint || '', hasReorder: !!e.data.reorderPoint, reorder: Math.round(Number(e.data.reorderPoint || 0) * 10000), units: (data.moves || []).filter(m => m.kind === 'file' && m.data && m.data.kind === 'move' && m.data.status === 'done').reduce((s, m) => s + (m.data.product === e.path ? ((m.data.toWarehouse ? Math.round(Number(m.data.quantity || 0) * 10000) : 0) - (m.data.fromWarehouse ? Math.round(Number(m.data.quantity || 0) * 10000) : 0)) : 0), 0) })).sort((a, b) => (a.code < b.code ? -1 : 1))"
+      },
+      "levels": {
+        "kind": "computed",
+        "expr": "(data.products || []).filter(p => p.kind === 'file' && p.data && p.data.kind === 'product').reduce((rows, p) => rows.concat((data.warehouses || []).filter(w => w.kind === 'file' && w.data && w.data.kind === 'warehouse').map(w => ({ path: p.path, code: p.data.code || p.name, product: p.data.name || '', warehouse: w.data.name || w.name, units: (data.moves || []).filter(m => m.kind === 'file' && m.data && m.data.kind === 'move' && m.data.status === 'done').reduce((s, m) => s + (m.data.product === p.path ? ((m.data.toWarehouse === w.path ? Math.round(Number(m.data.quantity || 0) * 10000) : 0) - (m.data.fromWarehouse === w.path ? Math.round(Number(m.data.quantity || 0) * 10000) : 0)) : 0), 0) }))), []).filter(l => l.units !== 0)"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Stock levels"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Computed from done stock moves; applied inventory adjustments count through their corrective moves. Draft moves are ignored.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Inventory",
+                  "variant": "ghost",
+                  "icon": "package",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/applications/inventory/canvas/home.page.yaml"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$products.error }}"
+            },
+            "rules": {
+              "visible": "data.$products.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$products.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$warehouses.error }}"
+            },
+            "rules": {
+              "visible": "data.$warehouses.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$warehouses.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$moves.error }}"
+            },
+            "rules": {
+              "visible": "data.$moves.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$moves.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 3
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Products tracked",
+                  "value": "{{ (data.totals || []).length }}",
+                  "icon": "package",
+                  "loading": "{{ data.$products.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "At or below reorder point",
+                  "value": "{{ (data.totals || []).filter(t => t.hasReorder && t.units <= t.reorder).length }}",
+                  "icon": "triangle-alert",
+                  "loading": "{{ data.$moves.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Done moves",
+                  "value": "{{ (data.moves || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status === 'done')).length }}",
+                  "icon": "arrow-left-right",
+                  "loading": "{{ data.$moves.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.tabs",
+            "props": {
+              "items": [
+                {
+                  "value": "onhand",
+                  "label": "On hand",
+                  "icon": "package"
+                },
+                {
+                  "value": "warehouse",
+                  "label": "By warehouse",
+                  "icon": "warehouse"
+                }
+              ]
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.totals || []).map(t => ({ path: t.path, code: t.code, product: t.product, sku: t.sku, unit: t.unit, onHand: (t.units / 10000), reorderPoint: t.reorderPoint, state: t.hasReorder && t.units <= t.reorder ? 'Reorder' : '' })) }}",
+                      "columns": [
+                        {
+                          "key": "code",
+                          "label": "Code"
+                        },
+                        {
+                          "key": "product",
+                          "label": "Product"
+                        },
+                        {
+                          "key": "sku",
+                          "label": "SKU"
+                        },
+                        {
+                          "key": "unit",
+                          "label": "Unit"
+                        },
+                        {
+                          "key": "onHand",
+                          "label": "On hand",
+                          "align": "end"
+                        },
+                        {
+                          "key": "reorderPoint",
+                          "label": "Reorder point",
+                          "align": "end"
+                        },
+                        {
+                          "key": "state",
+                          "label": "State"
+                        }
+                      ],
+                      "emptyText": "No products yet",
+                      "clickable": true
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "onhand"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.levels || []).map(l => ({ path: l.path, code: l.code, product: l.product, warehouse: l.warehouse, onHand: (l.units / 10000) })) }}",
+                      "columns": [
+                        {
+                          "key": "code",
+                          "label": "Code"
+                        },
+                        {
+                          "key": "product",
+                          "label": "Product"
+                        },
+                        {
+                          "key": "warehouse",
+                          "label": "Warehouse"
+                        },
+                        {
+                          "key": "onHand",
+                          "label": "On hand",
+                          "align": "end"
+                        }
+                      ],
+                      "emptyText": "No stock in any warehouse yet",
+                      "clickable": true
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "warehouse"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

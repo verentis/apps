@@ -1,0 +1,272 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "surveys-results",
+    "name": "Results",
+    "description": "Per-question results over the submitted responses.",
+    "icon": "bar-chart"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/surveys",
+        "reason": "Tally choices and average ratings over the submitted responses"
+      },
+      {
+        "path": "/survey-responses",
+        "reason": "Tally choices and average ratings over the submitted responses"
+      }
+    ],
+    "data": {
+      "surveys": {
+        "kind": "folder",
+        "path": "/surveys",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.surveys.survey+json"
+      },
+      "responses": {
+        "kind": "folder",
+        "path": "/survey-responses",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.surveys.response+json"
+      },
+      "rows": {
+        "kind": "computed",
+        "expr": "(data.surveys || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, title: e.data.title || '', status: e.data.status || '', questions: (e.data.questions || []).length, submitted: (data.responses || []).filter(r => r.kind === 'file' && r.data && r.data.state !== 'archived' && r.data.status === 'submitted' && r.data.survey === e.path).length, drafts: (data.responses || []).filter(r => r.kind === 'file' && r.data && r.data.state !== 'archived' && r.data.status === 'draft' && r.data.survey === e.path).length }))"
+      },
+      "results": {
+        "kind": "computed",
+        "expr": "(data.surveys || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => { var subs = (data.responses || []).filter(r => r.kind === 'file' && r.data && r.data.state !== 'archived' && r.data.status === 'submitted' && r.data.survey === e.path).map(r => r.data); return (e.data.questions || []).map(q => { var answers = subs.map(r => (r.answers || []).filter(a => a.sequence === q.sequence)[0]).filter(a => !!a); if (q.kind === 'rating') { var ratings = answers.map(a => Number(a.value)).filter(v => v >= 1 && v <= 5); return [{ path: e.path, survey: e.data.code || e.name, question: q.text || '', metric: 'Average rating', value: ratings.length ? (ratings.reduce((t, v) => t + v, 0) / ratings.length).toFixed(1) : '' }] } if (q.kind === 'single-choice') { return (q.choices || []).map(c => ({ path: e.path, survey: e.data.code || e.name, question: q.text || '', metric: c, value: answers.filter(a => a.value === c).length })) } if (q.kind === 'multi-choice') { return (q.choices || []).map(c => ({ path: e.path, survey: e.data.code || e.name, question: q.text || '', metric: c, value: answers.filter(a => (a.values || []).indexOf(c) >= 0).length })) } return [{ path: e.path, survey: e.data.code || e.name, question: q.text || '', metric: 'Answered', value: answers.filter(a => String(a.value || '').trim()).length }] }).reduce((all, rows) => all.concat(rows), []) }).reduce((all, rows) => all.concat(rows), [])"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Results"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Per-choice tallies, average ratings (1-5) and answered counts, computed from the submitted responses. Click a row to open the survey.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Surveys",
+                  "variant": "ghost",
+                  "icon": "clipboard-list",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/applications/surveys/canvas/home.page.yaml"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /surveys folder could not be read. Reinstall Surveys to recreate it."
+            },
+            "rules": {
+              "visible": "data.$surveys.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /survey-responses folder could not be read. Reinstall Surveys to recreate it."
+            },
+            "rules": {
+              "visible": "data.$responses.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 3
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Surveys",
+                  "value": "{{ (data.rows || []).length }}",
+                  "icon": "clipboard-list",
+                  "loading": "{{ data.$surveys.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Submitted responses",
+                  "value": "{{ (data.rows || []).reduce((total, r) => total + r.submitted, 0) }}",
+                  "icon": "send",
+                  "loading": "{{ data.$responses.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Draft responses",
+                  "value": "{{ (data.rows || []).reduce((total, r) => total + r.drafts, 0) }}",
+                  "icon": "pencil",
+                  "loading": "{{ data.$responses.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Responses per survey"
+            },
+            "children": [
+              {
+                "type": "canvas.table",
+                "props": {
+                  "rows": "{{ data.rows || [] }}",
+                  "columns": [
+                    {
+                      "key": "code",
+                      "label": "Survey"
+                    },
+                    {
+                      "key": "title",
+                      "label": "Title"
+                    },
+                    {
+                      "key": "questions",
+                      "label": "Questions",
+                      "align": "end"
+                    },
+                    {
+                      "key": "submitted",
+                      "label": "Submitted",
+                      "align": "end"
+                    },
+                    {
+                      "key": "drafts",
+                      "label": "Drafts",
+                      "align": "end"
+                    }
+                  ],
+                  "emptyText": "No surveys yet",
+                  "clickable": true
+                },
+                "on": {
+                  "row-click": [
+                    {
+                      "open-file": {
+                        "path": "{{ event.path }}",
+                        "mode": "edit"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Results per question"
+            },
+            "children": [
+              {
+                "type": "canvas.table",
+                "props": {
+                  "rows": "{{ data.results || [] }}",
+                  "columns": [
+                    {
+                      "key": "survey",
+                      "label": "Survey"
+                    },
+                    {
+                      "key": "question",
+                      "label": "Question"
+                    },
+                    {
+                      "key": "metric",
+                      "label": "Choice / metric"
+                    },
+                    {
+                      "key": "value",
+                      "label": "Result",
+                      "align": "end"
+                    }
+                  ],
+                  "emptyText": "No submitted responses yet",
+                  "clickable": true
+                },
+                "on": {
+                  "row-click": [
+                    {
+                      "open-file": {
+                        "path": "{{ event.path }}",
+                        "mode": "edit"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

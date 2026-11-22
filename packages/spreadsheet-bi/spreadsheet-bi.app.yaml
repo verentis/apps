@@ -1,0 +1,457 @@
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "spreadsheet-bi",
+    "name": "Spreadsheet BI",
+    "description": "Saved BI dashboards and snapshots as files in your workspace, computed live from the record files of CRM, Invoicing, Accounting and Helpdesk.",
+    "icon": "./icons/app.svg",
+    "version": "0.1.0",
+    "author": "Verentis"
+  },
+  "marketplace": {
+    "readme": "./README.md",
+    "keywords": [
+      "bi",
+      "dashboards",
+      "pivot",
+      "reports",
+      "analytics",
+      "spreadsheet",
+      "snapshots"
+    ]
+  },
+  "spec": {
+    "install-root": "/applications/spreadsheet-bi",
+    "entry": "https://canvas.apps.localtest.me",
+    "scope": "global",
+    "entry-points": [
+      {
+        "id": "home",
+        "display-name": "Spreadsheet BI",
+        "route": "/render?document=.%2Fcanvas%2Fhome.page.yaml",
+        "order": 10
+      },
+      {
+        "id": "viewer",
+        "display-name": "Dashboard viewer",
+        "route": "/render?document=.%2Fcanvas%2Fviewer.page.yaml",
+        "order": 20
+      },
+      {
+        "id": "snapshots",
+        "display-name": "Snapshots",
+        "route": "/render?document=.%2Fcanvas%2Fsnapshots.page.yaml",
+        "order": 30
+      }
+    ],
+    "launch": {
+      "enabled": true,
+      "entry-point": "home",
+      "pinnable": true
+    },
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run"
+    ],
+    "scopes": [
+      "spreadsheet-bi.default"
+    ],
+    "settings": [
+      {
+        "key": "dashboard-code-prefix",
+        "display-name": "Dashboard code prefix",
+        "type": "string",
+        "default": "BID-",
+        "description": "Prefix of generated dashboard codes, e.g. BID-0001."
+      },
+      {
+        "key": "snapshot-code-prefix",
+        "display-name": "Snapshot code prefix",
+        "type": "string",
+        "default": "BIS-",
+        "description": "Prefix of generated snapshot codes, e.g. BIS-0001."
+      },
+      {
+        "key": "code-digits",
+        "display-name": "Code digits",
+        "type": "number",
+        "default": 4,
+        "description": "Minimum number of digits in generated codes (zero-padded)."
+      }
+    ],
+    "dependencies": [
+      {
+        "package": "verentis/canvas",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/nodejs",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/crm",
+        "version": "latest",
+        "optional": true
+      },
+      {
+        "package": "verentis/invoicing",
+        "version": "latest",
+        "optional": true
+      },
+      {
+        "package": "verentis/accounting",
+        "version": "latest",
+        "optional": true
+      },
+      {
+        "package": "verentis/helpdesk",
+        "version": "latest",
+        "optional": true
+      }
+    ],
+    "engine": "verentis/nodejs",
+    "scripts": [
+      "scripts/create",
+      "scripts/post"
+    ],
+    "install": [
+      {
+        "from": "canvas/*.form.yaml",
+        "to": "/applications/spreadsheet-bi/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.form+yaml"
+      },
+      {
+        "from": "canvas/*.page.yaml",
+        "to": "/applications/spreadsheet-bi/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.page+yaml"
+      },
+      {
+        "from": "schemas/*.schema.json",
+        "to": "/applications/spreadsheet-bi/schemas/",
+        "mode": "managed",
+        "mime": "application/schema+json"
+      },
+      {
+        "from": "templates/*.json",
+        "to": "/applications/spreadsheet-bi/templates/",
+        "mode": "managed",
+        "mime": "application/json"
+      },
+      {
+        "from": "seed/dashboards",
+        "to": "/bi-dashboards",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.spreadsheet-bi.dashboards"
+      },
+      {
+        "from": "seed/snapshots",
+        "to": "/bi-snapshots",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.spreadsheet-bi.snapshots"
+      },
+      {
+        "from": "seed/starter/BID-0001.json",
+        "to": "/bi-dashboards/BID-0001",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.spreadsheet-bi.dashboard+json"
+      },
+      {
+        "from": "seed/settings.json",
+        "to": "/settings/spreadsheet-bi.json",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.spreadsheet-bi.settings+json"
+      }
+    ],
+    "creatables": [
+      {
+        "id": "dashboard",
+        "display-name": "Dashboard",
+        "description": "A new BI dashboard",
+        "icon": "lucide:layout-dashboard",
+        "mime": "application/vnd.verentis.spreadsheet-bi.dashboard+json",
+        "parents": [
+          "application/vnd.verentis.spreadsheet-bi.dashboards"
+        ],
+        "folder-names": [
+          "bi-dashboards",
+          "dashboards",
+          "spreadsheet-bi"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/dashboard.json"
+      },
+      {
+        "id": "snapshot",
+        "display-name": "Snapshot",
+        "description": "A new BI snapshot",
+        "icon": "lucide:camera",
+        "mime": "application/vnd.verentis.spreadsheet-bi.snapshot+json",
+        "parents": [
+          "application/vnd.verentis.spreadsheet-bi.snapshots"
+        ],
+        "folder-names": [
+          "bi-snapshots",
+          "snapshots",
+          "spreadsheet-bi"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/snapshot.json"
+      }
+    ],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-forms": true,
+      "allow-popups": false
+    },
+    "file-access": [
+      {
+        "path": "/bi-dashboards",
+        "mode": "read",
+        "reason": "List the saved dashboards",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/bi-snapshots",
+        "mode": "read",
+        "reason": "Count the snapshots",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/bi-dashboards",
+        "mode": "read",
+        "reason": "Read the dashboard tile definitions",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/viewer.page.yaml"
+        }
+      },
+      {
+        "path": "/customers",
+        "mode": "read",
+        "reason": "Compute tile values over /customers (when the owning app is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/viewer.page.yaml"
+        }
+      },
+      {
+        "path": "/invoices",
+        "mode": "read",
+        "reason": "Compute tile values over /invoices (when the owning app is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/viewer.page.yaml"
+        }
+      },
+      {
+        "path": "/tickets",
+        "mode": "read",
+        "reason": "Compute tile values over /tickets (when the owning app is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/viewer.page.yaml"
+        }
+      },
+      {
+        "path": "/journals",
+        "mode": "read",
+        "reason": "Compute tile values over /journals (when the owning app is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/viewer.page.yaml"
+        }
+      },
+      {
+        "path": "/expenses",
+        "mode": "read",
+        "reason": "Compute tile values over /expenses (when the owning app is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/viewer.page.yaml"
+        }
+      },
+      {
+        "path": "/bi-snapshots",
+        "mode": "read",
+        "reason": "List the snapshots",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/snapshots.page.yaml"
+        }
+      },
+      {
+        "path": "/bi-dashboards",
+        "mode": "read",
+        "reason": "Show each snapshot's dashboard name",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/snapshots.page.yaml"
+        }
+      },
+      {
+        "path": "/applications/spreadsheet-bi/",
+        "mode": "read",
+        "reason": "Read the Spreadsheet BI schemas and run the snapshot script",
+        "origin": {
+          "kind": "document",
+          "id": "spreadsheet-bi-dashboard"
+        }
+      },
+      {
+        "path": "/bi-dashboards",
+        "mode": "read",
+        "reason": "Choose the dashboard a snapshot computes",
+        "origin": {
+          "kind": "document",
+          "id": "spreadsheet-bi-snapshot"
+        }
+      },
+      {
+        "path": "/applications/spreadsheet-bi/",
+        "mode": "read",
+        "reason": "Read the Spreadsheet BI schemas and run the snapshot script",
+        "origin": {
+          "kind": "document",
+          "id": "spreadsheet-bi-snapshot"
+        }
+      },
+      {
+        "path": "/bi-dashboards",
+        "mode": "read",
+        "reason": "Choose the default dashboard for new snapshots",
+        "origin": {
+          "kind": "document",
+          "id": "spreadsheet-bi-settings"
+        }
+      },
+      {
+        "path": "/applications/spreadsheet-bi/",
+        "mode": "read",
+        "reason": "Read the Spreadsheet BI schemas and run the snapshot script",
+        "origin": {
+          "kind": "document",
+          "id": "spreadsheet-bi-settings"
+        }
+      },
+      {
+        "path": "/bi-dashboards",
+        "mode": "write",
+        "reason": "Create dashboards with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "spreadsheet-bi-create"
+        }
+      },
+      {
+        "path": "/bi-snapshots",
+        "mode": "write",
+        "reason": "Create snapshots with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "spreadsheet-bi-create"
+        }
+      },
+      {
+        "path": "/settings/spreadsheet-bi.json",
+        "mode": "read",
+        "reason": "Default new snapshots to the default dashboard",
+        "origin": {
+          "kind": "script",
+          "id": "spreadsheet-bi-create"
+        }
+      },
+      {
+        "path": "/bi-dashboards",
+        "mode": "read",
+        "reason": "Read the dashboard a snapshot computes",
+        "origin": {
+          "kind": "script",
+          "id": "spreadsheet-bi-post"
+        }
+      },
+      {
+        "path": "/bi-snapshots",
+        "mode": "write",
+        "reason": "Write computed results into snapshots and mark them taken",
+        "origin": {
+          "kind": "script",
+          "id": "spreadsheet-bi-post"
+        }
+      },
+      {
+        "path": "/customers",
+        "mode": "read",
+        "reason": "Compute tile values over /customers (when the owning app is installed)",
+        "origin": {
+          "kind": "script",
+          "id": "spreadsheet-bi-post"
+        }
+      },
+      {
+        "path": "/invoices",
+        "mode": "read",
+        "reason": "Compute tile values over /invoices (when the owning app is installed)",
+        "origin": {
+          "kind": "script",
+          "id": "spreadsheet-bi-post"
+        }
+      },
+      {
+        "path": "/tickets",
+        "mode": "read",
+        "reason": "Compute tile values over /tickets (when the owning app is installed)",
+        "origin": {
+          "kind": "script",
+          "id": "spreadsheet-bi-post"
+        }
+      },
+      {
+        "path": "/journals",
+        "mode": "read",
+        "reason": "Compute tile values over /journals (when the owning app is installed)",
+        "origin": {
+          "kind": "script",
+          "id": "spreadsheet-bi-post"
+        }
+      },
+      {
+        "path": "/expenses",
+        "mode": "read",
+        "reason": "Compute tile values over /expenses (when the owning app is installed)",
+        "origin": {
+          "kind": "script",
+          "id": "spreadsheet-bi-post"
+        }
+      }
+    ]
+  },
+  "packaging": {
+    "publisher": "verentis",
+    "files": [
+      "canvas/**",
+      "schemas/**",
+      "templates/**",
+      "seed/**",
+      "scripts/**",
+      "README.md"
+    ],
+    "templates": [
+      "canvas/*.yaml"
+    ],
+    "variables": {
+      "canvas-origin": "https://canvas.apps.localtest.me"
+    },
+    "encryption": "none"
+  }
+}

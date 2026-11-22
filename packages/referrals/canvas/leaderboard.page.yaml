@@ -1,0 +1,198 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "referrals-leaderboard",
+    "name": "Leaderboard",
+    "description": "Referral points per referrer.",
+    "icon": "trophy"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/referrals",
+        "reason": "Sum referral points per referrer"
+      }
+    ],
+    "data": {
+      "referrals": {
+        "kind": "folder",
+        "path": "/referrals",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.referrals.referral+json"
+      },
+      "rows": {
+        "kind": "computed",
+        "expr": "(data.referrals || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, referrer: e.data.referrerName || '', candidate: e.data.candidateName || '', status: e.data.status || '', points: Number(e.data.points) || 0, decidedAt: e.data.decidedAt || '' }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Leaderboard"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Referrers ranked by awarded points. Points are awarded when a referral is marked hired.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Referrals",
+                  "variant": "ghost",
+                  "icon": "gift",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/applications/referrals/canvas/home.page.yaml"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /referrals folder could not be read. Reinstall Referrals to recreate it."
+            },
+            "rules": {
+              "visible": "data.$referrals.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 4
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Referrers",
+                  "value": "{{ (data.rows || []).map(r => r.referrer || 'No referrer').filter((v, i, a) => a.indexOf(v) === i).length }}",
+                  "icon": "users",
+                  "loading": "{{ data.$referrals.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Hired",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'hired').length }}",
+                  "icon": "check",
+                  "loading": "{{ data.$referrals.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Points awarded",
+                  "value": "{{ (data.rows || []).map(r => r.points).reduce((sum, v) => sum + v, 0) }}",
+                  "icon": "trophy",
+                  "loading": "{{ data.$referrals.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Open",
+                  "value": "{{ (data.rows || []).filter(r => ['submitted','in-process'].includes(r.status)).length }}",
+                  "icon": "hourglass",
+                  "loading": "{{ data.$referrals.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "By referrer"
+            },
+            "children": [
+              {
+                "type": "canvas.table",
+                "props": {
+                  "rows": "{{ (data.rows || []).map(r => r.referrer || 'No referrer').filter((v, i, a) => a.indexOf(v) === i).map(name => ({ referrer: name, referrals: (data.rows || []).filter(r => (r.referrer || 'No referrer') === name).length, hired: (data.rows || []).filter(r => r.status === 'hired').filter(r => (r.referrer || 'No referrer') === name).length, points: (data.rows || []).filter(r => (r.referrer || 'No referrer') === name).map(r => r.points).reduce((sum, v) => sum + v, 0) })).sort((a, b) => b.points - a.points || a.referrer.localeCompare(b.referrer)) }}",
+                  "columns": [
+                    {
+                      "key": "referrer",
+                      "label": "Referrer"
+                    },
+                    {
+                      "key": "referrals",
+                      "label": "Referrals",
+                      "align": "end"
+                    },
+                    {
+                      "key": "hired",
+                      "label": "Hired",
+                      "align": "end"
+                    },
+                    {
+                      "key": "points",
+                      "label": "Points",
+                      "align": "end"
+                    }
+                  ],
+                  "emptyText": "No referrals yet"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

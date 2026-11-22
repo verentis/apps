@@ -1,0 +1,225 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "rental-revenue",
+    "name": "Revenue",
+    "description": "Booked rental revenue, late fees and deposits held.",
+    "icon": "chart-no-axes-combined"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/rental-bookings",
+        "reason": "Sum booking totals, late fees and deposits"
+      }
+    ],
+    "data": {
+      "bookings": {
+        "kind": "folder",
+        "path": "/rental-bookings",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.rental.booking+json"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Revenue"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Confirmed, picked-up and returned bookings use their exact script-computed totals; late fees are added on return.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Rental",
+                  "variant": "ghost",
+                  "icon": "key",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/applications/rental/canvas/home.page.yaml"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$bookings.error }}"
+            },
+            "rules": {
+              "visible": "data.$bookings.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$bookings.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 4
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Booked revenue",
+                  "value": "{{ ((data.bookings || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && ((e.data.status === 'confirmed' || e.data.status === 'picked-up') || e.data.status === 'returned') && e.data.total).reduce((s, e) => s + Math.round(Number(e.data.total || 0) * 10000), 0) / 10000).toFixed(2) }}",
+                  "icon": "receipt",
+                  "loading": "{{ data.$bookings.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Returned revenue",
+                  "value": "{{ ((data.bookings || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status === 'returned') && e.data.total).reduce((s, e) => s + Math.round(Number(e.data.total || 0) * 10000), 0) / 10000).toFixed(2) }}",
+                  "icon": "package-check",
+                  "loading": "{{ data.$bookings.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Late fees",
+                  "value": "{{ ((data.bookings || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && e.data.status === 'returned').reduce((s, e) => s + Math.round(Number(e.data.lateFee || 0) * 10000), 0) / 10000).toFixed(2) }}",
+                  "icon": "alarm-clock",
+                  "loading": "{{ data.$bookings.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Deposits held",
+                  "value": "{{ ((data.bookings || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status === 'confirmed' || e.data.status === 'picked-up')).reduce((s, e) => s + Math.round(Number(e.data.deposit || 0) * 10000) * Number(e.data.quantity || 0), 0) / 10000).toFixed(2) }}",
+                  "icon": "piggy-bank",
+                  "loading": "{{ data.$bookings.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Billed bookings"
+            },
+            "children": [
+              {
+                "type": "canvas.table",
+                "props": {
+                  "rows": "{{ (data.bookings || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && e.data.total && ((e.data.status === 'confirmed' || e.data.status === 'picked-up') || e.data.status === 'returned')).map(e => ({ path: e.path, code: e.data.code || e.name, customer: e.data.customerName || '', product: (e.data.product || '').split('/').pop() || '', start: e.data.startDate, end: e.data.endDate, quantity: e.data.quantity, status: e.data.status, total: e.data.total || '' })).sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0)) }}",
+                  "columns": [
+                    {
+                      "key": "code",
+                      "label": "Booking"
+                    },
+                    {
+                      "key": "customer",
+                      "label": "Customer"
+                    },
+                    {
+                      "key": "product",
+                      "label": "Product"
+                    },
+                    {
+                      "key": "start",
+                      "label": "Start"
+                    },
+                    {
+                      "key": "end",
+                      "label": "End"
+                    },
+                    {
+                      "key": "status",
+                      "label": "Status"
+                    },
+                    {
+                      "key": "total",
+                      "label": "Total",
+                      "align": "end"
+                    }
+                  ],
+                  "emptyText": "Nothing billed yet",
+                  "clickable": true
+                },
+                "on": {
+                  "row-click": [
+                    {
+                      "open-file": {
+                        "path": "{{ event.path }}",
+                        "mode": "edit"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

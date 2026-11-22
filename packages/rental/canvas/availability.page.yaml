@@ -1,0 +1,253 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "rental-availability",
+    "name": "Availability",
+    "description": "What is owned, out and available per rental product today.",
+    "icon": "boxes"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/rental-products",
+        "reason": "List rental products and the quantity owned"
+      },
+      {
+        "path": "/rental-bookings",
+        "reason": "Subtract overlapping confirmed and picked-up bookings"
+      }
+    ],
+    "data": {
+      "products": {
+        "kind": "folder",
+        "path": "/rental-products",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.rental.product+json"
+      },
+      "bookings": {
+        "kind": "folder",
+        "path": "/rental-bookings",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.rental.booking+json"
+      },
+      "availability": {
+        "kind": "computed",
+        "expr": "(data.products || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, name: e.data.name || '', status: e.data.status, dailyRate: e.data.dailyRate || '', owned: Number(e.data.quantityOwned || 0), out: (data.bookings || []).filter(b => b.kind === 'file' && b.data && b.data.state !== 'archived' && (b.data.status === 'confirmed' || b.data.status === 'picked-up') && b.data.product === e.path && (b.data.startDate || '') <= Date().slice(0, 10) && Date().slice(0, 10) <= (b.data.endDate || '')).reduce((s, b) => s + Number(b.data.quantity || 0), 0) })).map(r => ({ path: r.path, code: r.code, name: r.name, status: r.status, dailyRate: r.dailyRate, owned: r.owned, out: r.out, available: r.status === 'available' ? r.owned - r.out : 0 }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Availability"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Per product: units owned, out on confirmed and picked-up bookings covering today, and what is left to rent.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Rental",
+                  "variant": "ghost",
+                  "icon": "key",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/applications/rental/canvas/home.page.yaml"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$products.error }}"
+            },
+            "rules": {
+              "visible": "data.$products.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$products.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$bookings.error }}"
+            },
+            "rules": {
+              "visible": "data.$bookings.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$bookings.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 4
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Products",
+                  "value": "{{ (data.products || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).length }}",
+                  "icon": "package",
+                  "loading": "{{ data.$products.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Units owned",
+                  "value": "{{ (data.availability || []).reduce((s, r) => s + r.owned, 0) }}",
+                  "icon": "boxes",
+                  "loading": "{{ data.$products.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Units out",
+                  "value": "{{ (data.availability || []).reduce((s, r) => s + r.out, 0) }}",
+                  "icon": "package-open",
+                  "loading": "{{ data.$bookings.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Units available",
+                  "value": "{{ (data.availability || []).reduce((s, r) => s + r.available, 0) }}",
+                  "icon": "package-check",
+                  "loading": "{{ data.$bookings.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.availability || []).map(r => ({ path: r.path, code: r.code, name: r.name, status: r.status, dailyRate: r.dailyRate, owned: r.owned, out: r.out, available: r.available })) }}",
+              "columns": [
+                {
+                  "key": "code",
+                  "label": "Product"
+                },
+                {
+                  "key": "name",
+                  "label": "Name"
+                },
+                {
+                  "key": "status",
+                  "label": "Status"
+                },
+                {
+                  "key": "dailyRate",
+                  "label": "Daily rate",
+                  "align": "end"
+                },
+                {
+                  "key": "owned",
+                  "label": "Owned",
+                  "align": "end"
+                },
+                {
+                  "key": "out",
+                  "label": "Out",
+                  "align": "end"
+                },
+                {
+                  "key": "available",
+                  "label": "Available",
+                  "align": "end"
+                }
+              ],
+              "emptyText": "No rental products yet",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

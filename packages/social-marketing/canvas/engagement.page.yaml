@@ -1,0 +1,245 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "social-marketing-engagement",
+    "name": "Engagement",
+    "description": "Hand-recorded engagement, summed per social account.",
+    "icon": "heart"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/social-accounts",
+        "reason": "Sum published posts and engagement per social account"
+      },
+      {
+        "path": "/social-posts",
+        "reason": "Sum published posts and engagement per social account"
+      }
+    ],
+    "data": {
+      "posts": {
+        "kind": "folder",
+        "path": "/social-posts",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.social-marketing.post+json"
+      },
+      "accounts": {
+        "kind": "folder",
+        "path": "/social-accounts",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.social-marketing.account+json"
+      },
+      "rows": {
+        "kind": "computed",
+        "expr": "(data.posts || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, accountPath: e.data.account || '', handle: ((((data.accounts || []).find(a => a.kind === 'file' && a.data && a.path === e.data.account) || {}).data || {}).handle) || '', status: e.data.status || '', scheduledDate: e.data.scheduledDate || '', publishedAt: e.data.publishedAt || '', excerpt: String(e.data.content || '').slice(0, 80), likes: Number((e.data.engagement || {}).likes || 0), shares: Number((e.data.engagement || {}).shares || 0), comments: Number((e.data.engagement || {}).comments || 0) }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Engagement by account"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Published posts and their hand-recorded likes, shares and comments, summed per social account.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Social Marketing",
+                  "variant": "ghost",
+                  "icon": "megaphone",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/applications/social-marketing/canvas/home.page.yaml"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /social-posts folder could not be read. Reinstall Social Marketing to recreate it."
+            },
+            "rules": {
+              "visible": "data.$posts.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /social-accounts folder could not be read. Reinstall Social Marketing to recreate it."
+            },
+            "rules": {
+              "visible": "data.$accounts.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 4
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Published posts",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'published').length }}",
+                  "icon": "megaphone",
+                  "loading": "{{ data.$posts.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Likes",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'published').reduce((sum, r) => sum + r.likes, 0) }}",
+                  "icon": "heart",
+                  "loading": "{{ data.$posts.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Shares",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'published').reduce((sum, r) => sum + r.shares, 0) }}",
+                  "icon": "repeat",
+                  "loading": "{{ data.$posts.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Comments",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'published').reduce((sum, r) => sum + r.comments, 0) }}",
+                  "icon": "message-circle",
+                  "loading": "{{ data.$posts.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Accounts"
+            },
+            "children": [
+              {
+                "type": "canvas.table",
+                "props": {
+                  "rows": "{{ (data.accounts || []).filter(a => a.kind === 'file' && a.data && a.data.state !== 'archived').map(a => ({ path: a.path, code: a.data.code || a.name, handle: a.data.handle || '', network: ({ 'mastodon': 'Mastodon', 'linkedin': 'LinkedIn', 'x': 'X', 'facebook': 'Facebook', 'other': 'Other' })[a.data.network] || a.data.network || '', active: a.data.active === true ? 'Yes' : 'No', published: (data.rows || []).filter(r => r.accountPath === a.path && r.status === 'published').length, likes: (data.rows || []).filter(r => r.accountPath === a.path && r.status === 'published').reduce((sum, r) => sum + r.likes, 0), shares: (data.rows || []).filter(r => r.accountPath === a.path && r.status === 'published').reduce((sum, r) => sum + r.shares, 0), comments: (data.rows || []).filter(r => r.accountPath === a.path && r.status === 'published').reduce((sum, r) => sum + r.comments, 0) })) }}",
+                  "columns": [
+                    {
+                      "key": "code",
+                      "label": "Account"
+                    },
+                    {
+                      "key": "handle",
+                      "label": "Handle"
+                    },
+                    {
+                      "key": "network",
+                      "label": "Network"
+                    },
+                    {
+                      "key": "active",
+                      "label": "Active"
+                    },
+                    {
+                      "key": "published",
+                      "label": "Published",
+                      "align": "end"
+                    },
+                    {
+                      "key": "likes",
+                      "label": "Likes",
+                      "align": "end"
+                    },
+                    {
+                      "key": "shares",
+                      "label": "Shares",
+                      "align": "end"
+                    },
+                    {
+                      "key": "comments",
+                      "label": "Comments",
+                      "align": "end"
+                    }
+                  ],
+                  "emptyText": "No social accounts yet",
+                  "clickable": true
+                },
+                "on": {
+                  "row-click": [
+                    {
+                      "open-file": {
+                        "path": "{{ event.path }}",
+                        "mode": "edit"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

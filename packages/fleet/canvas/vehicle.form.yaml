@@ -1,0 +1,688 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Form",
+  "metadata": {
+    "id": "fleet-vehicle",
+    "name": "Fleet vehicle",
+    "description": "View and edit a Fleet vehicle.",
+    "icon": "car"
+  },
+  "spec": {
+    "binds": [
+      {
+        "pattern": "application/vnd.verentis.fleet.vehicle+json",
+        "mode": "edit",
+        "priority": 200,
+        "scope": "global",
+        "json-schema": {
+          "id": "https://schemas.verentis.io/fleet/v1/vehicle.schema.json",
+          "source": "/applications/fleet/schemas/vehicle.schema.json",
+          "title": "Fleet vehicle",
+          "version": "1"
+        }
+      }
+    ],
+    "entry": "${var:canvas-origin}/render?document=%2Fapplications%2Ffleet%2Fcanvas%2Fvehicle.form.yaml",
+    "scope": "global",
+    "mime-types": [
+      {
+        "pattern": "application/vnd.verentis.fleet.vehicle+json",
+        "mode": "edit",
+        "priority": 200,
+        "json-schema": {
+          "id": "https://schemas.verentis.io/fleet/v1/vehicle.schema.json",
+          "source": "/applications/fleet/schemas/vehicle.schema.json",
+          "title": "Fleet vehicle",
+          "version": "1"
+        }
+      }
+    ],
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run",
+      "execution.read"
+    ],
+    "capabilities": [],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-popups": false,
+      "allow-forms": true
+    },
+    "file-access": [
+      {
+        "path": "/service-logs",
+        "mode": "read",
+        "reason": "Show the service history of this vehicle"
+      },
+      {
+        "path": "/applications/fleet/",
+        "mode": "read",
+        "reason": "Read the Fleet schemas and run the posting script"
+      }
+    ],
+    "access": [
+      {
+        "path": "/service-logs",
+        "reason": "Show the service history of this vehicle"
+      },
+      {
+        "path": "/applications/fleet/",
+        "reason": "Read the Fleet schemas and run the posting script"
+      }
+    ],
+    "data": {
+      "record": {
+        "kind": "document",
+        "consistency": "conditional"
+      },
+      "services": {
+        "kind": "folder",
+        "path": "/service-logs",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.fleet.service+json"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.heading",
+                        "props": {
+                          "level": 2,
+                          "text": "{{ ((form.values.make || '') + ' ' + (form.values.model || '')).trim() || 'New vehicle' }}"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.badge",
+                        "props": {
+                          "text": "{{ String(form.values.status || '').split('-').join(' ') }}",
+                          "tone": "{{ [\"active\",\"done\"].includes(form.values.status) ? 'success' : [\"in-maintenance\",\"draft\",\"expired\"].includes(form.values.status) ? 'warning' : 'neutral' }}"
+                        },
+                        "rules": {
+                          "visible": "!!form.values.status"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.badge",
+                        "props": {
+                          "text": "Archived",
+                          "tone": "warning",
+                          "icon": "archive"
+                        },
+                        "rules": {
+                          "visible": "form.values.state === 'archived'"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Vehicle {{ form.values.code || '' }} · {{ ctx.file.path }}",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Retire",
+                      "icon": "circle-off",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "retire"
+                    },
+                    "rules": {
+                      "visible": "form.values.status === 'active' && !(form.values.state === 'archived')",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Archive",
+                          "variant": "ghost",
+                          "icon": "archive",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "archive"
+                        },
+                        "rules": {
+                          "visible": "!(form.values.state === 'archived') && !((form.values.status === 'retired'))",
+                          "disabled": "form.saving || form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Restore",
+                          "variant": "outline",
+                          "icon": "archive-restore",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "restore"
+                        },
+                        "rules": {
+                          "visible": "form.values.state === 'archived'",
+                          "disabled": "form.saving || form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Reset",
+                          "variant": "ghost",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "reset"
+                        },
+                        "rules": {
+                          "disabled": "form.saving || !form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Save",
+                          "icon": "save",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "save"
+                        },
+                        "rules": {
+                          "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || ((form.values.status === 'retired'))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$record.error }}"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.dashboard.badge",
+            "props": {
+              "text": "This vehicle is archived. Restore it to edit.",
+              "tone": "warning",
+              "icon": "archive"
+            },
+            "rules": {
+              "visible": "form.values.state === 'archived'"
+            }
+          },
+          {
+            "type": "canvas.tabs",
+            "props": {
+              "items": [
+                {
+                  "value": "overview",
+                  "label": "Overview",
+                  "icon": "car"
+                },
+                {
+                  "value": "services",
+                  "label": "Service history",
+                  "icon": "wrench"
+                }
+              ]
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.card",
+                        "props": {
+                          "title": "Vehicle"
+                        },
+                        "children": [
+                          {
+                            "type": "canvas.grid",
+                            "layout": {
+                              "base": {
+                                "columns": 1,
+                                "gap": 4
+                              },
+                              "tablet": {
+                                "columns": 2
+                              }
+                            },
+                            "children": [
+                              {
+                                "type": "canvas.form.input",
+                                "props": {
+                                  "label": "Make",
+                                  "value": "{{ form.values.make }}",
+                                  "required": true
+                                },
+                                "rules": {
+                                  "disabled": "(form.values.state === 'archived' || ((form.values.status === 'retired')))"
+                                }
+                              },
+                              {
+                                "type": "canvas.form.input",
+                                "props": {
+                                  "label": "Model",
+                                  "value": "{{ form.values.model }}",
+                                  "required": true
+                                },
+                                "rules": {
+                                  "disabled": "(form.values.state === 'archived' || ((form.values.status === 'retired')))"
+                                }
+                              },
+                              {
+                                "type": "canvas.form.input",
+                                "props": {
+                                  "label": "Year",
+                                  "value": "{{ form.values.year }}",
+                                  "placeholder": "2024"
+                                },
+                                "rules": {
+                                  "disabled": "(form.values.state === 'archived' || ((form.values.status === 'retired')))"
+                                }
+                              },
+                              {
+                                "type": "canvas.form.input",
+                                "props": {
+                                  "label": "License plate",
+                                  "value": "{{ form.values.licensePlate }}",
+                                  "placeholder": "CA 123-456"
+                                },
+                                "rules": {
+                                  "disabled": "(form.values.state === 'archived' || ((form.values.status === 'retired')))"
+                                }
+                              },
+                              {
+                                "type": "canvas.form.input",
+                                "props": {
+                                  "label": "VIN",
+                                  "value": "{{ form.values.vin }}",
+                                  "placeholder": "JTDBR32E720045671"
+                                },
+                                "rules": {
+                                  "disabled": "(form.values.state === 'archived' || ((form.values.status === 'retired')))"
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "canvas.card",
+                        "props": {
+                          "title": "Operation"
+                        },
+                        "children": [
+                          {
+                            "type": "canvas.grid",
+                            "layout": {
+                              "base": {
+                                "columns": 1,
+                                "gap": 4
+                              },
+                              "tablet": {
+                                "columns": 2
+                              }
+                            },
+                            "children": [
+                              {
+                                "type": "canvas.form.input",
+                                "props": {
+                                  "label": "Driver",
+                                  "value": "{{ form.values.driverName }}"
+                                },
+                                "rules": {
+                                  "disabled": "(form.values.state === 'archived' || ((form.values.status === 'retired')))"
+                                }
+                              },
+                              {
+                                "type": "canvas.form.select",
+                                "props": {
+                                  "label": "Status",
+                                  "value": "{{ form.values.status }}",
+                                  "description": "Retiring a vehicle is done with the Retire action and cannot be undone from the form.",
+                                  "options": [
+                                    {
+                                      "label": "Active",
+                                      "value": "active"
+                                    },
+                                    {
+                                      "label": "In maintenance",
+                                      "value": "in-maintenance"
+                                    }
+                                  ]
+                                },
+                                "rules": {
+                                  "disabled": "(form.values.state === 'archived' || ((form.values.status === 'retired')))"
+                                }
+                              },
+                              {
+                                "type": "canvas.form.input",
+                                "props": {
+                                  "label": "Odometer (km)",
+                                  "value": "{{ form.values.odometerKm }}",
+                                  "description": "Current odometer reading in kilometres, as an exact decimal.",
+                                  "placeholder": "0"
+                                },
+                                "rules": {
+                                  "disabled": "(form.values.state === 'archived' || ((form.values.status === 'retired')))"
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ],
+                "slot": "overview"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "{{ data.$services.error }}"
+                    },
+                    "rules": {
+                      "visible": "data.$services.status === 'error'"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Loading…",
+                      "tone": "muted"
+                    },
+                    "rules": {
+                      "visible": "data.$services.status === 'loading'"
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.services || []).filter(s => s.kind === 'file' && s.data && s.data.kind === 'service' && s.data.vehicle === ctx.file.path).map(s => ({ path: s.path, date: s.data.date || '', log: s.data.code || s.name, type: s.data.type || '', description: s.data.description || '', odometerKm: s.data.odometerKm || '', cost: s.data.cost || '', status: s.data.status || '' })).sort((a, b) => (a.date < b.date ? -1 : (a.date > b.date ? 1 : 0))) }}",
+                      "columns": [
+                        {
+                          "key": "date",
+                          "label": "Date"
+                        },
+                        {
+                          "key": "log",
+                          "label": "Log"
+                        },
+                        {
+                          "key": "type",
+                          "label": "Type"
+                        },
+                        {
+                          "key": "description",
+                          "label": "Description"
+                        },
+                        {
+                          "key": "odometerKm",
+                          "label": "Odometer (km)",
+                          "align": "end"
+                        },
+                        {
+                          "key": "cost",
+                          "label": "Cost",
+                          "align": "end"
+                        },
+                        {
+                          "key": "status",
+                          "label": "Status"
+                        }
+                      ],
+                      "emptyText": "No service logs for this vehicle yet",
+                      "clickable": true
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "services"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "actions": {
+      "save": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Saved",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "reset": {
+        "steps": [
+          {
+            "reset-form": {}
+          }
+        ]
+      },
+      "archive": {
+        "steps": [
+          {
+            "confirm": {
+              "title": "Archive",
+              "message": "Archive this record? It stays in the workspace and can be restored."
+            }
+          },
+          {
+            "patch-form": {
+              "values": {
+                "state": "archived",
+                "archivedAt": "{{ Date() }}",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Archived",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "restore": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "state": "active",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Restored",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "retire": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Retire vehicle",
+              "message": "Retire this vehicle? Retired vehicles are locked, keep their history and cannot be reactivated from the form."
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/fleet/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "retire",
+                "path": "{{ ctx.file.path }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

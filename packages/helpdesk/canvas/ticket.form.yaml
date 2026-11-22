@@ -1,0 +1,803 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Form",
+  "metadata": {
+    "id": "helpdesk-ticket",
+    "name": "Helpdesk ticket",
+    "description": "View and edit a Helpdesk ticket.",
+    "icon": "ticket"
+  },
+  "spec": {
+    "binds": [
+      {
+        "pattern": "application/vnd.verentis.helpdesk.ticket+json",
+        "mode": "edit",
+        "priority": 200,
+        "scope": "global",
+        "json-schema": {
+          "id": "https://schemas.verentis.io/helpdesk/v1/ticket.schema.json",
+          "source": "/applications/helpdesk/schemas/ticket.schema.json",
+          "title": "Helpdesk ticket",
+          "version": "1"
+        }
+      }
+    ],
+    "entry": "${var:canvas-origin}/render?document=%2Fapplications%2Fhelpdesk%2Fcanvas%2Fticket.form.yaml",
+    "scope": "global",
+    "mime-types": [
+      {
+        "pattern": "application/vnd.verentis.helpdesk.ticket+json",
+        "mode": "edit",
+        "priority": 200,
+        "json-schema": {
+          "id": "https://schemas.verentis.io/helpdesk/v1/ticket.schema.json",
+          "source": "/applications/helpdesk/schemas/ticket.schema.json",
+          "title": "Helpdesk ticket",
+          "version": "1"
+        }
+      }
+    ],
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run",
+      "execution.read"
+    ],
+    "capabilities": [],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-popups": false,
+      "allow-forms": true
+    },
+    "file-access": [
+      {
+        "path": "/helpdesk-teams",
+        "mode": "read",
+        "reason": "Choose the team a ticket belongs to"
+      },
+      {
+        "path": "/customers",
+        "mode": "read",
+        "reason": "Offer CRM customers on tickets (when CRM is installed)"
+      },
+      {
+        "path": "/applications/helpdesk/",
+        "mode": "read",
+        "reason": "Read the Helpdesk schemas and run the ticket action script"
+      }
+    ],
+    "access": [
+      {
+        "path": "/helpdesk-teams",
+        "reason": "Choose the team a ticket belongs to"
+      },
+      {
+        "path": "/customers",
+        "reason": "Offer CRM customers on tickets (when CRM is installed)"
+      },
+      {
+        "path": "/applications/helpdesk/",
+        "reason": "Read the Helpdesk schemas and run the ticket action script"
+      }
+    ],
+    "data": {
+      "record": {
+        "kind": "document",
+        "consistency": "conditional"
+      },
+      "teams": {
+        "kind": "folder",
+        "path": "/helpdesk-teams",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.helpdesk.team+json"
+      },
+      "teamoptions": {
+        "kind": "computed",
+        "expr": "(data.teams || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + (e.data.name || ''), value: e.path }))"
+      },
+      "companies": {
+        "kind": "folder",
+        "path": "/customers",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.crm.company+json"
+      },
+      "contacts": {
+        "kind": "folder",
+        "path": "/customers",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.crm.contact+json"
+      },
+      "customeroptions": {
+        "kind": "computed",
+        "expr": "(data.companies || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + (e.data.name || ''), value: e.path })).concat((data.contacts || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + ([e.data.givenName, e.data.familyName].filter(Boolean).join(' ')), value: e.path })))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.heading",
+                        "props": {
+                          "level": 2,
+                          "text": "{{ form.values.subject || 'New ticket' }}"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.badge",
+                        "props": {
+                          "text": "{{ String(form.values.stage || '').split('-').join(' ') }}",
+                          "tone": "{{ [\"solved\"].includes(form.values.stage) ? 'success' : [\"waiting\"].includes(form.values.stage) ? 'warning' : [\"closed\"].includes(form.values.stage) ? 'danger' : 'neutral' }}"
+                        },
+                        "rules": {
+                          "visible": "!!form.values.stage"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.badge",
+                        "props": {
+                          "text": "Archived",
+                          "tone": "warning",
+                          "icon": "archive"
+                        },
+                        "rules": {
+                          "visible": "form.values.state === 'archived'"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Ticket {{ form.values.code || '' }} · {{ ctx.file.path }}",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Resolve",
+                      "icon": "check",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "resolve"
+                    },
+                    "rules": {
+                      "visible": "['in-progress', 'waiting'].includes(form.values.stage) && !(form.values.state === 'archived')",
+                      "disabled": "form.saving || form.dirty || !String(form.values.resolution || '').trim()"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Close",
+                      "variant": "outline",
+                      "icon": "lock",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "close"
+                    },
+                    "rules": {
+                      "visible": "form.values.stage === 'solved' && !(form.values.state === 'archived')",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Copy name",
+                      "variant": "ghost",
+                      "icon": "copy",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "copy-customer"
+                    },
+                    "rules": {
+                      "visible": "!(form.values.stage === 'closed') && !!form.values.customerRef",
+                      "disabled": "form.saving || form.values.state === 'archived'"
+                    }
+                  },
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Archive",
+                          "variant": "ghost",
+                          "icon": "archive",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "archive"
+                        },
+                        "rules": {
+                          "visible": "!(form.values.state === 'archived') && !(form.values.stage === 'closed')",
+                          "disabled": "form.saving || form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Restore",
+                          "variant": "outline",
+                          "icon": "archive-restore",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "restore"
+                        },
+                        "rules": {
+                          "visible": "form.values.state === 'archived'",
+                          "disabled": "form.saving || form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Reset",
+                          "variant": "ghost",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "reset"
+                        },
+                        "rules": {
+                          "disabled": "form.saving || !form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Save",
+                          "icon": "save",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "save"
+                        },
+                        "rules": {
+                          "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (form.values.stage === 'closed')"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$record.error }}"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.dashboard.badge",
+            "props": {
+              "text": "This ticket is archived. Restore it to edit.",
+              "tone": "warning",
+              "icon": "archive"
+            },
+            "rules": {
+              "visible": "form.values.state === 'archived'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Overdue: the SLA deadline {{ form.values.slaDeadline }} has passed.",
+              "tone": "danger"
+            },
+            "rules": {
+              "visible": "['new', 'in-progress', 'waiting'].includes(form.values.stage) && !!form.values.slaDeadline && form.values.slaDeadline < Date()"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "This ticket is closed and can no longer be edited.",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "form.values.stage === 'closed'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 1,
+                "gap": 4
+              },
+              "tablet": {
+                "columns": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Ticket"
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Subject",
+                          "value": "{{ form.values.subject }}",
+                          "required": true
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.stage === 'closed'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Team",
+                          "value": "{{ form.values.team }}",
+                          "options": "{{ data.teamoptions }}"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.stage === 'closed'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Assignee",
+                          "value": "{{ form.values.assignee }}",
+                          "placeholder": "Name or email"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.stage === 'closed'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Priority",
+                          "value": "{{ form.values.priority }}",
+                          "options": [
+                            {
+                              "value": "low",
+                              "label": "Low"
+                            },
+                            {
+                              "value": "normal",
+                              "label": "Normal"
+                            },
+                            {
+                              "value": "high",
+                              "label": "High"
+                            },
+                            {
+                              "value": "urgent",
+                              "label": "Urgent"
+                            }
+                          ]
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.stage === 'closed'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Stage",
+                          "value": "{{ form.values.stage }}",
+                          "description": "Solved and closed are set by Resolve and Close.",
+                          "options": [
+                            {
+                              "value": "new",
+                              "label": "New"
+                            },
+                            {
+                              "value": "in-progress",
+                              "label": "In Progress"
+                            },
+                            {
+                              "value": "waiting",
+                              "label": "Waiting"
+                            },
+                            {
+                              "value": "solved",
+                              "label": "Solved"
+                            },
+                            {
+                              "value": "closed",
+                              "label": "Closed"
+                            }
+                          ]
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.stage === 'closed'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "SLA deadline",
+                          "value": "{{ form.values.slaDeadline }}",
+                          "description": "Computed from the team's SLA hours at creation."
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.stage === 'closed')) || (true)"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Customer"
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "CRM customer",
+                          "value": "{{ form.values.customerRef }}",
+                          "description": "Optional. Choose a CRM customer, then Copy name.",
+                          "options": "{{ data.customeroptions }}"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.stage === 'closed'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Customer name",
+                          "value": "{{ form.values.customerName }}"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.stage === 'closed'))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Details"
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.textarea",
+                        "props": {
+                          "label": "Description",
+                          "value": "{{ form.values.description }}",
+                          "rows": 6
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.stage === 'closed'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.textarea",
+                        "props": {
+                          "label": "Resolution",
+                          "value": "{{ form.values.resolution }}",
+                          "description": "Required before a ticket can be resolved.",
+                          "rows": 4
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.stage === 'closed'))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.collab.discussion",
+            "props": {
+              "reference": "vfs:{{ ctx.file.path }}",
+              "title": "Ticket {{ form.values.code }}",
+              "placeholder": "Message the team about this ticket…"
+            }
+          }
+        ]
+      }
+    ],
+    "actions": {
+      "save": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Saved",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "reset": {
+        "steps": [
+          {
+            "reset-form": {}
+          }
+        ]
+      },
+      "archive": {
+        "steps": [
+          {
+            "confirm": {
+              "title": "Archive",
+              "message": "Archive this record? It stays in the workspace and can be restored."
+            }
+          },
+          {
+            "patch-form": {
+              "values": {
+                "state": "archived",
+                "archivedAt": "{{ Date() }}",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Archived",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "restore": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "state": "active",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Restored",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "copy-customer": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "customerName": "{{ ((data.companies || []).concat(data.contacts || []).filter(e => e.kind === 'file' && e.data && e.path === form.values.customerRef).map(e => e.data.name || [e.data.givenName, e.data.familyName].filter(Boolean).join(' '))[0]) || form.values.customerName }}"
+              }
+            }
+          }
+        ]
+      },
+      "resolve": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Resolve ticket",
+              "message": "Mark this ticket solved with its resolution text? Solved tickets can only be closed."
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/helpdesk/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "resolve",
+                "path": "{{ ctx.file.path }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "close": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Close ticket",
+              "message": "Close this solved ticket? Closed tickets are locked and cannot be edited."
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/helpdesk/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "close",
+                "path": "{{ ctx.file.path }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

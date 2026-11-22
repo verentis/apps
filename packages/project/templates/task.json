@@ -1,0 +1,17 @@
+{
+  "$schema": "https://schemas.verentis.io/project/v1/task.schema.json",
+  "schemaVersion": 1,
+  "kind": "task",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "project": "",
+  "title": "{{ name }}",
+  "stage": "backlog",
+  "priority": "medium",
+  "assignee": "",
+  "dueDate": "",
+  "description": ""
+}

@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.verentis.io/referrals/v1/referral.schema.json",
+  "title": "Referrals referral",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "const": "https://schemas.verentis.io/referrals/v1/referral.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "kind": {
+      "const": "referral"
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "state": {
+      "enum": [
+        "active",
+        "archived"
+      ]
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "archivedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "code": {
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "referrerName": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "referrerRef": {
+      "type": "string",
+      "maxLength": 4096,
+      "pattern": "^(/.*)?$"
+    },
+    "candidateName": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "job": {
+      "type": "string",
+      "maxLength": 4096,
+      "pattern": "^(/.*)?$"
+    },
+    "status": {
+      "enum": [
+        "submitted",
+        "in-process",
+        "hired",
+        "not-hired"
+      ]
+    },
+    "points": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000000
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 10000
+    },
+    "decidedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    }
+  },
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "kind",
+    "id",
+    "state",
+    "createdAt",
+    "updatedAt",
+    "code",
+    "referrerName",
+    "candidateName",
+    "status",
+    "points"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "archived"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "archivedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          }
+        },
+        "required": [
+          "archivedAt"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "hired",
+              "not-hired"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "decidedAt": true
+        },
+        "required": [
+          "decidedAt"
+        ]
+      }
+    }
+  ]
+}

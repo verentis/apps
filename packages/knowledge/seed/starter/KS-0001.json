@@ -1,0 +1,13 @@
+{
+  "$schema": "https://schemas.verentis.io/knowledge/v1/space.schema.json",
+  "schemaVersion": 1,
+  "kind": "space",
+  "id": "9e2a4b6c-1d3f-4a5b-8c7d-0e1f2a3b4c01",
+  "state": "active",
+  "createdAt": "2026-01-01T00:00:00Z",
+  "updatedAt": "2026-01-01T00:00:00Z",
+  "code": "KS-0001",
+  "name": "Company handbook",
+  "description": "Policies, onboarding and how the team works.",
+  "icon": "book"
+}

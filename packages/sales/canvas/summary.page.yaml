@@ -1,0 +1,291 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "sales-summary",
+    "name": "Sales summary",
+    "description": "Pipeline, confirmed value and open deliveries.",
+    "icon": "chart-no-axes-combined"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/quotations",
+        "reason": "Sum the quotation pipeline and confirmed value"
+      },
+      {
+        "path": "/sales-orders",
+        "reason": "Sum the order book and open deliveries"
+      }
+    ],
+    "data": {
+      "quotations": {
+        "kind": "folder",
+        "path": "/quotations",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.sales.quotation+json"
+      },
+      "orders": {
+        "kind": "folder",
+        "path": "/sales-orders",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.sales.order+json"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Sales summary"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Open quotations are estimated from their lines; confirmed quotations and sales orders use their exact totals.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Sales",
+                  "variant": "ghost",
+                  "icon": "package",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/applications/sales/canvas/home.page.yaml"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$quotations.error }}"
+            },
+            "rules": {
+              "visible": "data.$quotations.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$quotations.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$orders.error }}"
+            },
+            "rules": {
+              "visible": "data.$orders.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$orders.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 4
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Open quotations",
+                  "value": "{{ (data.quotations || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status === 'draft' || e.data.status === 'sent')).length }}",
+                  "icon": "file-pen",
+                  "loading": "{{ data.$quotations.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Pipeline (estimated)",
+                  "value": "{{ ((data.quotations || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status === 'draft' || e.data.status === 'sent')).reduce((s, e) => s + (e.data.lines || []).reduce((t, l) => t + Math.round(Number(l.quantity || 0) * Number(l.unitPrice || 0) * (100 - Number(l.discount || 0)) * 100), 0), 0) / 10000).toFixed(2) }}",
+                  "icon": "trending-up",
+                  "loading": "{{ data.$quotations.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Confirmed value",
+                  "value": "{{ ((data.quotations || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && e.data.status === 'confirmed' && e.data.totals).reduce((s, e) => s + Math.round(Number(e.data.totals.total || 0) * 10000), 0) / 10000).toFixed(2) }}",
+                  "icon": "receipt",
+                  "loading": "{{ data.$quotations.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Order book",
+                  "value": "{{ ((data.orders || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && e.data.totals).reduce((s, e) => s + Math.round(Number(e.data.totals.total || 0) * 10000), 0) / 10000).toFixed(2) }}",
+                  "icon": "package-check",
+                  "loading": "{{ data.$orders.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Confirmed quotations"
+            },
+            "children": [
+              {
+                "type": "canvas.table",
+                "props": {
+                  "rows": "{{ (data.quotations || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && e.data.status === 'confirmed').map(e => ({ path: e.path, code: e.data.code || e.name, customer: (e.data.customer && e.data.customer.name) || '', date: e.data.date, status: e.data.status, total: (e.data.totals && e.data.totals.total) || '' })) }}",
+                  "columns": [
+                    {
+                      "key": "code",
+                      "label": "Quotation"
+                    },
+                    {
+                      "key": "customer",
+                      "label": "Customer"
+                    },
+                    {
+                      "key": "date",
+                      "label": "Date"
+                    },
+                    {
+                      "key": "total",
+                      "label": "Total",
+                      "align": "end"
+                    }
+                  ],
+                  "emptyText": "Nothing confirmed yet",
+                  "clickable": true
+                },
+                "on": {
+                  "row-click": [
+                    {
+                      "open-file": {
+                        "path": "{{ event.path }}",
+                        "mode": "edit"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Open deliveries"
+            },
+            "children": [
+              {
+                "type": "canvas.table",
+                "props": {
+                  "rows": "{{ (data.orders || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && e.data.deliveryStatus !== 'delivered').map(e => ({ path: e.path, code: e.data.code || e.name, customer: (e.data.customer && e.data.customer.name) || '', date: e.data.date, delivery: e.data.deliveryStatus, total: (e.data.totals && e.data.totals.total) || '' })) }}",
+                  "columns": [
+                    {
+                      "key": "code",
+                      "label": "Order"
+                    },
+                    {
+                      "key": "customer",
+                      "label": "Customer"
+                    },
+                    {
+                      "key": "date",
+                      "label": "Date"
+                    },
+                    {
+                      "key": "delivery",
+                      "label": "Delivery"
+                    },
+                    {
+                      "key": "total",
+                      "label": "Total",
+                      "align": "end"
+                    }
+                  ],
+                  "emptyText": "Nothing to deliver",
+                  "clickable": true
+                },
+                "on": {
+                  "row-click": [
+                    {
+                      "open-file": {
+                        "path": "{{ event.path }}",
+                        "mode": "edit"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

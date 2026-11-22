@@ -1,0 +1,208 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.verentis.io/appraisals/v1/appraisal.schema.json",
+  "title": "Appraisals appraisal",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "const": "https://schemas.verentis.io/appraisals/v1/appraisal.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "kind": {
+      "const": "appraisal"
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "state": {
+      "enum": [
+        "active",
+        "archived"
+      ]
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "archivedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "code": {
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "employeeName": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "employeeRef": {
+      "type": "string",
+      "maxLength": 4096,
+      "pattern": "^(/.*)?$"
+    },
+    "period": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "manager": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "status": {
+      "enum": [
+        "draft",
+        "scheduled",
+        "done",
+        "cancelled"
+      ]
+    },
+    "scheduledAt": {
+      "type": "string",
+      "pattern": "^([0-9]{4}-[0-9]{2}-[0-9]{2})?$"
+    },
+    "ratings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "criteria": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "score": {
+            "enum": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5"
+            ]
+          }
+        },
+        "required": [
+          "criteria",
+          "score"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "maxItems": 50
+    },
+    "overallScore": {
+      "type": "string",
+      "pattern": "^((0|[1-9][0-9]{0,11})(\\.[0-9]{1,6})?)?$"
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 10000
+    },
+    "completedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "cancelledAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    }
+  },
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "kind",
+    "id",
+    "state",
+    "createdAt",
+    "updatedAt",
+    "code",
+    "employeeName",
+    "status",
+    "scheduledAt",
+    "ratings",
+    "overallScore"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "archived"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "archivedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          }
+        },
+        "required": [
+          "archivedAt"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "done"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "completedAt": true
+        },
+        "required": [
+          "completedAt"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "cancelled"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "cancelledAt": true
+        },
+        "required": [
+          "cancelledAt"
+        ]
+      }
+    }
+  ]
+}

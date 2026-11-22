@@ -1,0 +1,698 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Form",
+  "metadata": {
+    "id": "quality-check",
+    "name": "Quality quality check",
+    "description": "View and edit a Quality quality check.",
+    "icon": "clipboard-check"
+  },
+  "spec": {
+    "binds": [
+      {
+        "pattern": "application/vnd.verentis.quality.check+json",
+        "mode": "edit",
+        "priority": 200,
+        "scope": "global",
+        "json-schema": {
+          "id": "https://schemas.verentis.io/quality/v1/check.schema.json",
+          "source": "/applications/quality/schemas/check.schema.json",
+          "title": "Quality quality check",
+          "version": "1"
+        }
+      }
+    ],
+    "entry": "${var:canvas-origin}/render?document=%2Fapplications%2Fquality%2Fcanvas%2Fcheck.form.yaml",
+    "scope": "global",
+    "mime-types": [
+      {
+        "pattern": "application/vnd.verentis.quality.check+json",
+        "mode": "edit",
+        "priority": 200,
+        "json-schema": {
+          "id": "https://schemas.verentis.io/quality/v1/check.schema.json",
+          "source": "/applications/quality/schemas/check.schema.json",
+          "title": "Quality quality check",
+          "version": "1"
+        }
+      }
+    ],
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run",
+      "execution.read"
+    ],
+    "capabilities": [],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-popups": false,
+      "allow-forms": true
+    },
+    "file-access": [
+      {
+        "path": "/quality-control-points",
+        "mode": "read",
+        "reason": "Choose the control point a check verifies"
+      },
+      {
+        "path": "/applications/quality/",
+        "mode": "read",
+        "reason": "Read the Quality schemas and run the quality action script"
+      }
+    ],
+    "access": [
+      {
+        "path": "/quality-control-points",
+        "reason": "Choose the control point a check verifies"
+      },
+      {
+        "path": "/applications/quality/",
+        "reason": "Read the Quality schemas and run the quality action script"
+      }
+    ],
+    "data": {
+      "record": {
+        "kind": "document",
+        "consistency": "conditional"
+      },
+      "points": {
+        "kind": "folder",
+        "path": "/quality-control-points",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.quality.point+json"
+      },
+      "pointoptions": {
+        "kind": "computed",
+        "expr": "(data.points || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.active !== false)).map(e => ({ label: (e.data.code || e.name) + ' · ' + (e.data.title || ''), value: e.path }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.heading",
+                        "props": {
+                          "level": 2,
+                          "text": "{{ form.values.reference || 'New quality check' }}"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.badge",
+                        "props": {
+                          "text": "{{ String(form.values.result || '').split('-').join(' ') }}",
+                          "tone": "{{ [\"pass\"].includes(form.values.result) ? 'success' : [\"pending\"].includes(form.values.result) ? 'warning' : [\"fail\"].includes(form.values.result) ? 'danger' : 'neutral' }}"
+                        },
+                        "rules": {
+                          "visible": "!!form.values.result"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.badge",
+                        "props": {
+                          "text": "Archived",
+                          "tone": "warning",
+                          "icon": "archive"
+                        },
+                        "rules": {
+                          "visible": "form.values.state === 'archived'"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Quality check {{ form.values.code || '' }} · {{ ctx.file.path }}",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Record pass",
+                      "icon": "check",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "record-pass"
+                    },
+                    "rules": {
+                      "visible": "(!form.values.result || form.values.result === 'pending') && !(form.values.state === 'archived')",
+                      "disabled": "form.saving || form.dirty || form.invalid"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Record fail",
+                      "variant": "outline",
+                      "icon": "x",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "record-fail"
+                    },
+                    "rules": {
+                      "visible": "(!form.values.result || form.values.result === 'pending') && !(form.values.state === 'archived')",
+                      "disabled": "form.saving || form.dirty || form.invalid"
+                    }
+                  },
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Archive",
+                          "variant": "ghost",
+                          "icon": "archive",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "archive"
+                        },
+                        "rules": {
+                          "visible": "!(form.values.state === 'archived') && !(!(!form.values.result || form.values.result === 'pending'))",
+                          "disabled": "form.saving || form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Restore",
+                          "variant": "outline",
+                          "icon": "archive-restore",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "restore"
+                        },
+                        "rules": {
+                          "visible": "form.values.state === 'archived'",
+                          "disabled": "form.saving || form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Reset",
+                          "variant": "ghost",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "reset"
+                        },
+                        "rules": {
+                          "disabled": "form.saving || !form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Save",
+                          "icon": "save",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "save"
+                        },
+                        "rules": {
+                          "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (!(!form.values.result || form.values.result === 'pending'))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$record.error }}"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.dashboard.badge",
+            "props": {
+              "text": "This quality check is archived. Restore it to edit.",
+              "tone": "warning",
+              "icon": "archive"
+            },
+            "rules": {
+              "visible": "form.values.state === 'archived'"
+            }
+          },
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Control point",
+                  "variant": "ghost",
+                  "icon": "crosshair",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "{{ form.values.point }}",
+                        "mode": "edit"
+                      }
+                    }
+                  ]
+                },
+                "rules": {
+                  "visible": "!!(form.values.point)"
+                }
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Alert",
+                  "variant": "ghost",
+                  "icon": "siren",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "{{ form.values.alert }}",
+                        "mode": "edit"
+                      }
+                    }
+                  ]
+                },
+                "rules": {
+                  "visible": "!!(form.values.alert)"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "This check is recorded and can no longer be edited.",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "!(!form.values.result || form.values.result === 'pending')"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 1,
+                "gap": 4
+              },
+              "tablet": {
+                "columns": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Check"
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Control point",
+                          "value": "{{ form.values.point }}",
+                          "required": true,
+                          "description": "The control point this check verifies. Measure points judge the measured value.",
+                          "options": "{{ data.pointoptions }}"
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (!(!form.values.result || form.values.result === 'pending')))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.date",
+                        "props": {
+                          "label": "Date",
+                          "value": "{{ form.values.date }}",
+                          "required": true
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (!(!form.values.result || form.values.result === 'pending')))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Reference",
+                          "value": "{{ form.values.reference }}",
+                          "placeholder": "e.g. MO-0001 or PO-0001"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (!(!form.values.result || form.values.result === 'pending')))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Result"
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Measured value",
+                          "value": "{{ form.values.measuredValue }}",
+                          "description": "Required before recording a measure check.",
+                          "placeholder": "0"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (!(!form.values.result || form.values.result === 'pending')))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Result",
+                          "value": "{{ form.values.result }}",
+                          "description": "Set by Record pass and Record fail.",
+                          "options": [
+                            {
+                              "value": "pending",
+                              "label": "Pending"
+                            },
+                            {
+                              "value": "pass",
+                              "label": "Pass"
+                            },
+                            {
+                              "value": "fail",
+                              "label": "Fail"
+                            }
+                          ]
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (!(!form.values.result || form.values.result === 'pending'))) || (true)"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.textarea",
+                        "props": {
+                          "label": "Notes",
+                          "value": "{{ form.values.notes }}",
+                          "rows": 4
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (!(!form.values.result || form.values.result === 'pending')))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "actions": {
+      "save": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Saved",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "reset": {
+        "steps": [
+          {
+            "reset-form": {}
+          }
+        ]
+      },
+      "archive": {
+        "steps": [
+          {
+            "confirm": {
+              "title": "Archive",
+              "message": "Archive this record? It stays in the workspace and can be restored."
+            }
+          },
+          {
+            "patch-form": {
+              "values": {
+                "state": "archived",
+                "archivedAt": "{{ Date() }}",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Archived",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "restore": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "state": "active",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Restored",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "record-pass": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Record pass",
+              "message": "Record this check as passed? Measure checks are validated against the control point tolerance. Recorded checks are locked."
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/quality/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "record-check",
+                "path": "{{ ctx.file.path }}",
+                "result": "pass"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "record-fail": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Record fail",
+              "message": "Record this check as failed? A quality alert is raised for it. Recorded checks are locked."
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/quality/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "record-check",
+                "path": "{{ ctx.file.path }}",
+                "result": "fail"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

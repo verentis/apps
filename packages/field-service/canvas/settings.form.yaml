@@ -1,0 +1,245 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Form",
+  "metadata": {
+    "id": "field-service-settings",
+    "name": "Field Service settings",
+    "description": "Edit the Field Service settings file.",
+    "icon": "settings"
+  },
+  "spec": {
+    "binds": [
+      {
+        "pattern": "application/vnd.verentis.field-service.settings+json",
+        "mode": "edit",
+        "priority": 200,
+        "scope": "global",
+        "json-schema": {
+          "id": "https://schemas.verentis.io/field-service/v1/settings.schema.json",
+          "source": "/applications/field-service/schemas/settings.schema.json",
+          "title": "Field Service settings",
+          "version": "1"
+        }
+      }
+    ],
+    "entry": "${var:canvas-origin}/render?document=%2Fapplications%2Ffield-service%2Fcanvas%2Fsettings.form.yaml",
+    "scope": "global",
+    "mime-types": [
+      {
+        "pattern": "application/vnd.verentis.field-service.settings+json",
+        "mode": "edit",
+        "priority": 200,
+        "json-schema": {
+          "id": "https://schemas.verentis.io/field-service/v1/settings.schema.json",
+          "source": "/applications/field-service/schemas/settings.schema.json",
+          "title": "Field Service settings",
+          "version": "1"
+        }
+      }
+    ],
+    "permissions": [
+      "file.read",
+      "file.write"
+    ],
+    "capabilities": [],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-popups": false,
+      "allow-forms": true
+    },
+    "file-access": [
+      {
+        "path": "/applications/field-service/",
+        "mode": "read",
+        "reason": "Read the Field Service schemas and run the task action script"
+      }
+    ],
+    "access": [
+      {
+        "path": "/applications/field-service/",
+        "reason": "Read the Field Service schemas and run the task action script"
+      }
+    ],
+    "data": {
+      "record": {
+        "kind": "document",
+        "consistency": "conditional"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Field Service settings"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Defaults new tasks start with. Code prefixes are app settings, managed with the installed app.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Reset",
+                      "variant": "ghost",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "reset-form": {}
+                        }
+                      ]
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Save",
+                      "icon": "save",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "save": {}
+                        },
+                        {
+                          "toast": {
+                            "message": "Saved",
+                            "variant": "success"
+                          }
+                        }
+                      ]
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty || form.invalid"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$record.error }}"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 1,
+                "gap": 4
+              },
+              "tablet": {
+                "columns": 1
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Defaults"
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Default technician",
+                          "value": "{{ form.values.defaultTechnician }}",
+                          "description": "New tasks start with this technician."
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "actions": {}
+  }
+}

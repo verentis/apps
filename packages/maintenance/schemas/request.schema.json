@@ -1,0 +1,211 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.verentis.io/maintenance/v1/request.schema.json",
+  "title": "Maintenance maintenance request",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "const": "https://schemas.verentis.io/maintenance/v1/request.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "kind": {
+      "const": "request"
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "state": {
+      "enum": [
+        "active",
+        "archived"
+      ]
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "archivedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "code": {
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "equipment": {
+      "type": "string",
+      "maxLength": 4096,
+      "pattern": "^(/.*)?$"
+    },
+    "type": {
+      "enum": [
+        "corrective",
+        "preventive"
+      ]
+    },
+    "priority": {
+      "enum": [
+        "low",
+        "normal",
+        "high"
+      ]
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 10000
+    },
+    "stage": {
+      "enum": [
+        "new",
+        "in-progress",
+        "repaired",
+        "scrap"
+      ]
+    },
+    "scheduledDate": {
+      "type": "string",
+      "pattern": "^([0-9]{4}-[0-9]{2}-[0-9]{2})?$"
+    },
+    "durationHours": {
+      "type": "string",
+      "pattern": "^((0|[1-9][0-9]{0,11})(\\.[0-9]{1,6})?)?$"
+    },
+    "startedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "completedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "scrappedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    }
+  },
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "kind",
+    "id",
+    "state",
+    "createdAt",
+    "updatedAt",
+    "code",
+    "equipment",
+    "type",
+    "priority",
+    "description",
+    "stage",
+    "scheduledDate",
+    "durationHours"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "archived"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "archivedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          }
+        },
+        "required": [
+          "archivedAt"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "stage": {
+            "enum": [
+              "in-progress",
+              "repaired"
+            ]
+          }
+        },
+        "required": [
+          "stage"
+        ]
+      },
+      "then": {
+        "properties": {
+          "startedAt": true
+        },
+        "required": [
+          "startedAt"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "stage": {
+            "enum": [
+              "repaired"
+            ]
+          }
+        },
+        "required": [
+          "stage"
+        ]
+      },
+      "then": {
+        "properties": {
+          "completedAt": true
+        },
+        "required": [
+          "completedAt"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "stage": {
+            "enum": [
+              "scrap"
+            ]
+          }
+        },
+        "required": [
+          "stage"
+        ]
+      },
+      "then": {
+        "properties": {
+          "scrappedAt": true
+        },
+        "required": [
+          "scrappedAt"
+        ]
+      }
+    }
+  ]
+}

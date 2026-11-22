@@ -1,0 +1,12 @@
+{
+  "$schema": "https://schemas.verentis.io/employees/v1/department.schema.json",
+  "schemaVersion": 1,
+  "kind": "department",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "name": "{{ name }}",
+  "manager": ""
+}

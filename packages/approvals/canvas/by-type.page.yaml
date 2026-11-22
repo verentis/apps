@@ -1,0 +1,244 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "approvals-by-type",
+    "name": "Approvals by type",
+    "description": "Requests per approval type and status.",
+    "icon": "list-checks"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/approval-types",
+        "reason": "Count approval requests per type and status"
+      },
+      {
+        "path": "/approval-requests",
+        "reason": "Count approval requests per type and status"
+      }
+    ],
+    "data": {
+      "requests": {
+        "kind": "folder",
+        "path": "/approval-requests",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.approvals.request+json"
+      },
+      "types": {
+        "kind": "folder",
+        "path": "/approval-types",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.approvals.type+json"
+      },
+      "rows": {
+        "kind": "computed",
+        "expr": "(data.requests || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, title: e.data.title || '', requester: e.data.requester || '', type: e.data.type || '', typeName: (((data.types || []).find(t => t.path === e.data.type) || {}).data || {}).name || '', required: (((data.types || []).find(t => t.path === e.data.type) || {}).data || {}).requiredApprovers || 0, approvers: (e.data.approvals || []).filter(a => a.decision === 'approve').map(a => a.approver), deciders: (e.data.approvals || []).map(a => a.approver), amount: e.data.amount || '', date: e.data.date || '', status: e.data.status || 'draft' }))"
+      },
+      "summary": {
+        "kind": "computed",
+        "expr": "(data.types || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, name: e.data.name || '', required: e.data.requiredApprovers || 0, draft: (data.requests || []).filter(r => r.kind === 'file' && r.data && r.data.state !== 'archived' && r.data.type === e.path && ((r.data.status || 'draft') === 'draft')).length, submitted: (data.requests || []).filter(r => r.kind === 'file' && r.data && r.data.state !== 'archived' && r.data.type === e.path && (r.data.status === 'submitted')).length, approved: (data.requests || []).filter(r => r.kind === 'file' && r.data && r.data.state !== 'archived' && r.data.type === e.path && (r.data.status === 'approved')).length, refused: (data.requests || []).filter(r => r.kind === 'file' && r.data && r.data.state !== 'archived' && r.data.type === e.path && (r.data.status === 'refused')).length, cancelled: (data.requests || []).filter(r => r.kind === 'file' && r.data && r.data.state !== 'archived' && r.data.type === e.path && (r.data.status === 'cancelled')).length }))"
+      }
+    },
+    "state": {
+      "showempty": false
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Approvals by type"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Every approval type with its threshold and its requests, counted by status.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Approvals",
+                  "variant": "ghost",
+                  "icon": "file-check",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/applications/approvals/canvas/home.page.yaml"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$requests.error }}"
+            },
+            "rules": {
+              "visible": "data.$requests.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$types.error }}"
+            },
+            "rules": {
+              "visible": "data.$types.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 3
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Approval types",
+                  "value": "{{ (data.types || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).length }}",
+                  "icon": "list-checks",
+                  "loading": "{{ data.$types.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Open requests",
+                  "value": "{{ (data.requests || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && ((e.data.status || 'draft') === 'draft' || e.data.status === 'submitted')).length }}",
+                  "icon": "hourglass",
+                  "loading": "{{ data.$requests.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Decided",
+                  "value": "{{ (data.requests || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status === 'approved' || e.data.status === 'refused')).length }}",
+                  "icon": "check",
+                  "loading": "{{ data.$requests.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.form.switch",
+            "props": {
+              "label": "Show types without requests",
+              "value": "{{ state.showempty }}"
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.summary || []).filter(t => state.showempty || t.draft + t.submitted + t.approved + t.refused + t.cancelled > 0).map(t => ({ path: t.path, code: t.code, name: t.name, required: t.required, draft: t.draft, submitted: t.submitted, approved: t.approved, refused: t.refused, cancelled: t.cancelled })) }}",
+              "columns": [
+                {
+                  "key": "code",
+                  "label": "Type"
+                },
+                {
+                  "key": "name",
+                  "label": "Name"
+                },
+                {
+                  "key": "required",
+                  "label": "Required",
+                  "align": "end"
+                },
+                {
+                  "key": "draft",
+                  "label": "Draft",
+                  "align": "end"
+                },
+                {
+                  "key": "submitted",
+                  "label": "Submitted",
+                  "align": "end"
+                },
+                {
+                  "key": "approved",
+                  "label": "Approved",
+                  "align": "end"
+                },
+                {
+                  "key": "refused",
+                  "label": "Refused",
+                  "align": "end"
+                },
+                {
+                  "key": "cancelled",
+                  "label": "Cancelled",
+                  "align": "end"
+                }
+              ],
+              "emptyText": "No approval types",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

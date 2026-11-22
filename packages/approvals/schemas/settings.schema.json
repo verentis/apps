@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.verentis.io/approvals/v1/settings.schema.json",
+  "title": "Approvals settings",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "const": "https://schemas.verentis.io/approvals/v1/settings.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "defaultRequester": {
+      "type": "string",
+      "maxLength": 200
+    }
+  },
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "defaultRequester"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,331 @@
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "manufacturing",
+    "name": "Manufacturing",
+    "description": "Bills of materials and manufacturing orders as files in your workspace, confirmed, started and completed by script, with stock moves handed to Inventory.",
+    "icon": "./icons/app.svg",
+    "version": "0.1.0",
+    "author": "Verentis"
+  },
+  "marketplace": {
+    "readme": "./README.md",
+    "keywords": [
+      "manufacturing",
+      "mrp",
+      "production",
+      "bill of materials",
+      "bom",
+      "manufacturing orders",
+      "routing",
+      "workcenters"
+    ]
+  },
+  "spec": {
+    "install-root": "/applications/manufacturing",
+    "entry": "https://canvas.apps.localtest.me",
+    "scope": "global",
+    "entry-points": [
+      {
+        "id": "home",
+        "display-name": "Manufacturing",
+        "route": "/render?document=.%2Fcanvas%2Fhome.page.yaml",
+        "order": 10
+      },
+      {
+        "id": "orders",
+        "display-name": "Manufacturing orders",
+        "route": "/render?document=.%2Fcanvas%2Forders.page.yaml",
+        "order": 20
+      },
+      {
+        "id": "boms",
+        "display-name": "Bills of materials",
+        "route": "/render?document=.%2Fcanvas%2Fboms.page.yaml",
+        "order": 30
+      }
+    ],
+    "launch": {
+      "enabled": true,
+      "entry-point": "home",
+      "pinnable": true
+    },
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run"
+    ],
+    "scopes": [
+      "manufacturing.default"
+    ],
+    "settings": [
+      {
+        "key": "bom-code-prefix",
+        "display-name": "Bill of materials code prefix",
+        "type": "string",
+        "default": "BOM-",
+        "description": "Prefix of generated bill of materials codes, e.g. BOM-0001."
+      },
+      {
+        "key": "order-code-prefix",
+        "display-name": "Manufacturing order code prefix",
+        "type": "string",
+        "default": "MO-",
+        "description": "Prefix of generated manufacturing order codes, e.g. MO-0001."
+      },
+      {
+        "key": "code-digits",
+        "display-name": "Code digits",
+        "type": "number",
+        "default": 4,
+        "description": "Minimum number of digits in generated codes (zero-padded)."
+      }
+    ],
+    "dependencies": [
+      {
+        "package": "verentis/canvas",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/nodejs",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/inventory",
+        "version": "latest",
+        "optional": true
+      }
+    ],
+    "engine": "verentis/nodejs",
+    "scripts": [
+      "scripts/create",
+      "scripts/post"
+    ],
+    "install": [
+      {
+        "from": "canvas/*.form.yaml",
+        "to": "/applications/manufacturing/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.form+yaml"
+      },
+      {
+        "from": "canvas/*.page.yaml",
+        "to": "/applications/manufacturing/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.page+yaml"
+      },
+      {
+        "from": "schemas/*.schema.json",
+        "to": "/applications/manufacturing/schemas/",
+        "mode": "managed",
+        "mime": "application/schema+json"
+      },
+      {
+        "from": "templates/*.json",
+        "to": "/applications/manufacturing/templates/",
+        "mode": "managed",
+        "mime": "application/json"
+      },
+      {
+        "from": "seed/boms",
+        "to": "/bills-of-materials",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.manufacturing.boms"
+      },
+      {
+        "from": "seed/orders",
+        "to": "/manufacturing-orders",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.manufacturing.orders"
+      }
+    ],
+    "creatables": [
+      {
+        "id": "bom",
+        "display-name": "Bill of materials",
+        "description": "A new bill of materials",
+        "icon": "lucide:list-tree",
+        "mime": "application/vnd.verentis.manufacturing.bom+json",
+        "parents": [
+          "application/vnd.verentis.manufacturing.boms"
+        ],
+        "folder-names": [
+          "bills-of-materials",
+          "boms",
+          "manufacturing"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/bom.json"
+      },
+      {
+        "id": "order",
+        "display-name": "Manufacturing order",
+        "description": "A new manufacturing order",
+        "icon": "lucide:factory",
+        "mime": "application/vnd.verentis.manufacturing.order+json",
+        "parents": [
+          "application/vnd.verentis.manufacturing.orders"
+        ],
+        "folder-names": [
+          "manufacturing-orders",
+          "manufacturing"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/order.json"
+      }
+    ],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-forms": true,
+      "allow-popups": false
+    },
+    "file-access": [
+      {
+        "path": "/bills-of-materials",
+        "mode": "read",
+        "reason": "List bills of materials",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/manufacturing-orders",
+        "mode": "read",
+        "reason": "List manufacturing orders",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/bills-of-materials",
+        "mode": "read",
+        "reason": "List bills of materials",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/boms.page.yaml"
+        }
+      },
+      {
+        "path": "/manufacturing-orders",
+        "mode": "read",
+        "reason": "List manufacturing orders",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/orders.page.yaml"
+        }
+      },
+      {
+        "path": "/products",
+        "mode": "read",
+        "reason": "Offer Inventory products to build (when Inventory is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "manufacturing-bom"
+        }
+      },
+      {
+        "path": "/applications/manufacturing/",
+        "mode": "read",
+        "reason": "Read the Manufacturing schemas and run the production script",
+        "origin": {
+          "kind": "document",
+          "id": "manufacturing-bom"
+        }
+      },
+      {
+        "path": "/bills-of-materials",
+        "mode": "read",
+        "reason": "Choose the bill of materials to build",
+        "origin": {
+          "kind": "document",
+          "id": "manufacturing-order"
+        }
+      },
+      {
+        "path": "/applications/manufacturing/",
+        "mode": "read",
+        "reason": "Read the Manufacturing schemas and run the production script",
+        "origin": {
+          "kind": "document",
+          "id": "manufacturing-order"
+        }
+      },
+      {
+        "path": "/bills-of-materials",
+        "mode": "write",
+        "reason": "Create bills of materials with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "manufacturing-create"
+        }
+      },
+      {
+        "path": "/manufacturing-orders",
+        "mode": "write",
+        "reason": "Create manufacturing orders with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "manufacturing-create"
+        }
+      },
+      {
+        "path": "/bills-of-materials",
+        "mode": "read",
+        "reason": "Check the bill of materials a confirmed order builds",
+        "origin": {
+          "kind": "script",
+          "id": "manufacturing-post"
+        }
+      },
+      {
+        "path": "/manufacturing-orders",
+        "mode": "write",
+        "reason": "Confirm, start and complete manufacturing orders",
+        "origin": {
+          "kind": "script",
+          "id": "manufacturing-post"
+        }
+      },
+      {
+        "path": "/stock-moves",
+        "mode": "write",
+        "reason": "Emit consumption and production stock moves for completed orders when Inventory is installed",
+        "origin": {
+          "kind": "script",
+          "id": "manufacturing-post"
+        }
+      },
+      {
+        "path": "/settings/inventory.json",
+        "mode": "read",
+        "reason": "Stamp emitted stock moves with the Inventory default warehouse when it is set",
+        "origin": {
+          "kind": "script",
+          "id": "manufacturing-post"
+        }
+      }
+    ]
+  },
+  "packaging": {
+    "publisher": "verentis",
+    "files": [
+      "canvas/**",
+      "schemas/**",
+      "templates/**",
+      "seed/**",
+      "scripts/**",
+      "README.md"
+    ],
+    "templates": [
+      "canvas/*.yaml"
+    ],
+    "variables": {
+      "canvas-origin": "https://canvas.apps.localtest.me"
+    },
+    "encryption": "none"
+  }
+}

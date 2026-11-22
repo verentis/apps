@@ -1,0 +1,324 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "payroll-structures",
+    "name": "Salary structures",
+    "description": "Salary structures and pay profiles.",
+    "icon": "layers"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/salary-structures",
+        "reason": "List salary structures"
+      },
+      {
+        "path": "/pay-profiles",
+        "reason": "List pay profiles"
+      }
+    ],
+    "data": {
+      "structures": {
+        "kind": "folder",
+        "path": "/salary-structures",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.payroll.structure+json"
+      },
+      "profiles": {
+        "kind": "folder",
+        "path": "/pay-profiles",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.payroll.profile+json"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Salary structures"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Structures hold the pay rules — earnings, deductions and employer contributions as fixed amounts or percentages of the base wage. No tax tables are built in; rules are your data.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Payroll",
+                  "variant": "ghost",
+                  "icon": "calendar-check",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/applications/payroll/canvas/home.page.yaml"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 3
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Structures",
+                  "value": "{{ (data.structures || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).length }}",
+                  "icon": "layers",
+                  "loading": "{{ data.$structures.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Pay profiles",
+                  "value": "{{ (data.profiles || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).length }}",
+                  "icon": "id-card",
+                  "loading": "{{ data.$profiles.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Active profiles",
+                  "value": "{{ (data.profiles || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.active === true)).length }}",
+                  "icon": "user-check",
+                  "loading": "{{ data.$profiles.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /salary-structures folder could not be read. Reinstall Payroll to recreate it."
+            },
+            "rules": {
+              "visible": "data.$structures.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /pay-profiles folder could not be read. Reinstall Payroll to recreate it."
+            },
+            "rules": {
+              "visible": "data.$profiles.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.tabs",
+            "props": {
+              "items": [
+                {
+                  "value": "structures",
+                  "label": "Structures",
+                  "icon": "layers"
+                },
+                {
+                  "value": "profiles",
+                  "label": "Pay profiles",
+                  "icon": "id-card"
+                }
+              ]
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Open /salary-structures",
+                          "variant": "outline",
+                          "icon": "folder-open",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "open-file": {
+                                "path": "/salary-structures"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.files",
+                    "props": {
+                      "path": "/salary-structures/",
+                      "mimeTypes": [
+                        "application/vnd.verentis.payroll.structure+json"
+                      ],
+                      "showFolders": false,
+                      "navigable": false,
+                      "columns": [
+                        {
+                          "key": "name",
+                          "label": "Code"
+                        },
+                        {
+                          "key": "data.name",
+                          "label": "Name"
+                        }
+                      ],
+                      "emptyText": "No salary structures yet. Use New in /salary-structures."
+                    }
+                  }
+                ],
+                "slot": "structures"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Open /pay-profiles",
+                          "variant": "outline",
+                          "icon": "folder-open",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "open-file": {
+                                "path": "/pay-profiles"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.files",
+                    "props": {
+                      "path": "/pay-profiles/",
+                      "mimeTypes": [
+                        "application/vnd.verentis.payroll.profile+json"
+                      ],
+                      "showFolders": false,
+                      "navigable": false,
+                      "columns": [
+                        {
+                          "key": "name",
+                          "label": "Code"
+                        },
+                        {
+                          "key": "data.employeeName",
+                          "label": "Employee"
+                        },
+                        {
+                          "key": "data.baseWage",
+                          "label": "Base wage",
+                          "align": "end"
+                        },
+                        {
+                          "key": "data.currency",
+                          "label": "Currency"
+                        }
+                      ],
+                      "emptyText": "No pay profiles yet. Use New in /pay-profiles."
+                    }
+                  }
+                ],
+                "slot": "profiles"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

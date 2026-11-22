@@ -1,0 +1,294 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "events-registrations",
+    "name": "Registrations",
+    "description": "Registrations per event, against capacity.",
+    "icon": "user-check"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/events",
+        "reason": "Sum confirmed and attended seats per event against its capacity"
+      },
+      {
+        "path": "/event-registrations",
+        "reason": "Sum confirmed and attended seats per event against its capacity"
+      }
+    ],
+    "data": {
+      "events": {
+        "kind": "folder",
+        "path": "/events",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.events.event+json"
+      },
+      "registrations": {
+        "kind": "folder",
+        "path": "/event-registrations",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.events.registration+json"
+      },
+      "rows": {
+        "kind": "computed",
+        "expr": "(data.events || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, name: e.data.name || '', venue: e.data.venue || '', startsAt: e.data.startsAt || '', status: e.data.status || '', capacity: Number(e.data.capacity) || 0, taken: (data.registrations || []).filter(r => r.kind === 'file' && r.data && r.data.state !== 'archived' && [\"confirmed\",\"attended\"].includes(r.data.status) && r.data.event === e.path).reduce((total, r) => total + (Number(r.data.qty) || 0), 0), remaining: Math.max((Number(e.data.capacity) || 0) - ((data.registrations || []).filter(r => r.kind === 'file' && r.data && r.data.state !== 'archived' && [\"confirmed\",\"attended\"].includes(r.data.status) && r.data.event === e.path).reduce((total, r) => total + (Number(r.data.qty) || 0), 0)), 0) }))"
+      },
+      "registrationrows": {
+        "kind": "computed",
+        "expr": "(data.registrations || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, attendee: e.data.attendeeName || '', event: ((((data.events || []).find(v => v.kind === 'file' && v.data && v.path === e.data.event) || {}).data || {}).name) || '', eventPath: e.data.event || '', qty: Number(e.data.qty) || 0, status: e.data.status || '' }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Registrations"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Confirmed and attended seats per event, against its capacity. Click a row to open the record.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Events",
+                  "variant": "ghost",
+                  "icon": "calendar",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/applications/events/canvas/home.page.yaml"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /events folder could not be read. Reinstall Events to recreate it."
+            },
+            "rules": {
+              "visible": "data.$events.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /event-registrations folder could not be read. Reinstall Events to recreate it."
+            },
+            "rules": {
+              "visible": "data.$registrations.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 4
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Registrations",
+                  "value": "{{ (data.registrationrows || []).length }}",
+                  "icon": "user-check",
+                  "loading": "{{ data.$registrations.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Seats confirmed",
+                  "value": "{{ (data.registrationrows || []).filter(r => [\"confirmed\",\"attended\"].includes(r.status)).reduce((total, r) => total + r.qty, 0) }}",
+                  "icon": "check",
+                  "loading": "{{ data.$registrations.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Attended",
+                  "value": "{{ (data.registrationrows || []).filter(r => r.status === 'attended').reduce((total, r) => total + r.qty, 0) }}",
+                  "icon": "badge-check",
+                  "loading": "{{ data.$registrations.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Cancelled",
+                  "value": "{{ (data.registrationrows || []).filter(r => r.status === 'cancelled').length }}",
+                  "icon": "x",
+                  "loading": "{{ data.$registrations.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Capacity per event"
+            },
+            "children": [
+              {
+                "type": "canvas.table",
+                "props": {
+                  "rows": "{{ (data.events || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, name: e.data.name || '', venue: e.data.venue || '', startsAt: e.data.startsAt || '', status: e.data.status || '', capacity: Number(e.data.capacity) || 0, taken: (data.registrations || []).filter(r => r.kind === 'file' && r.data && r.data.state !== 'archived' && [\"confirmed\",\"attended\"].includes(r.data.status) && r.data.event === e.path).reduce((total, r) => total + (Number(r.data.qty) || 0), 0), remaining: Math.max((Number(e.data.capacity) || 0) - ((data.registrations || []).filter(r => r.kind === 'file' && r.data && r.data.state !== 'archived' && [\"confirmed\",\"attended\"].includes(r.data.status) && r.data.event === e.path).reduce((total, r) => total + (Number(r.data.qty) || 0), 0)), 0) })).map(r => ({ path: r.path, code: r.code, name: r.name, status: r.status, capacity: r.capacity, taken: r.taken, remaining: r.remaining, fill: r.capacity > 0 ? Math.round(r.taken * 100 / r.capacity) + '%' : '' })) }}",
+                  "columns": [
+                    {
+                      "key": "code",
+                      "label": "Event"
+                    },
+                    {
+                      "key": "name",
+                      "label": "Name"
+                    },
+                    {
+                      "key": "status",
+                      "label": "Status"
+                    },
+                    {
+                      "key": "taken",
+                      "label": "Seats taken",
+                      "align": "end"
+                    },
+                    {
+                      "key": "capacity",
+                      "label": "Capacity",
+                      "align": "end"
+                    },
+                    {
+                      "key": "remaining",
+                      "label": "Remaining",
+                      "align": "end"
+                    },
+                    {
+                      "key": "fill",
+                      "label": "Fill",
+                      "align": "end"
+                    }
+                  ],
+                  "emptyText": "No events yet",
+                  "clickable": true
+                },
+                "on": {
+                  "row-click": [
+                    {
+                      "open-file": {
+                        "path": "{{ event.path }}",
+                        "mode": "edit"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Registrations"
+            },
+            "children": [
+              {
+                "type": "canvas.table",
+                "props": {
+                  "rows": "{{ (data.registrationrows || []).map(r => ({ path: r.path, code: r.code, attendee: r.attendee, event: r.event, qty: r.qty, status: r.status })) }}",
+                  "columns": [
+                    {
+                      "key": "code",
+                      "label": "Registration"
+                    },
+                    {
+                      "key": "attendee",
+                      "label": "Attendee"
+                    },
+                    {
+                      "key": "event",
+                      "label": "Event"
+                    },
+                    {
+                      "key": "qty",
+                      "label": "Seats",
+                      "align": "end"
+                    },
+                    {
+                      "key": "status",
+                      "label": "Status"
+                    }
+                  ],
+                  "emptyText": "No registrations yet",
+                  "clickable": true
+                },
+                "on": {
+                  "row-click": [
+                    {
+                      "open-file": {
+                        "path": "{{ event.path }}",
+                        "mode": "edit"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

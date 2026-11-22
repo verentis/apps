@@ -1,0 +1,6 @@
+{
+  "$schema": "https://schemas.verentis.io/sales/v1/settings.schema.json",
+  "schemaVersion": 1,
+  "currency": "ZAR",
+  "notes": "Prices are valid for 30 days."
+}

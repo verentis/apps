@@ -1,0 +1,1032 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Form",
+  "metadata": {
+    "id": "sales-quotation",
+    "name": "Sales quotation",
+    "description": "View and edit a sales quotation.",
+    "icon": "file-text"
+  },
+  "spec": {
+    "binds": [
+      {
+        "pattern": "application/vnd.verentis.sales.quotation+json",
+        "mode": "edit",
+        "priority": 200,
+        "scope": "global",
+        "json-schema": {
+          "id": "https://schemas.verentis.io/sales/v1/quotation.schema.json",
+          "source": "/applications/sales/schemas/quotation.schema.json",
+          "title": "Sales quotation",
+          "version": "1"
+        }
+      }
+    ],
+    "entry": "${var:canvas-origin}/render?document=%2Fapplications%2Fsales%2Fcanvas%2Fquotation.form.yaml",
+    "scope": "global",
+    "mime-types": [
+      {
+        "pattern": "application/vnd.verentis.sales.quotation+json",
+        "mode": "edit",
+        "priority": 200,
+        "json-schema": {
+          "id": "https://schemas.verentis.io/sales/v1/quotation.schema.json",
+          "source": "/applications/sales/schemas/quotation.schema.json",
+          "title": "Sales quotation",
+          "version": "1"
+        }
+      }
+    ],
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run",
+      "execution.read"
+    ],
+    "capabilities": [],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-popups": false,
+      "allow-forms": true
+    },
+    "file-access": [
+      {
+        "path": "/customers",
+        "mode": "read",
+        "reason": "Offer CRM customers to quote (when CRM is installed)"
+      },
+      {
+        "path": "/products",
+        "mode": "read",
+        "reason": "Offer products on quotation lines"
+      },
+      {
+        "path": "/applications/sales/",
+        "mode": "read",
+        "reason": "Read the Sales schemas and run the confirm script"
+      }
+    ],
+    "access": [
+      {
+        "path": "/customers",
+        "reason": "Offer CRM customers to quote (when CRM is installed)"
+      },
+      {
+        "path": "/products",
+        "reason": "Offer products on quotation lines"
+      },
+      {
+        "path": "/applications/sales/",
+        "reason": "Read the Sales schemas and run the confirm script"
+      }
+    ],
+    "data": {
+      "record": {
+        "kind": "document",
+        "consistency": "conditional"
+      },
+      "companies": {
+        "kind": "folder",
+        "path": "/customers",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.crm.company+json"
+      },
+      "contacts": {
+        "kind": "folder",
+        "path": "/customers",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.crm.contact+json"
+      },
+      "customeroptions": {
+        "kind": "computed",
+        "expr": "(data.companies || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + (e.data.name || ''), value: e.path })).concat((data.contacts || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + ([e.data.givenName, e.data.familyName].filter(Boolean).join(' ')), value: e.path })))"
+      },
+      "products": {
+        "kind": "folder",
+        "path": "/products",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.sales.product+json"
+      },
+      "productoptions": {
+        "kind": "computed",
+        "expr": "(data.products || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + (e.data.name || ''), value: e.path }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.heading",
+                        "props": {
+                          "level": 2,
+                          "text": "{{ form.values.customer.name || 'New quotation' }}"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.badge",
+                        "props": {
+                          "text": "{{ String(form.values.status || '').split('-').join(' ') }}",
+                          "tone": "{{ [\"confirmed\",\"delivered\"].includes(form.values.status) ? 'success' : [\"draft\",\"pending\"].includes(form.values.status) ? 'warning' : [\"cancelled\"].includes(form.values.status) ? 'danger' : 'neutral' }}"
+                        },
+                        "rules": {
+                          "visible": "!!form.values.status"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.badge",
+                        "props": {
+                          "text": "Archived",
+                          "tone": "warning",
+                          "icon": "archive"
+                        },
+                        "rules": {
+                          "visible": "form.values.state === 'archived'"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Quotation {{ form.values.code || '' }} · {{ ctx.file.path }}",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Copy details",
+                      "variant": "outline",
+                      "icon": "copy",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "copy-customer"
+                    },
+                    "rules": {
+                      "visible": "(form.values.status === 'draft' || form.values.status === 'sent') && !!form.values.customerRef",
+                      "disabled": "form.saving || form.values.state === 'archived'"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Mark sent",
+                      "variant": "outline",
+                      "icon": "send",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "mark-sent"
+                    },
+                    "rules": {
+                      "visible": "form.values.status === 'draft' && !(form.values.state === 'archived')",
+                      "disabled": "form.saving || form.invalid"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Confirm",
+                      "icon": "check",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "confirm"
+                    },
+                    "rules": {
+                      "visible": "(form.values.status === 'draft' || form.values.status === 'sent') && !(form.values.state === 'archived')",
+                      "disabled": "form.saving || form.dirty || form.invalid"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Cancel",
+                      "variant": "ghost",
+                      "icon": "x",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "cancel"
+                    },
+                    "rules": {
+                      "visible": "(form.values.status === 'draft' || form.values.status === 'sent') && !(form.values.state === 'archived')",
+                      "disabled": "form.saving"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Reopen",
+                      "variant": "outline",
+                      "icon": "rotate-ccw",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "reopen"
+                    },
+                    "rules": {
+                      "visible": "form.values.status === 'cancelled' && !(form.values.state === 'archived')",
+                      "disabled": "form.saving"
+                    }
+                  },
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Archive",
+                          "variant": "ghost",
+                          "icon": "archive",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "archive"
+                        },
+                        "rules": {
+                          "visible": "!(form.values.state === 'archived') && !(form.values.status === 'confirmed')",
+                          "disabled": "form.saving || form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Restore",
+                          "variant": "outline",
+                          "icon": "archive-restore",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "restore"
+                        },
+                        "rules": {
+                          "visible": "form.values.state === 'archived'",
+                          "disabled": "form.saving || form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Reset",
+                          "variant": "ghost",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "reset"
+                        },
+                        "rules": {
+                          "disabled": "form.saving || !form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Save",
+                          "icon": "save",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "save"
+                        },
+                        "rules": {
+                          "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (form.values.status === 'confirmed')"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$record.error }}"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.dashboard.badge",
+            "props": {
+              "text": "This quotation is archived. Restore it to edit.",
+              "tone": "warning",
+              "icon": "archive"
+            },
+            "rules": {
+              "visible": "form.values.state === 'archived'"
+            }
+          },
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Sales order",
+                  "variant": "ghost",
+                  "icon": "package-check",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "{{ form.values.order && form.values.order.path }}",
+                        "mode": "edit"
+                      }
+                    }
+                  ]
+                },
+                "rules": {
+                  "visible": "!!(form.values.order && form.values.order.path)"
+                }
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Invoice",
+                  "variant": "ghost",
+                  "icon": "file-text",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "{{ form.values.invoice && form.values.invoice.path }}",
+                        "mode": "edit"
+                      }
+                    }
+                  ]
+                },
+                "rules": {
+                  "visible": "!!(form.values.invoice && form.values.invoice.path)"
+                }
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "CRM customer",
+                  "variant": "ghost",
+                  "icon": "building-2",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "{{ form.values.customerRef }}",
+                        "mode": "edit"
+                      }
+                    }
+                  ]
+                },
+                "rules": {
+                  "visible": "!!(form.values.customerRef)"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 3
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Subtotal",
+                  "value": "{{ form.values.totals ? form.values.totals.subtotal : ((form.values.lines || []).reduce((s, l) => s + Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)), 0) / 100).toFixed(2) }}",
+                  "icon": "sigma"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Discount",
+                  "value": "{{ form.values.totals ? form.values.totals.discount : ((form.values.lines || []).reduce((s, l) => s + Math.round(Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)) * Number(l.discount || 0) / 100), 0) / 100).toFixed(2) }}",
+                  "icon": "percent"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Total {{ form.values.currency }}",
+                  "value": "{{ form.values.totals ? form.values.totals.total : (((form.values.lines || []).reduce((s, l) => s + Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)), 0) - (form.values.lines || []).reduce((s, l) => s + Math.round(Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)) * Number(l.discount || 0) / 100), 0)) / 100).toFixed(2) }}",
+                  "icon": "receipt"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Estimated while drafting; confirming computes the exact totals.",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "!form.values.totals"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 1,
+                "gap": 4
+              },
+              "tablet": {
+                "columns": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Customer"
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "CRM customer",
+                          "value": "{{ form.values.customerRef }}",
+                          "description": "Optional. Choose a CRM customer, then Copy details.",
+                          "options": "{{ data.customeroptions }}"
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'confirmed'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Name",
+                          "value": "{{ form.values.customer.name }}",
+                          "required": true
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'confirmed'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Legal name",
+                          "value": "{{ form.values.customer.legalName }}"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'confirmed'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Email",
+                          "value": "{{ form.values.customer.email }}",
+                          "inputType": "email"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'confirmed'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Phone",
+                          "value": "{{ form.values.customer.phone }}"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'confirmed'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Tax number",
+                          "value": "{{ form.values.customer.taxIdentifier }}"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'confirmed'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.text-list",
+                        "props": {
+                          "label": "Street",
+                          "value": "{{ form.values.customer.address.lines }}"
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'confirmed'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "City",
+                          "value": "{{ form.values.customer.address.city }}"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'confirmed'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Region",
+                          "value": "{{ form.values.customer.address.region }}"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'confirmed'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Postal code",
+                          "value": "{{ form.values.customer.address.postalCode }}"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'confirmed'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Country code",
+                          "value": "{{ form.values.customer.address.country }}",
+                          "placeholder": "ZA"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'confirmed'))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Quotation"
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.date",
+                        "props": {
+                          "label": "Date",
+                          "value": "{{ form.values.date }}",
+                          "required": true
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'confirmed'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Currency",
+                          "value": "{{ form.values.currency }}",
+                          "required": true,
+                          "placeholder": "ZAR"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'confirmed'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Customer reference",
+                          "value": "{{ form.values.reference }}",
+                          "placeholder": "PO number"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'confirmed'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.textarea",
+                        "props": {
+                          "label": "Notes",
+                          "value": "{{ form.values.notes }}",
+                          "rows": 4
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'confirmed'))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Lines",
+                  "description": "Exact decimals. Each line is rounded to the cent; the discount is a percentage off the line."
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.array",
+                        "props": {
+                          "label": "Lines",
+                          "value": "{{ form.values.lines }}",
+                          "fields": [
+                            {
+                              "key": "product",
+                              "label": "Product",
+                              "type": "select",
+                              "options": "{{ data.productoptions }}"
+                            },
+                            {
+                              "key": "description",
+                              "label": "Description",
+                              "required": true
+                            },
+                            {
+                              "key": "quantity",
+                              "label": "Quantity",
+                              "required": true
+                            },
+                            {
+                              "key": "unitPrice",
+                              "label": "Unit price",
+                              "required": true
+                            },
+                            {
+                              "key": "discount",
+                              "label": "Discount %"
+                            }
+                          ],
+                          "defaultRow": {
+                            "product": "",
+                            "description": "",
+                            "quantity": "1",
+                            "unitPrice": "",
+                            "discount": ""
+                          },
+                          "rowIds": false,
+                          "minimum": 1,
+                          "maximum": 500,
+                          "addLabel": "Add line",
+                          "removeLabel": "Remove row"
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'confirmed'))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "actions": {
+      "save": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Saved",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "reset": {
+        "steps": [
+          {
+            "reset-form": {}
+          }
+        ]
+      },
+      "archive": {
+        "steps": [
+          {
+            "confirm": {
+              "title": "Archive",
+              "message": "Archive this record? It stays in the workspace and can be restored."
+            }
+          },
+          {
+            "patch-form": {
+              "values": {
+                "state": "archived",
+                "archivedAt": "{{ Date() }}",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Archived",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "restore": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "state": "active",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Restored",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "copy-customer": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "customer": "{{ (data.companies || []).concat(data.contacts || []).filter(e => e.kind === 'file' && e.data && e.path === form.values.customerRef).map(e => ({ name: e.data.name || [e.data.givenName, e.data.familyName].filter(Boolean).join(' '), legalName: (e.data.legalName || ''), email: (e.data.email || ''), phone: (e.data.phone || ''), taxIdentifier: (e.data.taxIdentifier || ''), address: { lines: (e.data.address || {}).lines || [], city: ((e.data.address || {}).city || ''), region: ((e.data.address || {}).region || ''), postalCode: ((e.data.address || {}).postalCode || ''), country: ((e.data.address || {}).country || '') } }))[0] || form.values.customer }}"
+              }
+            }
+          }
+        ]
+      },
+      "mark-sent": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "status": "sent",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Marked sent",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "confirm": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Confirm quotation",
+              "message": "Confirm this quotation and create its sales order? Confirmed quotations cannot be edited."
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/sales/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "confirm-quotation",
+                "path": "{{ ctx.file.path }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "cancel": {
+        "steps": [
+          {
+            "confirm": {
+              "title": "Cancel quotation",
+              "message": "Cancel this quotation? It can be reopened later."
+            }
+          },
+          {
+            "patch-form": {
+              "values": {
+                "status": "cancelled",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Cancelled",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "reopen": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "status": "draft",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Reopened as a draft",
+              "variant": "success"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

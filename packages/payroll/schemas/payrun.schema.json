@@ -1,0 +1,326 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.verentis.io/payroll/v1/payrun.schema.json",
+  "title": "Payroll pay run",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "const": "https://schemas.verentis.io/payroll/v1/payrun.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "kind": {
+      "const": "payrun"
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "state": {
+      "enum": [
+        "active",
+        "archived"
+      ]
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "archivedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "code": {
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "period": {
+      "type": "string",
+      "pattern": "^([0-9]{4}-(0[1-9]|1[0-2]))?$"
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^([A-Z]{3})?$"
+    },
+    "status": {
+      "enum": [
+        "draft",
+        "computed",
+        "approved",
+        "posted"
+      ]
+    },
+    "payslips": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "employee": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "profile": {
+            "type": "string",
+            "maxLength": 4096,
+            "pattern": "^(/.*)?$"
+          },
+          "base": {
+            "type": "string",
+            "pattern": "^((0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?)?$"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "rule": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "pattern": "^([A-Za-z0-9][A-Za-z0-9._-]*)?$"
+                },
+                "name": {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                "kind": {
+                  "enum": [
+                    "earning",
+                    "deduction",
+                    "employer-contribution"
+                  ]
+                },
+                "amount": {
+                  "type": "string",
+                  "pattern": "^((0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?)?$"
+                }
+              },
+              "required": [
+                "rule",
+                "name",
+                "kind",
+                "amount"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 0,
+            "maxItems": 100
+          },
+          "gross": {
+            "type": "string",
+            "pattern": "^((0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?)?$"
+          },
+          "deductions": {
+            "type": "string",
+            "pattern": "^((0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?)?$"
+          },
+          "contributions": {
+            "type": "string",
+            "pattern": "^((0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?)?$"
+          },
+          "net": {
+            "type": "string",
+            "pattern": "^((0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?)?$"
+          }
+        },
+        "required": [
+          "employee",
+          "profile",
+          "base",
+          "lines",
+          "gross",
+          "deductions",
+          "contributions",
+          "net"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "maxItems": 1000
+    },
+    "totals": {
+      "type": "object",
+      "properties": {
+        "gross": {
+          "type": "string",
+          "pattern": "^((0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?)?$"
+        },
+        "deductions": {
+          "type": "string",
+          "pattern": "^((0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?)?$"
+        },
+        "contributions": {
+          "type": "string",
+          "pattern": "^((0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?)?$"
+        },
+        "net": {
+          "type": "string",
+          "pattern": "^((0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?)?$"
+        }
+      },
+      "required": [
+        "gross",
+        "deductions",
+        "contributions",
+        "net"
+      ],
+      "additionalProperties": false
+    },
+    "computedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "approvedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "postedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "journal": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^/",
+          "maxLength": 4096
+        },
+        "nodeId": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "kind",
+    "id",
+    "state",
+    "createdAt",
+    "updatedAt",
+    "code",
+    "period",
+    "status",
+    "payslips"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "archived"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "archivedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          }
+        },
+        "required": [
+          "archivedAt"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "computed",
+              "approved",
+              "posted"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "computedAt": true,
+          "totals": true,
+          "currency": true
+        },
+        "required": [
+          "computedAt",
+          "totals",
+          "currency"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "approved",
+              "posted"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "approvedAt": true
+        },
+        "required": [
+          "approvedAt"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "posted"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "postedAt": true,
+          "journal": true
+        },
+        "required": [
+          "postedAt",
+          "journal"
+        ]
+      }
+    }
+  ]
+}

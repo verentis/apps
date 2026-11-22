@@ -1,0 +1,760 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Form",
+  "metadata": {
+    "id": "maintenance-request",
+    "name": "Maintenance maintenance request",
+    "description": "View and edit a Maintenance maintenance request.",
+    "icon": "hammer"
+  },
+  "spec": {
+    "binds": [
+      {
+        "pattern": "application/vnd.verentis.maintenance.request+json",
+        "mode": "edit",
+        "priority": 200,
+        "scope": "global",
+        "json-schema": {
+          "id": "https://schemas.verentis.io/maintenance/v1/request.schema.json",
+          "source": "/applications/maintenance/schemas/request.schema.json",
+          "title": "Maintenance maintenance request",
+          "version": "1"
+        }
+      }
+    ],
+    "entry": "${var:canvas-origin}/render?document=%2Fapplications%2Fmaintenance%2Fcanvas%2Frequest.form.yaml",
+    "scope": "global",
+    "mime-types": [
+      {
+        "pattern": "application/vnd.verentis.maintenance.request+json",
+        "mode": "edit",
+        "priority": 200,
+        "json-schema": {
+          "id": "https://schemas.verentis.io/maintenance/v1/request.schema.json",
+          "source": "/applications/maintenance/schemas/request.schema.json",
+          "title": "Maintenance maintenance request",
+          "version": "1"
+        }
+      }
+    ],
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run",
+      "execution.read"
+    ],
+    "capabilities": [],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-popups": false,
+      "allow-forms": true
+    },
+    "file-access": [
+      {
+        "path": "/equipment",
+        "mode": "read",
+        "reason": "Choose the equipment a request maintains"
+      },
+      {
+        "path": "/applications/maintenance/",
+        "mode": "read",
+        "reason": "Read the Maintenance schemas and run the maintenance action script"
+      }
+    ],
+    "access": [
+      {
+        "path": "/equipment",
+        "reason": "Choose the equipment a request maintains"
+      },
+      {
+        "path": "/applications/maintenance/",
+        "reason": "Read the Maintenance schemas and run the maintenance action script"
+      }
+    ],
+    "data": {
+      "record": {
+        "kind": "document",
+        "consistency": "conditional"
+      },
+      "equipment": {
+        "kind": "folder",
+        "path": "/equipment",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.maintenance.equipment+json"
+      },
+      "equipmentoptions": {
+        "kind": "computed",
+        "expr": "(data.equipment || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status !== 'scrapped')).map(e => ({ label: (e.data.code || e.name) + ' · ' + (e.data.name || ''), value: e.path }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.heading",
+                        "props": {
+                          "level": 2,
+                          "text": "{{ form.values.code || 'New maintenance request' }}"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.badge",
+                        "props": {
+                          "text": "{{ String(form.values.stage || '').split('-').join(' ') }}",
+                          "tone": "{{ [\"repaired\",\"operational\"].includes(form.values.stage) ? 'success' : [\"in-progress\",\"under-maintenance\"].includes(form.values.stage) ? 'warning' : [\"scrap\",\"scrapped\"].includes(form.values.stage) ? 'danger' : 'neutral' }}"
+                        },
+                        "rules": {
+                          "visible": "!!form.values.stage"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.badge",
+                        "props": {
+                          "text": "Archived",
+                          "tone": "warning",
+                          "icon": "archive"
+                        },
+                        "rules": {
+                          "visible": "form.values.state === 'archived'"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Maintenance request {{ form.values.code || '' }} · {{ ctx.file.path }}",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Start",
+                      "icon": "play",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "start"
+                    },
+                    "rules": {
+                      "visible": "form.values.stage === 'new' && !(form.values.state === 'archived')",
+                      "disabled": "form.saving || form.dirty || form.invalid"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Complete",
+                      "icon": "check",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "complete"
+                    },
+                    "rules": {
+                      "visible": "form.values.stage === 'in-progress'",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Scrap",
+                      "variant": "ghost",
+                      "icon": "trash-2",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "scrap"
+                    },
+                    "rules": {
+                      "visible": "(form.values.stage === 'new' || form.values.stage === 'in-progress') && !(form.values.state === 'archived')",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Archive",
+                          "variant": "ghost",
+                          "icon": "archive",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "archive"
+                        },
+                        "rules": {
+                          "visible": "!(form.values.state === 'archived') && !((form.values.stage === 'repaired' || form.values.stage === 'scrap'))",
+                          "disabled": "form.saving || form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Restore",
+                          "variant": "outline",
+                          "icon": "archive-restore",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "restore"
+                        },
+                        "rules": {
+                          "visible": "form.values.state === 'archived'",
+                          "disabled": "form.saving || form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Reset",
+                          "variant": "ghost",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "reset"
+                        },
+                        "rules": {
+                          "disabled": "form.saving || !form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Save",
+                          "icon": "save",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "save"
+                        },
+                        "rules": {
+                          "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || ((form.values.stage === 'repaired' || form.values.stage === 'scrap'))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$record.error }}"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.dashboard.badge",
+            "props": {
+              "text": "This maintenance request is archived. Restore it to edit.",
+              "tone": "warning",
+              "icon": "archive"
+            },
+            "rules": {
+              "visible": "form.values.state === 'archived'"
+            }
+          },
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Equipment",
+                  "variant": "ghost",
+                  "icon": "wrench",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "{{ form.values.equipment }}",
+                        "mode": "edit"
+                      }
+                    }
+                  ]
+                },
+                "rules": {
+                  "visible": "!!(form.values.equipment)"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "This request is finished and can no longer be edited.",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "(form.values.stage === 'repaired' || form.values.stage === 'scrap')"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 1,
+                "gap": 4
+              },
+              "tablet": {
+                "columns": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Request"
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Equipment",
+                          "value": "{{ form.values.equipment }}",
+                          "required": true,
+                          "description": "Starting a request puts this equipment under maintenance.",
+                          "options": "{{ data.equipmentoptions }}"
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || ((form.values.stage === 'repaired' || form.values.stage === 'scrap')))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Type",
+                          "value": "{{ form.values.type }}",
+                          "options": [
+                            {
+                              "value": "corrective",
+                              "label": "Corrective"
+                            },
+                            {
+                              "value": "preventive",
+                              "label": "Preventive"
+                            }
+                          ]
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || ((form.values.stage === 'repaired' || form.values.stage === 'scrap')))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Priority",
+                          "value": "{{ form.values.priority }}",
+                          "options": [
+                            {
+                              "value": "low",
+                              "label": "Low"
+                            },
+                            {
+                              "value": "normal",
+                              "label": "Normal"
+                            },
+                            {
+                              "value": "high",
+                              "label": "High"
+                            }
+                          ]
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || ((form.values.stage === 'repaired' || form.values.stage === 'scrap')))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Stage",
+                          "value": "{{ form.values.stage }}",
+                          "description": "Set by the Start, Complete and Scrap actions.",
+                          "options": [
+                            {
+                              "value": "new",
+                              "label": "New"
+                            },
+                            {
+                              "value": "in-progress",
+                              "label": "In Progress"
+                            },
+                            {
+                              "value": "repaired",
+                              "label": "Repaired"
+                            },
+                            {
+                              "value": "scrap",
+                              "label": "Scrap"
+                            }
+                          ]
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || ((form.values.stage === 'repaired' || form.values.stage === 'scrap'))) || (true)"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.date",
+                        "props": {
+                          "label": "Scheduled date",
+                          "value": "{{ form.values.scheduledDate }}"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || ((form.values.stage === 'repaired' || form.values.stage === 'scrap')))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Duration (hours)",
+                          "value": "{{ form.values.durationHours }}",
+                          "placeholder": "1.5"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || ((form.values.stage === 'repaired' || form.values.stage === 'scrap')))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Details"
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.textarea",
+                        "props": {
+                          "label": "Description",
+                          "value": "{{ form.values.description }}",
+                          "rows": 6
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || ((form.values.stage === 'repaired' || form.values.stage === 'scrap')))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "actions": {
+      "save": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Saved",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "reset": {
+        "steps": [
+          {
+            "reset-form": {}
+          }
+        ]
+      },
+      "archive": {
+        "steps": [
+          {
+            "confirm": {
+              "title": "Archive",
+              "message": "Archive this record? It stays in the workspace and can be restored."
+            }
+          },
+          {
+            "patch-form": {
+              "values": {
+                "state": "archived",
+                "archivedAt": "{{ Date() }}",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Archived",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "restore": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "state": "active",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Restored",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "start": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Start request",
+              "message": "Start this maintenance request? Its equipment is put under maintenance."
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/maintenance/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "start-request",
+                "path": "{{ ctx.file.path }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "complete": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Complete request",
+              "message": "Mark this request repaired? Its equipment returns to operational and the request is locked."
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/maintenance/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "complete-request",
+                "path": "{{ ctx.file.path }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "scrap": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Scrap equipment",
+              "message": "Scrap this request and its equipment? Scrapped equipment cannot be maintained and the request is locked."
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/maintenance/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "scrap",
+                "path": "{{ ctx.file.path }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "$schema": "https://schemas.verentis.io/purchase/v1/settings.schema.json",
+  "schemaVersion": 1,
+  "defaultCurrency": "",
+  "defaultLeadDays": 7,
+  "notes": ""
+}

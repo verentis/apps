@@ -1,0 +1,19 @@
+{
+  "$schema": "https://schemas.verentis.io/approvals/v1/request.schema.json",
+  "schemaVersion": 1,
+  "kind": "request",
+  "id": "8c2d3e4f-5a6b-4c7d-9e8f-1a2b3c4d5e10",
+  "state": "active",
+  "createdAt": "2026-01-01T00:00:00Z",
+  "updatedAt": "2026-01-01T00:00:00Z",
+  "code": "APR-0001",
+  "type": "/approval-types/APT-0001",
+  "title": "Two standing desks",
+  "requester": "Alex Example",
+  "amount": "1250.00",
+  "date": "",
+  "reference": "",
+  "reason": "The quote expires at the end of the month.",
+  "status": "draft",
+  "approvals": []
+}

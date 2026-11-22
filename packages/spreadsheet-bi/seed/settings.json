@@ -1,0 +1,5 @@
+{
+  "$schema": "https://schemas.verentis.io/spreadsheet-bi/v1/settings.schema.json",
+  "schemaVersion": 1,
+  "defaultDashboard": "/bi-dashboards/BID-0001"
+}

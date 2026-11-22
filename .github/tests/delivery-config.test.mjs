@@ -8,7 +8,13 @@ const exists = path => existsSync(new URL(path, repo))
 
 const config = JSON.parse(read('.github/verentis-delivery.json'))
 const hosted = ['image-viewer', 'markdown-viewer', 'smart-editor', 'excalidraw']
-const packageOnly = ['crm', 'accounting', 'invoicing']
+const packageOnly = [
+  'crm', 'accounting', 'invoicing',
+  'appointments', 'appraisals', 'approvals', 'documents', 'employees', 'events', 'expenses',
+  'field-service', 'fleet', 'helpdesk', 'inventory', 'knowledge', 'maintenance', 'manufacturing',
+  'payroll', 'planning', 'plm', 'project', 'purchase', 'quality', 'recruitment', 'referrals',
+  'rental', 'sales', 'social-marketing', 'spreadsheet-bi', 'surveys', 'time-off', 'timesheets',
+]
 const packages = readdirSync(new URL('packages/', repo), { withFileTypes: true })
   .filter(entry => entry.isDirectory() && readdirSync(new URL(`packages/${entry.name}/`, repo)).some(file => file.endsWith('.app.yaml')))
   .map(entry => entry.name)

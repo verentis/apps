@@ -1,0 +1,434 @@
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "quality",
+    "name": "Quality",
+    "description": "Quality control points, checks and alerts as files in your workspace, recorded against tolerances and resolved by script.",
+    "icon": "./icons/app.svg",
+    "version": "0.1.0",
+    "author": "Verentis"
+  },
+  "marketplace": {
+    "readme": "./README.md",
+    "keywords": [
+      "quality",
+      "qc",
+      "quality control",
+      "checks",
+      "alerts",
+      "tolerance",
+      "non-conformance"
+    ]
+  },
+  "spec": {
+    "install-root": "/applications/quality",
+    "entry": "https://canvas.apps.localtest.me",
+    "scope": "global",
+    "entry-points": [
+      {
+        "id": "home",
+        "display-name": "Quality",
+        "route": "/render?document=.%2Fcanvas%2Fhome.page.yaml",
+        "order": 10
+      },
+      {
+        "id": "checks",
+        "display-name": "Quality checks",
+        "route": "/render?document=.%2Fcanvas%2Fchecks.page.yaml",
+        "order": 20
+      },
+      {
+        "id": "alerts",
+        "display-name": "Quality alerts",
+        "route": "/render?document=.%2Fcanvas%2Falerts.page.yaml",
+        "order": 30
+      },
+      {
+        "id": "points",
+        "display-name": "Control points",
+        "route": "/render?document=.%2Fcanvas%2Fpoints.page.yaml",
+        "order": 40
+      }
+    ],
+    "launch": {
+      "enabled": true,
+      "entry-point": "home",
+      "pinnable": true
+    },
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run"
+    ],
+    "scopes": [
+      "quality.default"
+    ],
+    "settings": [
+      {
+        "key": "point-code-prefix",
+        "display-name": "Control point code prefix",
+        "type": "string",
+        "default": "QCP-",
+        "description": "Prefix of generated control point codes, e.g. QCP-0001."
+      },
+      {
+        "key": "check-code-prefix",
+        "display-name": "Quality check code prefix",
+        "type": "string",
+        "default": "QCK-",
+        "description": "Prefix of generated quality check codes, e.g. QCK-0001."
+      },
+      {
+        "key": "alert-code-prefix",
+        "display-name": "Quality alert code prefix",
+        "type": "string",
+        "default": "QAL-",
+        "description": "Prefix of generated quality alert codes, e.g. QAL-0001."
+      },
+      {
+        "key": "code-digits",
+        "display-name": "Code digits",
+        "type": "number",
+        "default": 4,
+        "description": "Minimum number of digits in generated codes (zero-padded)."
+      }
+    ],
+    "dependencies": [
+      {
+        "package": "verentis/canvas",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/nodejs",
+        "version": "latest"
+      }
+    ],
+    "engine": "verentis/nodejs",
+    "scripts": [
+      "scripts/create",
+      "scripts/post"
+    ],
+    "install": [
+      {
+        "from": "canvas/*.form.yaml",
+        "to": "/applications/quality/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.form+yaml"
+      },
+      {
+        "from": "canvas/*.page.yaml",
+        "to": "/applications/quality/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.page+yaml"
+      },
+      {
+        "from": "schemas/*.schema.json",
+        "to": "/applications/quality/schemas/",
+        "mode": "managed",
+        "mime": "application/schema+json"
+      },
+      {
+        "from": "templates/*.json",
+        "to": "/applications/quality/templates/",
+        "mode": "managed",
+        "mime": "application/json"
+      },
+      {
+        "from": "seed/points",
+        "to": "/quality-control-points",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.quality.points"
+      },
+      {
+        "from": "seed/checks",
+        "to": "/quality-checks",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.quality.checks"
+      },
+      {
+        "from": "seed/alerts",
+        "to": "/quality-alerts",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.quality.alerts"
+      }
+    ],
+    "creatables": [
+      {
+        "id": "point",
+        "display-name": "Control point",
+        "description": "A new control point",
+        "icon": "lucide:crosshair",
+        "mime": "application/vnd.verentis.quality.point+json",
+        "parents": [
+          "application/vnd.verentis.quality.points"
+        ],
+        "folder-names": [
+          "quality-control-points",
+          "control-points",
+          "quality"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/point.json"
+      },
+      {
+        "id": "check",
+        "display-name": "Quality check",
+        "description": "A new quality check",
+        "icon": "lucide:clipboard-check",
+        "mime": "application/vnd.verentis.quality.check+json",
+        "parents": [
+          "application/vnd.verentis.quality.checks"
+        ],
+        "folder-names": [
+          "quality-checks",
+          "checks",
+          "quality"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/check.json"
+      },
+      {
+        "id": "alert",
+        "display-name": "Quality alert",
+        "description": "A new quality alert",
+        "icon": "lucide:siren",
+        "mime": "application/vnd.verentis.quality.alert+json",
+        "parents": [
+          "application/vnd.verentis.quality.alerts"
+        ],
+        "folder-names": [
+          "quality-alerts",
+          "alerts",
+          "quality"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/alert.json"
+      }
+    ],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-forms": true,
+      "allow-popups": false
+    },
+    "file-access": [
+      {
+        "path": "/quality-control-points",
+        "mode": "read",
+        "reason": "Count checks and alerts and show the quality containers",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/quality-checks",
+        "mode": "read",
+        "reason": "Count checks and alerts and show the quality containers",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/quality-alerts",
+        "mode": "read",
+        "reason": "Count checks and alerts and show the quality containers",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/quality-control-points",
+        "mode": "read",
+        "reason": "List checks by result with their control point titles",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/checks.page.yaml"
+        }
+      },
+      {
+        "path": "/quality-checks",
+        "mode": "read",
+        "reason": "List checks by result with their control point titles",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/checks.page.yaml"
+        }
+      },
+      {
+        "path": "/quality-alerts",
+        "mode": "read",
+        "reason": "List checks by result with their control point titles",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/checks.page.yaml"
+        }
+      },
+      {
+        "path": "/quality-control-points",
+        "mode": "read",
+        "reason": "Board alerts by stage",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/alerts.page.yaml"
+        }
+      },
+      {
+        "path": "/quality-checks",
+        "mode": "read",
+        "reason": "Board alerts by stage",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/alerts.page.yaml"
+        }
+      },
+      {
+        "path": "/quality-alerts",
+        "mode": "read",
+        "reason": "Board alerts by stage",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/alerts.page.yaml"
+        }
+      },
+      {
+        "path": "/quality-control-points",
+        "mode": "read",
+        "reason": "List control points with their check counts",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/points.page.yaml"
+        }
+      },
+      {
+        "path": "/quality-checks",
+        "mode": "read",
+        "reason": "List control points with their check counts",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/points.page.yaml"
+        }
+      },
+      {
+        "path": "/quality-alerts",
+        "mode": "read",
+        "reason": "List control points with their check counts",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/points.page.yaml"
+        }
+      },
+      {
+        "path": "/applications/quality/",
+        "mode": "read",
+        "reason": "Read the Quality schemas and run the quality action script",
+        "origin": {
+          "kind": "document",
+          "id": "quality-point"
+        }
+      },
+      {
+        "path": "/quality-control-points",
+        "mode": "read",
+        "reason": "Choose the control point a check verifies",
+        "origin": {
+          "kind": "document",
+          "id": "quality-check"
+        }
+      },
+      {
+        "path": "/applications/quality/",
+        "mode": "read",
+        "reason": "Read the Quality schemas and run the quality action script",
+        "origin": {
+          "kind": "document",
+          "id": "quality-check"
+        }
+      },
+      {
+        "path": "/applications/quality/",
+        "mode": "read",
+        "reason": "Read the Quality schemas and run the quality action script",
+        "origin": {
+          "kind": "document",
+          "id": "quality-alert"
+        }
+      },
+      {
+        "path": "/quality-control-points",
+        "mode": "write",
+        "reason": "Create quality control points with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "quality-create"
+        }
+      },
+      {
+        "path": "/quality-checks",
+        "mode": "write",
+        "reason": "Create quality checks with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "quality-create"
+        }
+      },
+      {
+        "path": "/quality-alerts",
+        "mode": "write",
+        "reason": "Create quality alerts with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "quality-create"
+        }
+      },
+      {
+        "path": "/quality-control-points",
+        "mode": "read",
+        "reason": "Check a recorded result against its control point and tolerance",
+        "origin": {
+          "kind": "script",
+          "id": "quality-post"
+        }
+      },
+      {
+        "path": "/quality-checks",
+        "mode": "write",
+        "reason": "Record quality check results",
+        "origin": {
+          "kind": "script",
+          "id": "quality-post"
+        }
+      },
+      {
+        "path": "/quality-alerts",
+        "mode": "write",
+        "reason": "Raise a quality alert for a failed check and resolve alerts",
+        "origin": {
+          "kind": "script",
+          "id": "quality-post"
+        }
+      }
+    ]
+  },
+  "packaging": {
+    "publisher": "verentis",
+    "files": [
+      "canvas/**",
+      "schemas/**",
+      "templates/**",
+      "seed/**",
+      "scripts/**",
+      "README.md"
+    ],
+    "templates": [
+      "canvas/*.yaml"
+    ],
+    "variables": {
+      "canvas-origin": "https://canvas.apps.localtest.me"
+    },
+    "encryption": "none"
+  }
+}

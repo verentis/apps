@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.verentis.io/fleet/v1/vehicle.schema.json",
+  "title": "Fleet vehicle",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "const": "https://schemas.verentis.io/fleet/v1/vehicle.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "kind": {
+      "const": "vehicle"
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "state": {
+      "enum": [
+        "active",
+        "archived"
+      ]
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "archivedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "code": {
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "make": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "model": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "year": {
+      "type": "string",
+      "pattern": "^([0-9]{4})?$"
+    },
+    "licensePlate": {
+      "type": "string",
+      "maxLength": 32
+    },
+    "vin": {
+      "type": "string",
+      "maxLength": 64
+    },
+    "driverName": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "status": {
+      "enum": [
+        "active",
+        "in-maintenance",
+        "retired"
+      ]
+    },
+    "odometerKm": {
+      "type": "string",
+      "pattern": "^((0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?)?$"
+    },
+    "retiredAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    }
+  },
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "kind",
+    "id",
+    "state",
+    "createdAt",
+    "updatedAt",
+    "code",
+    "make",
+    "model",
+    "year",
+    "licensePlate",
+    "vin",
+    "driverName",
+    "status",
+    "odometerKm"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "archived"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "archivedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          }
+        },
+        "required": [
+          "archivedAt"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "retired"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "retiredAt": true
+        },
+        "required": [
+          "retiredAt"
+        ]
+      }
+    }
+  ]
+}

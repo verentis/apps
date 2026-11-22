@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.verentis.io/recruitment/v1/settings.schema.json",
+  "title": "Recruitment settings",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "const": "https://schemas.verentis.io/recruitment/v1/settings.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "defaultJob": {
+      "type": "string",
+      "maxLength": 4096,
+      "pattern": "^(/.*)?$"
+    }
+  },
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "defaultJob"
+  ],
+  "additionalProperties": false
+}

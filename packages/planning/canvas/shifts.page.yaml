@@ -1,0 +1,361 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "planning-shifts",
+    "name": "Shifts",
+    "description": "Every shift, listed by status.",
+    "icon": "list"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/shift-roles",
+        "reason": "List shifts by status with their role names"
+      },
+      {
+        "path": "/shifts",
+        "reason": "List shifts by status with their role names"
+      }
+    ],
+    "data": {
+      "shifts": {
+        "kind": "folder",
+        "path": "/shifts",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.planning.shift+json"
+      },
+      "roles": {
+        "kind": "folder",
+        "path": "/shift-roles",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.planning.role+json"
+      },
+      "rows": {
+        "kind": "computed",
+        "expr": "(data.shifts || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, employee: e.data.employee || '', role: ((((data.roles || []).find(r => r.kind === 'file' && r.data && r.path === e.data.role) || {}).data || {}).name) || '', date: e.data.date || '', start: e.data.startTime || '', end: e.data.endTime || '', time: [e.data.startTime, e.data.endTime].filter(Boolean).join('–'), status: e.data.status || '' }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Shifts by status"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Every active shift, grouped by its status. Click a row to open the shift.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Planning",
+                  "variant": "ghost",
+                  "icon": "calendar-days",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/applications/planning/canvas/home.page.yaml"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /shifts folder could not be read. Reinstall Planning to recreate it."
+            },
+            "rules": {
+              "visible": "data.$shifts.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /shift-roles folder could not be read. Reinstall Planning to recreate it."
+            },
+            "rules": {
+              "visible": "data.$roles.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 3
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Draft",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'draft').length }}",
+                  "icon": "calendar-days",
+                  "loading": "{{ data.$shifts.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Published",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'published').length }}",
+                  "icon": "calendar-days",
+                  "loading": "{{ data.$shifts.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Confirmed",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'confirmed').length }}",
+                  "icon": "calendar-days",
+                  "loading": "{{ data.$shifts.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.tabs",
+            "props": {
+              "items": [
+                {
+                  "value": "draft",
+                  "label": "Draft",
+                  "icon": "calendar-days"
+                },
+                {
+                  "value": "published",
+                  "label": "Published",
+                  "icon": "calendar-days"
+                },
+                {
+                  "value": "confirmed",
+                  "label": "Confirmed",
+                  "icon": "calendar-days"
+                }
+              ]
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.rows || []).filter(r => r.status === 'draft').sort((a, b) => ((a.date + (a.start || '~')) < (b.date + (b.start || '~')) ? -1 : 1)) }}",
+                      "columns": [
+                        {
+                          "key": "code",
+                          "label": "Shift"
+                        },
+                        {
+                          "key": "employee",
+                          "label": "Employee"
+                        },
+                        {
+                          "key": "role",
+                          "label": "Role"
+                        },
+                        {
+                          "key": "date",
+                          "label": "Date"
+                        },
+                        {
+                          "key": "time",
+                          "label": "Time"
+                        },
+                        {
+                          "key": "status",
+                          "label": "Status"
+                        }
+                      ],
+                      "emptyText": "No draft shifts",
+                      "clickable": true
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "draft"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.rows || []).filter(r => r.status === 'published').sort((a, b) => ((a.date + (a.start || '~')) < (b.date + (b.start || '~')) ? -1 : 1)) }}",
+                      "columns": [
+                        {
+                          "key": "code",
+                          "label": "Shift"
+                        },
+                        {
+                          "key": "employee",
+                          "label": "Employee"
+                        },
+                        {
+                          "key": "role",
+                          "label": "Role"
+                        },
+                        {
+                          "key": "date",
+                          "label": "Date"
+                        },
+                        {
+                          "key": "time",
+                          "label": "Time"
+                        },
+                        {
+                          "key": "status",
+                          "label": "Status"
+                        }
+                      ],
+                      "emptyText": "No published shifts",
+                      "clickable": true
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "published"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.rows || []).filter(r => r.status === 'confirmed').sort((a, b) => ((a.date + (a.start || '~')) < (b.date + (b.start || '~')) ? -1 : 1)) }}",
+                      "columns": [
+                        {
+                          "key": "code",
+                          "label": "Shift"
+                        },
+                        {
+                          "key": "employee",
+                          "label": "Employee"
+                        },
+                        {
+                          "key": "role",
+                          "label": "Role"
+                        },
+                        {
+                          "key": "date",
+                          "label": "Date"
+                        },
+                        {
+                          "key": "time",
+                          "label": "Time"
+                        },
+                        {
+                          "key": "status",
+                          "label": "Status"
+                        }
+                      ],
+                      "emptyText": "No confirmed shifts",
+                      "clickable": true
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "confirmed"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

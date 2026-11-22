@@ -1,0 +1,20 @@
+{
+  "$schema": "https://schemas.verentis.io/knowledge/v1/article.schema.json",
+  "schemaVersion": 1,
+  "kind": "article",
+  "id": "9e2a4b6c-1d3f-4a5b-8c7d-0e1f2a3b4c04",
+  "state": "active",
+  "createdAt": "2026-01-01T00:00:00Z",
+  "updatedAt": "2026-01-01T00:00:00Z",
+  "code": "KA-0003",
+  "title": "Expense policy",
+  "space": "/knowledge-spaces/KS-0001",
+  "parent": "",
+  "body": "Draft of the expense policy. Add the approval thresholds before publishing.\n",
+  "tags": [
+    "policy",
+    "finance"
+  ],
+  "status": "draft",
+  "owner": "Jordan Jacobs"
+}

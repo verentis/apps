@@ -1,0 +1,21 @@
+{
+  "$schema": "https://schemas.verentis.io/knowledge/v1/article.schema.json",
+  "schemaVersion": 1,
+  "kind": "article",
+  "id": "9e2a4b6c-1d3f-4a5b-8c7d-0e1f2a3b4c03",
+  "state": "active",
+  "createdAt": "2026-01-01T00:00:00Z",
+  "updatedAt": "2026-01-01T00:00:00Z",
+  "code": "KA-0002",
+  "title": "Getting around the workspace",
+  "space": "/knowledge-spaces/KS-0001",
+  "parent": "/articles/KA-0001",
+  "body": "## Finding things\n\nArticles live in `/articles`; spaces group them. Use the Spaces page to browse the hierarchy.\n",
+  "tags": [
+    "handbook",
+    "workspace"
+  ],
+  "status": "published",
+  "owner": "Avery Adams",
+  "publishedAt": "2026-01-01T00:00:00Z"
+}

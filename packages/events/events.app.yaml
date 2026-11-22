@@ -1,0 +1,356 @@
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "events",
+    "name": "Events",
+    "description": "Events and registrations as files in your workspace, with capacity tracking, a publishing lifecycle and scripted confirm and check-in actions.",
+    "icon": "./icons/app.svg",
+    "version": "0.1.0",
+    "author": "Verentis"
+  },
+  "marketplace": {
+    "readme": "./README.md",
+    "keywords": [
+      "events",
+      "registrations",
+      "attendees",
+      "tickets",
+      "capacity",
+      "venue"
+    ]
+  },
+  "spec": {
+    "install-root": "/applications/events",
+    "entry": "https://canvas.apps.localtest.me",
+    "scope": "global",
+    "entry-points": [
+      {
+        "id": "home",
+        "display-name": "Events",
+        "route": "/render?document=.%2Fcanvas%2Fhome.page.yaml",
+        "order": 10
+      },
+      {
+        "id": "events",
+        "display-name": "All events",
+        "route": "/render?document=.%2Fcanvas%2Fevents.page.yaml",
+        "order": 20
+      },
+      {
+        "id": "registrations",
+        "display-name": "Registrations",
+        "route": "/render?document=.%2Fcanvas%2Fregistrations.page.yaml",
+        "order": 30
+      }
+    ],
+    "launch": {
+      "enabled": true,
+      "entry-point": "home",
+      "pinnable": true
+    },
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run"
+    ],
+    "scopes": [
+      "events.default"
+    ],
+    "settings": [
+      {
+        "key": "event-code-prefix",
+        "display-name": "Event code prefix",
+        "type": "string",
+        "default": "EVT-",
+        "description": "Prefix of generated event codes, e.g. EVT-0001."
+      },
+      {
+        "key": "registration-code-prefix",
+        "display-name": "Registration code prefix",
+        "type": "string",
+        "default": "EVR-",
+        "description": "Prefix of generated registration codes, e.g. EVR-0001."
+      },
+      {
+        "key": "code-digits",
+        "display-name": "Code digits",
+        "type": "number",
+        "default": 4,
+        "description": "Minimum number of digits in generated codes (zero-padded)."
+      }
+    ],
+    "dependencies": [
+      {
+        "package": "verentis/canvas",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/nodejs",
+        "version": "latest"
+      }
+    ],
+    "engine": "verentis/nodejs",
+    "scripts": [
+      "scripts/create",
+      "scripts/post"
+    ],
+    "install": [
+      {
+        "from": "canvas/*.form.yaml",
+        "to": "/applications/events/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.form+yaml"
+      },
+      {
+        "from": "canvas/*.page.yaml",
+        "to": "/applications/events/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.page+yaml"
+      },
+      {
+        "from": "schemas/*.schema.json",
+        "to": "/applications/events/schemas/",
+        "mode": "managed",
+        "mime": "application/schema+json"
+      },
+      {
+        "from": "templates/*.json",
+        "to": "/applications/events/templates/",
+        "mode": "managed",
+        "mime": "application/json"
+      },
+      {
+        "from": "seed/events",
+        "to": "/events",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.events.events"
+      },
+      {
+        "from": "seed/registrations",
+        "to": "/event-registrations",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.events.registrations"
+      },
+      {
+        "from": "seed/settings.json",
+        "to": "/settings/events.json",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.events.settings+json"
+      }
+    ],
+    "creatables": [
+      {
+        "id": "event",
+        "display-name": "Event",
+        "description": "A new event event",
+        "icon": "lucide:calendar",
+        "mime": "application/vnd.verentis.events.event+json",
+        "parents": [
+          "application/vnd.verentis.events.events"
+        ],
+        "folder-names": [
+          "events"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/event.json"
+      },
+      {
+        "id": "registration",
+        "display-name": "Registration",
+        "description": "A new event registration",
+        "icon": "lucide:user-check",
+        "mime": "application/vnd.verentis.events.registration+json",
+        "parents": [
+          "application/vnd.verentis.events.registrations"
+        ],
+        "folder-names": [
+          "event-registrations",
+          "registrations",
+          "events"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/registration.json"
+      }
+    ],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-forms": true,
+      "allow-popups": false
+    },
+    "file-access": [
+      {
+        "path": "/events",
+        "mode": "read",
+        "reason": "Count events and registrations and show them",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/event-registrations",
+        "mode": "read",
+        "reason": "Count events and registrations and show them",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/events",
+        "mode": "read",
+        "reason": "List events by status with their seats taken",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/events.page.yaml"
+        }
+      },
+      {
+        "path": "/event-registrations",
+        "mode": "read",
+        "reason": "List events by status with their seats taken",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/events.page.yaml"
+        }
+      },
+      {
+        "path": "/events",
+        "mode": "read",
+        "reason": "Sum confirmed and attended seats per event against its capacity",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/registrations.page.yaml"
+        }
+      },
+      {
+        "path": "/event-registrations",
+        "mode": "read",
+        "reason": "Sum confirmed and attended seats per event against its capacity",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/registrations.page.yaml"
+        }
+      },
+      {
+        "path": "/event-registrations",
+        "mode": "read",
+        "reason": "Show confirmed seats against this event's capacity",
+        "origin": {
+          "kind": "document",
+          "id": "events-event"
+        }
+      },
+      {
+        "path": "/applications/events/",
+        "mode": "read",
+        "reason": "Read the Events schemas and run the action script",
+        "origin": {
+          "kind": "document",
+          "id": "events-event"
+        }
+      },
+      {
+        "path": "/events",
+        "mode": "read",
+        "reason": "Choose the event a registration belongs to",
+        "origin": {
+          "kind": "document",
+          "id": "events-registration"
+        }
+      },
+      {
+        "path": "/event-registrations",
+        "mode": "read",
+        "reason": "Show how many seats are already taken on the chosen event",
+        "origin": {
+          "kind": "document",
+          "id": "events-registration"
+        }
+      },
+      {
+        "path": "/applications/events/",
+        "mode": "read",
+        "reason": "Read the Events schemas and run the action script",
+        "origin": {
+          "kind": "document",
+          "id": "events-registration"
+        }
+      },
+      {
+        "path": "/applications/events/",
+        "mode": "read",
+        "reason": "Read the Events schemas and run the action script",
+        "origin": {
+          "kind": "document",
+          "id": "events-settings"
+        }
+      },
+      {
+        "path": "/events",
+        "mode": "write",
+        "reason": "Create events with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "events-create"
+        }
+      },
+      {
+        "path": "/event-registrations",
+        "mode": "write",
+        "reason": "Create registrations with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "events-create"
+        }
+      },
+      {
+        "path": "/settings/events.json",
+        "mode": "read",
+        "reason": "Default new events to the default venue",
+        "origin": {
+          "kind": "script",
+          "id": "events-create"
+        }
+      },
+      {
+        "path": "/events",
+        "mode": "write",
+        "reason": "Publish, complete and cancel events, and read capacity when confirming",
+        "origin": {
+          "kind": "script",
+          "id": "events-post"
+        }
+      },
+      {
+        "path": "/event-registrations",
+        "mode": "write",
+        "reason": "Confirm, check in and cancel registrations, and sum confirmed quantities",
+        "origin": {
+          "kind": "script",
+          "id": "events-post"
+        }
+      }
+    ]
+  },
+  "packaging": {
+    "publisher": "verentis",
+    "files": [
+      "canvas/**",
+      "schemas/**",
+      "templates/**",
+      "seed/**",
+      "scripts/**",
+      "README.md"
+    ],
+    "templates": [
+      "canvas/*.yaml"
+    ],
+    "variables": {
+      "canvas-origin": "https://canvas.apps.localtest.me"
+    },
+    "encryption": "none"
+  }
+}

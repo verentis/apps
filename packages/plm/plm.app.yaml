@@ -1,0 +1,208 @@
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "plm",
+    "name": "PLM",
+    "description": "Engineering change orders as files in your workspace, submitted, approved, rejected and applied by script, with bill of materials references handed from Manufacturing.",
+    "icon": "./icons/app.svg",
+    "version": "0.1.0",
+    "author": "Verentis"
+  },
+  "marketplace": {
+    "readme": "./README.md",
+    "keywords": [
+      "plm",
+      "product lifecycle",
+      "engineering change order",
+      "eco",
+      "change management",
+      "approvals",
+      "bill of materials"
+    ]
+  },
+  "spec": {
+    "install-root": "/applications/plm",
+    "entry": "https://canvas.apps.localtest.me",
+    "scope": "global",
+    "entry-points": [
+      {
+        "id": "home",
+        "display-name": "PLM",
+        "route": "/render?document=.%2Fcanvas%2Fhome.page.yaml",
+        "order": 10
+      }
+    ],
+    "launch": {
+      "enabled": true,
+      "entry-point": "home",
+      "pinnable": true
+    },
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run"
+    ],
+    "scopes": [
+      "plm.default"
+    ],
+    "settings": [
+      {
+        "key": "eco-code-prefix",
+        "display-name": "Engineering change order code prefix",
+        "type": "string",
+        "default": "ECO-",
+        "description": "Prefix of generated engineering change order codes, e.g. ECO-0001."
+      },
+      {
+        "key": "code-digits",
+        "display-name": "Code digits",
+        "type": "number",
+        "default": 4,
+        "description": "Minimum number of digits in generated codes (zero-padded)."
+      }
+    ],
+    "dependencies": [
+      {
+        "package": "verentis/canvas",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/nodejs",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/manufacturing",
+        "version": "latest",
+        "optional": true
+      }
+    ],
+    "engine": "verentis/nodejs",
+    "scripts": [
+      "scripts/create",
+      "scripts/post"
+    ],
+    "install": [
+      {
+        "from": "canvas/*.form.yaml",
+        "to": "/applications/plm/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.form+yaml"
+      },
+      {
+        "from": "canvas/*.page.yaml",
+        "to": "/applications/plm/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.page+yaml"
+      },
+      {
+        "from": "schemas/*.schema.json",
+        "to": "/applications/plm/schemas/",
+        "mode": "managed",
+        "mime": "application/schema+json"
+      },
+      {
+        "from": "templates/*.json",
+        "to": "/applications/plm/templates/",
+        "mode": "managed",
+        "mime": "application/json"
+      },
+      {
+        "from": "seed/ecos",
+        "to": "/engineering-change-orders",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.plm.ecos"
+      }
+    ],
+    "creatables": [
+      {
+        "id": "eco",
+        "display-name": "Engineering change order",
+        "description": "A new engineering change order",
+        "icon": "lucide:file-cog",
+        "mime": "application/vnd.verentis.plm.eco+json",
+        "parents": [
+          "application/vnd.verentis.plm.ecos"
+        ],
+        "folder-names": [
+          "engineering-change-orders",
+          "ecos",
+          "plm"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/eco.json"
+      }
+    ],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-forms": true,
+      "allow-popups": false
+    },
+    "file-access": [
+      {
+        "path": "/engineering-change-orders",
+        "mode": "read",
+        "reason": "List engineering change orders",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/bills-of-materials",
+        "mode": "read",
+        "reason": "Offer Manufacturing bills of materials to reference (when Manufacturing is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "plm-eco"
+        }
+      },
+      {
+        "path": "/applications/plm/",
+        "mode": "read",
+        "reason": "Read the PLM schemas and run the review script",
+        "origin": {
+          "kind": "document",
+          "id": "plm-eco"
+        }
+      },
+      {
+        "path": "/engineering-change-orders",
+        "mode": "write",
+        "reason": "Create engineering change orders with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "plm-create"
+        }
+      },
+      {
+        "path": "/engineering-change-orders",
+        "mode": "write",
+        "reason": "Submit, approve, reject and apply engineering change orders",
+        "origin": {
+          "kind": "script",
+          "id": "plm-post"
+        }
+      }
+    ]
+  },
+  "packaging": {
+    "publisher": "verentis",
+    "files": [
+      "canvas/**",
+      "schemas/**",
+      "templates/**",
+      "seed/**",
+      "scripts/**",
+      "README.md"
+    ],
+    "templates": [
+      "canvas/*.yaml"
+    ],
+    "variables": {
+      "canvas-origin": "https://canvas.apps.localtest.me"
+    },
+    "encryption": "none"
+  }
+}

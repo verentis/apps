@@ -1,0 +1,701 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Form",
+  "metadata": {
+    "id": "employees-employee",
+    "name": "Employees employee",
+    "description": "View and edit an Employees employee.",
+    "icon": "user-round"
+  },
+  "spec": {
+    "binds": [
+      {
+        "pattern": "application/vnd.verentis.employees.employee+json",
+        "mode": "edit",
+        "priority": 200,
+        "scope": "global",
+        "json-schema": {
+          "id": "https://schemas.verentis.io/employees/v1/employee.schema.json",
+          "source": "/applications/employees/schemas/employee.schema.json",
+          "title": "Employees employee",
+          "version": "1"
+        }
+      }
+    ],
+    "entry": "${var:canvas-origin}/render?document=%2Fapplications%2Femployees%2Fcanvas%2Femployee.form.yaml",
+    "scope": "global",
+    "mime-types": [
+      {
+        "pattern": "application/vnd.verentis.employees.employee+json",
+        "mode": "edit",
+        "priority": 200,
+        "json-schema": {
+          "id": "https://schemas.verentis.io/employees/v1/employee.schema.json",
+          "source": "/applications/employees/schemas/employee.schema.json",
+          "title": "Employees employee",
+          "version": "1"
+        }
+      }
+    ],
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run",
+      "execution.read"
+    ],
+    "capabilities": [],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-popups": false,
+      "allow-forms": true
+    },
+    "file-access": [
+      {
+        "path": "/departments",
+        "mode": "read",
+        "reason": "Choose the department an employee belongs to"
+      },
+      {
+        "path": "/employees",
+        "mode": "read",
+        "reason": "Choose an employee's manager"
+      },
+      {
+        "path": "/applications/employees/",
+        "mode": "read",
+        "reason": "Read the Employees schemas and run the employee action script"
+      }
+    ],
+    "access": [
+      {
+        "path": "/departments",
+        "reason": "Choose the department an employee belongs to"
+      },
+      {
+        "path": "/employees",
+        "reason": "Choose an employee's manager"
+      },
+      {
+        "path": "/applications/employees/",
+        "reason": "Read the Employees schemas and run the employee action script"
+      }
+    ],
+    "data": {
+      "record": {
+        "kind": "document",
+        "consistency": "conditional"
+      },
+      "departments": {
+        "kind": "folder",
+        "path": "/departments",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.employees.department+json"
+      },
+      "departmentoptions": {
+        "kind": "computed",
+        "expr": "(data.departments || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + (e.data.name || ''), value: e.path }))"
+      },
+      "staff": {
+        "kind": "folder",
+        "path": "/employees",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.employees.employee+json"
+      },
+      "employeeoptions": {
+        "kind": "computed",
+        "expr": "(data.staff || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status !== 'terminated')).map(e => ({ label: (e.data.code || e.name) + ' · ' + (e.data.name || ''), value: e.path }))"
+      },
+      "manageroptions": {
+        "kind": "computed",
+        "expr": "(data.staff || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status !== 'terminated')).map(e => ({ label: (e.data.code || e.name) + ' · ' + (e.data.name || ''), value: e.path }))"
+      }
+    },
+    "state": {
+      "terminationdate": ""
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.heading",
+                        "props": {
+                          "level": 2,
+                          "text": "{{ form.values.name || 'New employee' }}"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.badge",
+                        "props": {
+                          "text": "{{ String(form.values.status || '').split('-').join(' ') }}",
+                          "tone": "{{ [\"active\"].includes(form.values.status) ? 'success' : [\"on-leave\"].includes(form.values.status) ? 'warning' : [\"terminated\"].includes(form.values.status) ? 'danger' : 'neutral' }}"
+                        },
+                        "rules": {
+                          "visible": "!!form.values.status"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.badge",
+                        "props": {
+                          "text": "Archived",
+                          "tone": "warning",
+                          "icon": "archive"
+                        },
+                        "rules": {
+                          "visible": "form.values.state === 'archived'"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Employee {{ form.values.code || '' }} · {{ ctx.file.path }}",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Terminate",
+                      "variant": "outline",
+                      "icon": "user-x",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "terminate"
+                    },
+                    "rules": {
+                      "visible": "form.values.status === 'active' && !(form.values.state === 'archived')",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Archive",
+                          "variant": "ghost",
+                          "icon": "archive",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "archive"
+                        },
+                        "rules": {
+                          "visible": "!(form.values.state === 'archived') && !(form.values.status === 'terminated')",
+                          "disabled": "form.saving || form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Restore",
+                          "variant": "outline",
+                          "icon": "archive-restore",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "restore"
+                        },
+                        "rules": {
+                          "visible": "form.values.state === 'archived'",
+                          "disabled": "form.saving || form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Reset",
+                          "variant": "ghost",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "reset"
+                        },
+                        "rules": {
+                          "disabled": "form.saving || !form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Save",
+                          "icon": "save",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "save"
+                        },
+                        "rules": {
+                          "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (form.values.status === 'terminated')"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$record.error }}"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.dashboard.badge",
+            "props": {
+              "text": "This employee is archived. Restore it to edit.",
+              "tone": "warning",
+              "icon": "archive"
+            },
+            "rules": {
+              "visible": "form.values.state === 'archived'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "This employee was terminated on {{ form.values.terminationDate }} and can no longer be edited.",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "form.values.status === 'terminated'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 1,
+                "gap": 4
+              },
+              "tablet": {
+                "columns": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.form.date",
+                "props": {
+                  "label": "Termination date",
+                  "value": "{{ state.terminationdate }}",
+                  "description": "Used by Terminate; left empty it defaults to today."
+                },
+                "rules": {
+                  "visible": "form.values.status === 'active'"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 1,
+                "gap": 4
+              },
+              "tablet": {
+                "columns": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Person"
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Name",
+                          "value": "{{ form.values.name }}",
+                          "required": true
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'terminated'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Job title",
+                          "value": "{{ form.values.jobTitle }}"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'terminated'))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Organization"
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Department",
+                          "value": "{{ form.values.department }}",
+                          "options": "{{ data.departmentoptions }}"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'terminated'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Manager",
+                          "value": "{{ form.values.manager }}",
+                          "options": "{{ data.manageroptions }}"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'terminated'))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Contact"
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Work email",
+                          "value": "{{ form.values.workEmail }}",
+                          "inputType": "email"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'terminated'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Work phone",
+                          "value": "{{ form.values.workPhone }}"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'terminated'))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Employment"
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.date",
+                        "props": {
+                          "label": "Start date",
+                          "value": "{{ form.values.startDate }}"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'terminated'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Status",
+                          "value": "{{ form.values.status }}",
+                          "description": "Terminated is set by the Terminate action.",
+                          "options": [
+                            {
+                              "value": "active",
+                              "label": "Active"
+                            },
+                            {
+                              "value": "on-leave",
+                              "label": "On Leave"
+                            },
+                            {
+                              "value": "terminated",
+                              "label": "Terminated"
+                            }
+                          ]
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'terminated'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.date",
+                        "props": {
+                          "label": "Termination date",
+                          "value": "{{ form.values.terminationDate }}",
+                          "description": "Set by the Terminate action."
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'terminated')) || (true)"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "actions": {
+      "save": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Saved",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "reset": {
+        "steps": [
+          {
+            "reset-form": {}
+          }
+        ]
+      },
+      "archive": {
+        "steps": [
+          {
+            "confirm": {
+              "title": "Archive",
+              "message": "Archive this record? It stays in the workspace and can be restored."
+            }
+          },
+          {
+            "patch-form": {
+              "values": {
+                "state": "archived",
+                "archivedAt": "{{ Date() }}",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Archived",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "restore": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "state": "active",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Restored",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "terminate": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Terminate employee",
+              "message": "Terminate this employee as of the termination date? Terminated employees are locked and can no longer be edited."
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/employees/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "terminate",
+                "path": "{{ ctx.file.path }}",
+                "date": "{{ state.terminationdate }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

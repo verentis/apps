@@ -1,0 +1,21 @@
+{
+  "$schema": "https://schemas.verentis.io/documents/v1/document.schema.json",
+  "schemaVersion": 1,
+  "kind": "document",
+  "id": "9d2e3f4a-5b6c-4d7e-9f0a-1b2c3d4e5f08",
+  "state": "active",
+  "createdAt": "2026-01-01T00:00:00Z",
+  "updatedAt": "2026-01-01T00:00:00Z",
+  "code": "DOC-0002",
+  "title": "Globex master agreement",
+  "filePath": "/shared/legal/globex-msa.pdf",
+  "workspace": "/document-workspaces/DWS-0002",
+  "tags": [
+    "legal",
+    "contract"
+  ],
+  "owner": "Jordan Jacobs",
+  "status": "in-review",
+  "notes": "Renewal for 2026.",
+  "reviewComment": ""
+}

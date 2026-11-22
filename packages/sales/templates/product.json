@@ -1,0 +1,14 @@
+{
+  "$schema": "https://schemas.verentis.io/sales/v1/product.schema.json",
+  "schemaVersion": 1,
+  "kind": "product",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "name": "{{ name }}",
+  "unit": "each",
+  "listPrice": "",
+  "description": ""
+}

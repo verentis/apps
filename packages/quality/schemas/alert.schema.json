@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.verentis.io/quality/v1/alert.schema.json",
+  "title": "Quality quality alert",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "const": "https://schemas.verentis.io/quality/v1/alert.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "kind": {
+      "const": "alert"
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "state": {
+      "enum": [
+        "active",
+        "archived"
+      ]
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "archivedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "code": {
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "title": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "sourceCheck": {
+      "type": "string",
+      "maxLength": 4096,
+      "pattern": "^(/.*)?$"
+    },
+    "severity": {
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "stage": {
+      "enum": [
+        "new",
+        "investigation",
+        "action",
+        "resolved"
+      ]
+    },
+    "rootCause": {
+      "type": "string",
+      "maxLength": 10000
+    },
+    "correctiveAction": {
+      "type": "string",
+      "maxLength": 10000
+    },
+    "resolvedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    }
+  },
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "kind",
+    "id",
+    "state",
+    "createdAt",
+    "updatedAt",
+    "code",
+    "title",
+    "sourceCheck",
+    "severity",
+    "stage",
+    "rootCause",
+    "correctiveAction"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "archived"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "archivedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          }
+        },
+        "required": [
+          "archivedAt"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "stage": {
+            "enum": [
+              "resolved"
+            ]
+          }
+        },
+        "required": [
+          "stage"
+        ]
+      },
+      "then": {
+        "properties": {
+          "rootCause": true,
+          "correctiveAction": true,
+          "resolvedAt": true
+        },
+        "required": [
+          "rootCause",
+          "correctiveAction",
+          "resolvedAt"
+        ]
+      }
+    }
+  ]
+}

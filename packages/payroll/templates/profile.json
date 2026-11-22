@@ -1,0 +1,16 @@
+{
+  "$schema": "https://schemas.verentis.io/payroll/v1/profile.schema.json",
+  "schemaVersion": 1,
+  "kind": "profile",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "employeeName": "{{ name }}",
+  "employeeRef": "",
+  "structure": "",
+  "baseWage": "",
+  "currency": "",
+  "active": true
+}

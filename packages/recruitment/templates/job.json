@@ -1,0 +1,14 @@
+{
+  "$schema": "https://schemas.verentis.io/recruitment/v1/job.schema.json",
+  "schemaVersion": 1,
+  "kind": "job",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "title": "{{ name }}",
+  "department": "",
+  "status": "open",
+  "openings": 1
+}

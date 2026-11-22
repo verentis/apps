@@ -1,0 +1,20 @@
+{
+  "$schema": "https://schemas.verentis.io/rental/v1/booking.schema.json",
+  "schemaVersion": 1,
+  "kind": "booking",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "customerRef": "",
+  "customerName": "{{ name }}",
+  "product": "",
+  "quantity": 1,
+  "startDate": "",
+  "endDate": "",
+  "dailyRate": "",
+  "deposit": "",
+  "notes": "",
+  "status": "draft"
+}

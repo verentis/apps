@@ -1,0 +1,12 @@
+{
+  "$schema": "https://schemas.verentis.io/documents/v1/tag.schema.json",
+  "schemaVersion": 1,
+  "kind": "tag",
+  "id": "9d2e3f4a-5b6c-4d7e-9f0a-1b2c3d4e5f05",
+  "state": "active",
+  "createdAt": "2026-01-01T00:00:00Z",
+  "updatedAt": "2026-01-01T00:00:00Z",
+  "code": "DTG-0003",
+  "label": "legal",
+  "category": "department"
+}

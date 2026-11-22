@@ -1,0 +1,282 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "plm-home",
+    "name": "PLM",
+    "description": "Engineering change orders by stage.",
+    "icon": "file-cog"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/engineering-change-orders",
+        "reason": "List engineering change orders"
+      }
+    ],
+    "data": {
+      "ecos": {
+        "kind": "folder",
+        "path": "/engineering-change-orders",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.plm.eco+json"
+      },
+      "ecorows": {
+        "kind": "computed",
+        "expr": "(data.ecos || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, title: e.data.title || '', type: e.data.type || '', priority: e.data.priority || '', effectiveDate: e.data.effectiveDate || '', stage: e.data.stage || 'draft' }))"
+      }
+    },
+    "state": {
+      "showclosed": false
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "PLM"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Engineering change orders are files in your workspace. Draft one in its folder, submit it for review, then approve and apply it (or reject it with a reason) from its form.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Open /engineering-change-orders",
+                      "variant": "outline",
+                      "icon": "folder-open",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/engineering-change-orders"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 4
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Draft",
+                  "value": "{{ (data.ecos || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && ((e.data.stage || 'draft') === 'draft')).length }}",
+                  "icon": "file-pen",
+                  "loading": "{{ data.$ecos.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "In review",
+                  "value": "{{ (data.ecos || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && ((e.data.stage || 'draft') === 'in-review')).length }}",
+                  "icon": "eye",
+                  "loading": "{{ data.$ecos.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Approved",
+                  "value": "{{ (data.ecos || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && ((e.data.stage || 'draft') === 'approved')).length }}",
+                  "icon": "check",
+                  "loading": "{{ data.$ecos.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Applied",
+                  "value": "{{ (data.ecos || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && ((e.data.stage || 'draft') === 'applied')).length }}",
+                  "icon": "check-check",
+                  "loading": "{{ data.$ecos.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Rejected",
+                  "value": "{{ (data.ecos || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && ((e.data.stage || 'draft') === 'rejected')).length }}",
+                  "icon": "x",
+                  "loading": "{{ data.$ecos.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /engineering-change-orders folder could not be read. Reinstall PLM to recreate it."
+            },
+            "rules": {
+              "visible": "data.$ecos.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$ecos.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.form.switch",
+            "props": {
+              "label": "Show applied and rejected changes",
+              "value": "{{ state.showclosed }}"
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.ecorows || []).filter(r => state.showclosed || (r.stage !== 'applied' && r.stage !== 'rejected')) }}",
+              "columns": [
+                {
+                  "key": "code",
+                  "label": "ECO"
+                },
+                {
+                  "key": "title",
+                  "label": "Title"
+                },
+                {
+                  "key": "type",
+                  "label": "Type"
+                },
+                {
+                  "key": "priority",
+                  "label": "Priority"
+                },
+                {
+                  "key": "effectiveDate",
+                  "label": "Effective"
+                },
+                {
+                  "key": "stage",
+                  "label": "Stage"
+                }
+              ],
+              "emptyText": "No open engineering change orders. Use New in /engineering-change-orders.",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Browse"
+            },
+            "children": [
+              {
+                "type": "canvas.files",
+                "props": {
+                  "path": "/engineering-change-orders/",
+                  "mimeTypes": [
+                    "application/vnd.verentis.plm.eco+json"
+                  ],
+                  "showFolders": false,
+                  "navigable": false,
+                  "columns": [
+                    {
+                      "key": "name",
+                      "label": "Code"
+                    },
+                    {
+                      "key": "data.title",
+                      "label": "Title"
+                    },
+                    {
+                      "key": "data.stage",
+                      "label": "Stage"
+                    }
+                  ],
+                  "emptyText": "No engineering change orders yet. Use New in /engineering-change-orders."
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

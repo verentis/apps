@@ -1,0 +1,402 @@
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "helpdesk",
+    "name": "Helpdesk",
+    "description": "Support teams and tickets as files in your workspace, with SLA deadlines, a stage pipeline and scripted resolve and close actions.",
+    "icon": "./icons/app.svg",
+    "version": "0.1.0",
+    "author": "Verentis"
+  },
+  "marketplace": {
+    "readme": "./README.md",
+    "keywords": [
+      "helpdesk",
+      "support",
+      "tickets",
+      "sla",
+      "teams",
+      "service desk",
+      "customer service"
+    ]
+  },
+  "spec": {
+    "install-root": "/applications/helpdesk",
+    "entry": "https://canvas.apps.localtest.me",
+    "scope": "global",
+    "entry-points": [
+      {
+        "id": "home",
+        "display-name": "Helpdesk",
+        "route": "/render?document=.%2Fcanvas%2Fhome.page.yaml",
+        "order": 10
+      },
+      {
+        "id": "tickets",
+        "display-name": "Tickets",
+        "route": "/render?document=.%2Fcanvas%2Ftickets.page.yaml",
+        "order": 20
+      },
+      {
+        "id": "sla",
+        "display-name": "SLA report",
+        "route": "/render?document=.%2Fcanvas%2Fsla.page.yaml",
+        "order": 30
+      },
+      {
+        "id": "workload",
+        "display-name": "Workload",
+        "route": "/render?document=.%2Fcanvas%2Fworkload.page.yaml",
+        "order": 40
+      }
+    ],
+    "launch": {
+      "enabled": true,
+      "entry-point": "home",
+      "pinnable": true
+    },
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run"
+    ],
+    "scopes": [
+      "helpdesk.default"
+    ],
+    "settings": [
+      {
+        "key": "team-code-prefix",
+        "display-name": "Team code prefix",
+        "type": "string",
+        "default": "TEAM-",
+        "description": "Prefix of generated team codes, e.g. TEAM-0001."
+      },
+      {
+        "key": "ticket-code-prefix",
+        "display-name": "Ticket number prefix",
+        "type": "string",
+        "default": "TKT-",
+        "description": "Prefix of generated ticket codes, e.g. TKT-0001."
+      },
+      {
+        "key": "code-digits",
+        "display-name": "Code digits",
+        "type": "number",
+        "default": 4,
+        "description": "Minimum number of digits in generated codes (zero-padded)."
+      }
+    ],
+    "dependencies": [
+      {
+        "package": "verentis/canvas",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/nodejs",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/crm",
+        "version": "latest",
+        "optional": true
+      }
+    ],
+    "engine": "verentis/nodejs",
+    "scripts": [
+      "scripts/create",
+      "scripts/post"
+    ],
+    "install": [
+      {
+        "from": "canvas/*.form.yaml",
+        "to": "/applications/helpdesk/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.form+yaml"
+      },
+      {
+        "from": "canvas/*.page.yaml",
+        "to": "/applications/helpdesk/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.page+yaml"
+      },
+      {
+        "from": "schemas/*.schema.json",
+        "to": "/applications/helpdesk/schemas/",
+        "mode": "managed",
+        "mime": "application/schema+json"
+      },
+      {
+        "from": "templates/*.json",
+        "to": "/applications/helpdesk/templates/",
+        "mode": "managed",
+        "mime": "application/json"
+      },
+      {
+        "from": "seed/teams",
+        "to": "/helpdesk-teams",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.helpdesk.teams"
+      },
+      {
+        "from": "seed/tickets",
+        "to": "/tickets",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.helpdesk.tickets"
+      },
+      {
+        "from": "seed/starter/TEAM-0001.json",
+        "to": "/helpdesk-teams/TEAM-0001",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.helpdesk.team+json"
+      },
+      {
+        "from": "seed/starter/TKT-0001.json",
+        "to": "/tickets/TKT-0001",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.helpdesk.ticket+json"
+      },
+      {
+        "from": "seed/starter/TKT-0002.json",
+        "to": "/tickets/TKT-0002",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.helpdesk.ticket+json"
+      },
+      {
+        "from": "seed/starter/TKT-0003.json",
+        "to": "/tickets/TKT-0003",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.helpdesk.ticket+json"
+      },
+      {
+        "from": "seed/settings.json",
+        "to": "/settings/helpdesk.json",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.helpdesk.settings+json"
+      }
+    ],
+    "creatables": [
+      {
+        "id": "team",
+        "display-name": "Team",
+        "description": "A new helpdesk team",
+        "icon": "lucide:users",
+        "mime": "application/vnd.verentis.helpdesk.team+json",
+        "parents": [
+          "application/vnd.verentis.helpdesk.teams"
+        ],
+        "folder-names": [
+          "helpdesk-teams",
+          "teams",
+          "helpdesk"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/team.json"
+      },
+      {
+        "id": "ticket",
+        "display-name": "Ticket",
+        "description": "A new helpdesk ticket",
+        "icon": "lucide:ticket",
+        "mime": "application/vnd.verentis.helpdesk.ticket+json",
+        "parents": [
+          "application/vnd.verentis.helpdesk.tickets"
+        ],
+        "folder-names": [
+          "tickets",
+          "helpdesk"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/ticket.json"
+      }
+    ],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-forms": true,
+      "allow-popups": false
+    },
+    "file-access": [
+      {
+        "path": "/helpdesk-teams",
+        "mode": "read",
+        "reason": "Count tickets and show the teams and tickets",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/tickets",
+        "mode": "read",
+        "reason": "Count tickets and show the teams and tickets",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/helpdesk-teams",
+        "mode": "read",
+        "reason": "List tickets by stage with their team names",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/tickets.page.yaml"
+        }
+      },
+      {
+        "path": "/tickets",
+        "mode": "read",
+        "reason": "List tickets by stage with their team names",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/tickets.page.yaml"
+        }
+      },
+      {
+        "path": "/helpdesk-teams",
+        "mode": "read",
+        "reason": "Compare open tickets against their SLA deadlines",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/sla.page.yaml"
+        }
+      },
+      {
+        "path": "/tickets",
+        "mode": "read",
+        "reason": "Compare open tickets against their SLA deadlines",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/sla.page.yaml"
+        }
+      },
+      {
+        "path": "/helpdesk-teams",
+        "mode": "read",
+        "reason": "Sum open tickets per team and assignee",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/workload.page.yaml"
+        }
+      },
+      {
+        "path": "/tickets",
+        "mode": "read",
+        "reason": "Sum open tickets per team and assignee",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/workload.page.yaml"
+        }
+      },
+      {
+        "path": "/applications/helpdesk/",
+        "mode": "read",
+        "reason": "Read the Helpdesk schemas and run the ticket action script",
+        "origin": {
+          "kind": "document",
+          "id": "helpdesk-team"
+        }
+      },
+      {
+        "path": "/helpdesk-teams",
+        "mode": "read",
+        "reason": "Choose the team a ticket belongs to",
+        "origin": {
+          "kind": "document",
+          "id": "helpdesk-ticket"
+        }
+      },
+      {
+        "path": "/customers",
+        "mode": "read",
+        "reason": "Offer CRM customers on tickets (when CRM is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "helpdesk-ticket"
+        }
+      },
+      {
+        "path": "/applications/helpdesk/",
+        "mode": "read",
+        "reason": "Read the Helpdesk schemas and run the ticket action script",
+        "origin": {
+          "kind": "document",
+          "id": "helpdesk-ticket"
+        }
+      },
+      {
+        "path": "/helpdesk-teams",
+        "mode": "read",
+        "reason": "Choose the default team for new tickets",
+        "origin": {
+          "kind": "document",
+          "id": "helpdesk-settings"
+        }
+      },
+      {
+        "path": "/applications/helpdesk/",
+        "mode": "read",
+        "reason": "Read the Helpdesk schemas and run the ticket action script",
+        "origin": {
+          "kind": "document",
+          "id": "helpdesk-settings"
+        }
+      },
+      {
+        "path": "/helpdesk-teams",
+        "mode": "write",
+        "reason": "Create teams with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "helpdesk-create"
+        }
+      },
+      {
+        "path": "/tickets",
+        "mode": "write",
+        "reason": "Create tickets with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "helpdesk-create"
+        }
+      },
+      {
+        "path": "/settings/helpdesk.json",
+        "mode": "read",
+        "reason": "Default new tickets to the default team",
+        "origin": {
+          "kind": "script",
+          "id": "helpdesk-create"
+        }
+      },
+      {
+        "path": "/tickets",
+        "mode": "write",
+        "reason": "Mark tickets solved or closed",
+        "origin": {
+          "kind": "script",
+          "id": "helpdesk-post"
+        }
+      }
+    ]
+  },
+  "packaging": {
+    "publisher": "verentis",
+    "files": [
+      "canvas/**",
+      "schemas/**",
+      "templates/**",
+      "seed/**",
+      "scripts/**",
+      "README.md"
+    ],
+    "templates": [
+      "canvas/*.yaml"
+    ],
+    "variables": {
+      "canvas-origin": "https://canvas.apps.localtest.me"
+    },
+    "encryption": "none"
+  }
+}

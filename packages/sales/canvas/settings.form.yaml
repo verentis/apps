@@ -1,0 +1,259 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Form",
+  "metadata": {
+    "id": "sales-settings",
+    "name": "Sales settings",
+    "description": "Edit the Sales settings file.",
+    "icon": "settings"
+  },
+  "spec": {
+    "binds": [
+      {
+        "pattern": "application/vnd.verentis.sales.settings+json",
+        "mode": "edit",
+        "priority": 200,
+        "scope": "global",
+        "json-schema": {
+          "id": "https://schemas.verentis.io/sales/v1/settings.schema.json",
+          "source": "/applications/sales/schemas/settings.schema.json",
+          "title": "Sales settings",
+          "version": "1"
+        }
+      }
+    ],
+    "entry": "${var:canvas-origin}/render?document=%2Fapplications%2Fsales%2Fcanvas%2Fsettings.form.yaml",
+    "scope": "global",
+    "mime-types": [
+      {
+        "pattern": "application/vnd.verentis.sales.settings+json",
+        "mode": "edit",
+        "priority": 200,
+        "json-schema": {
+          "id": "https://schemas.verentis.io/sales/v1/settings.schema.json",
+          "source": "/applications/sales/schemas/settings.schema.json",
+          "title": "Sales settings",
+          "version": "1"
+        }
+      }
+    ],
+    "permissions": [
+      "file.read",
+      "file.write"
+    ],
+    "capabilities": [],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-popups": false,
+      "allow-forms": true
+    },
+    "file-access": [
+      {
+        "path": "/applications/sales/",
+        "mode": "read",
+        "reason": "Read the Sales schemas and run the confirm script"
+      }
+    ],
+    "access": [
+      {
+        "path": "/applications/sales/",
+        "reason": "Read the Sales schemas and run the confirm script"
+      }
+    ],
+    "data": {
+      "record": {
+        "kind": "document",
+        "consistency": "conditional"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Sales settings"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Defaults for new quotations and sales orders. Number prefixes are app settings, managed with the installed app.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Reset",
+                      "variant": "ghost",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "reset-form": {}
+                        }
+                      ]
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Save",
+                      "icon": "save",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "save": {}
+                        },
+                        {
+                          "toast": {
+                            "message": "Saved",
+                            "variant": "success"
+                          }
+                        }
+                      ]
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty || form.invalid"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$record.error }}"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 1,
+                "gap": 4
+              },
+              "tablet": {
+                "columns": 1
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Defaults",
+                  "description": "What new quotations and sales orders start with. Number prefixes are app settings, managed with the installed app."
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Currency",
+                          "value": "{{ form.values.currency }}",
+                          "placeholder": "ZAR"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.textarea",
+                        "props": {
+                          "label": "Quotation notes",
+                          "value": "{{ form.values.notes }}",
+                          "rows": 4
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "actions": {}
+  }
+}

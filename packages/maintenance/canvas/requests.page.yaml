@@ -1,0 +1,434 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "maintenance-requests",
+    "name": "Maintenance requests",
+    "description": "Every maintenance request, boarded by stage.",
+    "icon": "hammer"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/equipment",
+        "reason": "Board requests by stage with their equipment names"
+      },
+      {
+        "path": "/maintenance-requests",
+        "reason": "Board requests by stage with their equipment names"
+      }
+    ],
+    "data": {
+      "equipment": {
+        "kind": "folder",
+        "path": "/equipment",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.maintenance.equipment+json"
+      },
+      "requests": {
+        "kind": "folder",
+        "path": "/maintenance-requests",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.maintenance.request+json"
+      },
+      "rows": {
+        "kind": "computed",
+        "expr": "(data.requests || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, equipmentPath: e.data.equipment || '', equipment: ((((data.equipment || []).find(q => q.kind === 'file' && q.data && q.path === e.data.equipment) || {}).data || {}).name) || '', type: e.data.type || '', priority: e.data.priority || '', stage: e.data.stage || 'new', scheduledDate: e.data.scheduledDate || '', durationHours: e.data.durationHours || '' }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Requests by stage"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Every active maintenance request, grouped by its stage. Click a row to open the request.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Maintenance",
+                  "variant": "ghost",
+                  "icon": "wrench",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/applications/maintenance/canvas/home.page.yaml"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /equipment folder could not be read. Reinstall Maintenance to recreate it."
+            },
+            "rules": {
+              "visible": "data.$equipment.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /maintenance-requests folder could not be read. Reinstall Maintenance to recreate it."
+            },
+            "rules": {
+              "visible": "data.$requests.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 4
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "New",
+                  "value": "{{ (data.rows || []).filter(r => r.stage === 'new').length }}",
+                  "icon": "hammer",
+                  "loading": "{{ data.$requests.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "In Progress",
+                  "value": "{{ (data.rows || []).filter(r => r.stage === 'in-progress').length }}",
+                  "icon": "hammer",
+                  "loading": "{{ data.$requests.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Repaired",
+                  "value": "{{ (data.rows || []).filter(r => r.stage === 'repaired').length }}",
+                  "icon": "hammer",
+                  "loading": "{{ data.$requests.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Scrap",
+                  "value": "{{ (data.rows || []).filter(r => r.stage === 'scrap').length }}",
+                  "icon": "hammer",
+                  "loading": "{{ data.$requests.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.tabs",
+            "props": {
+              "items": [
+                {
+                  "value": "new",
+                  "label": "New",
+                  "icon": "hammer"
+                },
+                {
+                  "value": "in-progress",
+                  "label": "In Progress",
+                  "icon": "hammer"
+                },
+                {
+                  "value": "repaired",
+                  "label": "Repaired",
+                  "icon": "hammer"
+                },
+                {
+                  "value": "scrap",
+                  "label": "Scrap",
+                  "icon": "hammer"
+                }
+              ]
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.rows || []).filter(r => r.stage === 'new') }}",
+                      "columns": [
+                        {
+                          "key": "code",
+                          "label": "Request"
+                        },
+                        {
+                          "key": "equipment",
+                          "label": "Equipment"
+                        },
+                        {
+                          "key": "type",
+                          "label": "Type"
+                        },
+                        {
+                          "key": "priority",
+                          "label": "Priority"
+                        },
+                        {
+                          "key": "scheduledDate",
+                          "label": "Scheduled"
+                        },
+                        {
+                          "key": "durationHours",
+                          "label": "Hours",
+                          "align": "end"
+                        }
+                      ],
+                      "emptyText": "No new requests",
+                      "clickable": true
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "new"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.rows || []).filter(r => r.stage === 'in-progress') }}",
+                      "columns": [
+                        {
+                          "key": "code",
+                          "label": "Request"
+                        },
+                        {
+                          "key": "equipment",
+                          "label": "Equipment"
+                        },
+                        {
+                          "key": "type",
+                          "label": "Type"
+                        },
+                        {
+                          "key": "priority",
+                          "label": "Priority"
+                        },
+                        {
+                          "key": "scheduledDate",
+                          "label": "Scheduled"
+                        },
+                        {
+                          "key": "durationHours",
+                          "label": "Hours",
+                          "align": "end"
+                        }
+                      ],
+                      "emptyText": "No in progress requests",
+                      "clickable": true
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "in-progress"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.rows || []).filter(r => r.stage === 'repaired') }}",
+                      "columns": [
+                        {
+                          "key": "code",
+                          "label": "Request"
+                        },
+                        {
+                          "key": "equipment",
+                          "label": "Equipment"
+                        },
+                        {
+                          "key": "type",
+                          "label": "Type"
+                        },
+                        {
+                          "key": "priority",
+                          "label": "Priority"
+                        },
+                        {
+                          "key": "scheduledDate",
+                          "label": "Scheduled"
+                        },
+                        {
+                          "key": "durationHours",
+                          "label": "Hours",
+                          "align": "end"
+                        }
+                      ],
+                      "emptyText": "No repaired requests",
+                      "clickable": true
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "repaired"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.rows || []).filter(r => r.stage === 'scrap') }}",
+                      "columns": [
+                        {
+                          "key": "code",
+                          "label": "Request"
+                        },
+                        {
+                          "key": "equipment",
+                          "label": "Equipment"
+                        },
+                        {
+                          "key": "type",
+                          "label": "Type"
+                        },
+                        {
+                          "key": "priority",
+                          "label": "Priority"
+                        },
+                        {
+                          "key": "scheduledDate",
+                          "label": "Scheduled"
+                        },
+                        {
+                          "key": "durationHours",
+                          "label": "Hours",
+                          "align": "end"
+                        }
+                      ],
+                      "emptyText": "No scrap requests",
+                      "clickable": true
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "scrap"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

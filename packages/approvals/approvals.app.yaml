@@ -1,0 +1,385 @@
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "approvals",
+    "name": "Approvals",
+    "description": "Approval types and requests as files in your workspace, submitted, approved, refused or cancelled by script with multi-approver thresholds.",
+    "icon": "./icons/app.svg",
+    "version": "0.1.0",
+    "author": "Verentis"
+  },
+  "marketplace": {
+    "readme": "./README.md",
+    "keywords": [
+      "approvals",
+      "approval requests",
+      "sign-off",
+      "workflow",
+      "decisions"
+    ]
+  },
+  "spec": {
+    "install-root": "/applications/approvals",
+    "entry": "https://canvas.apps.localtest.me",
+    "scope": "global",
+    "entry-points": [
+      {
+        "id": "home",
+        "display-name": "Approvals",
+        "route": "/render?document=.%2Fcanvas%2Fhome.page.yaml",
+        "order": 10
+      },
+      {
+        "id": "requests",
+        "display-name": "Requests",
+        "route": "/render?document=.%2Fcanvas%2Frequests.page.yaml",
+        "order": 20
+      },
+      {
+        "id": "pending",
+        "display-name": "To decide",
+        "route": "/render?document=.%2Fcanvas%2Fpending.page.yaml",
+        "order": 30
+      },
+      {
+        "id": "by-type",
+        "display-name": "By type",
+        "route": "/render?document=.%2Fcanvas%2Fby-type.page.yaml",
+        "order": 40
+      }
+    ],
+    "launch": {
+      "enabled": true,
+      "entry-point": "home",
+      "pinnable": true
+    },
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run"
+    ],
+    "scopes": [
+      "approvals.default"
+    ],
+    "settings": [
+      {
+        "key": "type-code-prefix",
+        "display-name": "Approval type code prefix",
+        "type": "string",
+        "default": "APT-",
+        "description": "Prefix of generated approval type numbers, e.g. APT-0001."
+      },
+      {
+        "key": "request-code-prefix",
+        "display-name": "Approval request number prefix",
+        "type": "string",
+        "default": "APR-",
+        "description": "Prefix of generated approval request numbers, e.g. APR-0001."
+      },
+      {
+        "key": "code-digits",
+        "display-name": "Code digits",
+        "type": "number",
+        "default": 4,
+        "description": "Minimum number of digits in generated numbers (zero-padded)."
+      }
+    ],
+    "dependencies": [
+      {
+        "package": "verentis/canvas",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/nodejs",
+        "version": "latest"
+      }
+    ],
+    "engine": "verentis/nodejs",
+    "scripts": [
+      "scripts/create",
+      "scripts/post"
+    ],
+    "install": [
+      {
+        "from": "canvas/*.form.yaml",
+        "to": "/applications/approvals/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.form+yaml"
+      },
+      {
+        "from": "canvas/*.page.yaml",
+        "to": "/applications/approvals/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.page+yaml"
+      },
+      {
+        "from": "schemas/*.schema.json",
+        "to": "/applications/approvals/schemas/",
+        "mode": "managed",
+        "mime": "application/schema+json"
+      },
+      {
+        "from": "templates/*.json",
+        "to": "/applications/approvals/templates/",
+        "mode": "managed",
+        "mime": "application/json"
+      },
+      {
+        "from": "seed/types",
+        "to": "/approval-types",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.approvals.types"
+      },
+      {
+        "from": "seed/requests",
+        "to": "/approval-requests",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.approvals.requests"
+      },
+      {
+        "from": "seed/starter/APT-0001.json",
+        "to": "/approval-types/APT-0001",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.approvals.type+json"
+      },
+      {
+        "from": "seed/starter/APT-0002.json",
+        "to": "/approval-types/APT-0002",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.approvals.type+json"
+      },
+      {
+        "from": "seed/starter/APT-0003.json",
+        "to": "/approval-types/APT-0003",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.approvals.type+json"
+      },
+      {
+        "from": "seed/sample/APR-0001.json",
+        "to": "/approval-requests/APR-0001",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.approvals.request+json"
+      },
+      {
+        "from": "seed/settings.json",
+        "to": "/settings/approvals.json",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.approvals.settings+json"
+      }
+    ],
+    "creatables": [
+      {
+        "id": "type",
+        "display-name": "Approval type",
+        "description": "A new approval type",
+        "icon": "lucide:list-checks",
+        "mime": "application/vnd.verentis.approvals.type+json",
+        "parents": [
+          "application/vnd.verentis.approvals.types"
+        ],
+        "folder-names": [
+          "approval-types",
+          "approvals"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/type.json"
+      },
+      {
+        "id": "request",
+        "display-name": "Approval request",
+        "description": "A new approval request",
+        "icon": "lucide:file-check",
+        "mime": "application/vnd.verentis.approvals.request+json",
+        "parents": [
+          "application/vnd.verentis.approvals.requests"
+        ],
+        "folder-names": [
+          "approval-requests",
+          "approvals"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/request.json"
+      }
+    ],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-forms": true,
+      "allow-popups": false
+    },
+    "file-access": [
+      {
+        "path": "/approval-types",
+        "mode": "read",
+        "reason": "List approval requests and types",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/approval-requests",
+        "mode": "read",
+        "reason": "List approval requests and types",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/approval-types",
+        "mode": "read",
+        "reason": "List approval requests with their types, thresholds and statuses",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/requests.page.yaml"
+        }
+      },
+      {
+        "path": "/approval-requests",
+        "mode": "read",
+        "reason": "List approval requests with their types, thresholds and statuses",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/requests.page.yaml"
+        }
+      },
+      {
+        "path": "/approval-types",
+        "mode": "read",
+        "reason": "List submitted requests awaiting an approver's decision",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/pending.page.yaml"
+        }
+      },
+      {
+        "path": "/approval-requests",
+        "mode": "read",
+        "reason": "List submitted requests awaiting an approver's decision",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/pending.page.yaml"
+        }
+      },
+      {
+        "path": "/approval-types",
+        "mode": "read",
+        "reason": "Count approval requests per type and status",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/by-type.page.yaml"
+        }
+      },
+      {
+        "path": "/approval-requests",
+        "mode": "read",
+        "reason": "Count approval requests per type and status",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/by-type.page.yaml"
+        }
+      },
+      {
+        "path": "/applications/approvals/",
+        "mode": "read",
+        "reason": "Read the Approvals schemas and run the decision script",
+        "origin": {
+          "kind": "document",
+          "id": "approvals-type"
+        }
+      },
+      {
+        "path": "/approval-types",
+        "mode": "read",
+        "reason": "Offer the approval types and show each request's threshold",
+        "origin": {
+          "kind": "document",
+          "id": "approvals-request"
+        }
+      },
+      {
+        "path": "/applications/approvals/",
+        "mode": "read",
+        "reason": "Read the Approvals schemas and run the decision script",
+        "origin": {
+          "kind": "document",
+          "id": "approvals-request"
+        }
+      },
+      {
+        "path": "/applications/approvals/",
+        "mode": "read",
+        "reason": "Read the Approvals schemas and run the decision script",
+        "origin": {
+          "kind": "document",
+          "id": "approvals-settings"
+        }
+      },
+      {
+        "path": "/approval-types",
+        "mode": "write",
+        "reason": "Create approval types with the next number",
+        "origin": {
+          "kind": "script",
+          "id": "approvals-create"
+        }
+      },
+      {
+        "path": "/approval-requests",
+        "mode": "write",
+        "reason": "Create approval requests with the next number",
+        "origin": {
+          "kind": "script",
+          "id": "approvals-create"
+        }
+      },
+      {
+        "path": "/settings/approvals.json",
+        "mode": "read",
+        "reason": "Default new requests' requester",
+        "origin": {
+          "kind": "script",
+          "id": "approvals-create"
+        }
+      },
+      {
+        "path": "/approval-types",
+        "mode": "read",
+        "reason": "Read each request's type: its required fields and approver count",
+        "origin": {
+          "kind": "script",
+          "id": "approvals-post"
+        }
+      },
+      {
+        "path": "/approval-requests",
+        "mode": "write",
+        "reason": "Mark requests submitted, approved, refused or cancelled",
+        "origin": {
+          "kind": "script",
+          "id": "approvals-post"
+        }
+      }
+    ]
+  },
+  "packaging": {
+    "publisher": "verentis",
+    "files": [
+      "canvas/**",
+      "schemas/**",
+      "templates/**",
+      "seed/**",
+      "scripts/**",
+      "README.md"
+    ],
+    "templates": [
+      "canvas/*.yaml"
+    ],
+    "variables": {
+      "canvas-origin": "https://canvas.apps.localtest.me"
+    },
+    "encryption": "none"
+  }
+}

@@ -1,0 +1,247 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "appraisals-scores",
+    "name": "Scores",
+    "description": "Completed appraisals and their overall scores.",
+    "icon": "star"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/appraisals",
+        "reason": "Summarise completed appraisals' overall scores"
+      }
+    ],
+    "data": {
+      "appraisals": {
+        "kind": "folder",
+        "path": "/appraisals",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.appraisals.appraisal+json"
+      },
+      "rows": {
+        "kind": "computed",
+        "expr": "(data.appraisals || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, employee: e.data.employeeName || '', period: e.data.period || '', manager: e.data.manager || '', status: e.data.status || '', scheduledAt: e.data.scheduledAt || '', ratings: (e.data.ratings || []).length, overallScore: e.data.overallScore || '' }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Scores summary"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Completed appraisals by overall score, and the average per manager. Click a row to open the appraisal.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Appraisals",
+                  "variant": "ghost",
+                  "icon": "clipboard-check",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/applications/appraisals/canvas/home.page.yaml"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /appraisals folder could not be read. Reinstall Appraisals to recreate it."
+            },
+            "rules": {
+              "visible": "data.$appraisals.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 4
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Completed",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'done' && r.overallScore).length }}",
+                  "icon": "check",
+                  "loading": "{{ data.$appraisals.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Average score",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'done' && r.overallScore).length ? ((data.rows || []).filter(r => r.status === 'done' && r.overallScore).map(r => Math.round(Number(r.overallScore) * 100)).reduce((sum, v) => sum + v, 0) / (data.rows || []).filter(r => r.status === 'done' && r.overallScore).length / 100).toFixed(2) : '—' }}",
+                  "icon": "star",
+                  "loading": "{{ data.$appraisals.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Top score",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'done' && r.overallScore).length ? (data.rows || []).filter(r => r.status === 'done' && r.overallScore).map(r => r.overallScore).sort((a, b) => Number(b) - Number(a))[0] : '—' }}",
+                  "icon": "trophy",
+                  "loading": "{{ data.$appraisals.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Scheduled",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'scheduled').length }}",
+                  "icon": "calendar",
+                  "loading": "{{ data.$appraisals.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Completed appraisals"
+            },
+            "children": [
+              {
+                "type": "canvas.table",
+                "props": {
+                  "rows": "{{ (data.rows || []).filter(r => r.status === 'done' && r.overallScore).sort((a, b) => Number(b.overallScore) - Number(a.overallScore)) }}",
+                  "columns": [
+                    {
+                      "key": "code",
+                      "label": "Appraisal"
+                    },
+                    {
+                      "key": "employee",
+                      "label": "Employee"
+                    },
+                    {
+                      "key": "period",
+                      "label": "Period"
+                    },
+                    {
+                      "key": "manager",
+                      "label": "Manager"
+                    },
+                    {
+                      "key": "ratings",
+                      "label": "Ratings",
+                      "align": "end"
+                    },
+                    {
+                      "key": "overallScore",
+                      "label": "Overall score",
+                      "align": "end"
+                    }
+                  ],
+                  "emptyText": "No completed appraisals yet",
+                  "clickable": true
+                },
+                "on": {
+                  "row-click": [
+                    {
+                      "open-file": {
+                        "path": "{{ event.path }}",
+                        "mode": "edit"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "By manager"
+            },
+            "children": [
+              {
+                "type": "canvas.table",
+                "props": {
+                  "rows": "{{ (data.rows || []).filter(r => r.status === 'done' && r.overallScore).map(r => r.manager || 'No manager').filter((v, i, a) => a.indexOf(v) === i).sort().map(m => ({ manager: m, done: (data.rows || []).filter(r => r.status === 'done' && r.overallScore).filter(r => (r.manager || 'No manager') === m).length, average: ((data.rows || []).filter(r => r.status === 'done' && r.overallScore).filter(r => (r.manager || 'No manager') === m).map(r => Math.round(Number(r.overallScore) * 100)).reduce((sum, v) => sum + v, 0) / (data.rows || []).filter(r => r.status === 'done' && r.overallScore).filter(r => (r.manager || 'No manager') === m).length / 100).toFixed(2) })) }}",
+                  "columns": [
+                    {
+                      "key": "manager",
+                      "label": "Manager"
+                    },
+                    {
+                      "key": "done",
+                      "label": "Completed",
+                      "align": "end"
+                    },
+                    {
+                      "key": "average",
+                      "label": "Average score",
+                      "align": "end"
+                    }
+                  ],
+                  "emptyText": "No completed appraisals yet"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

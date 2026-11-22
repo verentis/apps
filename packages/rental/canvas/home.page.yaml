@@ -1,0 +1,427 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "rental-home",
+    "name": "Rental",
+    "description": "Rental overview.",
+    "icon": "key"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/rental-products",
+        "reason": "List rental products"
+      },
+      {
+        "path": "/rental-bookings",
+        "reason": "List rental bookings"
+      }
+    ],
+    "data": {
+      "products": {
+        "kind": "folder",
+        "path": "/rental-products",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.rental.product+json"
+      },
+      "productoptions": {
+        "kind": "computed",
+        "expr": "(data.products || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + ((e.data.name || '') + ' · ' + (e.data.dailyRate || '') + '/day'), value: e.path }))"
+      },
+      "bookings": {
+        "kind": "folder",
+        "path": "/rental-bookings",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.rental.booking+json"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Rental"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Rental products and bookings are files in your workspace. Draft bookings in their folder, then confirm, pick up and return them from their forms.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Bookings",
+                      "variant": "outline",
+                      "icon": "calendar-check",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/applications/rental/canvas/bookings.page.yaml"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Availability",
+                      "variant": "outline",
+                      "icon": "boxes",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/applications/rental/canvas/availability.page.yaml"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Revenue",
+                      "variant": "outline",
+                      "icon": "chart-no-axes-combined",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/applications/rental/canvas/revenue.page.yaml"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Settings",
+                      "variant": "ghost",
+                      "icon": "settings",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/settings/rental.json",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 4
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Rental products",
+                  "value": "{{ (data.products || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).length }}",
+                  "icon": "package",
+                  "loading": "{{ data.$products.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Draft bookings",
+                  "value": "{{ (data.bookings || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status === 'draft')).length }}",
+                  "icon": "file-pen",
+                  "loading": "{{ data.$bookings.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Out with customers",
+                  "value": "{{ (data.bookings || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status === 'picked-up')).length }}",
+                  "icon": "package-open",
+                  "loading": "{{ data.$bookings.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Booked revenue",
+                  "value": "{{ ((data.bookings || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && ((e.data.status === 'confirmed' || e.data.status === 'picked-up') || e.data.status === 'returned') && e.data.total).reduce((s, e) => s + Math.round(Number(e.data.total || 0) * 10000), 0) / 10000).toFixed(2) }}",
+                  "icon": "receipt",
+                  "loading": "{{ data.$bookings.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /rental-products folder could not be read. Reinstall Rental to recreate it."
+            },
+            "rules": {
+              "visible": "data.$products.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /rental-bookings folder could not be read. Reinstall Rental to recreate it."
+            },
+            "rules": {
+              "visible": "data.$bookings.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.tabs",
+            "props": {
+              "items": [
+                {
+                  "value": "products",
+                  "label": "Rental products",
+                  "icon": "package"
+                },
+                {
+                  "value": "bookings",
+                  "label": "Bookings",
+                  "icon": "calendar-check"
+                }
+              ]
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Open /rental-products",
+                          "variant": "outline",
+                          "icon": "folder-open",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "open-file": {
+                                "path": "/rental-products"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.files",
+                    "props": {
+                      "path": "/rental-products/",
+                      "mimeTypes": [
+                        "application/vnd.verentis.rental.product+json"
+                      ],
+                      "showFolders": false,
+                      "navigable": false,
+                      "columns": [
+                        {
+                          "key": "name",
+                          "label": "Number"
+                        },
+                        {
+                          "key": "data.name",
+                          "label": "Name"
+                        },
+                        {
+                          "key": "data.dailyRate",
+                          "label": "Daily rate",
+                          "align": "end"
+                        },
+                        {
+                          "key": "data.quantityOwned",
+                          "label": "Owned",
+                          "align": "end"
+                        },
+                        {
+                          "key": "data.status",
+                          "label": "Status"
+                        }
+                      ],
+                      "emptyText": "No rental products yet. Use New in /rental-products."
+                    }
+                  }
+                ],
+                "slot": "products"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Open /rental-bookings",
+                          "variant": "outline",
+                          "icon": "folder-open",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "open-file": {
+                                "path": "/rental-bookings"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.files",
+                    "props": {
+                      "path": "/rental-bookings/",
+                      "mimeTypes": [
+                        "application/vnd.verentis.rental.booking+json"
+                      ],
+                      "showFolders": false,
+                      "navigable": false,
+                      "columns": [
+                        {
+                          "key": "name",
+                          "label": "Number"
+                        },
+                        {
+                          "key": "data.customerName",
+                          "label": "Customer"
+                        },
+                        {
+                          "key": "data.startDate",
+                          "label": "Start"
+                        },
+                        {
+                          "key": "data.endDate",
+                          "label": "End"
+                        },
+                        {
+                          "key": "data.total",
+                          "label": "Total",
+                          "align": "end"
+                        },
+                        {
+                          "key": "data.status",
+                          "label": "Status"
+                        }
+                      ],
+                      "emptyText": "No bookings yet. Use New in /rental-bookings."
+                    }
+                  }
+                ],
+                "slot": "bookings"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://schemas.verentis.io/inventory/v1/move.schema.json",
+  "schemaVersion": 1,
+  "kind": "move",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "product": "",
+  "quantity": "",
+  "fromWarehouse": "",
+  "fromLocation": "",
+  "toWarehouse": "",
+  "toLocation": "",
+  "date": "",
+  "reference": "{{ name }}",
+  "status": "draft"
+}

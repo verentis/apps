@@ -1,0 +1,316 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Form",
+  "metadata": {
+    "id": "payroll-settings",
+    "name": "Payroll settings",
+    "description": "Edit the Payroll settings file.",
+    "icon": "settings"
+  },
+  "spec": {
+    "binds": [
+      {
+        "pattern": "application/vnd.verentis.payroll.settings+json",
+        "mode": "edit",
+        "priority": 200,
+        "scope": "global",
+        "json-schema": {
+          "id": "https://schemas.verentis.io/payroll/v1/settings.schema.json",
+          "source": "/applications/payroll/schemas/settings.schema.json",
+          "title": "Payroll settings",
+          "version": "1"
+        }
+      }
+    ],
+    "entry": "${var:canvas-origin}/render?document=%2Fapplications%2Fpayroll%2Fcanvas%2Fsettings.form.yaml",
+    "scope": "global",
+    "mime-types": [
+      {
+        "pattern": "application/vnd.verentis.payroll.settings+json",
+        "mode": "edit",
+        "priority": 200,
+        "json-schema": {
+          "id": "https://schemas.verentis.io/payroll/v1/settings.schema.json",
+          "source": "/applications/payroll/schemas/settings.schema.json",
+          "title": "Payroll settings",
+          "version": "1"
+        }
+      }
+    ],
+    "permissions": [
+      "file.read",
+      "file.write"
+    ],
+    "capabilities": [],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-popups": false,
+      "allow-forms": true
+    },
+    "file-access": [
+      {
+        "path": "/chart-of-accounts",
+        "mode": "read",
+        "reason": "Choose the accounts pay runs post to"
+      },
+      {
+        "path": "/applications/payroll/",
+        "mode": "read",
+        "reason": "Read the Payroll schemas and run the pay run script"
+      }
+    ],
+    "access": [
+      {
+        "path": "/chart-of-accounts",
+        "reason": "Choose the accounts pay runs post to"
+      },
+      {
+        "path": "/applications/payroll/",
+        "reason": "Read the Payroll schemas and run the pay run script"
+      }
+    ],
+    "data": {
+      "record": {
+        "kind": "document",
+        "consistency": "conditional"
+      },
+      "accounts": {
+        "kind": "folder",
+        "path": "/chart-of-accounts",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.accounting.account+json"
+      },
+      "accountoptions": {
+        "kind": "computed",
+        "expr": "(data.accounts || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + ((e.data.number ? e.data.number + ' ' : '') + (e.data.name || '')), value: e.path }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Payroll settings"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "The accounts pay runs post to. The currency is the Accounting base currency; code prefixes are app settings, managed with the installed app.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Reset",
+                      "variant": "ghost",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "reset-form": {}
+                        }
+                      ]
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Save",
+                      "icon": "save",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "save": {}
+                        },
+                        {
+                          "toast": {
+                            "message": "Saved",
+                            "variant": "success"
+                          }
+                        }
+                      ]
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty || form.invalid"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$record.error }}"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The Accounting chart of accounts (/chart-of-accounts) could not be read. Install Accounting to post pay runs."
+            },
+            "rules": {
+              "visible": "data.$accounts.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$accounts.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 1,
+                "gap": 4
+              },
+              "tablet": {
+                "columns": 1
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Posting accounts",
+                  "description": "Accounts in the Accounting chart of accounts that pay runs post to. The journal debits wage and contribution expenses and credits the payable accounts."
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Wage expense",
+                          "value": "{{ form.values.wageExpenseAccount }}",
+                          "options": "{{ data.accountoptions }}"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Deductions payable",
+                          "value": "{{ form.values.deductionsPayableAccount }}",
+                          "options": "{{ data.accountoptions }}"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Net wages payable",
+                          "value": "{{ form.values.netWagesPayableAccount }}",
+                          "options": "{{ data.accountoptions }}"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Employer contribution expense",
+                          "value": "{{ form.values.contributionExpenseAccount }}",
+                          "options": "{{ data.accountoptions }}"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Employer contributions payable",
+                          "value": "{{ form.values.contributionPayableAccount }}",
+                          "options": "{{ data.accountoptions }}"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "actions": {}
+  }
+}

@@ -1,0 +1,724 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Form",
+  "metadata": {
+    "id": "knowledge-article",
+    "name": "Knowledge article",
+    "description": "View and edit a Knowledge article.",
+    "icon": "file-text"
+  },
+  "spec": {
+    "binds": [
+      {
+        "pattern": "application/vnd.verentis.knowledge.article+json",
+        "mode": "edit",
+        "priority": 200,
+        "scope": "global",
+        "json-schema": {
+          "id": "https://schemas.verentis.io/knowledge/v1/article.schema.json",
+          "source": "/applications/knowledge/schemas/article.schema.json",
+          "title": "Knowledge article",
+          "version": "1"
+        }
+      }
+    ],
+    "entry": "${var:canvas-origin}/render?document=%2Fapplications%2Fknowledge%2Fcanvas%2Farticle.form.yaml",
+    "scope": "global",
+    "mime-types": [
+      {
+        "pattern": "application/vnd.verentis.knowledge.article+json",
+        "mode": "edit",
+        "priority": 200,
+        "json-schema": {
+          "id": "https://schemas.verentis.io/knowledge/v1/article.schema.json",
+          "source": "/applications/knowledge/schemas/article.schema.json",
+          "title": "Knowledge article",
+          "version": "1"
+        }
+      }
+    ],
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run",
+      "execution.read"
+    ],
+    "capabilities": [],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-popups": false,
+      "allow-forms": true
+    },
+    "file-access": [
+      {
+        "path": "/knowledge-spaces",
+        "mode": "read",
+        "reason": "Choose the space an article belongs to"
+      },
+      {
+        "path": "/articles",
+        "mode": "read",
+        "reason": "Choose the parent article an article nests beneath"
+      },
+      {
+        "path": "/applications/knowledge/",
+        "mode": "read",
+        "reason": "Read the Knowledge schemas and run the article action script"
+      }
+    ],
+    "access": [
+      {
+        "path": "/knowledge-spaces",
+        "reason": "Choose the space an article belongs to"
+      },
+      {
+        "path": "/articles",
+        "reason": "Choose the parent article an article nests beneath"
+      },
+      {
+        "path": "/applications/knowledge/",
+        "reason": "Read the Knowledge schemas and run the article action script"
+      }
+    ],
+    "data": {
+      "record": {
+        "kind": "document",
+        "consistency": "conditional"
+      },
+      "spaces": {
+        "kind": "folder",
+        "path": "/knowledge-spaces",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.knowledge.space+json"
+      },
+      "spaceoptions": {
+        "kind": "computed",
+        "expr": "(data.spaces || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + (e.data.name || ''), value: e.path }))"
+      },
+      "articles": {
+        "kind": "folder",
+        "path": "/articles",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.knowledge.article+json"
+      },
+      "parentoptions": {
+        "kind": "computed",
+        "expr": "(data.articles || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + (e.data.title || ''), value: e.path }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.heading",
+                        "props": {
+                          "level": 2,
+                          "text": "{{ form.values.title || 'New article' }}"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.badge",
+                        "props": {
+                          "text": "{{ String(form.values.status || '').split('-').join(' ') }}",
+                          "tone": "{{ [\"published\"].includes(form.values.status) ? 'success' : [\"archived\"].includes(form.values.status) ? 'warning' : 'neutral' }}"
+                        },
+                        "rules": {
+                          "visible": "!!form.values.status"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.badge",
+                        "props": {
+                          "text": "Archived",
+                          "tone": "warning",
+                          "icon": "archive"
+                        },
+                        "rules": {
+                          "visible": "form.values.state === 'archived'"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Article {{ form.values.code || '' }} · {{ ctx.file.path }}",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Publish",
+                      "icon": "send",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "publish"
+                    },
+                    "rules": {
+                      "visible": "form.values.status === 'draft' && !(form.values.state === 'archived')",
+                      "disabled": "form.saving || form.dirty || !(!!String(form.values.title || '').trim()) || !(!!String(form.values.body || '').trim())"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Archive article",
+                      "variant": "outline",
+                      "icon": "archive",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "archive-article"
+                    },
+                    "rules": {
+                      "visible": "form.values.status === 'published' && !(form.values.state === 'archived')",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Restore draft",
+                      "variant": "outline",
+                      "icon": "undo",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "restore-draft"
+                    },
+                    "rules": {
+                      "visible": "form.values.status === 'archived' && !(form.values.state === 'archived')",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Archive",
+                          "variant": "ghost",
+                          "icon": "archive",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "archive"
+                        },
+                        "rules": {
+                          "visible": "!(form.values.state === 'archived') && !(form.values.status === 'archived')",
+                          "disabled": "form.saving || form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Restore",
+                          "variant": "outline",
+                          "icon": "archive-restore",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "restore"
+                        },
+                        "rules": {
+                          "visible": "form.values.state === 'archived'",
+                          "disabled": "form.saving || form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Reset",
+                          "variant": "ghost",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "reset"
+                        },
+                        "rules": {
+                          "disabled": "form.saving || !form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Save",
+                          "icon": "save",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "save"
+                        },
+                        "rules": {
+                          "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (form.values.status === 'archived')"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$record.error }}"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.dashboard.badge",
+            "props": {
+              "text": "This article is archived. Restore it to edit.",
+              "tone": "warning",
+              "icon": "archive"
+            },
+            "rules": {
+              "visible": "form.values.state === 'archived'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "This article is archived and can no longer be edited. Restore it to draft to change it.",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "form.values.status === 'archived'"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 1,
+                "gap": 4
+              },
+              "tablet": {
+                "columns": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Article"
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Title",
+                          "value": "{{ form.values.title }}",
+                          "required": true
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'archived'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Space",
+                          "value": "{{ form.values.space }}",
+                          "options": "{{ data.spaceoptions }}"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'archived'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Parent article",
+                          "value": "{{ form.values.parent }}",
+                          "description": "Optional. Nest this article beneath another one.",
+                          "options": "{{ data.parentoptions }}"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'archived'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Owner",
+                          "value": "{{ form.values.owner }}",
+                          "placeholder": "Name or email"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'archived'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Status",
+                          "value": "{{ form.values.status }}",
+                          "description": "Set by the Publish, Archive and Restore actions.",
+                          "options": [
+                            {
+                              "value": "draft",
+                              "label": "Draft"
+                            },
+                            {
+                              "value": "published",
+                              "label": "Published"
+                            },
+                            {
+                              "value": "archived",
+                              "label": "Archived"
+                            }
+                          ]
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'archived')) || (true)"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.text-list",
+                        "props": {
+                          "label": "Tags",
+                          "value": "{{ form.values.tags }}"
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'archived'))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Body"
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.textarea",
+                        "props": {
+                          "label": "Body (Markdown)",
+                          "value": "{{ form.values.body }}",
+                          "description": "Markdown (text/markdown): headings, lists, links, tables and code blocks. Required before publishing.",
+                          "rows": 16
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'archived'))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "actions": {
+      "save": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Saved",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "reset": {
+        "steps": [
+          {
+            "reset-form": {}
+          }
+        ]
+      },
+      "archive": {
+        "steps": [
+          {
+            "confirm": {
+              "title": "Archive",
+              "message": "Archive this record? It stays in the workspace and can be restored."
+            }
+          },
+          {
+            "patch-form": {
+              "values": {
+                "state": "archived",
+                "archivedAt": "{{ Date() }}",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Archived",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "restore": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "state": "active",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Restored",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "publish": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Publish article",
+              "message": "Publish this article? Published articles appear in every listing and can be archived later."
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/knowledge/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "publish",
+                "path": "{{ ctx.file.path }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "archive-article": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Archive article",
+              "message": "Archive this published article? Archived articles are locked until restored to draft."
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/knowledge/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "archive",
+                "path": "{{ ctx.file.path }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "restore-draft": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Restore to draft",
+              "message": "Restore this archived article to draft so it can be edited and published again?"
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/knowledge/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "restore",
+                "path": "{{ ctx.file.path }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

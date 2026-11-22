@@ -1,0 +1,235 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.verentis.io/sales/v1/order.schema.json",
+  "title": "Sales sales order",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "const": "https://schemas.verentis.io/sales/v1/order.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "kind": {
+      "const": "order"
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "state": {
+      "enum": [
+        "active",
+        "archived"
+      ]
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "archivedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "code": {
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "date": {
+      "type": "string",
+      "pattern": "^([0-9]{4}-[0-9]{2}-[0-9]{2})?$"
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^([A-Z]{3})?$"
+    },
+    "customer": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "legalName": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 254,
+          "pattern": "^([^@\\s]+@[^@\\s]+)?$"
+        },
+        "phone": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "taxIdentifier": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "address": {
+          "type": "object",
+          "properties": {
+            "lines": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "minItems": 0,
+              "maxItems": 5
+            },
+            "city": {
+              "type": "string",
+              "maxLength": 1000
+            },
+            "region": {
+              "type": "string",
+              "maxLength": 1000
+            },
+            "postalCode": {
+              "type": "string",
+              "maxLength": 32
+            },
+            "country": {
+              "type": "string",
+              "pattern": "^([A-Z]{2})?$"
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "quotation": {
+      "type": "string",
+      "maxLength": 4096,
+      "pattern": "^(/.*)?$"
+    },
+    "lines": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "product": {
+            "type": "string",
+            "maxLength": 4096,
+            "pattern": "^(/.*)?$"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "quantity": {
+            "type": "string",
+            "pattern": "^((0|[1-9][0-9]{0,11})(\\.[0-9]{1,6})?)?$"
+          },
+          "unitPrice": {
+            "type": "string",
+            "pattern": "^((0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?)?$"
+          },
+          "discount": {
+            "type": "string",
+            "pattern": "^((0|[1-9][0-9]{0,11})(\\.[0-9]{1,6})?)?$"
+          }
+        },
+        "required": [
+          "product",
+          "description",
+          "quantity",
+          "unitPrice",
+          "discount"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "maxItems": 500
+    },
+    "totals": {
+      "type": "object",
+      "properties": {
+        "subtotal": {
+          "type": "string",
+          "pattern": "^((0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?)?$"
+        },
+        "discount": {
+          "type": "string",
+          "pattern": "^((0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?)?$"
+        },
+        "total": {
+          "type": "string",
+          "pattern": "^((0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?)?$"
+        }
+      },
+      "required": [
+        "subtotal",
+        "discount",
+        "total"
+      ],
+      "additionalProperties": false
+    },
+    "deliveryStatus": {
+      "enum": [
+        "pending",
+        "partial",
+        "delivered"
+      ]
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 10000
+    }
+  },
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "kind",
+    "id",
+    "state",
+    "createdAt",
+    "updatedAt",
+    "code",
+    "date",
+    "currency",
+    "customer",
+    "lines",
+    "deliveryStatus"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "archived"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "archivedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          }
+        },
+        "required": [
+          "archivedAt"
+        ]
+      }
+    }
+  ]
+}

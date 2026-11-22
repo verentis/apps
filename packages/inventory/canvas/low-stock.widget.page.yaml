@@ -1,0 +1,174 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "inventory-low-stock-widget",
+    "name": "Low stock",
+    "description": "Products at or below their reorder point for the workspace dashboard.",
+    "icon": "triangle-alert"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/products",
+        "reason": "Show the products and their reorder points"
+      },
+      {
+        "path": "/stock-moves",
+        "reason": "Sum the done stock moves"
+      }
+    ],
+    "data": {
+      "products": {
+        "kind": "folder",
+        "path": "/products",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.inventory.product+json"
+      },
+      "moves": {
+        "kind": "folder",
+        "path": "/stock-moves",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.inventory.move+json"
+      },
+      "low": {
+        "kind": "computed",
+        "expr": "((data.products || []).filter(e => e.kind === 'file' && e.data && e.data.kind === 'product').map(e => ({ path: e.path, code: e.data.code || e.name, product: e.data.name || '', sku: e.data.sku || '', unit: e.data.unit || '', reorderPoint: e.data.reorderPoint || '', hasReorder: !!e.data.reorderPoint, reorder: Math.round(Number(e.data.reorderPoint || 0) * 10000), units: (data.moves || []).filter(m => m.kind === 'file' && m.data && m.data.kind === 'move' && m.data.status === 'done').reduce((s, m) => s + (m.data.product === e.path ? ((m.data.toWarehouse ? Math.round(Number(m.data.quantity || 0) * 10000) : 0) - (m.data.fromWarehouse ? Math.round(Number(m.data.quantity || 0) * 10000) : 0)) : 0), 0) })).sort((a, b) => (a.code < b.code ? -1 : 1))).filter(t => t.hasReorder && t.units <= t.reorder)"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "gap": 2
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 3,
+                      "text": "Low stock"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "{{ (data.low || []).length }} product(s) at or below their reorder point",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Stock levels",
+                  "variant": "ghost",
+                  "icon": "chart-column",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/applications/inventory/canvas/stock.page.yaml"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$products.error }}"
+            },
+            "rules": {
+              "visible": "data.$products.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$moves.error }}"
+            },
+            "rules": {
+              "visible": "data.$moves.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$products.status === 'loading' || data.$moves.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.low || []).map(t => ({ path: t.path, product: t.product, sku: t.sku, onHand: (t.units / 10000), reorderPoint: t.reorderPoint })) }}",
+              "columns": [
+                {
+                  "key": "product",
+                  "label": "Product"
+                },
+                {
+                  "key": "sku",
+                  "label": "SKU"
+                },
+                {
+                  "key": "onHand",
+                  "label": "On hand",
+                  "align": "end"
+                },
+                {
+                  "key": "reorderPoint",
+                  "label": "Reorder point",
+                  "align": "end"
+                }
+              ],
+              "emptyText": "Nothing to reorder",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

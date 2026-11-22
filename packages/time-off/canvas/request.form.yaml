@@ -1,0 +1,779 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Form",
+  "metadata": {
+    "id": "time-off-request",
+    "name": "Time Off leave request",
+    "description": "View and edit a Time Off leave request.",
+    "icon": "calendar-off"
+  },
+  "spec": {
+    "binds": [
+      {
+        "pattern": "application/vnd.verentis.time-off.request+json",
+        "mode": "edit",
+        "priority": 200,
+        "scope": "global",
+        "json-schema": {
+          "id": "https://schemas.verentis.io/time-off/v1/request.schema.json",
+          "source": "/applications/time-off/schemas/request.schema.json",
+          "title": "Time Off leave request",
+          "version": "1"
+        }
+      }
+    ],
+    "entry": "${var:canvas-origin}/render?document=%2Fapplications%2Ftime-off%2Fcanvas%2Frequest.form.yaml",
+    "scope": "global",
+    "mime-types": [
+      {
+        "pattern": "application/vnd.verentis.time-off.request+json",
+        "mode": "edit",
+        "priority": 200,
+        "json-schema": {
+          "id": "https://schemas.verentis.io/time-off/v1/request.schema.json",
+          "source": "/applications/time-off/schemas/request.schema.json",
+          "title": "Time Off leave request",
+          "version": "1"
+        }
+      }
+    ],
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run",
+      "execution.read"
+    ],
+    "capabilities": [],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-popups": false,
+      "allow-forms": true
+    },
+    "file-access": [
+      {
+        "path": "/leave-types",
+        "mode": "read",
+        "reason": "Choose the leave type a request draws on"
+      },
+      {
+        "path": "/employees",
+        "mode": "read",
+        "reason": "Offer Employees records on requests (when Employees is installed)"
+      },
+      {
+        "path": "/applications/time-off/",
+        "mode": "read",
+        "reason": "Read the Time Off schemas and run the request action script"
+      }
+    ],
+    "access": [
+      {
+        "path": "/leave-types",
+        "reason": "Choose the leave type a request draws on"
+      },
+      {
+        "path": "/employees",
+        "reason": "Offer Employees records on requests (when Employees is installed)"
+      },
+      {
+        "path": "/applications/time-off/",
+        "reason": "Read the Time Off schemas and run the request action script"
+      }
+    ],
+    "data": {
+      "record": {
+        "kind": "document",
+        "consistency": "conditional"
+      },
+      "types": {
+        "kind": "folder",
+        "path": "/leave-types",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.time-off.type+json"
+      },
+      "typeoptions": {
+        "kind": "computed",
+        "expr": "(data.types || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + (e.data.name || ''), value: e.path }))"
+      },
+      "staff": {
+        "kind": "folder",
+        "path": "/employees",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.employees.employee+json"
+      },
+      "employeeoptions": {
+        "kind": "computed",
+        "expr": "(data.staff || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status !== 'terminated')).map(e => ({ label: (e.data.code || e.name) + ' · ' + (e.data.name || ''), value: e.path }))"
+      }
+    },
+    "state": {
+      "approver": "",
+      "refusalreason": ""
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.heading",
+                        "props": {
+                          "level": 2,
+                          "text": "{{ form.values.employeeName || 'New leave request' }}"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.badge",
+                        "props": {
+                          "text": "{{ String(form.values.status || '').split('-').join(' ') }}",
+                          "tone": "{{ [\"approved\"].includes(form.values.status) ? 'success' : [\"draft\"].includes(form.values.status) ? 'warning' : [\"refused\"].includes(form.values.status) ? 'danger' : 'neutral' }}"
+                        },
+                        "rules": {
+                          "visible": "!!form.values.status"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.badge",
+                        "props": {
+                          "text": "Archived",
+                          "tone": "warning",
+                          "icon": "archive"
+                        },
+                        "rules": {
+                          "visible": "form.values.state === 'archived'"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Leave request {{ form.values.code || '' }} · {{ ctx.file.path }}",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Submit",
+                      "icon": "send",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "submit"
+                    },
+                    "rules": {
+                      "visible": "(!form.values.status || form.values.status === 'draft') && !(form.values.state === 'archived')",
+                      "disabled": "form.saving || form.dirty || form.invalid"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Approve",
+                      "icon": "check",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "approve"
+                    },
+                    "rules": {
+                      "visible": "form.values.status === 'submitted'",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Refuse",
+                      "variant": "outline",
+                      "icon": "x",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "refuse"
+                    },
+                    "rules": {
+                      "visible": "form.values.status === 'submitted'",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Copy name",
+                      "variant": "ghost",
+                      "icon": "copy",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "copy-employee"
+                    },
+                    "rules": {
+                      "visible": "(!form.values.status || form.values.status === 'draft') && !!form.values.employeeRef",
+                      "disabled": "form.saving || form.values.state === 'archived'"
+                    }
+                  },
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Archive",
+                          "variant": "ghost",
+                          "icon": "archive",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "archive"
+                        },
+                        "rules": {
+                          "visible": "!(form.values.state === 'archived') && !(!(!form.values.status || form.values.status === 'draft'))",
+                          "disabled": "form.saving || form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Restore",
+                          "variant": "outline",
+                          "icon": "archive-restore",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "restore"
+                        },
+                        "rules": {
+                          "visible": "form.values.state === 'archived'",
+                          "disabled": "form.saving || form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Reset",
+                          "variant": "ghost",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "reset"
+                        },
+                        "rules": {
+                          "disabled": "form.saving || !form.dirty"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Save",
+                          "icon": "save",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "save"
+                        },
+                        "rules": {
+                          "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft'))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$record.error }}"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.dashboard.badge",
+            "props": {
+              "text": "This leave request is archived. Restore it to edit.",
+              "tone": "warning",
+              "icon": "archive"
+            },
+            "rules": {
+              "visible": "form.values.state === 'archived'"
+            }
+          },
+          {
+            "type": "canvas.dashboard.badge",
+            "props": {
+              "text": "Refused: {{ form.values.refusalReason }}",
+              "tone": "danger"
+            },
+            "rules": {
+              "visible": "form.values.status === 'refused'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Approved by {{ form.values.approver }} on {{ form.values.approvedAt }}",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "!!form.values.approver"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 1,
+                "gap": 4
+              },
+              "tablet": {
+                "columns": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.form.input",
+                "props": {
+                  "label": "Approver",
+                  "placeholder": "Who approves this request?",
+                  "value": "{{ state.approver }}"
+                },
+                "rules": {
+                  "visible": "form.values.status === 'submitted'"
+                }
+              },
+              {
+                "type": "canvas.form.input",
+                "props": {
+                  "label": "Refusal reason",
+                  "placeholder": "Why is it refused?",
+                  "value": "{{ state.refusalreason }}"
+                },
+                "rules": {
+                  "visible": "form.values.status === 'submitted'"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 1,
+                "gap": 4
+              },
+              "tablet": {
+                "columns": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Employee"
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Employee",
+                          "value": "{{ form.values.employeeName }}",
+                          "required": true
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft')))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Employee record",
+                          "value": "{{ form.values.employeeRef }}",
+                          "description": "Optional. Choose an Employees record, then Copy name.",
+                          "options": "{{ data.employeeoptions }}"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft')))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Leave"
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Leave type",
+                          "value": "{{ form.values.type }}",
+                          "required": true,
+                          "options": "{{ data.typeoptions }}"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft')))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Days",
+                          "value": "{{ form.values.days }}",
+                          "description": "The weekday count of the date range, computed at submission."
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft'))) || (true)"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.date",
+                        "props": {
+                          "label": "First day",
+                          "value": "{{ form.values.startDate }}",
+                          "required": true
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft')))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.date",
+                        "props": {
+                          "label": "Last day",
+                          "value": "{{ form.values.endDate }}",
+                          "required": true
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft')))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.textarea",
+                        "props": {
+                          "label": "Reason",
+                          "value": "{{ form.values.reason }}",
+                          "rows": 3
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft')))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "actions": {
+      "save": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Saved",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "reset": {
+        "steps": [
+          {
+            "reset-form": {}
+          }
+        ]
+      },
+      "archive": {
+        "steps": [
+          {
+            "confirm": {
+              "title": "Archive",
+              "message": "Archive this record? It stays in the workspace and can be restored."
+            }
+          },
+          {
+            "patch-form": {
+              "values": {
+                "state": "archived",
+                "archivedAt": "{{ Date() }}",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Archived",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "restore": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "state": "active",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Restored",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "copy-employee": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "employeeName": "{{ (((data.staff || []).filter(e => e.kind === 'file' && e.data && e.path === form.values.employeeRef).map(e => e.data.name || '')[0]) || form.values.employeeName) }}"
+              }
+            }
+          }
+        ]
+      },
+      "submit": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Submit request",
+              "message": "Submit this leave request? Its days are computed as the weekday count of the date range, and it can no longer be edited."
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/time-off/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "submit",
+                "path": "{{ ctx.file.path }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "approve": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Approve request",
+              "message": "Approve this leave request? Approved requests count against the leave type's allocation."
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/time-off/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "approve",
+                "path": "{{ ctx.file.path }}",
+                "approver": "{{ state.approver }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "refuse": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Refuse request",
+              "message": "Refuse this leave request? Give the reason in the Refusal reason field."
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/time-off/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "refuse",
+                "path": "{{ ctx.file.path }}",
+                "reason": "{{ state.refusalreason }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

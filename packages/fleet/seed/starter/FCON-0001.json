@@ -1,0 +1,17 @@
+{
+  "$schema": "https://schemas.verentis.io/fleet/v1/contract.schema.json",
+  "schemaVersion": 1,
+  "kind": "contract",
+  "id": "9c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e03",
+  "state": "active",
+  "createdAt": "2026-01-01T00:00:00Z",
+  "updatedAt": "2026-01-01T00:00:00Z",
+  "code": "FCON-0001",
+  "vehicle": "/vehicles/VEH-0001",
+  "type": "lease",
+  "vendor": "AutoLease Co",
+  "startDate": "2026-01-01",
+  "endDate": "2026-12-31",
+  "monthlyCost": "650.00",
+  "status": "active"
+}

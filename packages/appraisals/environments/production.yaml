@@ -1,0 +1,15 @@
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "appraisals"
+  },
+  "spec": {
+    "entry": "https://canvas.apps.verentis.io"
+  },
+  "packaging": {
+    "variables": {
+      "canvas-origin": "https://canvas.apps.verentis.io"
+    }
+  }
+}

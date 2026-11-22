@@ -1,0 +1,390 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "social-marketing-home",
+    "name": "Social Marketing",
+    "description": "Social Marketing overview.",
+    "icon": "megaphone"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/social-accounts",
+        "reason": "Count posts and engagement and show the social accounts and posts"
+      },
+      {
+        "path": "/social-posts",
+        "reason": "Count posts and engagement and show the social accounts and posts"
+      }
+    ],
+    "data": {
+      "posts": {
+        "kind": "folder",
+        "path": "/social-posts",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.social-marketing.post+json"
+      },
+      "accounts": {
+        "kind": "folder",
+        "path": "/social-accounts",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.social-marketing.account+json"
+      },
+      "rows": {
+        "kind": "computed",
+        "expr": "(data.posts || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, accountPath: e.data.account || '', handle: ((((data.accounts || []).find(a => a.kind === 'file' && a.data && a.path === e.data.account) || {}).data || {}).handle) || '', status: e.data.status || '', scheduledDate: e.data.scheduledDate || '', publishedAt: e.data.publishedAt || '', excerpt: String(e.data.content || '').slice(0, 80), likes: Number((e.data.engagement || {}).likes || 0), shares: Number((e.data.engagement || {}).shares || 0), comments: Number((e.data.engagement || {}).comments || 0) }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Social Marketing"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Social accounts and posts are files in your workspace. Draft posts in /social-posts, then schedule, publish or cancel them from their forms. Delivery to the networks is a platform integration.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Upcoming posts",
+                      "variant": "outline",
+                      "icon": "calendar-clock",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/applications/social-marketing/canvas/upcoming.page.yaml"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Engagement",
+                      "variant": "outline",
+                      "icon": "heart",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/applications/social-marketing/canvas/engagement.page.yaml"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Settings",
+                      "variant": "ghost",
+                      "icon": "settings",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/settings/social-marketing.json",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 4
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Published posts",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'published').length }}",
+                  "icon": "megaphone",
+                  "loading": "{{ data.$posts.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Scheduled",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'scheduled').length }}",
+                  "icon": "calendar-clock",
+                  "loading": "{{ data.$posts.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Drafts",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'draft').length }}",
+                  "icon": "pencil",
+                  "loading": "{{ data.$posts.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Total likes",
+                  "value": "{{ (data.rows || []).filter(r => r.status === 'published').reduce((sum, r) => sum + r.likes, 0) }}",
+                  "icon": "heart",
+                  "loading": "{{ data.$posts.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /social-posts folder could not be read. Reinstall Social Marketing to recreate it."
+            },
+            "rules": {
+              "visible": "data.$posts.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /social-accounts folder could not be read. Reinstall Social Marketing to recreate it."
+            },
+            "rules": {
+              "visible": "data.$accounts.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.tabs",
+            "props": {
+              "items": [
+                {
+                  "value": "posts",
+                  "label": "Posts",
+                  "icon": "megaphone"
+                },
+                {
+                  "value": "accounts",
+                  "label": "Social accounts",
+                  "icon": "at-sign"
+                }
+              ]
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Open /social-posts",
+                          "variant": "outline",
+                          "icon": "folder-open",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "open-file": {
+                                "path": "/social-posts"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.files",
+                    "props": {
+                      "path": "/social-posts/",
+                      "mimeTypes": [
+                        "application/vnd.verentis.social-marketing.post+json"
+                      ],
+                      "showFolders": false,
+                      "navigable": false,
+                      "columns": [
+                        {
+                          "key": "name",
+                          "label": "Post"
+                        },
+                        {
+                          "key": "data.status",
+                          "label": "Status"
+                        },
+                        {
+                          "key": "data.scheduledDate",
+                          "label": "Scheduled"
+                        },
+                        {
+                          "key": "data.publishedAt",
+                          "label": "Published at"
+                        }
+                      ],
+                      "emptyText": "No posts yet. Use New in /social-posts."
+                    }
+                  }
+                ],
+                "slot": "posts"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Open /social-accounts",
+                          "variant": "outline",
+                          "icon": "folder-open",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "open-file": {
+                                "path": "/social-accounts"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.files",
+                    "props": {
+                      "path": "/social-accounts/",
+                      "mimeTypes": [
+                        "application/vnd.verentis.social-marketing.account+json"
+                      ],
+                      "showFolders": false,
+                      "navigable": false,
+                      "columns": [
+                        {
+                          "key": "name",
+                          "label": "Account"
+                        },
+                        {
+                          "key": "data.handle",
+                          "label": "Handle"
+                        },
+                        {
+                          "key": "data.network",
+                          "label": "Network"
+                        }
+                      ],
+                      "emptyText": "No social accounts yet. Use New in /social-accounts."
+                    }
+                  }
+                ],
+                "slot": "accounts"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

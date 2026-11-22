@@ -1,0 +1,17 @@
+{
+  "$schema": "https://schemas.verentis.io/timesheets/v1/entry.schema.json",
+  "schemaVersion": 1,
+  "kind": "entry",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "employee": "",
+  "date": "",
+  "project": "",
+  "task": "",
+  "hours": "",
+  "description": "{{ name }}",
+  "status": "draft"
+}

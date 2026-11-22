@@ -1,0 +1,402 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "recruitment-home",
+    "name": "Recruitment",
+    "description": "Recruitment overview.",
+    "icon": "briefcase"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/job-positions",
+        "reason": "Count candidates and show the job positions and candidates"
+      },
+      {
+        "path": "/candidates",
+        "reason": "Count candidates and show the job positions and candidates"
+      }
+    ],
+    "data": {
+      "candidates": {
+        "kind": "folder",
+        "path": "/candidates",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.recruitment.candidate+json"
+      },
+      "jobs": {
+        "kind": "folder",
+        "path": "/job-positions",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.recruitment.job+json"
+      },
+      "rows": {
+        "kind": "computed",
+        "expr": "(data.candidates || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, name: e.data.name || '', jobPath: e.data.job || '', job: ((((data.jobs || []).find(j => j.kind === 'file' && j.data && j.path === e.data.job) || {}).data || {}).title) || '', source: e.data.source || '', stage: e.data.stage || '', expectedSalary: e.data.expectedSalary || '' }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "Recruitment"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Job positions and candidates are files in your workspace. Draft applications in /candidates, move them through the pipeline, then hire or refuse them from their forms.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Pipeline",
+                      "variant": "outline",
+                      "icon": "kanban",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/applications/recruitment/canvas/pipeline.page.yaml"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Positions",
+                      "variant": "outline",
+                      "icon": "briefcase",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/applications/recruitment/canvas/positions.page.yaml"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Settings",
+                      "variant": "ghost",
+                      "icon": "settings",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/settings/recruitment.json",
+                            "mode": "edit"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 4
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "In pipeline",
+                  "value": "{{ (data.rows || []).filter(r => [\"new\",\"screening\",\"interview\",\"offer\"].includes(r.stage)).length }}",
+                  "icon": "users",
+                  "loading": "{{ data.$candidates.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "In interview",
+                  "value": "{{ (data.rows || []).filter(r => r.stage === 'interview').length }}",
+                  "icon": "messages-square",
+                  "loading": "{{ data.$candidates.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Hired",
+                  "value": "{{ (data.rows || []).filter(r => r.stage === 'hired').length }}",
+                  "icon": "check",
+                  "loading": "{{ data.$candidates.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Refused",
+                  "value": "{{ (data.rows || []).filter(r => r.stage === 'refused').length }}",
+                  "icon": "x",
+                  "loading": "{{ data.$candidates.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /job-positions folder could not be read. Reinstall Recruitment to recreate it."
+            },
+            "rules": {
+              "visible": "data.$jobs.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The /candidates folder could not be read. Reinstall Recruitment to recreate it."
+            },
+            "rules": {
+              "visible": "data.$candidates.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.tabs",
+            "props": {
+              "items": [
+                {
+                  "value": "candidates",
+                  "label": "Candidates",
+                  "icon": "user-round"
+                },
+                {
+                  "value": "jobs",
+                  "label": "Job positions",
+                  "icon": "briefcase"
+                }
+              ]
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Open /candidates",
+                          "variant": "outline",
+                          "icon": "folder-open",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "open-file": {
+                                "path": "/candidates"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.files",
+                    "props": {
+                      "path": "/candidates/",
+                      "mimeTypes": [
+                        "application/vnd.verentis.recruitment.candidate+json"
+                      ],
+                      "showFolders": false,
+                      "navigable": false,
+                      "columns": [
+                        {
+                          "key": "name",
+                          "label": "Application"
+                        },
+                        {
+                          "key": "data.name",
+                          "label": "Candidate"
+                        },
+                        {
+                          "key": "data.source",
+                          "label": "Source"
+                        },
+                        {
+                          "key": "data.stage",
+                          "label": "Stage"
+                        },
+                        {
+                          "key": "data.expectedSalary",
+                          "label": "Expected salary"
+                        }
+                      ],
+                      "emptyText": "No candidates yet. Use New in /candidates."
+                    }
+                  }
+                ],
+                "slot": "candidates"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Open /job-positions",
+                          "variant": "outline",
+                          "icon": "folder-open",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "open-file": {
+                                "path": "/job-positions"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.files",
+                    "props": {
+                      "path": "/job-positions/",
+                      "mimeTypes": [
+                        "application/vnd.verentis.recruitment.job+json"
+                      ],
+                      "showFolders": false,
+                      "navigable": false,
+                      "columns": [
+                        {
+                          "key": "name",
+                          "label": "Code"
+                        },
+                        {
+                          "key": "data.title",
+                          "label": "Title"
+                        },
+                        {
+                          "key": "data.department",
+                          "label": "Department"
+                        },
+                        {
+                          "key": "data.status",
+                          "label": "Status"
+                        },
+                        {
+                          "key": "data.openings",
+                          "label": "Openings"
+                        }
+                      ],
+                      "emptyText": "No job positions yet. Use New in /job-positions."
+                    }
+                  }
+                ],
+                "slot": "jobs"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

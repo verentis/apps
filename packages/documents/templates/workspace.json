@@ -1,0 +1,13 @@
+{
+  "$schema": "https://schemas.verentis.io/documents/v1/workspace.schema.json",
+  "schemaVersion": 1,
+  "kind": "workspace",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "name": "{{ name }}",
+  "description": "",
+  "defaultTags": []
+}

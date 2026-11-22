@@ -12,6 +12,35 @@ are deployed separately; Canvas-backed business packages contain declarative ass
 | `crm` | File-based customers/pipeline: vendor-MIME JSON records, seeded containers, bound Canvas forms and creatables. |
 | `accounting` | File-based double-entry ledger: accounts, periods, journals and expenses posted by script, with trial balance, P&L and balance sheet pages. |
 | `invoicing` | File-based invoices, credit notes and payments issued to the Accounting ledger by script, with CRM customer copy and receivables. |
+| `sales` | Sales: products, quotations and sales orders; a quotation is confirmed into a sales order by script. |
+| `rental` | Sales: rental products and bookings, confirmed, picked up and returned by script. |
+| `purchase` | Supply chain: vendors and purchase orders, confirmed and received by script, with draft vendor bills handed to Invoicing. |
+| `inventory` | Supply chain: products, warehouses, stock moves and adjustments, validated and applied by script. |
+| `manufacturing` | Supply chain: bills of materials and manufacturing orders, confirmed, started and completed by script, with stock moves handed to Inventory. |
+| `plm` | Supply chain: engineering change orders, submitted, approved, rejected and applied by script against Manufacturing BOMs. |
+| `quality` | Supply chain: quality control points, checks and alerts, recorded against tolerances and resolved by script. |
+| `maintenance` | Supply chain: equipment and maintenance requests moved through stages by script, keeping equipment status in sync. |
+| `fleet` | Supply chain: vehicles, fleet contracts and service logs, validated and posted by script. |
+| `employees` | HR: departments and employees with a company directory, organization summary and scripted terminate action. |
+| `time-off` | HR: leave types and requests with weekday-counted days, scripted submit/approve/refuse and a remaining-allocation report. |
+| `recruitment` | HR: job positions and candidates with a hiring pipeline and scripted advance, refuse and hire actions. |
+| `appraisals` | HR: employee appraisals with criteria ratings, computed overall score and scripted schedule/complete actions. |
+| `referrals` | HR: employee referrals with a points leaderboard and scripted hire decisions that award points. |
+| `payroll` | HR: region-agnostic payroll engine — salary structures, pay profiles and pay runs computed and posted to the Accounting ledger by script. |
+| `project` | Services: projects and tasks with a stage board and a Complete action script. |
+| `timesheets` | Services: timesheet entries logged against Project work and validated by script. |
+| `helpdesk` | Services: support teams and tickets with SLA deadlines, a stage pipeline and scripted resolve/close. |
+| `field-service` | Services: field tasks — schedule technicians, log hours and materials on site, draft invoices for completed work. |
+| `planning` | Services: shift planning with roles, a week schedule, overlap-checked publishing and locked confirmed shifts. |
+| `appointments` | Services: appointment types with durations and buffers, and bookings with conflict-checked confirmation. |
+| `events` | Marketing: events and registrations with capacity tracking, a publishing lifecycle and scripted confirm/check-in. |
+| `surveys` | Marketing: surveys and responses with validated questionnaires, scripted open/close/submit and a results summary. |
+| `social-marketing` | Marketing: social accounts and posts with scripted schedule/publish/cancel; network delivery is a platform integration concern. |
+| `knowledge` | Productivity: spaces and Markdown articles nested into a hierarchy, published, archived and restored by script. |
+| `approvals` | Productivity: approval types and requests, submitted, approved, refused or cancelled by script with multi-approver thresholds. |
+| `documents` | Productivity: tagging and review workflow over existing workspace files, moved through inbox/review/validated/archived by script. |
+| `spreadsheet-bi` | Finance: saved BI dashboards and snapshots computed live from the record files of CRM, Invoicing, Accounting and Helpdesk. |
+| `expenses` | Finance: expense categories and employee expense reports, submitted, approved and posted to the Accounting ledger by script. |
 | `excalidraw` | Infinite-canvas diagrams and wireframes, portable Excalidraw files, and a platform-native collaboration adapter; installed multiplayer release acceptance remains gated. |
 
 Run a command across all JavaScript workspaces from the repository root:
@@ -33,6 +62,14 @@ when a generated file is stale). Accounting and Invoicing share build-time helpe
 development tooling, not an app. Their posting scripts (`scripts/post`) validate against the chart of accounts
 and open periods, write journals idempotently and mark records posted or issued, which then lock in their forms.
 All three depend on the `latest` Canvas and nodejs engine; Invoicing also depends on Accounting and optionally CRM.
+The same file-based pattern now spans the whole business suite — Sales (sales, rental), Supply Chain
+(purchase, inventory, manufacturing, plm, quality, maintenance, fleet), HR (employees, time-off, recruitment,
+appraisals, referrals, payroll), Services (project, timesheets, helpdesk, field-service, planning, appointments),
+Marketing (events, surveys, social-marketing), Productivity (knowledge, approvals, documents) and
+Finance (expenses, spreadsheet-bi) — each a Canvas UI over vendor-MIME JSON files with nodejs action scripts
+and no custom runtime dependencies. Email/SMS campaign delivery and marketing automation are deliberately
+deferred to the platform notification service design, and record-attached discussions are deferred to the
+chat service (a Canvas chat component bound to a per-record, possibly hidden, channel) rather than a file-based app.
 
 Excalidraw is a wrapper around the upstream MIT-licensed editor, not the platform's existing Canvas
 dynamic form renderer. It is an installed, authenticated workspace application, not an anonymous

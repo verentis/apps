@@ -1,0 +1,12 @@
+{
+  "$schema": "https://schemas.verentis.io/expenses/v1/category.schema.json",
+  "schemaVersion": 1,
+  "kind": "category",
+  "id": "7a1b2c3d-4e5f-4a6b-8c9d-0e1f2a3b4c02",
+  "state": "active",
+  "createdAt": "2026-01-01T00:00:00Z",
+  "updatedAt": "2026-01-01T00:00:00Z",
+  "code": "CAT-0002",
+  "name": "Meals and entertainment",
+  "expenseAccount": "/chart-of-accounts/ACC-0006"
+}

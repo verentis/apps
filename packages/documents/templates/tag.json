@@ -1,0 +1,12 @@
+{
+  "$schema": "https://schemas.verentis.io/documents/v1/tag.schema.json",
+  "schemaVersion": 1,
+  "kind": "tag",
+  "id": "{{ id }}",
+  "state": "active",
+  "createdAt": "{{ now }}",
+  "updatedAt": "{{ now }}",
+  "code": "",
+  "label": "{{ name }}",
+  "category": ""
+}
