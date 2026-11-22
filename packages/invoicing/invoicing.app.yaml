@@ -6,7 +6,7 @@ metadata:
   description: Invoices, credit notes and payments as files in your workspace,
     issued and posted to the Accounting ledger by script.
   icon: ./icons/app.svg
-  version: 0.2.6
+  version: 0.2.7
   author: Verentis
 marketplace:
   readme: ./README.md

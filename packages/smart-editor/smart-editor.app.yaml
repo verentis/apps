@@ -7,7 +7,7 @@ metadata:
   description: Edit and save workspace code and structured text with
     language-aware syntax highlighting.
   icon: ./icons/app.svg
-  version: 0.1.51
+  version: 0.1.52
   author: Verentis
   labels:
     category: editor

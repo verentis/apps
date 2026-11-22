@@ -7,7 +7,7 @@ metadata:
   description: Open workspace images, zoom into details and rotate the view
     without changing the original file.
   icon: ./icons/app.svg
-  version: 0.1.47
+  version: 0.1.48
   author: Verentis
   labels:
     category: media

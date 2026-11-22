@@ -7,7 +7,7 @@ metadata:
     meetings, tasks, notes and documents as files in your workspace, edited with
     Canvas forms.
   icon: ./icons/app.svg
-  version: 0.2.17
+  version: 0.2.18
   author: Verentis
 marketplace:
   readme: ./README.md

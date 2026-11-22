@@ -38,10 +38,11 @@ export default defineNuxtConfig({
   },
 
   fonts: {
+    provider: 'npm',
+    npm: { remote: false },
     families: [
-      { name: 'Inter', provider: 'google', global: true },
+      { name: 'Inter', global: true, weights: [400, 500, 600, 700] },
     ],
-    provider: 'google',
   },
 
   i18n: {
