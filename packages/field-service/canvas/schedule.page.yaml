@@ -131,7 +131,7 @@
                 "type": "canvas.dashboard.stat",
                 "props": {
                   "label": "Tasks today",
-                  "value": "{{ (data.rows || []).filter(r => r.today && [\"new\",\"scheduled\",\"on-site\"].includes(r.stage)).length }}",
+                  "value": "{{ (data.rows || []).filter(r => r.today && ['new', 'scheduled', 'on-site'].includes(r.stage)).length }}",
                   "icon": "calendar",
                   "loading": "{{ data.$tasks.status === 'loading' }}"
                 }
@@ -140,7 +140,7 @@
                 "type": "canvas.dashboard.stat",
                 "props": {
                   "label": "On site",
-                  "value": "{{ (data.rows || []).filter(r => r.today && [\"new\",\"scheduled\",\"on-site\"].includes(r.stage)).filter(r => r.stage === 'on-site').length }}",
+                  "value": "{{ (data.rows || []).filter(r => r.today && ['new', 'scheduled', 'on-site'].includes(r.stage)).filter(r => r.stage === 'on-site').length }}",
                   "icon": "map-pin",
                   "loading": "{{ data.$tasks.status === 'loading' }}"
                 }
@@ -149,7 +149,7 @@
                 "type": "canvas.dashboard.stat",
                 "props": {
                   "label": "Unassigned",
-                  "value": "{{ (data.rows || []).filter(r => r.today && [\"new\",\"scheduled\",\"on-site\"].includes(r.stage)).filter(r => !r.technician).length }}",
+                  "value": "{{ (data.rows || []).filter(r => r.today && ['new', 'scheduled', 'on-site'].includes(r.stage)).filter(r => !r.technician).length }}",
                   "icon": "user-x",
                   "loading": "{{ data.$tasks.status === 'loading' }}"
                 }
@@ -158,7 +158,7 @@
                 "type": "canvas.dashboard.stat",
                 "props": {
                   "label": "Technicians",
-                  "value": "{{ (data.rows || []).filter(r => r.today && [\"new\",\"scheduled\",\"on-site\"].includes(r.stage)).map(r => r.technician || 'Unassigned').filter((v, i, a) => a.indexOf(v) === i).length }}",
+                  "value": "{{ (data.rows || []).filter(r => r.today && ['new', 'scheduled', 'on-site'].includes(r.stage)).map(r => r.technician || 'Unassigned').filter((v, i, a) => a.indexOf(v) === i).length }}",
                   "icon": "users",
                   "loading": "{{ data.$tasks.status === 'loading' }}"
                 }
@@ -174,7 +174,7 @@
               {
                 "type": "canvas.table",
                 "props": {
-                  "rows": "{{ (data.rows || []).filter(r => r.today && [\"new\",\"scheduled\",\"on-site\"].includes(r.stage)).map(r => r.technician || 'Unassigned').filter((v, i, a) => a.indexOf(v) === i).sort().map(t => ({ technician: t, tasks: (data.rows || []).filter(r => r.today && [\"new\",\"scheduled\",\"on-site\"].includes(r.stage)).filter(r => (r.technician || 'Unassigned') === t).length, onsite: (data.rows || []).filter(r => r.today && [\"new\",\"scheduled\",\"on-site\"].includes(r.stage)).filter(r => (r.technician || 'Unassigned') === t && r.stage === 'on-site').length })) }}",
+                  "rows": "{{ (data.rows || []).filter(r => r.today && ['new', 'scheduled', 'on-site'].includes(r.stage)).map(r => r.technician || 'Unassigned').filter((v, i, a) => a.indexOf(v) === i).sort().map(t => ({ technician: t, tasks: (data.rows || []).filter(r => r.today && ['new', 'scheduled', 'on-site'].includes(r.stage)).filter(r => (r.technician || 'Unassigned') === t).length, onsite: (data.rows || []).filter(r => r.today && ['new', 'scheduled', 'on-site'].includes(r.stage)).filter(r => (r.technician || 'Unassigned') === t && r.stage === 'on-site').length })) }}",
                   "columns": [
                     {
                       "key": "technician",
@@ -205,7 +205,7 @@
               {
                 "type": "canvas.table",
                 "props": {
-                  "rows": "{{ (data.rows || []).filter(r => r.today && [\"new\",\"scheduled\",\"on-site\"].includes(r.stage)).sort((a, b) => ((a.technician || '~') + (a.windowStart || '~')) < ((b.technician || '~') + (b.windowStart || '~')) ? -1 : 1).map(r => ({ path: r.path, technician: r.technician || 'Unassigned', window: r.window, code: r.code, customer: r.customer, address: r.address, type: r.type, stage: r.stage })) }}",
+                  "rows": "{{ (data.rows || []).filter(r => r.today && ['new', 'scheduled', 'on-site'].includes(r.stage)).sort((a, b) => ((a.technician || '~') + (a.windowStart || '~')) < ((b.technician || '~') + (b.windowStart || '~')) ? -1 : 1).map(r => ({ path: r.path, technician: r.technician || 'Unassigned', window: r.window, code: r.code, customer: r.customer, address: r.address, type: r.type, stage: r.stage })) }}",
                   "columns": [
                     {
                       "key": "technician",

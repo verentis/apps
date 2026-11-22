@@ -246,7 +246,7 @@
                       "click": "cancel"
                     },
                     "rules": {
-                      "visible": "[\"new\",\"scheduled\",\"on-site\"].includes(form.values.stage) && !(form.values.state === 'archived')",
+                      "visible": "['new', 'scheduled', 'on-site'].includes(form.values.stage) && !(form.values.state === 'archived')",
                       "disabled": "form.saving || form.dirty"
                     }
                   },

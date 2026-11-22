@@ -101,7 +101,7 @@ const partyLines = party => [
   party?.taxIdentifier ? `Tax ID ${party.taxIdentifier}` : '', party?.email, party?.phone,
 ].filter(Boolean)
 
-const cell = value => String(value ?? '').replace(/\|/g, '\\|').replace(/\r?\n/g, ' ')
+const cell = value => String(value ?? '').replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\r?\n/g, ' ')
 
 /** A readable Markdown copy of an issued invoice or credit note, stored beneath it. */
 export function documentMarkdown(title, record, seller, customer, details) {

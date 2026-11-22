@@ -15,7 +15,12 @@ const stageTones = { success: ['solved'], warning: ['waiting'], danger: ['closed
 const schemaAccess = { path: `${installRoot}/`, reason: 'Read the Helpdesk schemas and run the ticket action script' }
 const closed = "form.values.stage === 'closed'"
 const idle = 'form.saving || form.dirty'
-const resolvable = `${JSON.stringify(['in-progress', 'waiting'])}.includes(form.values.stage)`
+// Builds a Canvas-expression array literal from constant stage names (no JSON.stringify: CodeQL js/bad-code-sanitization).
+const stageLiteral = values => `[${values.map(v => {
+  if (!/^[a-z0-9-]+$/.test(v)) throw new Error(`unsafe expression value: ${v}`)
+  return `'${v}'`
+}).join(', ')}]`
+const resolvable = `${stageLiteral(['in-progress', 'waiting'])}.includes(form.values.stage)`
 
 const teamSources = {
   teams: folder(containers.teams.path, mimeTypes.team),
@@ -45,7 +50,7 @@ function recordExtras(kind) {
     },
     notices: [
       { ...text('Overdue: the SLA deadline {{ form.values.slaDeadline }} has passed.', 'danger'),
-        rules: { visible: `${JSON.stringify(openStages)}.includes(form.values.stage) && !!form.values.slaDeadline && form.values.slaDeadline < Date()` } },
+        rules: { visible: `${stageLiteral(openStages)}.includes(form.values.stage) && !!form.values.slaDeadline && form.values.slaDeadline < Date()` } },
       { ...text('This ticket is closed and can no longer be edited.', 'muted'), rules: { visible: closed } },
     ],
     buttons: [
@@ -140,7 +145,7 @@ function settingsForm() {
 
 const active = "e.kind === 'file' && e.data && e.data.state !== 'archived'"
 const loading = source => `{{ data.$${source}.status === 'loading' }}`
-const openStage = value => `${JSON.stringify(openStages)}.includes(${value})`
+const openStage = value => `${stageLiteral(openStages)}.includes(${value})`
 
 // Every active ticket flattened for the pages: stage, team path and name, deadline and overdue flag.
 const ticketRows = `(data.tickets || []).filter(e => ${active}).map(e => ({ path: e.path, code: e.data.code || e.name, subject: e.data.subject || '', teamPath: e.data.team || '', team: ((((data.teams || []).find(t => t.kind === 'file' && t.data && t.path === e.data.team) || {}).data || {}).name) || '', priority: e.data.priority || '', stage: e.data.stage || '', assignee: e.data.assignee || '', deadline: e.data.slaDeadline || '', overdue: ${openStage('e.data.stage')} && !!e.data.slaDeadline && e.data.slaDeadline < Date() }))`

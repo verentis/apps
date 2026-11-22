@@ -219,7 +219,7 @@
                       "click": "resolve"
                     },
                     "rules": {
-                      "visible": "[\"in-progress\",\"waiting\"].includes(form.values.stage) && !(form.values.state === 'archived')",
+                      "visible": "['in-progress', 'waiting'].includes(form.values.stage) && !(form.values.state === 'archived')",
                       "disabled": "form.saving || form.dirty || !String(form.values.resolution || '').trim()"
                     }
                   },
@@ -369,7 +369,7 @@
               "tone": "danger"
             },
             "rules": {
-              "visible": "[\"new\",\"in-progress\",\"waiting\"].includes(form.values.stage) && !!form.values.slaDeadline && form.values.slaDeadline < Date()"
+              "visible": "['new', 'in-progress', 'waiting'].includes(form.values.stage) && !!form.values.slaDeadline && form.values.slaDeadline < Date()"
             }
           },
           {

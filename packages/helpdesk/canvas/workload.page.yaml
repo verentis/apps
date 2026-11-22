@@ -33,7 +33,7 @@
       },
       "rows": {
         "kind": "computed",
-        "expr": "(data.tickets || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, subject: e.data.subject || '', teamPath: e.data.team || '', team: ((((data.teams || []).find(t => t.kind === 'file' && t.data && t.path === e.data.team) || {}).data || {}).name) || '', priority: e.data.priority || '', stage: e.data.stage || '', assignee: e.data.assignee || '', deadline: e.data.slaDeadline || '', overdue: [\"new\",\"in-progress\",\"waiting\"].includes(e.data.stage) && !!e.data.slaDeadline && e.data.slaDeadline < Date() }))"
+        "expr": "(data.tickets || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, subject: e.data.subject || '', teamPath: e.data.team || '', team: ((((data.teams || []).find(t => t.kind === 'file' && t.data && t.path === e.data.team) || {}).data || {}).name) || '', priority: e.data.priority || '', stage: e.data.stage || '', assignee: e.data.assignee || '', deadline: e.data.slaDeadline || '', overdue: ['new', 'in-progress', 'waiting'].includes(e.data.stage) && !!e.data.slaDeadline && e.data.slaDeadline < Date() }))"
       }
     },
     "tree": [
@@ -133,7 +133,7 @@
               {
                 "type": "canvas.table",
                 "props": {
-                  "rows": "{{ (data.teams || []).filter(t => t.kind === 'file' && t.data && t.data.state !== 'archived').map(t => ({ path: t.path, team: t.data.name || t.name, members: (t.data.members || []).length, slaHours: t.data.slaHours || '', open: (data.rows || []).filter(r => r.teamPath === t.path && [\"new\",\"in-progress\",\"waiting\"].includes(r.stage)).length, overdue: (data.rows || []).filter(r => r.teamPath === t.path && r.overdue).length, solved: (data.rows || []).filter(r => r.teamPath === t.path && r.stage === 'solved').length })) }}",
+                  "rows": "{{ (data.teams || []).filter(t => t.kind === 'file' && t.data && t.data.state !== 'archived').map(t => ({ path: t.path, team: t.data.name || t.name, members: (t.data.members || []).length, slaHours: t.data.slaHours || '', open: (data.rows || []).filter(r => r.teamPath === t.path && ['new', 'in-progress', 'waiting'].includes(r.stage)).length, overdue: (data.rows || []).filter(r => r.teamPath === t.path && r.overdue).length, solved: (data.rows || []).filter(r => r.teamPath === t.path && r.stage === 'solved').length })) }}",
                   "columns": [
                     {
                       "key": "team",
@@ -190,7 +190,7 @@
               {
                 "type": "canvas.table",
                 "props": {
-                  "rows": "{{ (data.rows || []).filter(r => [\"new\",\"in-progress\",\"waiting\"].includes(r.stage)).map(r => r.assignee || 'Unassigned').filter((v, i, a) => a.indexOf(v) === i).sort().map(a => ({ assignee: a, open: (data.rows || []).filter(r => [\"new\",\"in-progress\",\"waiting\"].includes(r.stage)).filter(r => (r.assignee || 'Unassigned') === a).length, overdue: (data.rows || []).filter(r => [\"new\",\"in-progress\",\"waiting\"].includes(r.stage)).filter(r => (r.assignee || 'Unassigned') === a && r.overdue).length })) }}",
+                  "rows": "{{ (data.rows || []).filter(r => ['new', 'in-progress', 'waiting'].includes(r.stage)).map(r => r.assignee || 'Unassigned').filter((v, i, a) => a.indexOf(v) === i).sort().map(a => ({ assignee: a, open: (data.rows || []).filter(r => ['new', 'in-progress', 'waiting'].includes(r.stage)).filter(r => (r.assignee || 'Unassigned') === a).length, overdue: (data.rows || []).filter(r => ['new', 'in-progress', 'waiting'].includes(r.stage)).filter(r => (r.assignee || 'Unassigned') === a && r.overdue).length })) }}",
                   "columns": [
                     {
                       "key": "assignee",

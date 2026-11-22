@@ -15,6 +15,11 @@ const stageTones = { success: ['done'], warning: ['on-site'], danger: ['cancelle
 const schemaAccess = { path: `${installRoot}/`, reason: 'Read the Field Service schemas and run the task action script' }
 const locked = "['done', 'cancelled'].includes(form.values.stage)"
 const idle = 'form.saving || form.dirty'
+// Builds a Canvas-expression array literal from constant stage names (no JSON.stringify: CodeQL js/bad-code-sanitization).
+const stageLiteral = values => `[${values.map(v => {
+  if (!/^[a-z0-9-]+$/.test(v)) throw new Error(`unsafe expression value: ${v}`)
+  return `'${v}'`
+}).join(', ')}]`
 
 const fromCrm = "e.data.name || [e.data.givenName, e.data.familyName].filter(Boolean).join(' ')"
 const copyName = `((data.companies || []).concat(data.contacts || []).filter(e => e.kind === 'file' && e.data && e.path === form.values.customerRef).map(e => ${fromCrm})[0]) || form.values.customerName`
@@ -37,7 +42,7 @@ function taskForm() {
       button('Start', 'start', { visible: `form.values.stage === 'scheduled' && !(${archived})`, disabled: idle }, undefined, 'play'),
       button('Complete', 'complete', { visible: `form.values.stage === 'on-site' && !(${archived})`,
         disabled: `${idle} || !String(form.values.hours || '').trim()` }, undefined, 'check'),
-      button('Cancel task', 'cancel', { visible: `${JSON.stringify(openStages)}.includes(form.values.stage) && !(${archived})`, disabled: idle }, 'outline', 'x'),
+      button('Cancel task', 'cancel', { visible: `${stageLiteral(openStages)}.includes(form.values.stage) && !(${archived})`, disabled: idle }, 'outline', 'x'),
       button('Copy name', 'copy-customer', { visible: `!(${locked}) && !!form.values.customerRef`, disabled: `form.saving || ${archived}` }, 'ghost', 'copy'),
       recordButtons(locked),
     ]),
@@ -113,7 +118,7 @@ function settingsForm() {
 
 const active = "e.kind === 'file' && e.data && e.data.state !== 'archived'"
 const loading = source => `{{ data.$${source}.status === 'loading' }}`
-const openStage = value => `${JSON.stringify(openStages)}.includes(${value})`
+const openStage = value => `${stageLiteral(openStages)}.includes(${value})`
 
 // Every active task flattened for the pages: stage, schedule, technician and the time window.
 const taskRows = `(data.tasks || []).filter(e => ${active}).map(e => ({ path: e.path, code: e.data.code || e.name, customer: e.data.customerName || '', address: e.data.address || '', type: e.data.type || '', stage: e.data.stage || '', technician: e.data.technician || '', date: e.data.scheduledDate || '', window: [e.data.windowStart, e.data.windowEnd].filter(Boolean).join('–'), windowStart: e.data.windowStart || '', hours: e.data.hours || '', today: !!e.data.scheduledDate && e.data.scheduledDate === Date().slice(0, 10) }))`

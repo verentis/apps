@@ -162,7 +162,7 @@
                 "type": "canvas.dashboard.stat",
                 "props": {
                   "label": "Open tasks",
-                  "value": "{{ (data.rows || []).filter(r => [\"new\",\"scheduled\",\"on-site\"].includes(r.stage)).length }}",
+                  "value": "{{ (data.rows || []).filter(r => ['new', 'scheduled', 'on-site'].includes(r.stage)).length }}",
                   "icon": "wrench",
                   "loading": "{{ data.$tasks.status === 'loading' }}"
                 }
@@ -171,7 +171,7 @@
                 "type": "canvas.dashboard.stat",
                 "props": {
                   "label": "Today",
-                  "value": "{{ (data.rows || []).filter(r => r.today && [\"new\",\"scheduled\",\"on-site\"].includes(r.stage)).length }}",
+                  "value": "{{ (data.rows || []).filter(r => r.today && ['new', 'scheduled', 'on-site'].includes(r.stage)).length }}",
                   "icon": "calendar",
                   "loading": "{{ data.$tasks.status === 'loading' }}"
                 }
