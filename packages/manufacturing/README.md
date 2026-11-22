@@ -1,6 +1,6 @@
 # Manufacturing
 
-Bills of materials and manufacturing orders (Odoo MRP style), stored as JSON files in your workspace.
+Bills of materials and manufacturing orders, stored as JSON files in your workspace.
 Opening a Manufacturing record renders its Canvas form. Manufacturing folders open in the file browser,
 where **New** offers the records that belong there (for example **Manufacturing order** inside
 `/manufacturing-orders`).

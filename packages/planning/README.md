@@ -1,7 +1,7 @@
 # Planning
 
 Shift planning as files in your workspace: roles and shifts with a week schedule, overlap-checked publishing
-and confirmed, locked shifts. The Verentis Planning equivalent of Odoo Planning.
+and confirmed, locked shifts. Plan ahead with confidence.
 
 ## How it works
 

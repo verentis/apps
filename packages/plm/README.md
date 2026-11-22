@@ -1,7 +1,7 @@
 # PLM
 
 Engineering change orders as plain JSON files in your workspace, moved through their review stages by script —
-the file-based equivalent of Odoo PLM.
+a file-based product lifecycle manager.
 
 ## Layout
 

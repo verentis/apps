@@ -1,7 +1,7 @@
 # Appointments
 
 Appointment scheduling as files in your workspace: appointment types with durations and buffers, and bookings
-with conflict-checked confirmation. The Verentis Appointments equivalent of Odoo Appointments.
+with conflict-checked confirmation. Bookings live beside your records and sync with your schedule.
 
 ## How it works
 

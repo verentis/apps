@@ -1,7 +1,6 @@
 # Spreadsheet BI
 
-Saved BI dashboards and snapshots as files in your workspace — the file-based equivalent of Odoo's
-Spreadsheet/BI dashboards. A **dashboard** is a saved set of pivot-style tile definitions; its values are
+Saved BI dashboards and snapshots as files in your workspace. A **dashboard** is a saved set of pivot-style tile definitions; its values are
 computed **live** from the record files of sibling apps (CRM customers, Invoicing invoices, Helpdesk tickets,
 Accounting journals and expenses). A **snapshot** freezes one computation with exact decimal math.
 

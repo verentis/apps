@@ -1,7 +1,7 @@
 # Field Service
 
 Field tasks as files in your workspace: schedule technicians, log hours and materials on site, and draft
-invoices for completed work. The Verentis Field Service equivalent of Odoo Field Service.
+invoices for completed work. Everything from dispatch to invoice in one place.
 
 ## How it works
 
