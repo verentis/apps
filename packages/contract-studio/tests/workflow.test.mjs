@@ -21,7 +21,7 @@ async function fixture(initial = {}) {
 }
 
 test('approval pins ordered rendered wording, separate internal provenance and all artifact digests', async () => {
-  const {files,path,step,doc} = await fixture({[catalog]:{ authorities:[statute] }})
+  const {files,path,step,doc} = await fixture({[`${packs}/ZA`]:{ authorities:[statute] }})
   const {path:precedentPath} = await publish(clause,files,now)
   await step('add-inline',{pointId:'delivery',wording:'Deliver after point {{point:secrecy}}.'})
   await step('add-firm',{pointId:'secrecy',precedentPath,bindings:'client=Example Ltd'})
@@ -35,7 +35,7 @@ test('approval pins ordered rendered wording, separate internal provenance and a
   await step('approve',{reviewer:'Review lawyer'})
   await assert.rejects(step('return'),/frozen/)
   const frozen = doc().snapshot
-  await files.write(catalog, JSON.stringify({authorities:[]}))
+  await files.write(`${packs}/ZA`, JSON.stringify({authorities:[]}))
   await publish({...clause,revision:2,wording:'Changed after approval'},files,now)
   const out = await issue({path,version:doc().version},files)
   assert.equal(doc().stage,'issued')

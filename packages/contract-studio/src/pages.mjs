@@ -1,5 +1,5 @@
 import {
-  apiVersion, boundForm, button, card, folder, grid, heading, jsonFile, openFile, page,
+  apiVersion, boundForm, button, card, folder, grid, heading, openFile, page,
   projectRegistration, row, scriptPermissions, status, table, text,
 } from '../../../tools/file-apps/canvas.mjs'
 import { catalog, contracts, mime, packs, precedents, root, schemaId } from '../scripts/draft/model.mjs'
@@ -68,7 +68,7 @@ function contract() {
   const withText = params('pointId','wording','bindings','note')
   const compare = params('pointId','sourceKind','precedentPath')
   const firmUpdate = "p.precedent && (data.library || []).some(e => e.data && e.data.code === p.precedent.code && e.data.revision > p.precedent.revision)"
-  const authorityUpdate = "p.authority && p.authority.catalog === state.catalog && ((data.authorities && data.authorities.authorities) || []).some(a => a.id === p.authority.id && a.revision !== p.authority.revision)"
+  const authorityUpdate = `p.authority && (p.authority.catalog === state.catalog || (p.authority.catalog === '${catalog}' && state.catalog === '${packs}/ZA')) && ((data.authorities && data.authorities.authorities) || []).some(a => a.id === p.authority.id && a.revision !== p.authority.revision)`
   const pointRows = `(form.values.points || []).map((p, i) => ({ id:p.id, number:i+1, origin:p.origin, template:p.precedent ? p.precedent.wording : '', revision:p.precedent ? p.precedent.code+' v'+p.precedent.revision : '', wording:p.origin === 'firm' ? (p.variation || p.precedent.wording) : p.wording, edit:p.origin === 'firm' ? (p.variation || '') : p.wording, bindings:p.bindings, note:p.note, citation:p.authority ? p.authority.citation+' · '+p.authority.pinpoint+' · '+p.authority.coverage+' · '+p.authority.revision+' · '+p.authority.sourceUrl : '', update: (${firmUpdate}) || (${authorityUpdate}) ? 'Revision available for review' : '', decision:p.sourceDecision ? p.sourceDecision.decision : '' }))`
   const listing = table(expr(pointRows), [['number','#'],['id','Point ID'],['origin','Origin'],['revision','Firm revision'],['template','Approved base'],
     ['wording','Current template'],['bindings','Confirmed values'],['note','Internal note'],['citation','Authority (link only)'],['update','Source check'],['decision','Source decision']], 'No points yet.')
@@ -79,12 +79,12 @@ function contract() {
     name: 'contract-studio-contract', displayName: 'Contract Studio agreement', description: 'Edit points and review pinned sources.', icon: 'file-pen-line',
     mime: mime('contract'), schemaId, schemaSource: `${root}/schemas/contract.schema.json`,
     access: [scriptAccess('draft'), scriptAccess('issue'), access(`${root}/schemas/contract.schema.json`, 'Identify the agreement schema'),
-      access(precedents, 'Choose approved firm revisions'), access(catalog, 'Choose bibliographic South African references'),
+      access(precedents, 'Choose approved firm revisions'),
       access(packs, 'Choose bibliographic references in optional installed jurisdiction packs')],
-    data: { library: folder(precedents, mime('precedent')), packs: { kind: 'folder', path: packs, 'mime-pattern': 'application/vnd.verentis.legal-research.pack+json' },
-      authorities: jsonFile(state('catalog')) },
+    data: { library: folder(precedents, mime('precedent')), packs: folder(packs, 'application/vnd.verentis.legal-research.pack+json'),
+      authorities: { kind: 'computed', expr: '((data.packs || []).find(e => e.path === state.catalog) || {}).data' } },
     state: { ...initial('title','matter','pointId','wording','bindings','note','precedentPath','authorityId','pinpoint','reviewer'),
-      position: 1, catalog, sourceKind: 'firm', decision: 'defer', result: {} },
+      position: 1, catalog: '', sourceKind: 'firm', decision: 'defer', result: {} },
     actions: {
       metadata: edit('metadata', params('title','matter')),
       inline: edit('add-inline', withText), firm: edit('add-firm', { ...withText, ...params('precedentPath') }),
@@ -110,8 +110,8 @@ function contract() {
         row([button('Add inline point','inline'),button('Insert firm revision','firm'),button('Save selected point','update'),button('Move','move'),button('Remove','remove',undefined,'ghost')])]), draft),
       display(card('Statutory support · link only', [
         text('Use your own wording. A citation does not establish applicability, commencement or compliance. Research is optional for drafting.'),
-        choose('catalog','Installed catalogue',expr(`[{label:'South Africa pilot',value:'${catalog}'}].concat((data.packs || []).filter(e => e.kind === 'file').map(e => ({label:e.name,value:e.path})))`)),
-        ...status('authorities','Selected catalogue unavailable. Install Legal Research or select another pack; authoring remains available.'),
+        choose('catalog','Installed catalogue',expr("[{label:'Choose a country pack',value:''}].concat((data.packs || []).filter(e => e.kind === 'file').map(e => ({label:e.name,value:e.path})))")),
+        ...status('packs','Install a country pack to attach citations; authoring remains available.'),
         choose('authorityId','Authority',expr("((data.authorities && data.authorities.authorities) || []).filter(a => a.rights === 'link-only').map(a => ({label:a.jurisdiction+' · '+a.citation+' · '+a.coverage+' · '+a.revision,value:a.id}))")),
         control('pinpoint','Pinpoint in the cited provision'),row([button('Attach citation to point','attach'),button('Remove citation','detach',undefined,'ghost')])]),draft),
       display(card('Review a dependency update', [

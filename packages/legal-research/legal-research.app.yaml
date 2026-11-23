@@ -14,7 +14,7 @@
     "readme": "./marketplace/README.md",
     "keywords": [
       "law",
-      "south africa",
+      "jurisdiction",
       "legislation",
       "legal research"
     ],
@@ -66,15 +66,6 @@
     ],
     "file-access": [
       {
-        "path": "/applications/legal-research/catalog/authorities.json",
-        "mode": "read",
-        "reason": "Read the included South African citation index",
-        "origin": {
-          "kind": "document",
-          "id": "canvas/home.page.yaml"
-        }
-      },
-      {
         "path": "/legal-authority-packs",
         "mode": "read",
         "reason": "Read installed jurisdiction indexes",
@@ -90,12 +81,6 @@
         "to": "/applications/legal-research/canvas/home.page.yaml",
         "mode": "managed",
         "mime": "application/vnd.verentis.canvas.page+yaml"
-      },
-      {
-        "from": "catalog/authorities.json",
-        "to": "/applications/legal-research/catalog/authorities.json",
-        "mode": "managed",
-        "mime": "application/vnd.verentis.legal-research.pack+json"
       },
       {
         "from": "seed/packs",
@@ -114,7 +99,6 @@
   "packaging": {
     "publisher": "verentis",
     "files": [
-      "catalog/**",
       "canvas/**",
       "seed/**",
       "README.md"

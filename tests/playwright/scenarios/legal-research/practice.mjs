@@ -20,7 +20,7 @@ export async function practiceScenario({ root, canvas, browser, files, packs, bu
   })
   store.readText = async path => store.nodes.get(path).content
   await draft({ operation: 'create', code: 'AGR-DEMO', title: 'Workshop services agreement', matter }, store)
-  const catalog = '/applications/legal-research/catalog/authorities.json'
+  const catalog = '/legal-authority-packs/ZA'
   const clause = await publish({ code: 'RECORDS', title: 'Project records', revision: 1, jurisdiction: 'ZA',
     wording: 'The studio will retain the approved delivery schedule.', intendedUse: 'Services agreements', confirmed: true, approvedBy: 'Pilot counsel' }, store)
   const listings = { '/legal-precedents': [{ kind: 'file', path: clause.path, name: 'RECORDS-v1', mimeType: 'application/vnd.verentis.contract-studio.precedent+json' }], '/legal-contracts': [
@@ -90,6 +90,7 @@ export async function practiceScenario({ root, canvas, browser, files, packs, bu
       await page.getByLabel('Firm revision', { exact: true }).selectOption({ label: 'Project records · RECORDS v1 · ZA' })
       await page.getByRole('button', { name: 'Insert firm revision' }).click()
       await page.getByRole('cell', { name: 'RECORDS v1', exact: true }).waitFor()
+      await page.getByLabel('Installed catalogue').selectOption({ label: 'ZA' })
       const picker = page.getByLabel('Authority', { exact: true })
       const option = picker.getByRole('option', { name: /ZA · POPIA s 21/ })
       await picker.selectOption({ label: await option.innerText() })

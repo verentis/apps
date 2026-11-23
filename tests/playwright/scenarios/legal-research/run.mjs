@@ -12,17 +12,19 @@ const { chromium } = createRequire(join(process.env.APPS_TOOLING || root, 'packa
 const src = await readFile(join(here, 'render.mjs'), 'utf8')
 const bundle = await build({ stdin: { contents: src, resolveDir: canvas }, bundle: true, platform: 'browser', format: 'iife',
   write: false, minify: true, define: { 'process.env.NODE_ENV': '"production"', __VUE_OPTIONS_API__: 'true', __VUE_PROD_DEVTOOLS__: 'false', __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: 'false' } })
-const base = '/applications/legal-research/catalog/authorities.json'
+const base = '/legal-authority-packs/ZA'
 const extra = '/legal-authority-packs/NA'
-const files = Object.fromEntries(await Promise.all([[base, 'legal-research'], [extra, 'namibia-law']].map(async ([path, app]) =>
+const files = Object.fromEntries(await Promise.all([[base, 'south-africa-law'], [extra, 'namibia-law']].map(async ([path, app]) =>
   [path, JSON.parse(await readFile(join(root, 'packages', app, 'catalog/authorities.json'), 'utf8'))])))
-const packs = [{ name: 'NA', path: extra, kind: 'file', mimeType: 'application/vnd.verentis.legal-research.pack+json' }]
+const packs = [base, extra].map(path => ({ name: path.split('/').pop(), path, kind: 'file', mimeType: 'application/vnd.verentis.legal-research.pack+json' }))
 const outcomes = join(here, 'outcomes')
 await mkdir(outcomes, { recursive: true })
 const browser = await chromium.launch()
 try {
   for (const [app, label, first, second] of [
+    ['legal-research', ''],
     ['legal-research', 'Constitution s 6', '2026-06-25', '2026-06-26'],
+    ['south-africa-law', 'Constitution s 6', '2026-06-25', '2026-06-26'],
     ['namibia-law', 'Labour Act 11 of 2007 s 11', '2023-03-14', '2023-03-15'],
   ]) {
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
@@ -34,8 +36,14 @@ try {
     await page.addStyleTag({ path: join(canvas, 'packages/components/src/styles.css') })
     await page.addScriptTag({ content: bundle.outputFiles[0].text })
     await page.evaluate(args => window.renderDocument(args), {
-      document: await readFile(join(root, 'packages', app, 'canvas/home.page.yaml'), 'utf8'), files, packs,
+      document: await readFile(join(root, 'packages', app, 'canvas/home.page.yaml'), 'utf8'), files, packs: label ? packs : [],
     })
+    if (!label) {
+      await page.getByText('Install a country pack', { exact: false }).waitFor()
+      assert.deepEqual(errors, [])
+      await page.close()
+      continue
+    }
     const sourceRow = page.getByRole('row').filter({ has: page.getByText(label, { exact: true }) })
     await sourceRow.waitFor()
     await page.screenshot({ path: join(outcomes, `${app}-overview.png`) })

@@ -9,20 +9,11 @@
   "spec": {
     "access": [
       {
-        "path": "/applications/legal-research/catalog/authorities.json",
-        "reason": "Read the included South African citation index"
-      },
-      {
         "path": "/legal-authority-packs",
         "reason": "Read installed jurisdiction indexes"
       }
     ],
     "data": {
-      "core": {
-        "kind": "file",
-        "path": "/applications/legal-research/catalog/authorities.json",
-        "parse": "json"
-      },
       "packs": {
         "kind": "folder",
         "path": "/legal-authority-packs",
@@ -31,7 +22,7 @@
       },
       "authorities": {
         "kind": "computed",
-        "expr": "(data.core.authorities || []).concat((data.packs || []).flatMap(e => e.data.authorities || []))"
+        "expr": "(data.packs || []).flatMap(e => (e.data && e.data.authorities) || [])"
       },
       "results": {
         "kind": "computed",
@@ -79,7 +70,7 @@
             "type": "canvas.heading",
             "props": {
               "level": 2,
-              "text": "Legal Research"
+              "text": "Namibia Law"
             }
           },
           {
@@ -122,25 +113,6 @@
           {
             "type": "canvas.text",
             "props": {
-              "text": "{{ data.$core.error }}"
-            },
-            "rules": {
-              "visible": "data.$core.status === 'error'"
-            }
-          },
-          {
-            "type": "canvas.text",
-            "props": {
-              "text": "Loading…",
-              "tone": "muted"
-            },
-            "rules": {
-              "visible": "data.$core.status === 'loading'"
-            }
-          },
-          {
-            "type": "canvas.text",
-            "props": {
               "text": "{{ data.$packs.error }}"
             },
             "rules": {
@@ -155,6 +127,15 @@
             },
             "rules": {
               "visible": "data.$packs.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Install a country pack such as South Africa Law or Namibia Law to search its citations."
+            },
+            "rules": {
+              "visible": "data.packs && data.packs.length === 0"
             }
           },
           {

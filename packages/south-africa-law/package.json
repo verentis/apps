@@ -1,0 +1,8 @@
+{
+  "name": "@verentis/app-south-africa-law",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "scripts": { "build": "node src/build.mjs", "check": "node src/build.mjs --check" }
+}

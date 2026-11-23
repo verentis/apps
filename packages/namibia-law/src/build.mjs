@@ -1,7 +1,7 @@
 import { generate, json } from '../../../tools/file-apps/build.mjs'
 import { lawPack } from '../../../tools/file-apps/law-pack.mjs'
 import { documentFileAccess } from '../../../tools/file-apps/canvas.mjs'
-import { home, packPath, packMime } from '../../legal-research/src/page.mjs'
+import { researchPage, packPath, packMime } from '../../legal-research/src/page.mjs'
 
 const id = 'namibia-law'
 const catalog = lawPack({
@@ -15,7 +15,7 @@ const catalog = lawPack({
     officialUrl: 'https://namiblii.org/akn/na/act/2004/28', coverage: 'Reference only', path: 'companies/sec-011.md' },
 ])
 const root = `/applications/${id}`
-const page = { ...home, metadata: { ...home.metadata, id: 'namibia-law-home', name: 'Namibia Law' }, spec: { ...home.spec, state: { ...home.spec.state, country: 'NA' } } }
+const page = researchPage(id, 'Namibia Law', 'NA')
 const manifest = {
   'api-version': 'verentis.io/v1', kind: 'Application',
   metadata: { id, name: 'Namibia Law', version: '0.1.0', author: 'Verentis', icon: './icons/app.svg', description: 'Add selected Namibian labour and company law citations to Legal Research.' },

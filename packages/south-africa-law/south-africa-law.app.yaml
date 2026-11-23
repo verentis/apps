@@ -1,0 +1,111 @@
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "south-africa-law",
+    "name": "South Africa Law",
+    "version": "0.1.0",
+    "author": "Verentis",
+    "icon": "./icons/app.svg",
+    "description": "Add selected South African legislation and provision citations to Legal Research."
+  },
+  "marketplace": {
+    "logo": "./icons/app.svg",
+    "readme": "./marketplace/README.md",
+    "keywords": [
+      "south africa",
+      "law",
+      "jurisdiction"
+    ],
+    "hero": {
+      "source": "./marketplace/hero.svg",
+      "alt": "Law library shelves"
+    },
+    "images": [
+      {
+        "source": "./marketplace/overview.png",
+        "alt": "South African authorities in Legal Research",
+        "caption": "Browse the South African index"
+      },
+      {
+        "source": "./marketplace/detail.png",
+        "alt": "Dated references for Constitution section 6",
+        "caption": "Trace a change to its source"
+      }
+    ]
+  },
+  "spec": {
+    "scope": "global",
+    "install-root": "/applications/south-africa-law",
+    "entry": "https://canvas.apps.localtest.me",
+    "entry-points": [
+      {
+        "id": "home",
+        "display-name": "South African authorities",
+        "route": "/render?document=.%2Fcanvas%2Fhome.page.yaml",
+        "order": 10
+      }
+    ],
+    "launch": {
+      "enabled": true,
+      "entry-point": "home",
+      "pinnable": true
+    },
+    "dependencies": [
+      {
+        "package": "verentis/legal-research",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/canvas",
+        "version": "latest"
+      }
+    ],
+    "permissions": [
+      "file.read"
+    ],
+    "scopes": [
+      "south-africa-law.default"
+    ],
+    "file-access": [
+      {
+        "path": "/legal-authority-packs",
+        "mode": "read",
+        "reason": "Read installed jurisdiction indexes",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      }
+    ],
+    "install": [
+      {
+        "from": "catalog/authorities.json",
+        "to": "/legal-authority-packs/ZA",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.legal-research.pack+json"
+      },
+      {
+        "from": "canvas/home.page.yaml",
+        "to": "/applications/south-africa-law/canvas/home.page.yaml",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.page+yaml"
+      }
+    ],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-forms": true,
+      "allow-popups": true
+    }
+  },
+  "packaging": {
+    "publisher": "verentis",
+    "files": [
+      "catalog/**",
+      "canvas/**",
+      "README.md"
+    ],
+    "encryption": "none"
+  }
+}

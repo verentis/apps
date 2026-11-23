@@ -187,15 +187,6 @@
         }
       },
       {
-        "path": "/applications/legal-research/catalog/authorities.json",
-        "mode": "read",
-        "reason": "Choose bibliographic South African references",
-        "origin": {
-          "kind": "document",
-          "id": "contract-studio-contract"
-        }
-      },
-      {
         "path": "/legal-authority-packs",
         "mode": "read",
         "reason": "Choose bibliographic references in optional installed jurisdiction packs",
@@ -217,15 +208,6 @@
         "path": "/legal-precedents",
         "mode": "read",
         "reason": "Pin approved clause revisions",
-        "origin": {
-          "kind": "script",
-          "id": "contract-studio-draft"
-        }
-      },
-      {
-        "path": "/applications/legal-research/catalog/authorities.json",
-        "mode": "read",
-        "reason": "Pin citation metadata only",
         "origin": {
           "kind": "script",
           "id": "contract-studio-draft"
