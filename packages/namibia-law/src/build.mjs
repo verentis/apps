@@ -20,7 +20,7 @@ const manifest = {
   'api-version': 'verentis.io/v1', kind: 'Application',
   metadata: { id, name: 'Namibia Law', version: '0.1.0', author: 'Verentis', icon: './icons/app.svg', description: 'Add selected Namibian labour and company law citations to Legal Research.' },
   marketplace: {
-    logo: './icons/app.svg', readme: './marketplace/README.md', keywords: ['Namibia', 'law', 'jurisdiction'],
+    logo: './icons/app.svg', readme: './marketplace/README.md', keywords: ['namibia', 'law', 'jurisdiction'],
     hero: { source: './marketplace/hero.svg', alt: 'Sandstone library columns' },
     images: [{ source: './marketplace/overview.png', alt: 'Namibian authorities in Legal Research', caption: 'Browse the Namibian index' },
       { source: './marketplace/detail.png', alt: 'Dated references for Labour Act section 11', caption: 'Trace a change to its source' }],
