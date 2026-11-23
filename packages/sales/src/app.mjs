@@ -148,11 +148,14 @@ export const manifest = {
   kind: 'Application',
   metadata: {
     id: 'sales', name: 'Sales',
-    description: 'Products, quotations and sales orders as files in your workspace; a quotation is confirmed into a sales order by script.',
+    description: "Turn product quotations into confirmed sales orders.",
     icon: './icons/app.svg', version, author: 'Verentis',
   },
   marketplace: {
-    readme: './README.md',
+    logo: "./icons/app.svg",
+    hero: {"source": "./marketplace/hero.svg", "alt": "Sales cover"},
+    images: [{"source": "./marketplace/overview.png", "alt": "Sales overview in Canvas", "caption": "Sales overview"}, {"source": "./marketplace/detail.png", "alt": "Quotations in Canvas", "caption": "Quotations"}],
+    readme: "./marketplace/README.md",
     keywords: ['sales', 'quotations', 'quotes', 'sales orders', 'products', 'crm', 'invoicing'],
   },
   spec: {

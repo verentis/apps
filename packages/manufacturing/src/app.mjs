@@ -123,11 +123,14 @@ export const manifest = {
   kind: 'Application',
   metadata: {
     id: 'manufacturing', name: 'Manufacturing',
-    description: 'Bills of materials and manufacturing orders as files in your workspace, confirmed, started and completed by script, with stock moves handed to Inventory.',
+    description: "Plan production from a bill of materials and follow each manufacturing order.",
     icon: './icons/app.svg', version, author: 'Verentis',
   },
   marketplace: {
-    readme: './README.md',
+    logo: "./icons/app.svg",
+    hero: {"source": "./marketplace/hero.svg", "alt": "Manufacturing cover"},
+    images: [{"source": "./marketplace/overview.png", "alt": "Manufacturing overview in Canvas", "caption": "Manufacturing overview"}, {"source": "./marketplace/detail.png", "alt": "Manufacturing orders in Canvas", "caption": "Manufacturing orders"}],
+    readme: "./marketplace/README.md",
     keywords: ['manufacturing', 'mrp', 'production', 'bill of materials', 'bom', 'manufacturing orders', 'routing', 'workcenters'],
   },
   spec: {

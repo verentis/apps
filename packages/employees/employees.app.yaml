@@ -4,13 +4,16 @@
   "metadata": {
     "id": "employees",
     "name": "Employees",
-    "description": "Departments and employees as files in your workspace, with a company directory, an organization summary and a scripted terminate action.",
+    "description": "Build a company directory that shows who works where.",
     "icon": "./icons/app.svg",
     "version": "0.1.0",
     "author": "Verentis"
   },
   "marketplace": {
-    "readme": "./README.md",
+    "logo": "./icons/app.svg",
+      "hero": {"source": "./marketplace/hero.svg", "alt": "Employees cover"},
+      "images": [{"source": "./marketplace/overview.png", "alt": "Employees overview in Canvas", "caption": "Employees overview"}, {"source": "./marketplace/detail.png", "alt": "Directory in Canvas", "caption": "Directory"}],
+      "readme": "./marketplace/README.md",
     "keywords": [
       "employees",
       "hr",

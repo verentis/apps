@@ -109,11 +109,14 @@ export const manifest = {
   kind: 'Application',
   metadata: {
     id: 'maintenance', name: 'Maintenance',
-    description: 'Equipment and maintenance requests as files in your workspace, moved through their stages by script with the equipment status kept in sync.',
+    description: "Keep equipment history and upcoming maintenance work in one place.",
     icon: './icons/app.svg', version, author: 'Verentis',
   },
   marketplace: {
-    readme: './README.md',
+    logo: "./icons/app.svg",
+    hero: {"source": "./marketplace/hero.svg", "alt": "Maintenance cover"},
+    images: [{"source": "./marketplace/overview.png", "alt": "Maintenance overview in Canvas", "caption": "Maintenance overview"}, {"source": "./marketplace/detail.png", "alt": "Equipment in Canvas", "caption": "Equipment"}],
+    readme: "./marketplace/README.md",
     keywords: ['maintenance', 'equipment', 'preventive maintenance', 'corrective maintenance', 'repairs', 'cmms'],
   },
   spec: {

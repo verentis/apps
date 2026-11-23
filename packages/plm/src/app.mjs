@@ -91,11 +91,14 @@ export const manifest = {
   kind: 'Application',
   metadata: {
     id: 'plm', name: 'PLM',
-    description: 'Engineering change orders as files in your workspace, submitted, approved, rejected and applied by script, with bill of materials references handed from Manufacturing.',
+    description: "Manage engineering changes from proposal to approval and application.",
     icon: './icons/app.svg', version, author: 'Verentis',
   },
   marketplace: {
-    readme: './README.md',
+    logo: "./icons/app.svg",
+    hero: {"source": "./marketplace/hero.svg", "alt": "PLM cover"},
+    images: [{"source": "./marketplace/overview.png", "alt": "PLM overview in Canvas", "caption": "PLM overview"}, {"source": "./marketplace/detail.png", "alt": "PLM engineering change order in Canvas", "caption": "PLM engineering change order"}],
+    readme: "./marketplace/README.md",
     keywords: ['plm', 'product lifecycle', 'engineering change order', 'eco', 'change management', 'approvals', 'bill of materials'],
   },
   spec: {

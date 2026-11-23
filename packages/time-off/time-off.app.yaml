@@ -4,13 +4,16 @@
   "metadata": {
     "id": "time-off",
     "name": "Time Off",
-    "description": "Leave types and leave requests as files in your workspace, with weekday-counted days, scripted submit, approve and refuse actions and a remaining-allocation report.",
+    "description": "Keep leave requests, decisions and allocations in one place.",
     "icon": "./icons/app.svg",
     "version": "0.1.0",
     "author": "Verentis"
   },
   "marketplace": {
-    "readme": "./README.md",
+    "logo": "./icons/app.svg",
+      "hero": {"source": "./marketplace/hero.svg", "alt": "Time Off cover"},
+      "images": [{"source": "./marketplace/overview.png", "alt": "Time Off overview in Canvas", "caption": "Time Off overview"}, {"source": "./marketplace/detail.png", "alt": "Leave requests in Canvas", "caption": "Leave requests"}],
+      "readme": "./marketplace/README.md",
     "keywords": [
       "time off",
       "leave",

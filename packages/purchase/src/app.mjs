@@ -127,11 +127,14 @@ export const manifest = {
   kind: 'Application',
   metadata: {
     id: 'purchase', name: 'Purchase',
-    description: 'Vendors and purchase orders as files in your workspace, confirmed and received by script, with draft vendor bills handed to Invoicing.',
+    description: "Manage vendors and follow purchases from request for quotation to order.",
     icon: './icons/app.svg', version, author: 'Verentis',
   },
   marketplace: {
-    readme: './README.md',
+    logo: "./icons/app.svg",
+    hero: {"source": "./marketplace/hero.svg", "alt": "Purchase cover"},
+    images: [{"source": "./marketplace/overview.png", "alt": "Purchase overview in Canvas", "caption": "Purchase overview"}, {"source": "./marketplace/detail.png", "alt": "Purchase orders in Canvas", "caption": "Purchase orders"}],
+    readme: "./marketplace/README.md",
     keywords: ['purchase', 'purchasing', 'procurement', 'vendors', 'purchase orders', 'rfq', 'vendor bills'],
   },
   spec: {

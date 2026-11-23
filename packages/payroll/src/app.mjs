@@ -146,11 +146,14 @@ export const manifest = {
   kind: 'Application',
   metadata: {
     id: 'payroll', name: 'Payroll',
-    description: 'A region-agnostic payroll engine: salary structures, pay profiles and pay runs as files in your workspace, computed and posted to the Accounting ledger by script.',
+    description: "Prepare pay runs using salary rules you define for your organisation.",
     icon: './icons/app.svg', version, author: 'Verentis',
   },
   marketplace: {
-    readme: './README.md',
+    logo: "./icons/app.svg",
+    hero: {"source": "./marketplace/hero.svg", "alt": "Payroll cover"},
+    images: [{"source": "./marketplace/overview.png", "alt": "Payroll overview in Canvas", "caption": "Payroll overview"}, {"source": "./marketplace/detail.png", "alt": "Salary structures in Canvas", "caption": "Salary structures"}],
+    readme: "./marketplace/README.md",
     keywords: ['payroll', 'salaries', 'payslips', 'pay runs', 'wages', 'hr', 'accounting'],
   },
   spec: {

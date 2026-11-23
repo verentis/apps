@@ -98,11 +98,14 @@ export const manifest = {
   kind: 'Application',
   metadata: {
     id: 'referrals', name: 'Referrals',
-    description: 'Employee referrals as files in your workspace, with a points leaderboard and scripted hire decisions that award points from the settings.',
+    description: "Track employee referrals and recognise the people behind successful hires.",
     icon: './icons/app.svg', version, author: 'Verentis',
   },
   marketplace: {
-    readme: './README.md',
+    logo: "./icons/app.svg",
+    hero: {"source": "./marketplace/hero.svg", "alt": "Referrals cover"},
+    images: [{"source": "./marketplace/overview.png", "alt": "Referrals overview in Canvas", "caption": "Referrals overview"}, {"source": "./marketplace/detail.png", "alt": "Leaderboard in Canvas", "caption": "Leaderboard"}],
+    readme: "./marketplace/README.md",
     keywords: ['referrals', 'recruitment', 'hiring', 'points', 'leaderboard', 'hr'],
   },
   spec: {

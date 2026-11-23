@@ -118,11 +118,14 @@ export const manifest = {
   kind: 'Application',
   metadata: {
     id: 'appointments', name: 'Appointments',
-    description: 'Appointment scheduling as files in your workspace: appointment types with durations and buffers, and bookings with conflict-checked confirmation.',
+    description: "Organise bookings around the time each appointment actually needs.",
     icon: './icons/app.svg', version, author: 'Verentis',
   },
   marketplace: {
-    readme: './README.md',
+    logo: "./icons/app.svg",
+    hero: {"source": "./marketplace/hero.svg", "alt": "Appointments cover"},
+    images: [{"source": "./marketplace/overview.png", "alt": "Appointments overview in Canvas", "caption": "Appointments overview"}, {"source": "./marketplace/detail.png", "alt": "Types in Canvas", "caption": "Types"}],
+    readme: "./marketplace/README.md",
     keywords: ['appointments', 'booking', 'scheduling', 'calendar', 'meetings'],
   },
   spec: {

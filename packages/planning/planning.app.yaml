@@ -4,13 +4,16 @@
   "metadata": {
     "id": "planning",
     "name": "Planning",
-    "description": "Shift planning as files in your workspace: roles and shifts with a week schedule, overlap-checked publishing and confirmed, locked shifts.",
+    "description": "Build a staff roster and spot conflicts before shifts are published.",
     "icon": "./icons/app.svg",
     "version": "0.1.0",
     "author": "Verentis"
   },
   "marketplace": {
-    "readme": "./README.md",
+    "logo": "./icons/app.svg",
+      "hero": {"source": "./marketplace/hero.svg", "alt": "Planning cover"},
+      "images": [{"source": "./marketplace/overview.png", "alt": "Planning overview in Canvas", "caption": "Planning overview"}, {"source": "./marketplace/detail.png", "alt": "Shifts in Canvas", "caption": "Shifts"}],
+      "readme": "./marketplace/README.md",
     "keywords": [
       "planning",
       "shifts",

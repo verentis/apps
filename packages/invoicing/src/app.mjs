@@ -177,11 +177,14 @@ export const manifest = {
   kind: 'Application',
   metadata: {
     id: 'invoicing', name: 'Invoicing',
-    description: 'Invoices, credit notes and payments as files in your workspace, issued and posted to the Accounting ledger by script.',
+    description: "Issue customer invoices and see what is still owed.",
     icon: './icons/app.svg', version, author: 'Verentis',
   },
   marketplace: {
-    readme: './README.md',
+    logo: "./icons/app.svg",
+    hero: {"source": "./marketplace/hero.svg", "alt": "Invoicing cover"},
+    images: [{"source": "./marketplace/overview.png", "alt": "Invoicing overview in Canvas", "caption": "Invoicing overview"}, {"source": "./marketplace/detail.png", "alt": "Receivables in Canvas", "caption": "Receivables"}],
+    readme: "./marketplace/README.md",
     keywords: ['invoicing', 'invoices', 'credit notes', 'payments', 'receivables', 'billing', 'accounting'],
   },
   spec: {

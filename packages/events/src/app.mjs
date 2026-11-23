@@ -112,11 +112,14 @@ export const manifest = {
   kind: 'Application',
   metadata: {
     id: 'events', name: 'Events',
-    description: 'Events and registrations as files in your workspace, with capacity tracking, a publishing lifecycle and scripted confirm and check-in actions.',
+    description: "Plan events and keep track of who is coming.",
     icon: './icons/app.svg', version, author: 'Verentis',
   },
   marketplace: {
-    readme: './README.md',
+    logo: "./icons/app.svg",
+    hero: {"source": "./marketplace/hero.svg", "alt": "Events cover"},
+    images: [{"source": "./marketplace/overview.png", "alt": "Events overview in Canvas", "caption": "Events overview"}, {"source": "./marketplace/detail.png", "alt": "All events in Canvas", "caption": "All events"}],
+    readme: "./marketplace/README.md",
     keywords: ['events', 'registrations', 'attendees', 'tickets', 'capacity', 'venue'],
   },
   spec: {

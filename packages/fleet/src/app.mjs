@@ -130,11 +130,14 @@ export const manifest = {
   kind: 'Application',
   metadata: {
     id: 'fleet', name: 'Fleet',
-    description: 'Vehicles, fleet contracts and service logs as files in your workspace, validated and posted by script and reported with Canvas.',
+    description: "Keep vehicle records, contracts and service history together.",
     icon: './icons/app.svg', version, author: 'Verentis',
   },
   marketplace: {
-    readme: './README.md',
+    logo: "./icons/app.svg",
+    hero: {"source": "./marketplace/hero.svg", "alt": "Fleet cover"},
+    images: [{"source": "./marketplace/overview.png", "alt": "Fleet overview in Canvas", "caption": "Fleet overview"}, {"source": "./marketplace/detail.png", "alt": "Contracts in Canvas", "caption": "Contracts"}],
+    readme: "./marketplace/README.md",
     keywords: ['fleet', 'vehicles', 'contracts', 'lease', 'insurance', 'service logs', 'odometer', 'maintenance'],
   },
   spec: {
