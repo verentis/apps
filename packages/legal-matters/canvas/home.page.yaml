@@ -1,0 +1,87 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "legal-matters-home",
+    "name": "Legal Matters",
+    "icon": "briefcase-business"
+  },
+  "spec": {
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.heading",
+            "props": {
+              "level": 2,
+              "text": "Legal Matters"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Synthetic pilot only. Do not enter real names, client instructions or confidential records. Everyone in this isolated workspace must be authorised for every pilot file."
+            }
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Start a synthetic instruction"
+            },
+            "children": [
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "Disabled by default. The administrator must designate this isolated synthetic workspace before creating a matter. In Files choose New → Synthetic legal matter inside /legal-matters."
+                }
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Open intake folder in Files",
+                  "variant": "outline",
+                  "icon": "folder-open",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/legal-matters"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "From instruction to invoice"
+            },
+            "children": [
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "Link CRM parties, screen, record a human conflict disposition and agree terms. Prepare a pre-bill from validated time and explicitly recoverable expenses; review before creating an Invoicing draft. No trust money."
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

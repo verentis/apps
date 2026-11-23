@@ -1,0 +1,49 @@
+{
+  "formatVersion": 1,
+  "jurisdiction": "NA",
+  "repository": "lexifina/namibia-law",
+  "revision": "e46aaa41315de063236d6df919829a7f6db63cf8",
+  "authorities": [
+    {
+      "id": "NA:labour:s11",
+      "jurisdiction": "NA",
+      "instrument": "Labour Act 11 of 2007",
+      "provision": "s 11",
+      "citation": "Labour Act 11 of 2007 s 11",
+      "topic": "Payment of remuneration",
+      "officialUrl": "https://namiblii.org/akn/na/act/2007/11",
+      "coverage": "Provision history",
+      "revision": "e46aaa41315de063236d6df919829a7f6db63cf8",
+      "sourceUrl": "https://github.com/lexifina/namibia-law/blob/e46aaa41315de063236d6df919829a7f6db63cf8/labour/sec-011.md",
+      "rights": "link-only",
+      "checkedThrough": "2026-11-16",
+      "versions": [
+        {
+          "from": "2012-08-01",
+          "revision": "e9b3db8ec712a3403af5c13e323f48d0bec3406f",
+          "url": "https://github.com/lexifina/namibia-law/blob/e9b3db8ec712a3403af5c13e323f48d0bec3406f/labour/sec-011.md"
+        },
+        {
+          "from": "2023-03-15",
+          "revision": "991a613e786a610edc7fede7793a31fd2c3df090",
+          "url": "https://github.com/lexifina/namibia-law/blob/991a613e786a610edc7fede7793a31fd2c3df090/labour/sec-011.md"
+        }
+      ]
+    },
+    {
+      "id": "NA:companies:s11",
+      "jurisdiction": "NA",
+      "instrument": "Companies Act 28 of 2004",
+      "provision": "s 11",
+      "citation": "Companies Act 28 of 2004 s 11",
+      "topic": "Company law",
+      "officialUrl": "https://namiblii.org/akn/na/act/2004/28",
+      "coverage": "Reference only",
+      "revision": "e46aaa41315de063236d6df919829a7f6db63cf8",
+      "sourceUrl": "https://github.com/lexifina/namibia-law/blob/e46aaa41315de063236d6df919829a7f6db63cf8/companies/sec-011.md",
+      "rights": "link-only",
+      "checkedThrough": "2026-11-16",
+      "versions": []
+    }
+  ]
+}

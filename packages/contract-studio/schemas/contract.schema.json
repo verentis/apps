@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.verentis.io/contract-studio/v1/contract.schema.json",
+  "type": "object",
+  "title": "Contract Studio agreement",
+  "required": [
+    "kind",
+    "version",
+    "stage",
+    "code",
+    "title",
+    "points"
+  ],
+  "properties": {
+    "kind": {
+      "const": "contract"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "stage": {
+      "enum": [
+        "draft",
+        "in-review",
+        "approved",
+        "issued"
+      ]
+    },
+    "code": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "matter": {
+      "type": "string"
+    },
+    "points": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "origin"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "origin": {
+            "enum": [
+              "inline",
+              "firm"
+            ]
+          },
+          "wording": {
+            "type": "string"
+          },
+          "variation": {
+            "type": "string"
+          },
+          "bindings": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "precedent": {
+            "type": "object"
+          },
+          "authority": {
+            "type": "object",
+            "required": [
+              "id",
+              "rights",
+              "pinpoint",
+              "sourceUrl",
+              "revision"
+            ],
+            "properties": {
+              "rights": {
+                "const": "link-only"
+              }
+            }
+          }
+        }
+      }
+    },
+    "snapshot": {
+      "type": "object",
+      "required": [
+        "client",
+        "office",
+        "schedule",
+        "clientSha256",
+        "officeSha256",
+        "scheduleSha256"
+      ]
+    }
+  }
+}

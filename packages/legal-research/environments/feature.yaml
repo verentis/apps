@@ -1,0 +1,10 @@
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "legal-research"
+  },
+  "spec": {
+    "entry": "https://canvas.${param:apps-domain}"
+  }
+}

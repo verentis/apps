@@ -1,0 +1,1379 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Form",
+  "metadata": {
+    "id": "contract-studio-contract",
+    "name": "Contract Studio agreement",
+    "description": "Edit points and review pinned sources.",
+    "icon": "file-pen-line"
+  },
+  "spec": {
+    "binds": [
+      {
+        "pattern": "application/vnd.verentis.contract-studio.contract+json",
+        "mode": "edit",
+        "priority": 200,
+        "scope": "global",
+        "json-schema": {
+          "id": "https://schemas.verentis.io/contract-studio/v1/contract.schema.json",
+          "source": "/applications/contract-studio/schemas/contract.schema.json",
+          "title": "Contract Studio agreement",
+          "version": "1"
+        }
+      }
+    ],
+    "entry": "${var:canvas-origin}/render?document=%2Fapplications%2Fcontract-studio%2Fcanvas%2Fcontract.form.yaml",
+    "scope": "global",
+    "mime-types": [
+      {
+        "pattern": "application/vnd.verentis.contract-studio.contract+json",
+        "mode": "edit",
+        "priority": 200,
+        "json-schema": {
+          "id": "https://schemas.verentis.io/contract-studio/v1/contract.schema.json",
+          "source": "/applications/contract-studio/schemas/contract.schema.json",
+          "title": "Contract Studio agreement",
+          "version": "1"
+        }
+      }
+    ],
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run",
+      "execution.read"
+    ],
+    "capabilities": [],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-popups": false,
+      "allow-forms": true
+    },
+    "file-access": [
+      {
+        "path": "/applications/contract-studio/scripts/draft",
+        "mode": "read",
+        "reason": "Run the draft operation"
+      },
+      {
+        "path": "/applications/contract-studio/scripts/issue",
+        "mode": "read",
+        "reason": "Run the issue operation"
+      },
+      {
+        "path": "/applications/contract-studio/schemas/contract.schema.json",
+        "mode": "read",
+        "reason": "Identify the agreement schema"
+      },
+      {
+        "path": "/legal-precedents",
+        "mode": "read",
+        "reason": "Choose approved firm revisions"
+      },
+      {
+        "path": "/applications/legal-research/catalog/authorities.json",
+        "mode": "read",
+        "reason": "Choose bibliographic South African references"
+      },
+      {
+        "path": "/legal-authority-packs",
+        "mode": "read",
+        "reason": "Choose bibliographic references in optional installed jurisdiction packs"
+      }
+    ],
+    "access": [
+      {
+        "path": "/applications/contract-studio/scripts/draft",
+        "reason": "Run the draft operation"
+      },
+      {
+        "path": "/applications/contract-studio/scripts/issue",
+        "reason": "Run the issue operation"
+      },
+      {
+        "path": "/applications/contract-studio/schemas/contract.schema.json",
+        "reason": "Identify the agreement schema"
+      },
+      {
+        "path": "/legal-precedents",
+        "reason": "Choose approved firm revisions"
+      },
+      {
+        "path": "/applications/legal-research/catalog/authorities.json",
+        "reason": "Choose bibliographic South African references"
+      },
+      {
+        "path": "/legal-authority-packs",
+        "reason": "Choose bibliographic references in optional installed jurisdiction packs"
+      }
+    ],
+    "data": {
+      "record": {
+        "kind": "document",
+        "consistency": "conditional"
+      },
+      "library": {
+        "kind": "folder",
+        "path": "/legal-precedents",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.contract-studio.precedent+json"
+      },
+      "packs": {
+        "kind": "folder",
+        "path": "/legal-authority-packs",
+        "mime-pattern": "application/vnd.verentis.legal-research.pack+json"
+      },
+      "authorities": {
+        "kind": "file",
+        "path": "{{ state.catalog }}",
+        "parse": "json"
+      }
+    },
+    "state": {
+      "title": "",
+      "matter": "",
+      "pointId": "",
+      "wording": "",
+      "bindings": "",
+      "note": "",
+      "precedentPath": "",
+      "authorityId": "",
+      "pinpoint": "",
+      "reviewer": "",
+      "position": 1,
+      "catalog": "/applications/legal-research/catalog/authorities.json",
+      "sourceKind": "firm",
+      "decision": "defer",
+      "result": {}
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.heading",
+            "props": {
+              "level": 2,
+              "text": "{{ form.values.title || 'Agreement' }}"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Agreement {{ form.values.code }} · {{ form.values.stage }} · revision {{ form.values.version }} · {{ form.values.matter }}"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$record.error }}"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$record.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Agreement details"
+            },
+            "children": [
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Load current details",
+                  "variant": "ghost",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "set-state": {
+                        "key": "title",
+                        "value": "{{ form.values.title }}"
+                      }
+                    },
+                    {
+                      "set-state": {
+                        "key": "matter",
+                        "value": "{{ form.values.matter }}"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "canvas.grid",
+                "layout": {
+                  "base": {
+                    "columns": 1,
+                    "gap": 4
+                  },
+                  "tablet": {
+                    "columns": 2
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.form.input",
+                    "props": {
+                      "label": "Client-facing title",
+                      "value": "{{ state.title }}"
+                    }
+                  },
+                  {
+                    "type": "canvas.form.input",
+                    "props": {
+                      "label": "Optional matter path",
+                      "value": "{{ state.matter }}"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Update agreement details",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "metadata"
+                }
+              }
+            ],
+            "rules": {
+              "visible": "form.values.stage === 'draft'"
+            }
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Points and sources"
+            },
+            "children": [
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "Select a row to load it into the editor. Point IDs stay fixed when numbering changes. No citation or internal note is copied into the client document."
+                }
+              },
+              {
+                "type": "canvas.table",
+                "props": {
+                  "rows": "{{ (form.values.points || []).map((p, i) => ({ id:p.id, number:i+1, origin:p.origin, template:p.precedent ? p.precedent.wording : '', revision:p.precedent ? p.precedent.code+' v'+p.precedent.revision : '', wording:p.origin === 'firm' ? (p.variation || p.precedent.wording) : p.wording, edit:p.origin === 'firm' ? (p.variation || '') : p.wording, bindings:p.bindings, note:p.note, citation:p.authority ? p.authority.citation+' · '+p.authority.pinpoint+' · '+p.authority.coverage+' · '+p.authority.revision+' · '+p.authority.sourceUrl : '', update: (p.precedent && (data.library || []).some(e => e.data && e.data.code === p.precedent.code && e.data.revision > p.precedent.revision)) || (p.authority && p.authority.catalog === state.catalog && ((data.authorities && data.authorities.authorities) || []).some(a => a.id === p.authority.id && a.revision !== p.authority.revision)) ? 'Revision available for review' : '', decision:p.sourceDecision ? p.sourceDecision.decision : '' })) }}",
+                  "columns": [
+                    {
+                      "key": "number",
+                      "label": "#"
+                    },
+                    {
+                      "key": "id",
+                      "label": "Point ID"
+                    },
+                    {
+                      "key": "origin",
+                      "label": "Origin"
+                    },
+                    {
+                      "key": "revision",
+                      "label": "Firm revision"
+                    },
+                    {
+                      "key": "template",
+                      "label": "Approved base"
+                    },
+                    {
+                      "key": "wording",
+                      "label": "Current template"
+                    },
+                    {
+                      "key": "bindings",
+                      "label": "Confirmed values"
+                    },
+                    {
+                      "key": "note",
+                      "label": "Internal note"
+                    },
+                    {
+                      "key": "citation",
+                      "label": "Authority (link only)"
+                    },
+                    {
+                      "key": "update",
+                      "label": "Source check"
+                    },
+                    {
+                      "key": "decision",
+                      "label": "Source decision"
+                    }
+                  ],
+                  "emptyText": "No points yet.",
+                  "clickable": true
+                },
+                "on": {
+                  "row-click": [
+                    {
+                      "set-state": {
+                        "key": "pointId",
+                        "value": "{{ event.id }}"
+                      }
+                    },
+                    {
+                      "set-state": {
+                        "key": "wording",
+                        "value": "{{ event.edit }}"
+                      }
+                    },
+                    {
+                      "set-state": {
+                        "key": "bindings",
+                        "value": "{{ event.bindings }}"
+                      }
+                    },
+                    {
+                      "set-state": {
+                        "key": "note",
+                        "value": "{{ event.note }}"
+                      }
+                    },
+                    {
+                      "set-state": {
+                        "key": "position",
+                        "value": "{{ event.number }}"
+                      }
+                    },
+                    {
+                      "set-state": {
+                        "key": "result",
+                        "value": {}
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Point editor"
+            },
+            "children": [
+              {
+                "type": "canvas.grid",
+                "layout": {
+                  "base": {
+                    "columns": 1,
+                    "gap": 4
+                  },
+                  "tablet": {
+                    "columns": 2
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.form.input",
+                    "props": {
+                      "label": "Stable point ID",
+                      "value": "{{ state.pointId }}"
+                    }
+                  },
+                  {
+                    "type": "canvas.form.number",
+                    "props": {
+                      "label": "Move to position",
+                      "value": "{{ state.position }}",
+                      "min": 1,
+                      "step": 1
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.form.textarea",
+                "props": {
+                  "label": "Inline wording / local variation",
+                  "value": "{{ state.wording }}",
+                  "description": "Leave blank on a firm point to retain the approved template. To refer to another point, put point:ID inside double braces."
+                }
+              },
+              {
+                "type": "canvas.form.textarea",
+                "props": {
+                  "label": "Confirmed variables, one name=value per line",
+                  "value": "{{ state.bindings }}"
+                }
+              },
+              {
+                "type": "canvas.form.textarea",
+                "props": {
+                  "label": "Internal note (never exported to client)",
+                  "value": "{{ state.note }}"
+                }
+              },
+              {
+                "type": "canvas.form.select",
+                "props": {
+                  "label": "Firm revision",
+                  "value": "{{ state.precedentPath }}",
+                  "options": "{{ (data.library || []).filter(e => e.data).map(e => ({label:e.data.title+' · '+e.data.code+' v'+e.data.revision+' · '+e.data.jurisdiction, value:e.path})) }}"
+                }
+              },
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "{{ (data.library || []).filter(e => e.path === state.precedentPath && e.data).map(e => e.data.intendedUse+' — '+e.data.wording).join('') }}"
+                }
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Add inline point",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "inline"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Insert firm revision",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "firm"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Save selected point",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "update"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Move",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "move"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Remove",
+                      "variant": "ghost",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "remove"
+                    }
+                  }
+                ]
+              }
+            ],
+            "rules": {
+              "visible": "form.values.stage === 'draft'"
+            }
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Statutory support · link only"
+            },
+            "children": [
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "Use your own wording. A citation does not establish applicability, commencement or compliance. Research is optional for drafting."
+                }
+              },
+              {
+                "type": "canvas.form.select",
+                "props": {
+                  "label": "Installed catalogue",
+                  "value": "{{ state.catalog }}",
+                  "options": "{{ [{label:'South Africa pilot',value:'/applications/legal-research/catalog/authorities.json'}].concat((data.packs || []).filter(e => e.kind === 'file').map(e => ({label:e.name,value:e.path}))) }}"
+                }
+              },
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "Selected catalogue unavailable. Install Legal Research or select another pack; authoring remains available."
+                },
+                "rules": {
+                  "visible": "data.$authorities.status === 'error'"
+                }
+              },
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "Loading…",
+                  "tone": "muted"
+                },
+                "rules": {
+                  "visible": "data.$authorities.status === 'loading'"
+                }
+              },
+              {
+                "type": "canvas.form.select",
+                "props": {
+                  "label": "Authority",
+                  "value": "{{ state.authorityId }}",
+                  "options": "{{ ((data.authorities && data.authorities.authorities) || []).filter(a => a.rights === 'link-only').map(a => ({label:a.jurisdiction+' · '+a.citation+' · '+a.coverage+' · '+a.revision,value:a.id})) }}"
+                }
+              },
+              {
+                "type": "canvas.form.input",
+                "props": {
+                  "label": "Pinpoint in the cited provision",
+                  "value": "{{ state.pinpoint }}"
+                }
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Attach citation to point",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "attach"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Remove citation",
+                      "variant": "ghost",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "detach"
+                    }
+                  }
+                ]
+              }
+            ],
+            "rules": {
+              "visible": "form.values.stage === 'draft'"
+            }
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Review a dependency update"
+            },
+            "children": [
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "Select a point. For a firm clause, choose a newer revision of that same clause above. For an authority, compare against its installed catalogue. No change is applied automatically."
+                }
+              },
+              {
+                "type": "canvas.form.select",
+                "props": {
+                  "label": "Source",
+                  "value": "{{ state.sourceKind }}",
+                  "options": [
+                    {
+                      "label": "Firm revision",
+                      "value": "firm"
+                    },
+                    {
+                      "label": "Statutory authority",
+                      "value": "authority"
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Compare pinned and available sources",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "compare"
+                }
+              },
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "Pinned: {{ state.result.before }}"
+                }
+              },
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "Available: {{ state.result.after }}"
+                }
+              },
+              {
+                "type": "canvas.form.select",
+                "props": {
+                  "label": "Decision",
+                  "value": "{{ state.decision }}",
+                  "options": [
+                    {
+                      "label": "accept",
+                      "value": "accept"
+                    },
+                    {
+                      "label": "reject",
+                      "value": "reject"
+                    },
+                    {
+                      "label": "defer",
+                      "value": "defer"
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Record decision",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "decide"
+                },
+                "rules": {
+                  "disabled": "!state.result.token"
+                }
+              }
+            ],
+            "rules": {
+              "visible": "form.values.stage === 'draft'"
+            }
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Review"
+            },
+            "children": [
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "Review validates all variables and point references and renders exactly what the client will receive."
+                }
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Submit for review",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "submit"
+                }
+              }
+            ],
+            "rules": {
+              "visible": "form.values.stage === 'draft'"
+            }
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Client text for review"
+            },
+            "children": [
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "{{ form.values.review && form.values.review.client }}"
+                }
+              },
+              {
+                "type": "canvas.form.input",
+                "props": {
+                  "label": "Approving reviewer",
+                  "value": "{{ state.reviewer }}"
+                }
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Return to draft",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "return"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Approve and freeze",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "approve"
+                    }
+                  }
+                ]
+              }
+            ],
+            "rules": {
+              "visible": "form.values.stage === 'in-review'"
+            }
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Approved snapshot"
+            },
+            "children": [
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "{{ form.values.snapshot && form.values.snapshot.client }}"
+                }
+              },
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "Client SHA-256: {{ form.values.snapshot && form.values.snapshot.clientSha256 }}"
+                }
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Issue or verify all files",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "issue"
+                }
+              },
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "Client text: {{ form.values.clientPath }}"
+                }
+              },
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "Office-editable copy: {{ form.values.officePath }}"
+                }
+              },
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "Internal schedule: {{ form.values.schedulePath }}"
+                }
+              },
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "Copy the issued .fodt to a negotiation file before editing it in Office. Keep the original unchanged."
+                }
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Open client text",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "{{ form.values.clientPath }}",
+                            "mode": "view"
+                          }
+                        }
+                      ]
+                    },
+                    "rules": {
+                      "visible": "form.values.stage === 'issued'"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Open internal schedule",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "{{ form.values.schedulePath }}",
+                            "mode": "view"
+                          }
+                        }
+                      ]
+                    },
+                    "rules": {
+                      "visible": "form.values.stage === 'issued'"
+                    }
+                  }
+                ]
+              }
+            ],
+            "rules": {
+              "visible": "form.values.stage === 'approved' || form.values.stage === 'issued'"
+            }
+          }
+        ]
+      }
+    ],
+    "actions": {
+      "metadata": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "run-script": {
+              "file": "/applications/contract-studio/scripts/draft",
+              "parameters": {
+                "operation": "metadata",
+                "path": "{{ ctx.file.path }}",
+                "version": "{{ form.values.version }}",
+                "title": "{{ state.title }}",
+                "matter": "{{ state.matter }}"
+              },
+              "timeout": 120,
+              "assign": "result"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ state.result.message || 'Saved' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "inline": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "run-script": {
+              "file": "/applications/contract-studio/scripts/draft",
+              "parameters": {
+                "operation": "add-inline",
+                "path": "{{ ctx.file.path }}",
+                "version": "{{ form.values.version }}",
+                "pointId": "{{ state.pointId }}",
+                "wording": "{{ state.wording }}",
+                "bindings": "{{ state.bindings }}",
+                "note": "{{ state.note }}"
+              },
+              "timeout": 120,
+              "assign": "result"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ state.result.message || 'Saved' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "firm": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "run-script": {
+              "file": "/applications/contract-studio/scripts/draft",
+              "parameters": {
+                "operation": "add-firm",
+                "path": "{{ ctx.file.path }}",
+                "version": "{{ form.values.version }}",
+                "pointId": "{{ state.pointId }}",
+                "wording": "{{ state.wording }}",
+                "bindings": "{{ state.bindings }}",
+                "note": "{{ state.note }}",
+                "precedentPath": "{{ state.precedentPath }}"
+              },
+              "timeout": 120,
+              "assign": "result"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ state.result.message || 'Saved' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "update": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "run-script": {
+              "file": "/applications/contract-studio/scripts/draft",
+              "parameters": {
+                "operation": "edit-point",
+                "path": "{{ ctx.file.path }}",
+                "version": "{{ form.values.version }}",
+                "pointId": "{{ state.pointId }}",
+                "wording": "{{ state.wording }}",
+                "bindings": "{{ state.bindings }}",
+                "note": "{{ state.note }}"
+              },
+              "timeout": 120,
+              "assign": "result"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ state.result.message || 'Saved' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "move": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "run-script": {
+              "file": "/applications/contract-studio/scripts/draft",
+              "parameters": {
+                "operation": "move",
+                "path": "{{ ctx.file.path }}",
+                "version": "{{ form.values.version }}",
+                "pointId": "{{ state.pointId }}",
+                "position": "{{ state.position }}"
+              },
+              "timeout": 120,
+              "assign": "result"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ state.result.message || 'Saved' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "remove": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Confirm",
+              "message": "Remove this point? Review will reject references to the removed ID."
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/contract-studio/scripts/draft",
+              "parameters": {
+                "operation": "remove",
+                "path": "{{ ctx.file.path }}",
+                "version": "{{ form.values.version }}",
+                "pointId": "{{ state.pointId }}"
+              },
+              "timeout": 120,
+              "assign": "result"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ state.result.message || 'Saved' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "attach": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "run-script": {
+              "file": "/applications/contract-studio/scripts/draft",
+              "parameters": {
+                "operation": "attach",
+                "path": "{{ ctx.file.path }}",
+                "version": "{{ form.values.version }}",
+                "pointId": "{{ state.pointId }}",
+                "catalog": "{{ state.catalog }}",
+                "authorityId": "{{ state.authorityId }}",
+                "pinpoint": "{{ state.pinpoint }}"
+              },
+              "timeout": 120,
+              "assign": "result"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ state.result.message || 'Saved' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "detach": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "run-script": {
+              "file": "/applications/contract-studio/scripts/draft",
+              "parameters": {
+                "operation": "detach",
+                "path": "{{ ctx.file.path }}",
+                "version": "{{ form.values.version }}",
+                "pointId": "{{ state.pointId }}"
+              },
+              "timeout": 120,
+              "assign": "result"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ state.result.message || 'Saved' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "compare": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "run-script": {
+              "file": "/applications/contract-studio/scripts/draft",
+              "parameters": {
+                "operation": "compare",
+                "path": "{{ ctx.file.path }}",
+                "version": "{{ form.values.version }}",
+                "pointId": "{{ state.pointId }}",
+                "sourceKind": "{{ state.sourceKind }}",
+                "precedentPath": "{{ state.precedentPath }}"
+              },
+              "timeout": 120,
+              "assign": "result"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ state.result.message || 'Saved' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "decide": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "run-script": {
+              "file": "/applications/contract-studio/scripts/draft",
+              "parameters": {
+                "operation": "decide",
+                "path": "{{ ctx.file.path }}",
+                "version": "{{ form.values.version }}",
+                "pointId": "{{ state.pointId }}",
+                "sourceKind": "{{ state.sourceKind }}",
+                "precedentPath": "{{ state.precedentPath }}",
+                "decision": "{{ state.decision }}",
+                "token": "{{ state.result.token }}"
+              },
+              "timeout": 120,
+              "assign": "result"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ state.result.message || 'Saved' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "submit": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "run-script": {
+              "file": "/applications/contract-studio/scripts/draft",
+              "parameters": {
+                "operation": "submit",
+                "path": "{{ ctx.file.path }}",
+                "version": "{{ form.values.version }}"
+              },
+              "timeout": 120,
+              "assign": "result"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ state.result.message || 'Saved' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "return": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "run-script": {
+              "file": "/applications/contract-studio/scripts/draft",
+              "parameters": {
+                "operation": "return",
+                "path": "{{ ctx.file.path }}",
+                "version": "{{ form.values.version }}"
+              },
+              "timeout": 120,
+              "assign": "result"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ state.result.message || 'Saved' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "approve": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Confirm",
+              "message": "Freeze the reviewed client text, source schedule and digests?"
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/contract-studio/scripts/draft",
+              "parameters": {
+                "operation": "approve",
+                "path": "{{ ctx.file.path }}",
+                "version": "{{ form.values.version }}",
+                "reviewer": "{{ state.reviewer }}"
+              },
+              "timeout": 120,
+              "assign": "result"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ state.result.message || 'Saved' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "issue": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Confirm",
+              "message": "Materialise the approved snapshot into separate client and internal files?"
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/contract-studio/scripts/issue",
+              "parameters": {
+                "path": "{{ ctx.file.path }}",
+                "version": "{{ form.values.version }}"
+              },
+              "timeout": 120,
+              "assign": "result"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ state.result.message || 'Saved' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

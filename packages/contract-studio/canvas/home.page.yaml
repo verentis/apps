@@ -1,0 +1,370 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "contract-studio-home",
+    "name": "Contract Studio",
+    "icon": "file-pen-line"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/legal-contracts",
+        "reason": "List workspace agreements"
+      },
+      {
+        "path": "/applications/contract-studio/scripts/draft",
+        "reason": "Run the draft operation"
+      },
+      {
+        "path": "/applications/contract-studio/scripts/library",
+        "reason": "Run the library operation"
+      }
+    ],
+    "data": {
+      "agreements": {
+        "kind": "folder",
+        "path": "/legal-contracts",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.contract-studio.contract+json"
+      }
+    },
+    "state": {
+      "code": "",
+      "title": "",
+      "matter": "",
+      "clauseCode": "",
+      "clauseTitle": "",
+      "wording": "",
+      "jurisdiction": "",
+      "intendedUse": "",
+      "approvedBy": "",
+      "revision": 1,
+      "confirmed": false,
+      "result": {}
+    },
+    "actions": {
+      "create": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "run-script": {
+              "file": "/applications/contract-studio/scripts/draft",
+              "parameters": {
+                "operation": "create",
+                "code": "{{ state.code }}",
+                "title": "{{ state.title }}",
+                "matter": "{{ state.matter }}"
+              },
+              "timeout": 120,
+              "assign": "result"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "agreements"
+            }
+          },
+          {
+            "open-file": {
+              "path": "{{ state.result.path }}",
+              "mode": "edit"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ state.result.message || 'Saved' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "publish": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "confirm": {
+              "title": "Confirm",
+              "message": "Publish this firm-approved revision? Revisions cannot be edited here."
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/contract-studio/scripts/library",
+              "parameters": {
+                "code": "{{ state.clauseCode }}",
+                "title": "{{ state.clauseTitle }}",
+                "revision": "{{ state.revision }}",
+                "wording": "{{ state.wording }}",
+                "jurisdiction": "{{ state.jurisdiction }}",
+                "intendedUse": "{{ state.intendedUse }}",
+                "approvedBy": "{{ state.approvedBy }}",
+                "confirmed": "{{ state.confirmed }}"
+              },
+              "timeout": 120,
+              "assign": "result"
+            }
+          },
+          {
+            "set-state": {
+              "key": "confirmed",
+              "value": false
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ state.result.message || 'Saved' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.heading",
+            "props": {
+              "level": 2,
+              "text": "Contract Studio"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Draft ordered points, review their sources, then issue a clean agreement. Use synthetic material until workspace isolation is verified.",
+              "tone": "muted"
+            }
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Start an agreement"
+            },
+            "children": [
+              {
+                "type": "canvas.grid",
+                "layout": {
+                  "base": {
+                    "columns": 1,
+                    "gap": 4
+                  },
+                  "tablet": {
+                    "columns": 2
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.form.input",
+                    "props": {
+                      "label": "Unique agreement code",
+                      "value": "{{ state.code }}"
+                    }
+                  },
+                  {
+                    "type": "canvas.form.input",
+                    "props": {
+                      "label": "Client-facing title",
+                      "value": "{{ state.title }}"
+                    }
+                  },
+                  {
+                    "type": "canvas.form.input",
+                    "props": {
+                      "label": "Optional matter path",
+                      "value": "{{ state.matter }}",
+                      "placeholder": "/legal-matters/MAT-0001 (not opened or verified)"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Create and open draft",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "create"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Agreements"
+            },
+            "children": [
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "{{ data.$agreements.error }}"
+                },
+                "rules": {
+                  "visible": "data.$agreements.status === 'error'"
+                }
+              },
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "Loading…",
+                  "tone": "muted"
+                },
+                "rules": {
+                  "visible": "data.$agreements.status === 'loading'"
+                }
+              },
+              {
+                "type": "canvas.table",
+                "props": {
+                  "rows": "{{ (data.agreements || []).filter(e => e.data).map(e => ({path:e.path, code:e.data.code, title:e.data.title, stage:e.data.stage})) }}",
+                  "columns": [
+                    {
+                      "key": "code",
+                      "label": "Code"
+                    },
+                    {
+                      "key": "title",
+                      "label": "Title"
+                    },
+                    {
+                      "key": "stage",
+                      "label": "Stage"
+                    }
+                  ],
+                  "emptyText": "No agreements yet.",
+                  "clickable": true
+                },
+                "on": {
+                  "row-click": [
+                    {
+                      "open-file": {
+                        "path": "{{ event.path }}",
+                        "mode": "edit"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Publish a firm precedent revision"
+            },
+            "children": [
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "For authorised library editors. Publish original firm wording only. Use double braces around a variable name, for example two opening braces, client, and two closing braces."
+                }
+              },
+              {
+                "type": "canvas.grid",
+                "layout": {
+                  "base": {
+                    "columns": 1,
+                    "gap": 4
+                  },
+                  "tablet": {
+                    "columns": 2
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.form.input",
+                    "props": {
+                      "label": "Stable clause code",
+                      "value": "{{ state.clauseCode }}"
+                    }
+                  },
+                  {
+                    "type": "canvas.form.number",
+                    "props": {
+                      "label": "Revision number",
+                      "value": "{{ state.revision }}",
+                      "min": 1,
+                      "step": 1
+                    }
+                  },
+                  {
+                    "type": "canvas.form.input",
+                    "props": {
+                      "label": "Clause title",
+                      "value": "{{ state.clauseTitle }}"
+                    }
+                  },
+                  {
+                    "type": "canvas.form.input",
+                    "props": {
+                      "label": "Jurisdiction",
+                      "value": "{{ state.jurisdiction }}"
+                    }
+                  },
+                  {
+                    "type": "canvas.form.input",
+                    "props": {
+                      "label": "Intended use",
+                      "value": "{{ state.intendedUse }}"
+                    }
+                  },
+                  {
+                    "type": "canvas.form.input",
+                    "props": {
+                      "label": "Approved by",
+                      "value": "{{ state.approvedBy }}"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.form.textarea",
+                "props": {
+                  "label": "Approved template",
+                  "value": "{{ state.wording }}"
+                }
+              },
+              {
+                "type": "canvas.form.switch",
+                "props": {
+                  "label": "I confirm clearance for reuse and removal of all client details",
+                  "value": "{{ state.confirmed }}"
+                }
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Publish immutable revision",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "publish"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

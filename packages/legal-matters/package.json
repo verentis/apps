@@ -1,0 +1,12 @@
+{
+  "name": "@verentis/app-legal-matters",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "build": "node src/build.mjs",
+    "check": "node src/build.mjs --check",
+    "test:run": "node --test tests/*.test.mjs"
+  }
+}

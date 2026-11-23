@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="640" viewBox="0 0 1600 640">
+  <title>Law library shelves</title>
+  <rect width="1600" height="640" fill="#203d36"/>
+  <g stroke="#a2b9a4" fill="none" opacity=".28" stroke-width="3">
+    <path d="M-10 470h300M0 480h290M10 460V148h52v312zm72 0V200h47v260zm71 0-17-283 44-4 17 287zm61 0V226h39v234z"/>
+    <path d="M1340 180h270m-270 10h270m-236-17V-10h40v183zm64 0V-20h46v193zm67 0 31-177 45 8-32 169z"/>
+  </g>
+</svg>

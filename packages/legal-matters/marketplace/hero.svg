@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="480" viewBox="0 0 1280 480" role="img" aria-labelledby="title desc">
+  <title id="title">Legal Matters</title><desc id="desc">A matter folder with three tabs for intake, conflict review and billing.</desc>
+  <rect width="1280" height="480" fill="#173643"/>
+  <g font-family="system-ui,sans-serif">
+    <text x="76" y="141" fill="#a4d9c5" font-size="20" letter-spacing="4">VERENTIS  /  PRACTICE WORKSPACE</text>
+    <text x="72" y="244" fill="#fff3d7" font-size="80" font-weight="650">Legal Matters</text>
+    <text x="77" y="308" fill="#d3e8dc" font-size="26">From an instruction to a reviewed bill.</text>
+    <text x="78" y="385" fill="#a4d9c5" font-size="17">ISOLATED SYNTHETIC PILOT</text>
+    <path d="M843 150h119l30 30h184v178H843z" fill="#67a492"/>
+    <path d="M866 123h230v190H866z" fill="#bdddc9"/>
+    <path d="M887 102h230v190H887z" fill="#fff3d7"/>
+    <g fill="#25534e" font-size="19"><text x="909" y="145">01 / Intake</text><text x="909" y="184">02 / Conflict review</text><text x="909" y="223">03 / Pre-bill</text></g>
+    <path d="M833 248h354l-27 113H861z" fill="#82b6a4"/>
+  </g>
+</svg>

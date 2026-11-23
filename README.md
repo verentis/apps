@@ -10,6 +10,10 @@ are deployed separately; Canvas-backed business packages contain declarative ass
 | `markdown-viewer` | Safe content rendering and file-type registration. |
 | `smart-editor` | Rich editing, write access, and broader SDK integration. |
 | `crm` | File-based customers/pipeline: vendor-MIME JSON records, seeded containers, bound Canvas forms and creatables. |
+| `legal-matters` | Legal practice pilot: matter intake, conflict review and matter billing. |
+| `contract-studio` | Draft agreements from inline points, reusable firm clauses and pinned legal citations. |
+| `legal-research` | Browse South African legal citations and compare recorded provision versions without sending workspace searches to external services. |
+| `namibia-law` | Optional Namibian citation pack for Legal Research. |
 | `accounting` | File-based double-entry ledger: accounts, periods, journals and expenses posted by script, with trial balance, P&L and balance sheet pages. |
 | `invoicing` | File-based invoices, credit notes and payments issued to the Accounting ledger by script, with CRM customer copy and receivables. |
 | `sales` | Sales: products, quotations and sales orders; a quotation is confirmed into a sales order by script. |

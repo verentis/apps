@@ -1,0 +1,306 @@
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "contract-studio",
+    "name": "Contract Studio",
+    "description": "Draft, review and issue agreements with traceable firm wording and citation metadata.",
+    "icon": "./icons/app.svg",
+    "version": "0.1.0",
+    "author": "Verentis"
+  },
+  "marketplace": {
+    "logo": "./icons/app.svg",
+    "hero": {
+      "source": "./marketplace/hero.svg",
+      "alt": "Contract Studio — agreements and source schedules"
+    },
+    "images": [
+      {
+        "source": "./marketplace/overview.png",
+        "alt": "Contract Studio home in Canvas",
+        "caption": "Start an agreement or publish a cleared firm revision."
+      },
+      {
+        "source": "./marketplace/detail.png",
+        "alt": "Agreement review in Canvas",
+        "caption": "Review ordered points, source revisions and clean client wording."
+      }
+    ],
+    "readme": "./marketplace/README.md",
+    "keywords": [
+      "legal",
+      "contracts",
+      "drafting",
+      "precedents",
+      "citations"
+    ]
+  },
+  "spec": {
+    "install-root": "/applications/contract-studio",
+    "entry": "https://canvas.apps.localtest.me",
+    "scope": "global",
+    "entry-points": [
+      {
+        "id": "home",
+        "display-name": "Contract Studio",
+        "route": "/render?document=.%2Fcanvas%2Fhome.page.yaml",
+        "order": 10
+      }
+    ],
+    "launch": {
+      "enabled": true,
+      "entry-point": "home",
+      "pinnable": true
+    },
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run",
+      "execution.read"
+    ],
+    "scopes": [
+      "contract-studio.default"
+    ],
+    "dependencies": [
+      {
+        "package": "verentis/canvas",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/nodejs",
+        "version": "latest"
+      }
+    ],
+    "engine": "verentis/nodejs",
+    "scripts": [
+      "scripts/draft",
+      "scripts/library",
+      "scripts/issue"
+    ],
+    "install": [
+      {
+        "from": "canvas/*.form.yaml",
+        "to": "/applications/contract-studio/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.form+yaml"
+      },
+      {
+        "from": "canvas/*.page.yaml",
+        "to": "/applications/contract-studio/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.page+yaml"
+      },
+      {
+        "from": "schemas/*.schema.json",
+        "to": "/applications/contract-studio/schemas/",
+        "mode": "managed",
+        "mime": "application/schema+json"
+      },
+      {
+        "from": "seed/contracts",
+        "to": "/legal-contracts",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.contract-studio.contracts"
+      },
+      {
+        "from": "seed/precedents",
+        "to": "/legal-precedents",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.contract-studio.precedents"
+      },
+      {
+        "from": "seed/clients",
+        "to": "/legal-client-documents",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.contract-studio.clients"
+      },
+      {
+        "from": "seed/schedules",
+        "to": "/legal-source-schedules",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.contract-studio.schedules"
+      }
+    ],
+    "file-access": [
+      {
+        "path": "/legal-contracts",
+        "mode": "read",
+        "reason": "List workspace agreements",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/applications/contract-studio/scripts/draft",
+        "mode": "read",
+        "reason": "Run the draft operation",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/applications/contract-studio/scripts/library",
+        "mode": "read",
+        "reason": "Run the library operation",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/applications/contract-studio/scripts/draft",
+        "mode": "read",
+        "reason": "Run the draft operation",
+        "origin": {
+          "kind": "document",
+          "id": "contract-studio-contract"
+        }
+      },
+      {
+        "path": "/applications/contract-studio/scripts/issue",
+        "mode": "read",
+        "reason": "Run the issue operation",
+        "origin": {
+          "kind": "document",
+          "id": "contract-studio-contract"
+        }
+      },
+      {
+        "path": "/applications/contract-studio/schemas/contract.schema.json",
+        "mode": "read",
+        "reason": "Identify the agreement schema",
+        "origin": {
+          "kind": "document",
+          "id": "contract-studio-contract"
+        }
+      },
+      {
+        "path": "/legal-precedents",
+        "mode": "read",
+        "reason": "Choose approved firm revisions",
+        "origin": {
+          "kind": "document",
+          "id": "contract-studio-contract"
+        }
+      },
+      {
+        "path": "/applications/legal-research/catalog/authorities.json",
+        "mode": "read",
+        "reason": "Choose bibliographic South African references",
+        "origin": {
+          "kind": "document",
+          "id": "contract-studio-contract"
+        }
+      },
+      {
+        "path": "/legal-authority-packs",
+        "mode": "read",
+        "reason": "Choose bibliographic references in optional installed jurisdiction packs",
+        "origin": {
+          "kind": "document",
+          "id": "contract-studio-contract"
+        }
+      },
+      {
+        "path": "/legal-contracts",
+        "mode": "write",
+        "reason": "Create and conditionally edit, submit and approve agreements",
+        "origin": {
+          "kind": "script",
+          "id": "contract-studio-draft"
+        }
+      },
+      {
+        "path": "/legal-precedents",
+        "mode": "read",
+        "reason": "Pin approved clause revisions",
+        "origin": {
+          "kind": "script",
+          "id": "contract-studio-draft"
+        }
+      },
+      {
+        "path": "/applications/legal-research/catalog/authorities.json",
+        "mode": "read",
+        "reason": "Pin citation metadata only",
+        "origin": {
+          "kind": "script",
+          "id": "contract-studio-draft"
+        }
+      },
+      {
+        "path": "/legal-authority-packs",
+        "mode": "read",
+        "reason": "Pin citation metadata from a selected additional jurisdiction pack",
+        "origin": {
+          "kind": "script",
+          "id": "contract-studio-draft"
+        }
+      },
+      {
+        "path": "/legal-precedents",
+        "mode": "write",
+        "reason": "Publish cleared firm clause revisions create-only",
+        "origin": {
+          "kind": "script",
+          "id": "contract-studio-library"
+        }
+      },
+      {
+        "path": "/legal-contracts",
+        "mode": "write",
+        "reason": "Read the approval snapshot and conditionally mark delivery complete",
+        "origin": {
+          "kind": "script",
+          "id": "contract-studio-issue"
+        }
+      },
+      {
+        "path": "/legal-client-documents",
+        "mode": "write",
+        "reason": "Materialise clean TXT and Office-editable FODT files create-only",
+        "origin": {
+          "kind": "script",
+          "id": "contract-studio-issue"
+        }
+      },
+      {
+        "path": "/legal-source-schedules",
+        "mode": "write",
+        "reason": "Materialise the separate internal source schedule create-only",
+        "origin": {
+          "kind": "script",
+          "id": "contract-studio-issue"
+        }
+      }
+    ],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-forms": true,
+      "allow-popups": false
+    }
+  },
+  "packaging": {
+    "publisher": "verentis",
+    "files": [
+      "canvas/**",
+      "schemas/**",
+      "seed/**",
+      "scripts/**",
+      "icons/**",
+      "marketplace/**",
+      "README.md"
+    ],
+    "templates": [
+      "canvas/*.yaml"
+    ],
+    "variables": {
+      "canvas-origin": "https://canvas.apps.localtest.me"
+    },
+    "encryption": "none"
+  }
+}
