@@ -11,7 +11,7 @@ const manifest = {
     description: 'Find legal authorities by citation or topic and compare the sources recorded for two dates.',
   },
   marketplace: {
-    logo: './icons/app.svg', readme: './marketplace/README.md', keywords: ['law', 'South Africa', 'legislation', 'legal research'],
+    logo: './icons/app.svg', readme: './marketplace/README.md', keywords: ['law', 'south africa', 'legislation', 'legal research'],
     hero: { source: './marketplace/hero.svg', alt: 'Green law library shelves' },
     images: [{ source: './marketplace/overview.png', alt: 'Jurisdiction and citation search', caption: 'Find sources by topic or citation' },
       { source: './marketplace/detail.png', alt: 'Two dated Constitution section 6 citations', caption: 'Compare recorded provision versions' }],
