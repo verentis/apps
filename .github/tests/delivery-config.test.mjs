@@ -9,7 +9,7 @@ const exists = path => existsSync(new URL(path, repo))
 const config = JSON.parse(read('.github/verentis-delivery.json'))
 const hosted = ['image-viewer', 'markdown-viewer', 'smart-editor', 'excalidraw']
 const packageOnly = [
-  'crm', 'accounting', 'invoicing',
+  'crm', 'accounting', 'invoicing', 'contract-studio', 'legal-matters', 'legal-research', 'namibia-law',
   'appointments', 'appraisals', 'approvals', 'documents', 'employees', 'events', 'expenses',
   'field-service', 'fleet', 'helpdesk', 'inventory', 'knowledge', 'maintenance', 'manufacturing',
   'payroll', 'planning', 'plm', 'project', 'purchase', 'quality', 'recruitment', 'referrals',

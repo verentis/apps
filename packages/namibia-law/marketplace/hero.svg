@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="640" viewBox="0 0 1600 640">
+  <title>Sandstone library columns</title>
+  <rect width="1600" height="640" fill="#654638"/>
+  <g fill="none" stroke="#ebcea6" stroke-width="3" opacity=".26">
+    <path d="m-85 212 160-92 160 92zm-10 14h340M-28 496h208m-223 12h238M-17 254v220m23-220v220m52-220v220m24-220v220m51-220v220m24-220v220"/>
+    <path d="m1400 100 130-76 130 76zm-12 14h282m-220 21v180m21-180v180m48-180v180m21-180v180m48-180v180m21-180v180m-190 16h202"/>
+  </g>
+</svg>

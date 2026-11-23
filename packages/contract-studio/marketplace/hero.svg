@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 480" role="img" aria-label="Contract Studio: clean agreement, separate source schedule">
+  <rect width="1200" height="480" fill="#214447"/>
+  <g font-family="system-ui,sans-serif" fill="#f3ead7">
+    <text x="78" y="152" font-size="24" letter-spacing="4">VERENTIS LEGAL</text>
+    <text x="74" y="235" font-size="74" font-weight="650">Contract Studio</text>
+    <text x="78" y="303" font-size="28">Clean agreement. Separate source schedule.</text>
+  </g>
+  <path d="M894 70h188v261H894z" fill="#a9c1b8"/>
+  <path d="M846 115h190v262H846z" fill="#f3ead7"/>
+  <path d="M873 162h136m-136 46h113m-113 27h123m-123 47h103" fill="none" stroke="#527573" stroke-width="8"/>
+  <circle cx="1026" cy="350" r="36" fill="#ac6837"/>
+  <path d="m1010 350 11 11 21-25" stroke="white" stroke-width="5" fill="none"/>
+</svg>

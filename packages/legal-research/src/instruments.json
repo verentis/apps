@@ -1,0 +1,1367 @@
+[
+  {
+    "slug": "constitution",
+    "title": "Constitution of the Republic of South Africa, 1996",
+    "path": "constitution/constitution",
+    "url": "https://www.justice.gov.za/legislation/constitution/SAConstitution-web-eng.pdf",
+    "coverage": "Instrument index"
+  },
+  {
+    "slug": "popia",
+    "title": "Protection of Personal Information Act 4 of 2013",
+    "path": "act/2013/4",
+    "url": "https://www.gov.za/sites/default/files/gcis_document/201409/3706726-11act4of2013popi.pdf",
+    "coverage": "Instrument index"
+  },
+  {
+    "slug": "companies-act",
+    "title": "Companies Act 71 of 2008",
+    "path": "act/2008/71",
+    "url": "https://www.gov.za/sites/default/files/gcis_document/201409/321214210.pdf",
+    "coverage": "Instrument index"
+  },
+  {
+    "slug": "criminal-procedure-act",
+    "title": "Criminal Procedure Act, 1977",
+    "path": "act/1977/51",
+    "url": "https://www.justice.gov.za/legislation/acts/1977-051.pdf",
+    "coverage": "Consolidation only"
+  },
+  {
+    "slug": "paia",
+    "title": "Promotion of Access to Information Act, 2000",
+    "path": "act/2000/2",
+    "url": "https://www.justice.gov.za/legislation/acts/2000-002.pdf",
+    "coverage": "Consolidation only"
+  },
+  {
+    "slug": "paja",
+    "title": "Promotion of Administrative Justice Act, 2000",
+    "path": "act/2000/3",
+    "url": "https://www.justice.gov.za/legislation/acts/2000-003.pdf",
+    "coverage": "Consolidation only"
+  },
+  {
+    "slug": "pepuda",
+    "title": "Promotion of Equality and Prevention of Unfair Discrimination Act, 2000",
+    "path": "act/2000/4",
+    "url": "https://www.justice.gov.za/legislation/acts/2000-004.pdf",
+    "coverage": "Consolidation only"
+  },
+  {
+    "slug": "superior-courts-act",
+    "title": "Superior Courts Act, 2013",
+    "path": "act/2013/10",
+    "url": "https://www.justice.gov.za/legislation/acts/2013-010.pdf",
+    "coverage": "Consolidation only"
+  },
+  {
+    "slug": "magistrates-courts-act",
+    "title": "Magistrates' Courts Act, 1944",
+    "path": "act/1944/32",
+    "url": "https://www.justice.gov.za/legislation/acts/1944-032.pdf",
+    "coverage": "Consolidation only"
+  },
+  {
+    "slug": "prescription-act",
+    "title": "Prescription Act, 1969",
+    "path": "act/1969/68",
+    "url": "https://www.justice.gov.za/legislation/acts/1969-068.pdf",
+    "coverage": "Consolidation only"
+  },
+  {
+    "slug": "sexual-offences-act",
+    "title": "Criminal Law (Sexual Offences and Related Matters) Amendment Act, 2007",
+    "path": "act/2007/32",
+    "url": "https://www.justice.gov.za/legislation/acts/2007-032.pdf",
+    "coverage": "Consolidation only"
+  },
+  {
+    "slug": "legal-practice-act",
+    "title": "Legal Practice Act, 2014",
+    "path": "act/2014/28",
+    "url": "https://www.justice.gov.za/legislation/acts/2014-028.pdf",
+    "coverage": "Consolidation only"
+  },
+  {
+    "slug": "child-justice-act",
+    "title": "Child Justice Act, 2008",
+    "path": "act/2008/75",
+    "url": "https://www.justice.gov.za/legislation/acts/2008-075_childjustice.pdf",
+    "coverage": "Consolidation only"
+  },
+  {
+    "slug": "finance-act-1993",
+    "title": "Finance Act",
+    "path": "act/1993/79",
+    "url": "https://www.gov.za/documents/acts/finance-act-house-assembly-79-1993-02-jul-1993",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "nuclear-energy-act-1993",
+    "title": "Nuclear Energy Act",
+    "path": "act/1993/131",
+    "url": "https://www.gov.za/documents/nuclear-energy-act-0",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "second-unauthorised-expenditure-act-1993",
+    "title": "Second Unauthorised Expenditure Act",
+    "path": "act/1993/161",
+    "url": "https://www.gov.za/documents/acts/second-unauthorised-expenditure-act-house-assembly-161-1993-15-dec-1993",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "labour-relations-act-1995",
+    "title": "Labour Relations Act",
+    "path": "act/1995/66",
+    "url": "https://www.gov.za/documents/labour-relations-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "south-african-olympic-hostings-act-1997",
+    "title": "South African Olympic Hostings Act",
+    "path": "act/1997/36",
+    "url": "https://www.gov.za/documents/acts/south-african-olympic-hostings-act-36-1997-03-sep-1997",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "abolition-of-corporal-punishment-act-1997",
+    "title": "Abolition of Corporal Punishment Act",
+    "path": "act/1997/abolition-of-corporal-punishment",
+    "url": "https://www.gov.za/documents/abolition-corporal-punishment-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "south-african-revenue-service-act-1997",
+    "title": "South African Revenue Service Act",
+    "path": "act/1997/34",
+    "url": "https://www.gov.za/documents/south-african-revenue-service-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "counterfeit-goods-act-1997",
+    "title": "Counterfeit Goods Act",
+    "path": "act/1997/37",
+    "url": "https://www.gov.za/documents/counterfeit-goods-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "extension-of-terms-of-office-of-members-of-certain-councils-act-1997",
+    "title": "Extension of Terms of Office of Members of Certain Councils Act",
+    "path": "act/1997/45",
+    "url": "https://www.gov.za/documents/extension-terms-office-members-certain-councils-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "public-service-commission-act-1997",
+    "title": "Public Service Commission Act",
+    "path": "act/1997/46",
+    "url": "https://www.gov.za/documents/public-service-commission-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "abolition-of-public-administration-commissions-act-1997",
+    "title": "Abolition of Public Administration Commissions Act",
+    "path": "act/1997/48",
+    "url": "https://www.gov.za/documents/acts/abolition-public-administration-commissions-act-48-1997-03-oct-1997",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "marriage-act-extension-act-1997",
+    "title": "Marriage Act, Extension Act",
+    "path": "act/1997/50",
+    "url": "https://www.gov.za/documents/acts/marriage-act-extension-act-50-1997-12-nov-1997",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "environmental-laws-rationalisation-act-1997",
+    "title": "Environmental Laws Rationalisation Act",
+    "path": "act/1997/51",
+    "url": "https://www.gov.za/documents/environmental-laws-rationalisation-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "organised-local-government-act-1997",
+    "title": "Organised Local Government Act",
+    "path": "act/1997/52",
+    "url": "https://www.gov.za/documents/organised-local-government-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "national-arts-council-act-1997",
+    "title": "National Arts Council Act",
+    "path": "act/1997/56",
+    "url": "https://www.gov.za/documents/national-arts-council-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "lotteries-act-1997",
+    "title": "Lotteries Act",
+    "path": "act/1997/57",
+    "url": "https://www.gov.za/documents/lotteries-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "state-of-emergency-act-1997",
+    "title": "State of Emergency Act",
+    "path": "act/1997/64",
+    "url": "https://www.gov.za/documents/acts/state-emergency-act-64-1997-21-nov-1997",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "contingency-fees-act-1997",
+    "title": "Contingency Fees Act",
+    "path": "act/1997/66",
+    "url": "https://www.gov.za/documents/acts/contingency-fees-act-66-1997-21-nov-1997",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "identification-act-1997",
+    "title": "Identification Act",
+    "path": "act/1997/68",
+    "url": "https://www.gov.za/documents/identification-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "nonprofit-organisations-act-1997",
+    "title": "Nonprofit Organisations Act",
+    "path": "act/1997/71",
+    "url": "https://www.gov.za/documents/nonprofit-organisations-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "national-film-and-video-foundation-act-1997",
+    "title": "National Film and Video Foundation Act",
+    "path": "act/1997/73",
+    "url": "https://www.gov.za/documents/national-film-and-video-foundation-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "intergovernmental-fiscal-relations-act-1997",
+    "title": "Intergovernmental Fiscal Relations Act",
+    "path": "act/1997/97",
+    "url": "https://www.gov.za/documents/acts/intergovernmental-fiscal-relations-act-97-1997-17-dec-1997",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "housing-act-1997",
+    "title": "Housing Act",
+    "path": "act/1997/107",
+    "url": "https://www.gov.za/documents/housing-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "financial-and-fiscal-commission-act-1997",
+    "title": "Financial and Fiscal Commission Act",
+    "path": "act/1997/99",
+    "url": "https://www.gov.za/documents/financial-and-fiscal-commission-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "department-of-communications-rationalisation-act-1998",
+    "title": "Department of Communications Rationalisation Act",
+    "path": "act/1998/10",
+    "url": "https://www.gov.za/documents/department-communications-rationalisation-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "cross-border-road-transport-act-1998",
+    "title": "Cross-Border Road Transport Act",
+    "path": "act/1998/4",
+    "url": "https://www.gov.za/documents/cross-border-road-transport-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "south-african-maritime-safety-authority-levies-act-1998",
+    "title": "South African Maritime Safety Authority Levies Act",
+    "path": "act/1998/6",
+    "url": "https://www.gov.za/documents/acts/south-african-maritime-safety-authority-levies-act-6-1998-31-mar-1998",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "south-african-national-roads-agency-limited-and-national-roads-act-1998",
+    "title": "South African National Roads Agency Limited and National Roads Act",
+    "path": "act/1998/7",
+    "url": "https://www.gov.za/documents/south-african-national-roads-agency-limited-and-national-roads-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "regulation-of-foreign-military-assistance-act-1998",
+    "title": "Regulation of Foreign Military Assistance Act",
+    "path": "act/1998/15",
+    "url": "https://www.gov.za/documents/acts/regulation-foreign-military-assistance-act-15-1998-20-may-1998",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "marine-living-resources-act-1998",
+    "title": "Marine Living Resources Act",
+    "path": "act/1998/18",
+    "url": "https://www.gov.za/documents/marine-living-resources-act-27-may-1998-0000",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "prevention-of-illegal-eviction-from-and-unlawful-occupation-of-land-act-1998",
+    "title": "Prevention of Illegal Eviction from and Unlawful Occupation of Land Act",
+    "path": "act/1998/19",
+    "url": "https://www.gov.za/documents/prevention-illegal-eviction-and-unlawful-occupation-land-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "national-research-foundation-act-1998",
+    "title": "National Research Foundation Act",
+    "path": "act/1998/23",
+    "url": "https://www.gov.za/documents/acts/national-research-foundation-act-23-1998-03-jul-1998",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "national-prosecuting-authority-act-1998",
+    "title": "National Prosecuting Authority Act",
+    "path": "act/1998/national-prosecuting-authority",
+    "url": "https://www.gov.za/documents/national-prosecuting-authority-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "south-african-civil-aviation-authority-act-1998",
+    "title": "South African Civil Aviation Authority Act",
+    "path": "act/1998/40",
+    "url": "https://www.gov.za/documents/south-african-civil-aviation-authority-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "south-african-civil-aviation-authority-levies-act-1998",
+    "title": "South African Civil Aviation Authority Levies Act",
+    "path": "act/1998/41",
+    "url": "https://www.gov.za/documents/south-african-civil-aviation-authority-levies-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "sterilisation-act-1998",
+    "title": "Sterilisation Act",
+    "path": "act/1998/44",
+    "url": "https://www.gov.za/documents/sterilisation-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "national-land-transport-interim-arrangements-act-1998",
+    "title": "National Land Transport Interim Arrangements Act",
+    "path": "act/1998/45",
+    "url": "https://www.gov.za/documents/national-land-transport-interim-arrangements-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "administrative-adjudication-of-road-traffic-offences-act-1998",
+    "title": "Administrative Adjudication of Road Traffic Offences Act",
+    "path": "act/1998/46",
+    "url": "https://www.gov.za/documents/administrative-adjudication-road-traffic-offences-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "road-traffic-laws-rationalisation-act-1998",
+    "title": "Road Traffic Laws Rationalisation Act",
+    "path": "act/1998/47",
+    "url": "https://www.gov.za/documents/acts/road-traffic-laws-rationalisation-act-47-1998-11-sep-1998",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "remuneration-of-public-office-bearers-act-1998",
+    "title": "Remuneration of Public Office Bearers Act",
+    "path": "act/1998/20",
+    "url": "https://www.gov.za/documents/remuneration-public-office-bearers-act-0",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "short-term-insurance-act-1998",
+    "title": "Short-term Insurance Act",
+    "path": "act/1998/53",
+    "url": "https://www.gov.za/documents/short-term-insurance-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "inherited-debt-relief-act-1998",
+    "title": "Inherited Debt Relief Act",
+    "path": "act/1998/54",
+    "url": "https://www.gov.za/documents/acts/inherited-debt-relief-act-54-1998-23-sep-1998",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "employment-of-educators-act-1998",
+    "title": "Employment of Educators Act",
+    "path": "act/1998/76",
+    "url": "https://www.gov.za/documents/employment-educators-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "determination-of-delegates-national-council-of-provinces-act-1998",
+    "title": "Determination of Delegates (National Council of Provinces) Act",
+    "path": "act/1998/69",
+    "url": "https://www.gov.za/documents/determination-delegates-national-council-provinces-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "road-accident-fund-commission-act-1998",
+    "title": "Road Accident Fund Commission Act",
+    "path": "act/1998/71",
+    "url": "https://www.gov.za/documents/acts/road-accident-fund-commission-act-71-1998-07-oct-1998",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "agricultural-laws-rationalisation-act-1998",
+    "title": "Agricultural Laws Rationalisation Act",
+    "path": "act/1998/72",
+    "url": "https://www.gov.za/documents/agricultural-laws-rationalisation-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "port-of-ngqura-establishment-act-1998",
+    "title": "Port of Ngqura Establishment Act",
+    "path": "act/1998/77",
+    "url": "https://www.gov.za/documents/acts/port-ngqura-establishment-act-77-1998-28-oct-1998",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "national-payment-system-act-1998",
+    "title": "National Payment System Act",
+    "path": "act/1998/78",
+    "url": "https://www.gov.za/documents/national-payment-system-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "reconstruction-and-development-programme-fund-act-1998",
+    "title": "Reconstruction and Development Programme Fund Act",
+    "path": "act/1998/79",
+    "url": "https://www.gov.za/documents/reconstruction-and-development-programme-fund-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "inspection-of-financial-institutions-act-1998",
+    "title": "Inspection of Financial Institutions Act",
+    "path": "act/1998/80",
+    "url": "https://www.gov.za/documents/inspection-financial-institutions-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "executive-members-ethics-act-1998",
+    "title": "Executive Members' Ethics Act",
+    "path": "act/1998/82",
+    "url": "https://www.gov.za/documents/acts/executive-members-ethics-act-82-1998-28-oct-1998",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "the-south-african-library-for-the-blind-act-1998",
+    "title": "The South African Library for the Blind Act",
+    "path": "act/1998/91",
+    "url": "https://www.gov.za/documents/acts/south-african-library-blind-act-91-1998-02-nov-1998",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "the-national-library-of-south-africa-act-1998",
+    "title": "The National Library of South Africa Act",
+    "path": "act/1998/92",
+    "url": "https://www.gov.za/documents/acts/national-library-south-africa-act-92-1998-02-nov-1998",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "transformation-of-certain-rural-areas-act-1998",
+    "title": "Transformation of Certain Rural Areas Act",
+    "path": "act/1998/94",
+    "url": "https://www.gov.za/documents/transformation-certain-rural-areas-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "national-development-agency-act-1998",
+    "title": "National Development Agency Act",
+    "path": "act/1998/108",
+    "url": "https://www.gov.za/documents/national-development-agency-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "witness-protection-act-1998",
+    "title": "Witness Protection Act",
+    "path": "act/1998/witness-protection",
+    "url": "https://www.gov.za/documents/witness-protection-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "debt-collectors-act-1998",
+    "title": "Debt Collectors Act",
+    "path": "act/1998/debt-collectors",
+    "url": "https://www.gov.za/documents/debt-collectors-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "maintenance-act-1998",
+    "title": "Maintenance Act",
+    "path": "act/1998/maintenance",
+    "url": "https://www.gov.za/documents/maintenance-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "domestic-violence-act-1998",
+    "title": "Domestic Violence Act",
+    "path": "act/1998/domestic-violence",
+    "url": "https://www.gov.za/documents/domestic-violence-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "south-african-geographical-names-council-act-1998",
+    "title": "South African Geographical Names Council Act",
+    "path": "act/1998/118",
+    "url": "https://www.gov.za/documents/south-african-geographical-names-council-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "medical-schemes-act-1998",
+    "title": "Medical Schemes Act",
+    "path": "act/1998/131",
+    "url": "https://www.gov.za/documents/medical-schemes-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "national-sport-and-recreation-act-1998",
+    "title": "National Sport and Recreation Act",
+    "path": "act/1998/110",
+    "url": "https://www.gov.za/documents/national-sport-and-recreation-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "cultural-institutions-act-1998",
+    "title": "Cultural Institutions Act",
+    "path": "act/1998/119",
+    "url": "https://www.gov.za/documents/cultural-institutions-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "conversion-of-sasria-act-1998",
+    "title": "Conversion of SASRIA Act",
+    "path": "act/1998/134",
+    "url": "https://www.gov.za/documents/acts/conversion-sasria-act-134-1998-04-dec-1998",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "military-discipline-supplementary-measures-act-1999",
+    "title": "Military Discipline Supplementary Measures Act",
+    "path": "act/1999/16",
+    "url": "https://www.gov.za/documents/military-discipline-supplementary-measures-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "onderstepoort-biological-products-incorporation-act-1999",
+    "title": "Onderstepoort Biological Products Incorporation Act",
+    "path": "act/1999/19",
+    "url": "https://www.gov.za/documents/onderstepoort-biological-products-incorporation-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "road-traffic-management-corporation-act-1999",
+    "title": "Road Traffic Management Corporation Act",
+    "path": "act/1999/20",
+    "url": "https://www.gov.za/documents/road-traffic-management-corporation-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "national-heritage-resources-act-1999",
+    "title": "National Heritage Resources Act",
+    "path": "act/1999/25",
+    "url": "https://www.gov.za/documents/acts/national-heritage-resources-act-25-1999-28-apr-1999",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "skills-development-levies-act-1999",
+    "title": "Skills Development Levies Act",
+    "path": "act/1999/9",
+    "url": "https://www.gov.za/documents/skills-development-levies-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "abolition-of-certain-title-conditions-act-1999",
+    "title": "Abolition of Certain Title Conditions Act",
+    "path": "act/1999/43",
+    "url": "https://www.gov.za/documents/acts/abolition-certain-title-conditions-act-43-1999-24-nov-1999",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "disestablishment-of-the-local-government-affairs-council-act-1999",
+    "title": "Disestablishment of the Local Government Affairs Council Act",
+    "path": "act/1999/59",
+    "url": "https://www.gov.za/documents/acts/disestablishment-local-government-affairs-council-act-59-1999-06-dec-1999",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "world-heritage-convention-act-1999",
+    "title": "World Heritage Convention Act",
+    "path": "act/1999/49",
+    "url": "https://www.gov.za/documents/world-heritage-convention-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "rental-housing-act-1999",
+    "title": "Rental Housing Act",
+    "path": "act/1999/50",
+    "url": "https://www.gov.za/documents/rental-housing-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "preferential-procurement-policy-framework-act-2000",
+    "title": "Preferential Procurement Policy Framework Act",
+    "path": "act/2000/5",
+    "url": "https://www.gov.za/documents/acts/preferential-procurement-policy-framework-act-5-2000-03-feb-2000",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "south-african-airways-unallocatable-debt-act-2000",
+    "title": "South African Airways Unallocatable Debt Act",
+    "path": "act/2000/7",
+    "url": "https://www.gov.za/documents/acts/south-african-airways-unallocatable-debt-act-7-2000-17-mar-2000",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "independent-communications-authority-of-south-africa-act-2000",
+    "title": "Independent Communications Authority of South Africa Act",
+    "path": "act/2000/13",
+    "url": "https://www.gov.za/documents/independent-communications-authority-south-africa-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "protected-disclosures-act-2000",
+    "title": "Protected Disclosures Act",
+    "path": "act/2000/26",
+    "url": "https://www.gov.za/documents/acts/protected-disclosures-act-26-2000-07-aug-2000",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "african-renaissance-and-international-co-operation-fund-act-2000",
+    "title": "African Renaissance and International Co-operation Fund Act",
+    "path": "act/2000/51",
+    "url": "https://www.gov.za/documents/acts/african-renaissance-and-international-co-operation-fund-act-51-2000-24-nov-2000",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "council-for-the-built-environment-act-2000",
+    "title": "Council for the Built Environment Act",
+    "path": "act/2000/43",
+    "url": "https://www.gov.za/documents/acts/council-built-environment-act-43-2000-01-dec-2000",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "project-and-construction-management-professions-act-2000",
+    "title": "Project and Construction Management Professions Act",
+    "path": "act/2000/48",
+    "url": "https://www.gov.za/documents/acts/project-and-construction-management-professions-act-48-2000-01-dec-2000",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "national-health-laboratory-service-act-2000",
+    "title": "National Health Laboratory Service Act",
+    "path": "act/2000/37",
+    "url": "https://www.gov.za/documents/national-health-laboratory-service-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "council-for-medical-schemes-levies-act-2000",
+    "title": "Council for Medical Schemes Levies Act",
+    "path": "act/2000/58",
+    "url": "https://www.gov.za/documents/acts/council-medical-schemes-levies-act-58-2000-13-dec-2000",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "sea-transport-documents-act-2000",
+    "title": "Sea Transport Documents Act",
+    "path": "act/2000/65",
+    "url": "https://www.gov.za/documents/sea-transport-documents-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "abolition-of-lebowa-mineral-trust-act-2000",
+    "title": "Abolition of Lebowa Mineral Trust Act",
+    "path": "act/2000/67",
+    "url": "https://www.gov.za/documents/acts/abolition-lebowa-mineral-trust-act-67-2000-13-dec-2000",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "south-african-rail-commuter-corporation-limited-financial-arrangements-act-2000",
+    "title": "South African Rail Commuter Corporation Limited Financial Arrangements Act",
+    "path": "act/2000/64",
+    "url": "https://www.gov.za/documents/south-african-rail-commuter-corporation-limited-financial-arrangements-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "disestablishment-of-south-african-housing-trust-limited-act-2002",
+    "title": "Disestablishment of South African Housing Trust Limited Act",
+    "path": "act/2002/26",
+    "url": "https://www.gov.za/documents/acts/disestablishment-south-african-housing-trust-limited-act-26-2002-05-dec-2002",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "public-investment-corporation-act-2004",
+    "title": "Public Investment Corporation Act",
+    "path": "act/2004/23",
+    "url": "https://www.gov.za/documents/acts/public-investment-corporation-act-23-2004-14-dec-2004",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "public-audit-act-2004",
+    "title": "Public Audit Act",
+    "path": "act/2004/25",
+    "url": "https://www.gov.za/documents/public-audit-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "petroleum-pipelines-levies-act-2004",
+    "title": "Petroleum Pipelines Levies Act",
+    "path": "act/2004/28",
+    "url": "https://www.gov.za/documents/acts/petroleum-pipelines-levies-act-28-2004-20-dec-2004",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "traditional-health-practitioners-act-2004",
+    "title": "Traditional Health Practitioners Act",
+    "path": "act/2004/35",
+    "url": "https://www.gov.za/documents/acts/traditional-health-practitioners-act-35-2004-11-feb-2005",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "national-environment-management-air-quality-act-2004",
+    "title": "National Environment Management: Air Quality Act",
+    "path": "act/2004/39",
+    "url": "https://www.gov.za/documents/national-environment-management-air-quality-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "national-energy-regulator-act-2004",
+    "title": "National Energy Regulator Act",
+    "path": "act/2004/40",
+    "url": "https://www.gov.za/documents/national-energy-regulator-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "citation-of-constitutional-laws-act-2005",
+    "title": "Citation of Constitutional Laws Act",
+    "path": "act/2005/5",
+    "url": "https://www.gov.za/documents/citation-constitutional-laws-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "intergovernmental-relations-framework-act-2005",
+    "title": "Intergovernmental Relations Framework Act",
+    "path": "act/2005/13",
+    "url": "https://www.gov.za/documents/intergovernmental-relations-framework-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "auditing-profession-act-2005",
+    "title": "Auditing Profession Act",
+    "path": "act/2005/26",
+    "url": "https://www.gov.za/documents/auditing-profession-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "national-credit-act-2005",
+    "title": "National Credit Act",
+    "path": "act/2005/national-credit",
+    "url": "https://www.gov.za/documents/national-credit-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "electronic-communications-act-2005",
+    "title": "Electronic Communications Act",
+    "path": "act/2005/36",
+    "url": "https://www.gov.za/documents/electronic-communications-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "precious-metals-act-2005",
+    "title": "Precious Metals Act",
+    "path": "act/2005/37",
+    "url": "https://www.gov.za/documents/acts/precious-metals-act-37-2005-21-apr-2006",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "nursing-act-2005",
+    "title": "Nursing Act",
+    "path": "act/2005/33",
+    "url": "https://www.gov.za/documents/nursing-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "2010-fifa-world-cup-south-africa-special-measures-act-2006",
+    "title": "2010 FIFA World Cup South Africa Special Measures Act",
+    "path": "act/2006/11",
+    "url": "https://www.gov.za/documents/acts/2010-fifa-world-cup-south-africa-special-measures-act-11-2006-07-sep-2006",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "second-2010-fifa-world-cup-south-africa-special-measures-act-2006",
+    "title": "Second 2010 FIFA World Cup South Africa Special Measures Act",
+    "path": "act/2006/12",
+    "url": "https://www.gov.za/documents/acts/second-2010-fifa-world-cup-south-africa-special-measures-act-12-2006-07-sep-2006",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "older-persons-act-2006",
+    "title": "Older Persons Act",
+    "path": "act/2006/13",
+    "url": "https://www.gov.za/documents/older-persons-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "civil-union-act-2006",
+    "title": "Civil Union Act",
+    "path": "act/2006/17",
+    "url": "https://www.gov.za/documents/acts/civil-union-act-17-2006-17-nov-2006",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "continuing-education-and-training-act-previously-known-as-further-education-and-training-colleges-act-2006",
+    "title": "Continuing Education and Training Act (previously known as Further Education and Training Colleges Act)",
+    "path": "act/2006/16",
+    "url": "https://www.gov.za/documents/further-education-and-training-colleges-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "accreditation-for-conformity-assessment-calibration-and-good-laboratory-practice-act-2006",
+    "title": "Accreditation for Conformity Assessment, Calibration and Good Laboratory Practice Act",
+    "path": "act/2006/19",
+    "url": "https://www.gov.za/documents/acts/accreditation-conformity-assessment-calibration-and-good-laboratory-practice-act-19",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "finance-act-2007",
+    "title": "Finance Act",
+    "path": "act/2007/2",
+    "url": "https://www.gov.za/documents/acts/finance-act-2-2007-31-mar-2007",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "astronomy-geographic-advantage-act-2007",
+    "title": "Astronomy Geographic Advantage Act",
+    "path": "act/2007/21",
+    "url": "https://www.gov.za/documents/astronomy-geographic-advantage-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "national-qualifications-framework-act-2008",
+    "title": "National Qualifications Framework Act",
+    "path": "act/2008/67",
+    "url": "https://www.gov.za/documents/national-qualifications-framework-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "second-hand-goods-act-2009",
+    "title": "Second-Hand Goods Act",
+    "path": "act/2009/6",
+    "url": "https://www.gov.za/documents/second-hand-goods-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "prevention-of-and-treatment-for-substance-abuse-act-2008",
+    "title": "Prevention of and Treatment for Substance Abuse Act",
+    "path": "act/2008/70",
+    "url": "https://www.gov.za/documents/prevention-and-treatment-substance-abuse-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "financial-management-of-parliament-act-2009",
+    "title": "Financial Management of Parliament Act",
+    "path": "act/2009/10",
+    "url": "https://www.gov.za/documents/financial-management-parliament-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "reform-of-customary-law-of-succession-and-regulation-of-related-matters-act-2009",
+    "title": "Reform of Customary Law of Succession and Regulation of Related Matters Act",
+    "path": "act/2009/11",
+    "url": "https://www.gov.za/documents/reform-customary-law-succession-and-regulation-related-matters-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "western-cape-inherited-debt-relief-act-2009",
+    "title": "Western Cape Inherited Debt Relief Act",
+    "path": "act/2009/7",
+    "url": "https://www.gov.za/documents/acts/western-cape-inherited-debt-relief-act-7-2009-21-apr-2009",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "consumer-protection-act-2008",
+    "title": "Consumer Protection Act",
+    "path": "act/2008/68",
+    "url": "https://www.gov.za/documents/consumer-protection-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "community-schemes-ombud-service-act-2011",
+    "title": "Community Schemes Ombud Service Act",
+    "path": "act/2011/9",
+    "url": "https://www.gov.za/documents/community-schemes-ombud-service-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "road-accident-fund-transitional-provisions-act-2012",
+    "title": "Road Accident Fund (Transitional Provisions) Act",
+    "path": "act/2012/15",
+    "url": "https://www.gov.za/documents/road-accident-fund-transitional-provisions-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "credit-rating-services-act-2012",
+    "title": "Credit Rating Services Act",
+    "path": "act/2012/24",
+    "url": "https://www.gov.za/documents/credit-rating-services-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "dangerous-weapons-act-2013",
+    "title": "Dangerous Weapons Act",
+    "path": "act/2013/15",
+    "url": "https://www.gov.za/documents/dangerous-weapons-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "prevention-of-combating-and-torture-of-persons-act-2013",
+    "title": "Prevention of Combating and Torture of Persons Act",
+    "path": "act/2013/prevention-of-combating-and-torture-of-persons",
+    "url": "https://www.gov.za/documents/prevention-combating-and-torture-persons-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "prevention-and-combating-of-trafficking-in-persons-act-2013",
+    "title": "Prevention and Combating of Trafficking in Persons Act",
+    "path": "act/2013/prevention-and-combating-of-trafficking-in-persons",
+    "url": "https://www.gov.za/documents/prevention-and-combating-trafficking-persons-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "spatial-planning-and-land-use-management-act-2013",
+    "title": "Spatial Planning and Land Use Management Act",
+    "path": "act/2013/16",
+    "url": "https://www.gov.za/documents/spatial-planning-and-land-use-management-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "geomatics-profession-act-2013",
+    "title": "Geomatics Profession Act",
+    "path": "act/2013/19",
+    "url": "https://www.gov.za/documents/geomatics-profession-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "merchant-shipping-international-oil-pollution-compensation-fund-act-2013",
+    "title": "Merchant Shipping (International Oil Pollution Compensation Fund) Act",
+    "path": "act/2013/24",
+    "url": "https://www.gov.za/documents/merchant-shipping-international-oil-pollution-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "merchant-shipping-civil-liability-convention-act-2013",
+    "title": "Merchant Shipping (Civil Liability Convention) Act",
+    "path": "act/2013/25",
+    "url": "https://www.gov.za/documents/merchant-shipping-civil-liability-convention-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "employment-tax-incentive-act-2013",
+    "title": "Employment Tax Incentive Act",
+    "path": "act/2013/26",
+    "url": "https://www.gov.za/documents/employment-tax-incentive-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "merchant-shipping-international-oil-pollution-compensation-fund-administration-act-2013",
+    "title": "Merchant Shipping (International Oil Pollution Compensation Fund) Administration Act",
+    "path": "act/2013/35",
+    "url": "https://www.gov.za/documents/merchant-shipping-international-oil-pollution-compensation-fund-administration-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "merchant-shipping-international-oil-pollution-compensation-fund-contributions-act-2013",
+    "title": "Merchant Shipping (International Oil Pollution Compensation Fund) Contributions Act",
+    "path": "act/2013/36",
+    "url": "https://www.gov.za/documents/merchant-shipping-international-oil-pollution-compensation-fund-contributions-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "south-african-human-rights-commission-act-2013",
+    "title": "South African Human Rights Commission Act",
+    "path": "act/2013/40",
+    "url": "https://www.gov.za/documents/south-african-human-rights-commission-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "tourism-act-2014",
+    "title": "Tourism Act",
+    "path": "act/2014/3",
+    "url": "https://www.gov.za/documents/tourism-act-0",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "employment-services-act-2014",
+    "title": "Employment Services Act",
+    "path": "act/2014/4",
+    "url": "https://www.gov.za/documents/employment-services-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "special-economic-zones-act-2014",
+    "title": "Special Economic Zones Act",
+    "path": "act/2014/16",
+    "url": "https://www.gov.za/documents/special-economic-zones-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "south-african-language-practitioners-council-act-2014",
+    "title": "South African Language Practitioners' Council Act",
+    "path": "act/2014/8",
+    "url": "https://www.gov.za/documents/south-african-language-practitioners-council-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "legal-metrology-act-2014",
+    "title": "Legal Metrology Act",
+    "path": "act/2014/9",
+    "url": "https://www.gov.za/documents/legal-metrology-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "infrastructure-development-act-2014",
+    "title": "Infrastructure Development Act",
+    "path": "act/2014/23",
+    "url": "https://www.gov.za/documents/infrastructure-development-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "property-valuation-act-2014",
+    "title": "Property Valuation Act",
+    "path": "act/2014/17",
+    "url": "https://www.gov.za/documents/property-valuation-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "customs-duty-act-2014",
+    "title": "Customs Duty Act",
+    "path": "act/2014/30",
+    "url": "https://www.gov.za/documents/customs-duty-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "customs-control-act-2014",
+    "title": "Customs Control Act",
+    "path": "act/2014/31",
+    "url": "https://www.gov.za/documents/customs-control-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "legal-aid-south-africa-act-2014",
+    "title": "Legal Aid South Africa Act",
+    "path": "act/2014/legal-aid-south-africa",
+    "url": "https://www.gov.za/documents/legal-aid-south-africa-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "public-administration-management-act-2014",
+    "title": "Public Administration Management Act",
+    "path": "act/2014/11",
+    "url": "https://www.gov.za/documents/public-administration-management-act",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "agrement-south-africa-act-2015",
+    "title": "Agrément South Africa Act",
+    "path": "act/2015/11",
+    "url": "https://www.gov.za/documents/agr%C3%A9ment-south-africa-act-11-2015-15-dec-2015-0000",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "finance-act-2015",
+    "title": "Finance Act",
+    "path": "act/2015/19",
+    "url": "https://www.gov.za/documents/finance-act-19-2015-15-dec-2015-0000",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "protection-of-investment-act-2015",
+    "title": "Protection of Investment Act",
+    "path": "act/2015/22",
+    "url": "https://www.gov.za/documents/protection-investment-act-22-2015-15-dec-2015-0000",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "finance-act-2016",
+    "title": "Finance Act",
+    "path": "act/2016/7",
+    "url": "https://www.gov.za/documents/finance-act-7-2016-english-setswana-19-jan-2017-0000",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "justice-administered-fund-act-2017",
+    "title": "Justice Administered Fund Act",
+    "path": "act/2017/2",
+    "url": "https://www.gov.za/documents/justice-administered-fund-act-2-2017-6-apr-2017-0000",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "international-arbitration-act-2017",
+    "title": "International Arbitration Act",
+    "path": "act/2017/15",
+    "url": "https://www.gov.za/documents/acts/international-arbitration-act-15-2017-english-afrikaans-20-dec-2017",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "insurance-act-2017",
+    "title": "Insurance Act",
+    "path": "act/2017/18",
+    "url": "https://www.gov.za/documents/acts/insurance-act-18-2017-english-afrikaans-18-jan-2018",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "national-minimum-wage-act-2018",
+    "title": "National Minimum Wage Act",
+    "path": "act/2018/9",
+    "url": "https://www.gov.za/documents/acts/national-minimum-wage-act-9-2018-english-tshivenda-27-nov-2018",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "political-party-funding-act-2018",
+    "title": "Political Party Funding Act",
+    "path": "act/2018/6",
+    "url": "https://www.gov.za/documents/acts/political-party-funding-act-6-2018-english-setswana-23-jan-2019",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "plant-improvement-act-2018",
+    "title": "Plant Improvement Act",
+    "path": "act/2018/11",
+    "url": "https://www.gov.za/documents/acts/plant-improvement-act-11-2018-english-isizulu-29-mar-2019",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "plant-breeders-rights-act-2018",
+    "title": "Plant Breeders' Rights Act",
+    "path": "act/2018/12",
+    "url": "https://www.gov.za/documents/acts/plant-breeders-rights-act-12-2018-english-setswana-29-mar-2019",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "marine-spatial-planning-act-2018",
+    "title": "Marine Spatial Planning Act",
+    "path": "act/2018/16",
+    "url": "https://www.gov.za/documents/acts/marine-spatial-planning-act-16-2018-english-siswati-06-may-2019",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "carbon-tax-act-2019",
+    "title": "Carbon Tax Act",
+    "path": "act/2019/15",
+    "url": "https://www.gov.za/documents/acts/carbon-tax-act-15-2019-english-afrikaans-23-may-2019",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "public-audit-excess-fee-act-2019",
+    "title": "Public Audit Excess Fee Act",
+    "path": "act/2019/20",
+    "url": "https://www.gov.za/documents/acts/public-audit-excess-fee-act-20-2019-english-afrikaans-23-may-2019",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "protection-promotion-development-and-management-of-indigenous-knowledge-act-2019",
+    "title": "Protection, Promotion, Development and Management of Indigenous Knowledge Act",
+    "path": "act/2019/6",
+    "url": "https://www.gov.za/documents/acts/protection-promotion-development-and-management-indigenous-knowledge-act-6-2019",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "electronic-deeds-registration-systems-act-2019",
+    "title": "Electronic Deeds Registration Systems Act",
+    "path": "act/2019/19",
+    "url": "https://www.gov.za/documents/acts/electronic-deeds-registration-systems-act-19-2019-english-afrikaans-03-oct-2019",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "property-practitioners-act-2019",
+    "title": "Property Practitioners Act",
+    "path": "act/2019/22",
+    "url": "https://www.gov.za/documents/acts/property-practitioners-act-22-2019-english-tshivenda-03-oct-2019",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "traditional-and-khoi-san-leadership-act-2019",
+    "title": "Traditional and Khoi-San Leadership Act",
+    "path": "act/2019/3",
+    "url": "https://www.gov.za/documents/acts/traditional-and-khoi-san-leadership-act-3-2019-english-afrikaans-28-nov-2019",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "critical-infrastructure-protection-act-2019",
+    "title": "Critical Infrastructure Protection Act",
+    "path": "act/2019/8",
+    "url": "https://www.gov.za/documents/acts/critical-infrastructure-protection-act-8-2019-english-isixhosa-28-nov-2019",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "hydrographic-act-2019",
+    "title": "Hydrographic Act",
+    "path": "act/2019/35",
+    "url": "https://www.gov.za/documents/acts/hydrographic-act-35-2019-english-isixhosa-03-jun-2020",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "foreign-service-act-2019",
+    "title": "Foreign Service Act",
+    "path": "act/2019/26",
+    "url": "https://www.gov.za/documents/acts/foreign-service-act-26-2019-english-xitsonga-04-jun-2020",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "disaster-management-tax-relief-act-2020",
+    "title": "Disaster Management Tax Relief Act",
+    "path": "act/2020/13",
+    "url": "https://www.gov.za/documents/acts/disaster-management-tax-relief-act-13-2020-english-afrikaans-05-nov-2020",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "disaster-management-tax-relief-administration-act-2020",
+    "title": "Disaster Management Tax Relief Administration Act",
+    "path": "act/2020/14",
+    "url": "https://www.gov.za/documents/acts/disaster-management-tax-relief-administration-act-14-2020-english-afrikaans-05-nov",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "cybercrimes-act-2020",
+    "title": "Cybercrimes Act",
+    "path": "act/2020/cybercrimes",
+    "url": "https://www.gov.za/documents/acts/cybercrimes-act-19-2020-english-afrikaans-01-jun-2021",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "customary-initiation-act-2021",
+    "title": "Customary Initiation Act",
+    "path": "act/2021/2",
+    "url": "https://www.gov.za/documents/acts/customary-initiation-act-2-2021-english-siswati-04-jun-2021",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "financial-sector-and-deposit-insurance-levies-act-2022",
+    "title": "Financial Sector and Deposit Insurance Levies Act",
+    "path": "act/2022/11",
+    "url": "https://www.gov.za/documents/acts/financial-sector-and-deposit-insurance-levies-act-11-2022-english-sesotho-09-dec",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "financial-sector-and-deposit-insurance-levies-administration-and-deposit-insurance-premiums-act-2022",
+    "title": "Financial Sector and Deposit Insurance Levies (Administration) and Deposit Insurance Premiums Act",
+    "path": "act/2022/12",
+    "url": "https://www.gov.za/documents/acts/financial-sector-and-deposit-insurance-levies-administration-and-deposit-insurance",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "eskom-debt-relief-act-2023",
+    "title": "Eskom Debt Relief Act",
+    "path": "act/2023/7",
+    "url": "https://www.gov.za/documents/acts/eskom-debt-relief-act-7-2023-english-isixhosa-07-jul-2023",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "traditional-courts-act-2022",
+    "title": "Traditional Courts Act",
+    "path": "act/2022/9",
+    "url": "https://www.gov.za/documents/acts/traditional-courts-act-9-2022-english-isixhosa-27-sep-2023",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "land-court-act-2023",
+    "title": "Land Court Act",
+    "path": "act/2023/6",
+    "url": "https://www.gov.za/documents/acts/land-court-act-6-2023-english-isizulu-27-sep-2023",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "prevention-and-combating-of-hate-crimes-and-hate-speech-act-2023",
+    "title": "Prevention and Combating of Hate Crimes and Hate Speech Act",
+    "path": "act/2023/prevention-and-combating-of-hate-crimes-and-hate-speech",
+    "url": "https://www.gov.za/documents/acts/prevention-and-combating-hate-crimes-and-hate-speech-act-16-2023-english-sepedi-14",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "national-council-on-gender-based-violence-and-femicide-act-2024",
+    "title": "National Council on Gender-Based Violence and Femicide Act",
+    "path": "act/2024/9",
+    "url": "https://www.gov.za/documents/acts/national-council-gender-based-violence-and-femicide-act-9-2024-english-sepedi-27-may",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "cannabis-for-private-purposes-act-2024",
+    "title": "Cannabis for Private Purposes Act",
+    "path": "act/2024/7",
+    "url": "https://www.gov.za/documents/acts/cannabis-private-purposes-act-7-2024-english-sepedi-03-jun-2024",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "climate-change-act-2024",
+    "title": "Climate Change Act",
+    "path": "act/2024/22",
+    "url": "https://www.gov.za/documents/acts/climate-change-act-22-2024-english-tshivenda-23-jul-2024",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "public-procurement-act-2024",
+    "title": "Public Procurement Act",
+    "path": "act/2024/28",
+    "url": "https://www.gov.za/documents/acts/public-procurement-act-28-2024-english-setswana-23-jul-2024",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "south-african-national-water-resources-infrastructure-agency-soc-limited-act-act-2024",
+    "title": "South African National Water Resources Infrastructure Agency Soc Limited Act Act",
+    "path": "act/2024/34",
+    "url": "https://www.gov.za/documents/acts/south-african-national-water-resources-infrastructure-agency-soc-limited-act-act-34",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "upstream-petroleum-resources-development-act-2024",
+    "title": "Upstream Petroleum Resources Development Act",
+    "path": "act/2024/23",
+    "url": "https://www.gov.za/documents/acts/upstream-petroleum-resources-development-act-23-2024-english-isizulu-29-oct-2024",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "railway-safety-act-2024",
+    "title": "Railway Safety Act",
+    "path": "act/2024/30",
+    "url": "https://www.gov.za/documents/acts/railway-safety-act-30-2024-english-sepedi-10-dec-2024",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "plant-health-phytosanitary-act-2024",
+    "title": "Plant Health (Phytosanitary) Act",
+    "path": "act/2024/35",
+    "url": "https://www.gov.za/documents/acts/plant-health-phytosanitary-act-35-2024-20-dec-2024",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "global-minimum-tax-administration-act-2024",
+    "title": "Global Minimum Tax Administration Act",
+    "path": "act/2024/47",
+    "url": "https://www.gov.za/documents/acts/global-minimum-tax-administration-act-47-2024-english-afrikaans-09-jan-2025",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "expropriation-act-2024",
+    "title": "Expropriation Act",
+    "path": "act/2024/13",
+    "url": "https://www.gov.za/documents/acts/expropriation-act-13-2024-english-sepedi-24-jan-2025",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "housing-consumer-protection-act-2024",
+    "title": "Housing Consumer Protection Act",
+    "path": "act/2024/25",
+    "url": "https://www.gov.za/documents/acts/housing-consumer-protection-act-25-2024-english-siswati-29-jan-2025",
+    "coverage": "As enacted only"
+  },
+  {
+    "slug": "global-minimum-tax-act-2024",
+    "title": "Global Minimum Tax Act, 2024",
+    "path": "act/2024/46",
+    "url": "https://www.gov.za/documents/acts/global-minimum-tax-act-46-2024-english-afrikaans-24-dec-2024",
+    "coverage": "As enacted only"
+  }
+]

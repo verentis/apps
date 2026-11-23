@@ -1,0 +1,377 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "namibia-law-home",
+    "name": "Namibia Law",
+    "icon": "library"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/applications/legal-research/catalog/authorities.json",
+        "reason": "Read the included South African citation index"
+      },
+      {
+        "path": "/legal-authority-packs",
+        "reason": "Read installed jurisdiction indexes"
+      }
+    ],
+    "data": {
+      "core": {
+        "kind": "file",
+        "path": "/applications/legal-research/catalog/authorities.json",
+        "parse": "json"
+      },
+      "packs": {
+        "kind": "folder",
+        "path": "/legal-authority-packs",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.legal-research.pack+json"
+      },
+      "authorities": {
+        "kind": "computed",
+        "expr": "(data.core.authorities || []).concat((data.packs || []).flatMap(e => e.data.authorities || []))"
+      },
+      "results": {
+        "kind": "computed",
+        "expr": "(data.authorities || []).filter(a => (!state.country || a.jurisdiction === state.country) && [a.id,a.instrument,a.citation,a.topic].join(' ').toLowerCase().includes(state.query.trim().toLowerCase()))"
+      },
+      "countries": {
+        "kind": "computed",
+        "expr": "(data.authorities || []).map(a => a.jurisdiction).filter((c,i,all) => all.indexOf(c) === i).map(c => ({label:c,value:c}))"
+      },
+      "selected": {
+        "kind": "computed",
+        "expr": "(data.results || []).find(a => a.id === state.selected)"
+      },
+      "firstdate": {
+        "kind": "computed",
+        "expr": "data.selected && state.firstdate && state.firstdate <= data.selected.checkedThrough && (data.selected.versions || []).filter(v => v.from <= state.firstdate).slice(-1)[0]"
+      },
+      "seconddate": {
+        "kind": "computed",
+        "expr": "data.selected && state.seconddate && state.seconddate <= data.selected.checkedThrough && (data.selected.versions || []).filter(v => v.from <= state.seconddate).slice(-1)[0]"
+      }
+    },
+    "state": {
+      "query": "",
+      "country": "NA",
+      "selected": "",
+      "firstdate": "",
+      "seconddate": ""
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.heading",
+            "props": {
+              "level": 2,
+              "text": "Legal Research"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Find a statute or provision and check the source before relying on it. Search stays in your workspace.",
+              "tone": "muted"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 1,
+                "gap": 4
+              },
+              "tablet": {
+                "columns": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.form.input",
+                "props": {
+                  "label": "Find a citation, instrument or topic",
+                  "value": "{{ state.query }}",
+                  "placeholder": "e.g. POPIA, trust accounts or s 49"
+                }
+              },
+              {
+                "type": "canvas.form.select",
+                "props": {
+                  "label": "Jurisdiction",
+                  "value": "{{ state.country }}",
+                  "options": "{{ [{label:'All jurisdictions',value:''}].concat(data.countries || []) }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$core.error }}"
+            },
+            "rules": {
+              "visible": "data.$core.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$core.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.$packs.error }}"
+            },
+            "rules": {
+              "visible": "data.$packs.status === 'error'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$packs.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ (data.results || []).length }} matches. Showing up to 12; narrow the search for a particular instrument.",
+              "tone": "muted"
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.results || []).slice(0,12) }}",
+              "columns": [
+                {
+                  "key": "jurisdiction",
+                  "label": "Jurisdiction"
+                },
+                {
+                  "key": "citation",
+                  "label": "Citation"
+                },
+                {
+                  "key": "topic",
+                  "label": "Topic"
+                },
+                {
+                  "key": "coverage",
+                  "label": "Coverage"
+                }
+              ],
+              "emptyText": "No matching authority.",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "set-state": {
+                    "key": "selected",
+                    "value": "{{ event.id }}"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "{{ data.selected.citation }}"
+            },
+            "children": [
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "{{ data.selected.instrument }} · {{ data.selected.topic }}"
+                }
+              },
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "Link only. This index does not grant permission to copy statutory wording. Research notes are not sent to the source.",
+                  "tone": "muted"
+                }
+              },
+              {
+                "type": "canvas.link",
+                "props": {
+                  "text": "Open pinned provision",
+                  "href": "{{ data.selected.sourceUrl }}",
+                  "external": true
+                },
+                "rules": {
+                  "visible": "String(data.selected.sourceUrl || '').startsWith('https://')"
+                }
+              },
+              {
+                "type": "canvas.link",
+                "props": {
+                  "text": "Open source publication",
+                  "href": "{{ data.selected.officialUrl }}",
+                  "external": true
+                },
+                "rules": {
+                  "visible": "String(data.selected.officialUrl || '').startsWith('https://')"
+                }
+              },
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "Compare two dates within the recorded history. A publication link alone does not establish commencement.",
+                  "tone": "muted"
+                }
+              },
+              {
+                "type": "canvas.grid",
+                "layout": {
+                  "base": {
+                    "columns": 1,
+                    "gap": 4
+                  },
+                  "tablet": {
+                    "columns": 2
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "gap": 1
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.date",
+                        "props": {
+                          "label": "Earlier date",
+                          "value": "{{ state.firstdate }}"
+                        }
+                      },
+                      {
+                        "type": "canvas.text",
+                        "props": {
+                          "text": "Coverage unknown for this date; no wording inferred.",
+                          "tone": "muted"
+                        },
+                        "rules": {
+                          "visible": "!!state.firstdate && !data.firstdate"
+                        }
+                      },
+                      {
+                        "type": "canvas.text",
+                        "props": {
+                          "text": "Recorded change effective {{ data.firstdate.from }}"
+                        },
+                        "rules": {
+                          "visible": "!!data.firstdate"
+                        }
+                      },
+                      {
+                        "type": "canvas.link",
+                        "props": {
+                          "text": "Open earlier date source",
+                          "href": "{{ data.firstdate.url }}",
+                          "external": true
+                        },
+                        "rules": {
+                          "visible": "String(data.firstdate.url || '').startsWith('https://')"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "gap": 1
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.date",
+                        "props": {
+                          "label": "Later date",
+                          "value": "{{ state.seconddate }}"
+                        }
+                      },
+                      {
+                        "type": "canvas.text",
+                        "props": {
+                          "text": "Coverage unknown for this date; no wording inferred.",
+                          "tone": "muted"
+                        },
+                        "rules": {
+                          "visible": "!!state.seconddate && !data.seconddate"
+                        }
+                      },
+                      {
+                        "type": "canvas.text",
+                        "props": {
+                          "text": "Recorded change effective {{ data.seconddate.from }}"
+                        },
+                        "rules": {
+                          "visible": "!!data.seconddate"
+                        }
+                      },
+                      {
+                        "type": "canvas.link",
+                        "props": {
+                          "text": "Open later date source",
+                          "href": "{{ data.seconddate.url }}",
+                          "external": true
+                        },
+                        "rules": {
+                          "visible": "String(data.seconddate.url || '').startsWith('https://')"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "{{ data.firstdate.revision === data.seconddate.revision ? 'Both dates resolve to the same recorded wording.' : 'The recorded wording changed between the selected dates.' }}"
+                },
+                "rules": {
+                  "visible": "!!data.firstdate && !!data.seconddate"
+                }
+              }
+            ],
+            "rules": {
+              "visible": "!!data.selected"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

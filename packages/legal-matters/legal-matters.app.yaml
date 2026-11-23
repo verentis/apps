@@ -1,0 +1,283 @@
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "legal-matters",
+    "name": "Legal Matters",
+    "description": "Synthetic matter intake, human conflict review and traceable pre-billing.",
+    "icon": "./icons/app.svg",
+    "version": "0.1.0",
+    "author": "Verentis"
+  },
+  "marketplace": {
+    "logo": "./icons/app.svg",
+    "readme": "./marketplace/README.md",
+    "keywords": [
+      "legal",
+      "matters",
+      "conflicts",
+      "billing"
+    ],
+    "hero": {
+      "source": "./marketplace/hero.svg",
+      "alt": "Legal Matters · practice workspace"
+    },
+    "images": [
+      {
+        "source": "./marketplace/overview.png",
+        "alt": "Synthetic-only Legal Matters launch page",
+        "caption": "Open the isolated pilot intake folder"
+      },
+      {
+        "source": "./marketplace/detail.png",
+        "alt": "Synthetic instruction and human conflict review in Canvas",
+        "caption": "Review linked parties and agreed terms"
+      }
+    ]
+  },
+  "spec": {
+    "install-root": "/applications/legal-matters",
+    "entry": "https://canvas.apps.localtest.me",
+    "scope": "global",
+    "entry-points": [
+      {
+        "id": "home",
+        "display-name": "Legal Matters",
+        "route": "/render?document=.%2Fcanvas%2Fhome.page.yaml",
+        "order": 10
+      }
+    ],
+    "launch": {
+      "enabled": true,
+      "entry-point": "home",
+      "pinnable": true
+    },
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run",
+      "execution.read"
+    ],
+    "scopes": [
+      "legal-matters.default"
+    ],
+    "dependencies": [
+      {
+        "package": "verentis/canvas",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/nodejs",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/crm",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/project",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/timesheets",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/expenses",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/invoicing",
+        "version": "latest"
+      }
+    ],
+    "settings": [
+      {
+        "key": "pilot-mode",
+        "display-name": "Pilot mode",
+        "type": "string",
+        "default": "disabled",
+        "description": "Only isolated-synthetic enables workflows. Real client mode is not supported."
+      },
+      {
+        "key": "synthetic-workspace-id",
+        "display-name": "Isolated synthetic workspace UUID",
+        "type": "string",
+        "default": "",
+        "description": "Must equal the actual runtime workspace UUID. Do not set in a shared or client workspace."
+      }
+    ],
+    "engine": "verentis/nodejs",
+    "scripts": [
+      "scripts/workflow"
+    ],
+    "file-access": [
+      {
+        "path": "/applications/legal-matters/",
+        "mode": "read",
+        "reason": "Read the matter schema and run the guarded workflow",
+        "origin": {
+          "kind": "document",
+          "id": "legal-matters-matter"
+        }
+      },
+      {
+        "path": "/legal-matters",
+        "mode": "write",
+        "reason": "Create, screen and update synthetic pilot matters",
+        "origin": {
+          "kind": "script",
+          "id": "legal-matters-workflow"
+        }
+      },
+      {
+        "path": "/legal-billing-register",
+        "mode": "write",
+        "reason": "Conditionally reserve sources and track invoice delivery",
+        "origin": {
+          "kind": "script",
+          "id": "legal-matters-workflow"
+        }
+      },
+      {
+        "path": "/customers",
+        "mode": "read",
+        "reason": "Validate named CRM party links",
+        "origin": {
+          "kind": "script",
+          "id": "legal-matters-workflow"
+        }
+      },
+      {
+        "path": "/projects",
+        "mode": "read",
+        "reason": "Validate the linked project",
+        "origin": {
+          "kind": "script",
+          "id": "legal-matters-workflow"
+        }
+      },
+      {
+        "path": "/timesheets",
+        "mode": "read",
+        "reason": "Read selected validated time",
+        "origin": {
+          "kind": "script",
+          "id": "legal-matters-workflow"
+        }
+      },
+      {
+        "path": "/expense-reports",
+        "mode": "read",
+        "reason": "Read selected approved disbursements",
+        "origin": {
+          "kind": "script",
+          "id": "legal-matters-workflow"
+        }
+      },
+      {
+        "path": "/settings/accounting.json",
+        "mode": "read",
+        "reason": "Check currency and precision",
+        "origin": {
+          "kind": "script",
+          "id": "legal-matters-workflow"
+        }
+      },
+      {
+        "path": "/settings/invoicing.json",
+        "mode": "read",
+        "reason": "Read payment terms and tax defaults",
+        "origin": {
+          "kind": "script",
+          "id": "legal-matters-workflow"
+        }
+      },
+      {
+        "path": "/invoices",
+        "mode": "write",
+        "reason": "Create ordinary draft invoices without overwriting them",
+        "origin": {
+          "kind": "script",
+          "id": "legal-matters-workflow"
+        }
+      }
+    ],
+    "install": [
+      {
+        "from": "canvas/*.form.yaml",
+        "to": "/applications/legal-matters/canvas/",
+        "mime": "application/vnd.verentis.canvas.form+yaml",
+        "mode": "managed"
+      },
+      {
+        "from": "canvas/*.page.yaml",
+        "to": "/applications/legal-matters/canvas/",
+        "mime": "application/vnd.verentis.canvas.page+yaml",
+        "mode": "managed"
+      },
+      {
+        "from": "schemas/*.schema.json",
+        "to": "/applications/legal-matters/schemas/",
+        "mime": "application/schema+json",
+        "mode": "managed"
+      },
+      {
+        "from": "templates/*.json",
+        "to": "/applications/legal-matters/templates/",
+        "mime": "application/json",
+        "mode": "managed"
+      },
+      {
+        "from": "seed/matters",
+        "to": "/legal-matters",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.legal-matters.matters"
+      },
+      {
+        "from": "seed/register.json",
+        "to": "/legal-billing-register",
+        "mode": "seed",
+        "mime": "application/json"
+      }
+    ],
+    "creatables": [
+      {
+        "id": "matter",
+        "display-name": "Synthetic legal matter",
+        "description": "Guarded intake in an isolated pilot workspace",
+        "icon": "lucide:briefcase-business",
+        "mime": "application/vnd.verentis.legal-matters.matter+json",
+        "parents": [
+          "application/vnd.verentis.legal-matters.matters"
+        ],
+        "script": "./scripts/workflow",
+        "template": "./templates/matter.json"
+      }
+    ],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-forms": true,
+      "allow-popups": false
+    }
+  },
+  "packaging": {
+    "publisher": "verentis",
+    "files": [
+      "canvas/**",
+      "schemas/**",
+      "templates/**",
+      "seed/**",
+      "scripts/**",
+      "README.md"
+    ],
+    "templates": [
+      "canvas/*.yaml"
+    ],
+    "variables": {
+      "canvas-origin": "https://canvas.apps.localtest.me"
+    },
+    "encryption": "none"
+  }
+}

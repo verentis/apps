@@ -1,0 +1,13 @@
+{
+  "$schema":"https://schemas.verentis.io/legal-matters/v1/matter.schema.json",
+  "schemaVersion":1,"kind":"matter","state":"active","id":"31487ba0-407e-4229-a265-9a1256614602","revision":"3f45b8f0-af7f-45fb-b456-471956dab8bd","code":"MAT-DEMO",
+  "createdAt":"2026-06-01T12:00:00Z","updatedAt":"2026-06-02T12:00:00Z","pilot":"synthetic-only","status":"screened",
+  "title":"Synthetic • Services agreement review",
+  "parties":[{"role":"client","name":"Paper Kite Example Ltd","crm":"/customers/CUST-0001","aliases":"Paper Kite"},{"role":"counterparty","name":"Fictional Harbour Works","crm":"","aliases":"Harbour Example"}],
+  "team":["Alex Example · lawyer","Taylor Example · paralegal"],"project":"/projects/PRJ-0001","links":[],
+  "engagement":"Review the draft services agreement and advise on delivery milestones. Commercial advisory only.",
+  "currency":"ZAR","rates":[{"employee":"Taylor Example","effective":"2026-01-01","amount":"850.00"}],"fixedFee":"",
+  "reviewBy":"Alex Example","reviewReason":"Checking counterparty alias against a prior synthetic instruction.","disposition":"undecided",
+  "screen":{"count":1,"fingerprint":"demo-gallery-only","at":"2026-06-02T12:00:00Z"},
+  "billingReviewer":"","charges":[],"chronology":["2026-06-02T12:00:00Z · Screened · 1 potential matching matter"],"invoices":[]
+}
