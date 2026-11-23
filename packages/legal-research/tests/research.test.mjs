@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { catalog } from '../src/catalog.mjs'
+import { catalog } from '../../south-africa-law/src/catalog.mjs'
 import { home } from '../src/page.mjs'
 import { lawPack } from '../../../tools/file-apps/law-pack.mjs'
 
@@ -9,7 +9,9 @@ import { lawPack } from '../../../tools/file-apps/law-pack.mjs'
 const evaluate = (name, data, state) => Function('data', 'state', `return (${home.spec.data[name].expr})`)(data, state)
 test('only installed jurisdictions enter searches, with no external requests', () => {
   const extra = { id: 'NA:example', citation: 'Example Act', topic: 'Privacy', instrument: 'Example', jurisdiction: 'NA' }
-  const authorities = evaluate('authorities', { core: catalog, packs: [{ data: { authorities: [extra] } }] }, {})
+  assert.deepEqual(evaluate('authorities', { packs: [] }, {}), [])
+  assert.deepEqual(evaluate('authorities', { packs: [{ data: { authorities: [extra] } }] }, {}), [extra])
+  const authorities = evaluate('authorities', { packs: [{ data: catalog }, { data: { authorities: [extra] } }] }, {})
   assert.deepEqual(evaluate('results', { authorities }, { country: 'NA', query: ' PRIVACY ' }), [extra])
   const za = evaluate('results', { authorities }, { country: 'ZA', query: 'popia s 21' })
   assert.equal(za[0].id, 'ZA:popia:s21')

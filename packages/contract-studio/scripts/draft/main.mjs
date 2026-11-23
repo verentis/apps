@@ -1,4 +1,4 @@
-import { assert, authority, catalogPath, child, contracts, digest, freeze, key, libraryPath, matter,
+import { assert, authority, catalog, catalogPath, child, contracts, digest, freeze, key, libraryPath, matter, packs,
   mime, precedent, precedents, render, schemaId, string, variables } from './model.mjs'
 
 async function readLibrary(files, path) {
@@ -7,7 +7,9 @@ async function readLibrary(files, path) {
   return record
 }
 async function readAuthority(files, path, id) {
-  const source = await files.readJson(catalogPath(path))
+  // Resolve pre-split ZA references without rewriting their saved provenance.
+  const location = catalogPath(path)
+  const source = await files.readJson(location === catalog ? `${packs}/ZA` : location)
   assert(Array.isArray(source?.authorities), 'Invalid authority catalogue.')
   const matches = source.authorities.filter(a => a?.id === id)
   assert(matches.length === 1, 'Choose exactly one known authority from the selected catalogue.')

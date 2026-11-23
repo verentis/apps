@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { generate, json, scriptConsent, scriptManifest } from '../../../tools/file-apps/build.mjs'
 import { documentFileAccess } from '../../../tools/file-apps/canvas.mjs'
-import { catalog, clients, contracts, mime, packs, precedents, root, schedules, schemaId } from '../scripts/draft/model.mjs'
+import { clients, contracts, mime, packs, precedents, root, schedules, schemaId } from '../scripts/draft/model.mjs'
 import { pages } from './pages.mjs'
 
 const id = 'contract-studio'
@@ -11,7 +11,7 @@ const canvas = 'https://canvas.apps.localtest.me'
 const grant = (path, mode, reason) => ({ path, mode, reason })
 const scripts = {
   draft: [grant(contracts,'write','Create and conditionally edit, submit and approve agreements'),
-    grant(precedents,'read','Pin approved clause revisions'),grant(catalog,'read','Pin citation metadata only'),
+    grant(precedents,'read','Pin approved clause revisions'),
     grant(packs,'read','Pin citation metadata from a selected additional jurisdiction pack')],
   library: [grant(precedents,'write','Publish cleared firm clause revisions create-only')],
   issue: [grant(contracts,'write','Read the approval snapshot and conditionally mark delivery complete'),

@@ -72,11 +72,6 @@
         "reason": "Choose approved firm revisions"
       },
       {
-        "path": "/applications/legal-research/catalog/authorities.json",
-        "mode": "read",
-        "reason": "Choose bibliographic South African references"
-      },
-      {
         "path": "/legal-authority-packs",
         "mode": "read",
         "reason": "Choose bibliographic references in optional installed jurisdiction packs"
@@ -100,10 +95,6 @@
         "reason": "Choose approved firm revisions"
       },
       {
-        "path": "/applications/legal-research/catalog/authorities.json",
-        "reason": "Choose bibliographic South African references"
-      },
-      {
         "path": "/legal-authority-packs",
         "reason": "Choose bibliographic references in optional installed jurisdiction packs"
       }
@@ -122,12 +113,12 @@
       "packs": {
         "kind": "folder",
         "path": "/legal-authority-packs",
+        "contents": true,
         "mime-pattern": "application/vnd.verentis.legal-research.pack+json"
       },
       "authorities": {
-        "kind": "file",
-        "path": "{{ state.catalog }}",
-        "parse": "json"
+        "kind": "computed",
+        "expr": "((data.packs || []).find(e => e.path === state.catalog) || {}).data"
       }
     },
     "state": {
@@ -142,7 +133,7 @@
       "pinpoint": "",
       "reviewer": "",
       "position": 1,
-      "catalog": "/applications/legal-research/catalog/authorities.json",
+      "catalog": "",
       "sourceKind": "firm",
       "decision": "defer",
       "result": {}
@@ -281,7 +272,7 @@
               {
                 "type": "canvas.table",
                 "props": {
-                  "rows": "{{ (form.values.points || []).map((p, i) => ({ id:p.id, number:i+1, origin:p.origin, template:p.precedent ? p.precedent.wording : '', revision:p.precedent ? p.precedent.code+' v'+p.precedent.revision : '', wording:p.origin === 'firm' ? (p.variation || p.precedent.wording) : p.wording, edit:p.origin === 'firm' ? (p.variation || '') : p.wording, bindings:p.bindings, note:p.note, citation:p.authority ? p.authority.citation+' · '+p.authority.pinpoint+' · '+p.authority.coverage+' · '+p.authority.revision+' · '+p.authority.sourceUrl : '', update: (p.precedent && (data.library || []).some(e => e.data && e.data.code === p.precedent.code && e.data.revision > p.precedent.revision)) || (p.authority && p.authority.catalog === state.catalog && ((data.authorities && data.authorities.authorities) || []).some(a => a.id === p.authority.id && a.revision !== p.authority.revision)) ? 'Revision available for review' : '', decision:p.sourceDecision ? p.sourceDecision.decision : '' })) }}",
+                  "rows": "{{ (form.values.points || []).map((p, i) => ({ id:p.id, number:i+1, origin:p.origin, template:p.precedent ? p.precedent.wording : '', revision:p.precedent ? p.precedent.code+' v'+p.precedent.revision : '', wording:p.origin === 'firm' ? (p.variation || p.precedent.wording) : p.wording, edit:p.origin === 'firm' ? (p.variation || '') : p.wording, bindings:p.bindings, note:p.note, citation:p.authority ? p.authority.citation+' · '+p.authority.pinpoint+' · '+p.authority.coverage+' · '+p.authority.revision+' · '+p.authority.sourceUrl : '', update: (p.precedent && (data.library || []).some(e => e.data && e.data.code === p.precedent.code && e.data.revision > p.precedent.revision)) || (p.authority && (p.authority.catalog === state.catalog || (p.authority.catalog === '/applications/legal-research/catalog/authorities.json' && state.catalog === '/legal-authority-packs/ZA')) && ((data.authorities && data.authorities.authorities) || []).some(a => a.id === p.authority.id && a.revision !== p.authority.revision)) ? 'Revision available for review' : '', decision:p.sourceDecision ? p.sourceDecision.decision : '' })) }}",
                   "columns": [
                     {
                       "key": "number",
@@ -532,16 +523,16 @@
                 "props": {
                   "label": "Installed catalogue",
                   "value": "{{ state.catalog }}",
-                  "options": "{{ [{label:'South Africa pilot',value:'/applications/legal-research/catalog/authorities.json'}].concat((data.packs || []).filter(e => e.kind === 'file').map(e => ({label:e.name,value:e.path}))) }}"
+                  "options": "{{ [{label:'Choose a country pack',value:''}].concat((data.packs || []).filter(e => e.kind === 'file').map(e => ({label:e.name,value:e.path}))) }}"
                 }
               },
               {
                 "type": "canvas.text",
                 "props": {
-                  "text": "Selected catalogue unavailable. Install Legal Research or select another pack; authoring remains available."
+                  "text": "Install a country pack to attach citations; authoring remains available."
                 },
                 "rules": {
-                  "visible": "data.$authorities.status === 'error'"
+                  "visible": "data.$packs.status === 'error'"
                 }
               },
               {
@@ -551,7 +542,7 @@
                   "tone": "muted"
                 },
                 "rules": {
-                  "visible": "data.$authorities.status === 'loading'"
+                  "visible": "data.$packs.status === 'loading'"
                 }
               },
               {

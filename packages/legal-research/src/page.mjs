@@ -1,6 +1,5 @@
-import { apiVersion, card, column, folder, grid, heading, jsonFile, page, status, table, text } from '../../../tools/file-apps/canvas.mjs'
+import { apiVersion, card, column, folder, grid, heading, page, status, table, text } from '../../../tools/file-apps/canvas.mjs'
 
-export const basePath = '/applications/legal-research/catalog/authorities.json'
 export const packPath = '/legal-authority-packs'
 export const packMime = 'application/vnd.verentis.legal-research.pack+json'
 const computed = expr => ({ kind: 'computed', expr })
@@ -17,24 +16,26 @@ const compare = (label, key) => column([
   link(`Open ${label.toLowerCase()} source`, `data.${key}.url`),
 ])
 
-export const home = {
-  'api-version': apiVersion, kind: 'Page', metadata: { id: 'legal-research-home', name: 'Legal Research', icon: 'library' },
+export function researchPage(id, name, country = '') {
+  return {
+  'api-version': apiVersion, kind: 'Page', metadata: { id: `${id}-home`, name, icon: 'library' },
   spec: {
-    access: [{ path: basePath, reason: 'Read the included South African citation index' }, { path: packPath, reason: 'Read installed jurisdiction indexes' }],
+    access: [{ path: packPath, reason: 'Read installed jurisdiction indexes' }],
     data: {
-      core: jsonFile(basePath), packs: folder(packPath, packMime),
-      authorities: computed('(data.core.authorities || []).concat((data.packs || []).flatMap(e => e.data.authorities || []))'),
+      packs: folder(packPath, packMime),
+      authorities: computed('(data.packs || []).flatMap(e => (e.data && e.data.authorities) || [])'),
       results: computed("(data.authorities || []).filter(a => (!state.country || a.jurisdiction === state.country) && [a.id,a.instrument,a.citation,a.topic].join(' ').toLowerCase().includes(state.query.trim().toLowerCase()))"),
       countries: computed("(data.authorities || []).map(a => a.jurisdiction).filter((c,i,all) => all.indexOf(c) === i).map(c => ({label:c,value:c}))"),
       selected: computed('(data.results || []).find(a => a.id === state.selected)'),
       firstdate: computed(version('firstdate')), seconddate: computed(version('seconddate')),
     },
-    state: { query: '', country: '', selected: '', firstdate: '', seconddate: '' },
+    state: { query: '', country, selected: '', firstdate: '', seconddate: '' },
     tree: page([
-      heading('Legal Research'), text('Find a statute or provision and check the source before relying on it. Search stays in your workspace.', 'muted'),
+      heading(name), text('Find a statute or provision and check the source before relying on it. Search stays in your workspace.', 'muted'),
       grid([field('input', 'Find a citation, instrument or topic', 'query', { placeholder: 'e.g. POPIA, trust accounts or s 49' }),
         field('select', 'Jurisdiction', 'country', { options: "{{ [{label:'All jurisdictions',value:''}].concat(data.countries || []) }}" })]),
-      ...status('core'), ...status('packs'),
+      ...status('packs'),
+      { ...text('Install a country pack such as South Africa Law or Namibia Law to search its citations.'), rules: { visible: 'data.packs && data.packs.length === 0' } },
       text("{{ (data.results || []).length }} matches. Showing up to 12; narrow the search for a particular instrument.", 'muted'),
       { ...table('{{ (data.results || []).slice(0,12) }}', [['jurisdiction', 'Jurisdiction'], ['citation', 'Citation'], ['topic', 'Topic'], ['coverage', 'Coverage']], 'No matching authority.', true),
         on: { 'row-click': [{ 'set-state': { key: 'selected', value: '{{ event.id }}' } }] } },
@@ -50,3 +51,5 @@ export const home = {
     ]),
   },
 }
+}
+export const home = researchPage('legal-research', 'Legal Research')

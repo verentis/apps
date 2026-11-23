@@ -69,15 +69,6 @@
     ],
     "file-access": [
       {
-        "path": "/applications/legal-research/catalog/authorities.json",
-        "mode": "read",
-        "reason": "Read the included South African citation index",
-        "origin": {
-          "kind": "document",
-          "id": "canvas/home.page.yaml"
-        }
-      },
-      {
         "path": "/legal-authority-packs",
         "mode": "read",
         "reason": "Read installed jurisdiction indexes",

@@ -16,9 +16,6 @@ file-access:
   - path: "/legal-precedents"
     mode: read
     reason: "Pin approved clause revisions"
-  - path: "/applications/legal-research/catalog/authorities.json"
-    mode: read
-    reason: "Pin citation metadata only"
   - path: "/legal-authority-packs"
     mode: read
     reason: "Pin citation metadata from a selected additional jurisdiction pack"
