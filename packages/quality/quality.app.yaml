@@ -4,13 +4,16 @@
   "metadata": {
     "id": "quality",
     "name": "Quality",
-    "description": "Quality control points, checks and alerts as files in your workspace, recorded against tolerances and resolved by script.",
+    "description": "Turn quality requirements into checks your team can carry out and review.",
     "icon": "./icons/app.svg",
     "version": "0.1.0",
     "author": "Verentis"
   },
   "marketplace": {
-    "readme": "./README.md",
+    "logo": "./icons/app.svg",
+      "hero": {"source": "./marketplace/hero.svg", "alt": "Quality cover"},
+      "images": [{"source": "./marketplace/overview.png", "alt": "Quality overview in Canvas", "caption": "Quality overview"}, {"source": "./marketplace/detail.png", "alt": "Quality checks in Canvas", "caption": "Quality checks"}],
+      "readme": "./marketplace/README.md",
     "keywords": [
       "quality",
       "qc",

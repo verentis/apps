@@ -4,13 +4,16 @@
   "metadata": {
     "id": "documents",
     "name": "Documents",
-    "description": "A tagging and review workflow over files already in your workspace: document cards reference VFS paths, grouped into workspaces with tags, moved through inbox, review, validated and archived by scripted actions.",
+    "description": "Organise and review the documents your team already works with.",
     "icon": "./icons/app.svg",
     "version": "0.1.0",
     "author": "Verentis"
   },
   "marketplace": {
-    "readme": "./README.md",
+    "logo": "./icons/app.svg",
+      "hero": {"source": "./marketplace/hero.svg", "alt": "Documents cover"},
+      "images": [{"source": "./marketplace/overview.png", "alt": "Documents overview in Canvas", "caption": "Documents overview"}, {"source": "./marketplace/detail.png", "alt": "Library in Canvas", "caption": "Library"}],
+      "readme": "./marketplace/README.md",
     "keywords": [
       "documents",
       "dms",

@@ -110,11 +110,14 @@ export const manifest = {
   kind: 'Application',
   metadata: {
     id: 'field-service', name: 'Field Service',
-    description: 'Field tasks as files in your workspace: schedule technicians, log hours and materials on site, and draft invoices for completed work.',
+    description: "Coordinate on-site work from the technician's schedule to the invoice draft.",
     icon: './icons/app.svg', version, author: 'Verentis',
   },
   marketplace: {
-    readme: './README.md',
+    logo: "./icons/app.svg",
+    hero: {"source": "./marketplace/hero.svg", "alt": "Field Service cover"},
+    images: [{"source": "./marketplace/overview.png", "alt": "Field Service overview in Canvas", "caption": "Field Service overview"}, {"source": "./marketplace/detail.png", "alt": "Tasks in Canvas", "caption": "Tasks"}],
+    readme: "./marketplace/README.md",
     keywords: ['field service', 'tasks', 'technicians', 'onsite', 'install', 'repair', 'inspection', 'work orders'],
   },
   spec: {

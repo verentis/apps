@@ -109,11 +109,14 @@ export const manifest = {
   kind: 'Application',
   metadata: {
     id: 'recruitment', name: 'Recruitment',
-    description: 'Job positions and candidates as files in your workspace, with a hiring pipeline and scripted advance, refuse and hire actions.',
+    description: "Follow candidates from their first application to a hiring decision.",
     icon: './icons/app.svg', version, author: 'Verentis',
   },
   marketplace: {
-    readme: './README.md',
+    logo: "./icons/app.svg",
+    hero: {"source": "./marketplace/hero.svg", "alt": "Recruitment cover"},
+    images: [{"source": "./marketplace/overview.png", "alt": "Recruitment overview in Canvas", "caption": "Recruitment overview"}, {"source": "./marketplace/detail.png", "alt": "Pipeline in Canvas", "caption": "Pipeline"}],
+    readme: "./marketplace/README.md",
     keywords: ['recruitment', 'hiring', 'candidates', 'jobs', 'applications', 'hr', 'pipeline'],
   },
   spec: {

@@ -113,11 +113,14 @@ export const manifest = {
   kind: 'Application',
   metadata: {
     id: 'knowledge', name: 'Knowledge',
-    description: 'Spaces and Markdown articles as files in your workspace, nested into a hierarchy and published, archived and restored by script.',
+    description: "Give your team a shared handbook that is easy to browse.",
     icon: './icons/app.svg', version, author: 'Verentis',
   },
   marketplace: {
-    readme: './README.md',
+    logo: "./icons/app.svg",
+    hero: {"source": "./marketplace/hero.svg", "alt": "Knowledge cover"},
+    images: [{"source": "./marketplace/overview.png", "alt": "Knowledge overview in Canvas", "caption": "Knowledge overview"}, {"source": "./marketplace/detail.png", "alt": "Spaces in Canvas", "caption": "Spaces"}],
+    readme: "./marketplace/README.md",
     keywords: ['knowledge', 'wiki', 'articles', 'documentation', 'markdown', 'spaces', 'handbook'],
   },
   spec: {

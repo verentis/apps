@@ -141,11 +141,14 @@ export const manifest = {
   kind: 'Application',
   metadata: {
     id: 'inventory', name: 'Inventory',
-    description: 'Products, warehouses, stock moves and inventory adjustments as files in your workspace, validated and applied by script and reported with Canvas.',
+    description: "See which products are on hand and where they are stored.",
     icon: './icons/app.svg', version, author: 'Verentis',
   },
   marketplace: {
-    readme: './README.md',
+    logo: "./icons/app.svg",
+    hero: {"source": "./marketplace/hero.svg", "alt": "Inventory cover"},
+    images: [{"source": "./marketplace/overview.png", "alt": "Inventory overview in Canvas", "caption": "Inventory overview"}, {"source": "./marketplace/detail.png", "alt": "Stock levels in Canvas", "caption": "Stock levels"}],
+    readme: "./marketplace/README.md",
     keywords: ['inventory', 'stock', 'warehouse', 'products', 'stock moves', 'inventory adjustments', 'on hand', 'reorder point'],
   },
   spec: {

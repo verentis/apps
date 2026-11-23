@@ -109,11 +109,14 @@ export const manifest = {
   kind: 'Application',
   metadata: {
     id: 'project', name: 'Project',
-    description: 'Projects and their tasks as files in your workspace, with a stage board and a Complete action script.',
+    description: "Organise project tasks and see how work is progressing.",
     icon: './icons/app.svg', version, author: 'Verentis',
   },
   marketplace: {
-    readme: './README.md',
+    logo: "./icons/app.svg",
+    hero: {"source": "./marketplace/hero.svg", "alt": "Project cover"},
+    images: [{"source": "./marketplace/overview.png", "alt": "Project overview in Canvas", "caption": "Project overview"}, {"source": "./marketplace/detail.png", "alt": "Task board in Canvas", "caption": "Task board"}],
+    readme: "./marketplace/README.md",
     keywords: ['project', 'projects', 'tasks', 'kanban', 'board', 'planning'],
   },
   spec: {

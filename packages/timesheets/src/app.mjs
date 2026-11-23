@@ -92,11 +92,14 @@ export const manifest = {
   kind: 'Application',
   metadata: {
     id: 'timesheets', name: 'Timesheets',
-    description: 'Timesheet entries as files in your workspace, logged against Project work and validated by script.',
+    description: "Record working time and review how the week was spent.",
     icon: './icons/app.svg', version, author: 'Verentis',
   },
   marketplace: {
-    readme: './README.md',
+    logo: "./icons/app.svg",
+    hero: {"source": "./marketplace/hero.svg", "alt": "Timesheets cover"},
+    images: [{"source": "./marketplace/overview.png", "alt": "Timesheets overview in Canvas", "caption": "Timesheets overview"}, {"source": "./marketplace/detail.png", "alt": "This week in Canvas", "caption": "This week"}],
+    readme: "./marketplace/README.md",
     keywords: ['timesheets', 'time tracking', 'hours', 'projects', 'tasks'],
   },
   spec: {

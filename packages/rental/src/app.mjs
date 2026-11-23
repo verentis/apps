@@ -117,11 +117,14 @@ export const manifest = {
   kind: 'Application',
   metadata: {
     id: 'rental', name: 'Rental',
-    description: 'Rental products and bookings as files in your workspace; bookings are confirmed, picked up and returned by script.',
+    description: "Manage rental bookings from availability checks to returns.",
     icon: './icons/app.svg', version, author: 'Verentis',
   },
   marketplace: {
-    readme: './README.md',
+    logo: "./icons/app.svg",
+    hero: {"source": "./marketplace/hero.svg", "alt": "Rental cover"},
+    images: [{"source": "./marketplace/overview.png", "alt": "Rental overview in Canvas", "caption": "Rental overview"}, {"source": "./marketplace/detail.png", "alt": "Bookings in Canvas", "caption": "Bookings"}],
+    readme: "./marketplace/README.md",
     keywords: ['rental', 'rentals', 'bookings', 'hire', 'equipment', 'availability', 'invoicing'],
   },
   spec: {

@@ -4,13 +4,16 @@
   "metadata": {
     "id": "appraisals",
     "name": "Appraisals",
-    "description": "Employee appraisals as files in your workspace, with criteria ratings, a computed overall score and scripted schedule and complete actions.",
+    "description": "Bring employee performance reviews, ratings and outcomes into one place.",
     "icon": "./icons/app.svg",
     "version": "0.1.0",
     "author": "Verentis"
   },
   "marketplace": {
-    "readme": "./README.md",
+    "logo": "./icons/app.svg",
+      "hero": {"source": "./marketplace/hero.svg", "alt": "Appraisals cover"},
+      "images": [{"source": "./marketplace/overview.png", "alt": "Appraisals overview in Canvas", "caption": "Appraisals overview"}, {"source": "./marketplace/detail.png", "alt": "Appraisals by status in Canvas", "caption": "Appraisals by status"}],
+      "readme": "./marketplace/README.md",
     "keywords": [
       "appraisals",
       "performance",

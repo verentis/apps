@@ -114,11 +114,14 @@ export const manifest = {
   kind: 'Application',
   metadata: {
     id: 'helpdesk', name: 'Helpdesk',
-    description: 'Support teams and tickets as files in your workspace, with SLA deadlines, a stage pipeline and scripted resolve and close actions.',
+    description: "Give support teams a shared ticket queue and a clear view of deadlines.",
     icon: './icons/app.svg', version, author: 'Verentis',
   },
   marketplace: {
-    readme: './README.md',
+    logo: "./icons/app.svg",
+    hero: {"source": "./marketplace/hero.svg", "alt": "Helpdesk cover"},
+    images: [{"source": "./marketplace/overview.png", "alt": "Helpdesk overview in Canvas", "caption": "Helpdesk overview"}, {"source": "./marketplace/detail.png", "alt": "Tickets in Canvas", "caption": "Tickets"}],
+    readme: "./marketplace/README.md",
     keywords: ['helpdesk', 'support', 'tickets', 'sla', 'teams', 'service desk', 'customer service'],
   },
   spec: {

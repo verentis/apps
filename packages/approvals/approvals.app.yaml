@@ -4,13 +4,16 @@
   "metadata": {
     "id": "approvals",
     "name": "Approvals",
-    "description": "Approval types and requests as files in your workspace, submitted, approved, refused or cancelled by script with multi-approver thresholds.",
+    "description": "Give your team one place to request a decision and see its outcome.",
     "icon": "./icons/app.svg",
     "version": "0.1.0",
     "author": "Verentis"
   },
   "marketplace": {
-    "readme": "./README.md",
+    "logo": "./icons/app.svg",
+      "hero": {"source": "./marketplace/hero.svg", "alt": "Approvals cover"},
+      "images": [{"source": "./marketplace/overview.png", "alt": "Approvals overview in Canvas", "caption": "Approvals overview"}, {"source": "./marketplace/detail.png", "alt": "Approval requests in Canvas", "caption": "Approval requests"}],
+      "readme": "./marketplace/README.md",
     "keywords": [
       "approvals",
       "approval requests",

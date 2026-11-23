@@ -116,11 +116,14 @@ export const manifest = {
   kind: 'Application',
   metadata: {
     id: 'expenses', name: 'Expenses',
-    description: 'Expense categories and employee expense reports as files in your workspace, submitted, approved and posted to the Accounting ledger by script.',
+    description: "Take employee expenses from submission through approval and accounting.",
     icon: './icons/app.svg', version, author: 'Verentis',
   },
   marketplace: {
-    readme: './README.md',
+    logo: "./icons/app.svg",
+    hero: {"source": "./marketplace/hero.svg", "alt": "Expenses cover"},
+    images: [{"source": "./marketplace/overview.png", "alt": "Expenses overview in Canvas", "caption": "Expenses overview"}, {"source": "./marketplace/detail.png", "alt": "Expense reports in Canvas", "caption": "Expense reports"}],
+    readme: "./marketplace/README.md",
     keywords: ['expenses', 'expense reports', 'reimbursements', 'approvals', 'accounting'],
   },
   spec: {

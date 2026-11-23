@@ -119,11 +119,14 @@ export const manifest = {
   kind: 'Application',
   metadata: {
     id: 'social-marketing', name: 'Social Marketing',
-    description: 'Social accounts and posts as files in your workspace, with scripted schedule, publish and cancel transitions and hand-recorded engagement. Actual delivery to the networks is a platform integration concern.',
+    description: "Plan social content across accounts and compare engagement.",
     icon: './icons/app.svg', version, author: 'Verentis',
   },
   marketplace: {
-    readme: './README.md',
+    logo: "./icons/app.svg",
+    hero: {"source": "./marketplace/hero.svg", "alt": "Social Marketing cover"},
+    images: [{"source": "./marketplace/overview.png", "alt": "Social Marketing overview in Canvas", "caption": "Social Marketing overview"}, {"source": "./marketplace/detail.png", "alt": "Upcoming posts in Canvas", "caption": "Upcoming posts"}],
+    readme: "./marketplace/README.md",
     keywords: ['social media', 'marketing', 'posts', 'publishing', 'engagement', 'scheduling'],
   },
   spec: {

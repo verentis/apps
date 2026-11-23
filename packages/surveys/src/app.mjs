@@ -122,11 +122,14 @@ export const manifest = {
   kind: 'Application',
   metadata: {
     id: 'surveys', name: 'Surveys',
-    description: 'Surveys and responses as files in your workspace, with validated questionnaires, scripted open, close and submit actions and a results summary.',
+    description: "Collect structured feedback and review the answers question by question.",
     icon: './icons/app.svg', version, author: 'Verentis',
   },
   marketplace: {
-    readme: './README.md',
+    logo: "./icons/app.svg",
+    hero: {"source": "./marketplace/hero.svg", "alt": "Surveys cover"},
+    images: [{"source": "./marketplace/overview.png", "alt": "Surveys overview in Canvas", "caption": "Surveys overview"}, {"source": "./marketplace/detail.png", "alt": "All surveys in Canvas", "caption": "All surveys"}],
+    readme: "./marketplace/README.md",
     keywords: ['surveys', 'questionnaires', 'responses', 'feedback', 'polls', 'ratings'],
   },
   spec: {

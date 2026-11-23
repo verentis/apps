@@ -4,13 +4,16 @@
   "metadata": {
     "id": "spreadsheet-bi",
     "name": "Spreadsheet BI",
-    "description": "Saved BI dashboards and snapshots as files in your workspace, computed live from the record files of CRM, Invoicing, Accounting and Helpdesk.",
+    "description": "Create reusable dashboards and keep a snapshot of the numbers behind a decision.",
     "icon": "./icons/app.svg",
     "version": "0.1.0",
     "author": "Verentis"
   },
   "marketplace": {
-    "readme": "./README.md",
+    "logo": "./icons/app.svg",
+      "hero": {"source": "./marketplace/hero.svg", "alt": "Spreadsheet BI cover"},
+      "images": [{"source": "./marketplace/overview.png", "alt": "Spreadsheet BI overview in Canvas", "caption": "Spreadsheet BI overview"}, {"source": "./marketplace/detail.png", "alt": "Snapshots in Canvas", "caption": "Snapshots"}],
+      "readme": "./marketplace/README.md",
     "keywords": [
       "bi",
       "dashboards",

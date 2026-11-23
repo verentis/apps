@@ -145,11 +145,14 @@ export const manifest = {
   kind: 'Application',
   metadata: {
     id: 'accounting', name: 'Accounting',
-    description: 'A double-entry ledger as files in your workspace: chart of accounts, periods, journals and expenses, posted by script and reported with Canvas.',
+    description: "Keep a double-entry ledger and see where your business stands.",
     icon: './icons/app.svg', version, author: 'Verentis',
   },
   marketplace: {
-    readme: './README.md',
+    logo: "./icons/app.svg",
+    hero: {"source": "./marketplace/hero.svg", "alt": "Accounting cover"},
+    images: [{"source": "./marketplace/overview.png", "alt": "Accounting overview in Canvas", "caption": "Accounting overview"}, {"source": "./marketplace/detail.png", "alt": "Financial reports in Canvas", "caption": "Financial reports"}],
+    readme: "./marketplace/README.md",
     keywords: ['accounting', 'ledger', 'double-entry', 'journals', 'chart of accounts', 'expenses', 'trial balance', 'profit and loss', 'balance sheet'],
   },
   spec: {

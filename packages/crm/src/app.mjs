@@ -226,11 +226,14 @@ export const manifest = {
   kind: 'Application',
   metadata: {
     id: 'crm', name: 'CRM',
-    description: 'Customers, contacts, deals, cases and their emails, calls, meetings, tasks, notes and documents as files in your workspace, edited with Canvas forms.',
+    description: "Keep customer relationships, conversations and sales opportunities together.",
     icon: './icons/app.svg', version, author: 'Verentis',
   },
   marketplace: {
-    readme: './README.md',
+    logo: "./icons/app.svg",
+    hero: {"source": "./marketplace/hero.svg", "alt": "CRM cover"},
+    images: [{"source": "./marketplace/overview.png", "alt": "CRM overview in Canvas", "caption": "CRM overview"}, {"source": "./marketplace/detail.png", "alt": "Follow-ups in Canvas", "caption": "Follow-ups"}],
+    readme: "./marketplace/README.md",
     keywords: ['crm', 'customers', 'clients', 'accounts', 'contacts', 'companies', 'deals', 'opportunities', 'sales', 'pipeline', 'cases', 'support'],
   },
   spec: {
