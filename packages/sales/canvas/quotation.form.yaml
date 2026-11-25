@@ -59,7 +59,7 @@
       {
         "path": "/products",
         "mode": "read",
-        "reason": "Offer products on quotation lines"
+        "reason": "Offer Products' products on quotation lines"
       },
       {
         "path": "/applications/sales/",
@@ -74,7 +74,7 @@
       },
       {
         "path": "/products",
-        "reason": "Offer products on quotation lines"
+        "reason": "Offer Products' products on quotation lines"
       },
       {
         "path": "/applications/sales/",
@@ -106,11 +106,14 @@
         "kind": "folder",
         "path": "/products",
         "contents": true,
-        "mime-pattern": "application/vnd.verentis.sales.product+json"
+        "mime-pattern": "application/vnd.verentis.products.product+json"
       },
       "productoptions": {
         "kind": "computed",
         "expr": "(data.products || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + (e.data.name || ''), value: e.path }))"
+      },
+      "appops": {
+        "kind": "app-operations"
       }
     },
     "tree": [
@@ -128,74 +131,168 @@
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.validation-summary",
+            "props": {
+              "title": "Fix these before saving"
+            }
+          },
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "{{ form.values.customer.name || 'New quotation' }}",
+              "note": "Quotation {{ form.values.code || '' }}"
             },
             "children": [
               {
                 "type": "canvas.stack",
                 "layout": {
                   "base": {
-                    "gap": 1
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
                   }
                 },
                 "children": [
                   {
-                    "type": "canvas.stack",
-                    "layout": {
-                      "base": {
-                        "direction": "row",
-                        "wrap": true,
-                        "gap": 2,
-                        "align": "center"
-                      }
+                    "type": "canvas.dashboard.badge",
+                    "props": {
+                      "text": "{{ String(form.values.status || '').split('-').join(' ') }}",
+                      "tone": "{{ [\"confirmed\",\"delivered\"].includes(form.values.status) ? 'success' : [\"draft\",\"pending\"].includes(form.values.status) ? 'warning' : [\"cancelled\"].includes(form.values.status) ? 'danger' : 'neutral' }}"
                     },
-                    "children": [
-                      {
-                        "type": "canvas.heading",
-                        "props": {
-                          "level": 2,
-                          "text": "{{ form.values.customer.name || 'New quotation' }}"
-                        }
-                      },
-                      {
-                        "type": "canvas.dashboard.badge",
-                        "props": {
-                          "text": "{{ String(form.values.status || '').split('-').join(' ') }}",
-                          "tone": "{{ [\"confirmed\",\"delivered\"].includes(form.values.status) ? 'success' : [\"draft\",\"pending\"].includes(form.values.status) ? 'warning' : [\"cancelled\"].includes(form.values.status) ? 'danger' : 'neutral' }}"
-                        },
-                        "rules": {
-                          "visible": "!!form.values.status"
-                        }
-                      },
-                      {
-                        "type": "canvas.dashboard.badge",
-                        "props": {
-                          "text": "Archived",
-                          "tone": "warning",
-                          "icon": "archive"
-                        },
-                        "rules": {
-                          "visible": "form.values.state === 'archived'"
-                        }
-                      }
-                    ]
+                    "rules": {
+                      "visible": "!!form.values.status"
+                    }
                   },
                   {
-                    "type": "canvas.text",
+                    "type": "canvas.dashboard.badge",
                     "props": {
-                      "text": "Quotation {{ form.values.code || '' }} · {{ ctx.file.path }}",
-                      "tone": "muted"
+                      "text": "Archived",
+                      "tone": "warning",
+                      "icon": "archive"
+                    },
+                    "rules": {
+                      "visible": "form.values.state === 'archived'"
                     }
                   }
                 ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Copy details",
+                  "variant": "outline",
+                  "icon": "copy",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "copy-customer"
+                },
+                "rules": {
+                  "visible": "(form.values.status === 'draft' || form.values.status === 'sent') && !!form.values.customerRef",
+                  "disabled": "form.saving || form.values.state === 'archived'"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Mark sent",
+                  "variant": "outline",
+                  "icon": "send",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "mark-sent"
+                },
+                "rules": {
+                  "visible": "form.values.status === 'draft' && !(form.values.state === 'archived')",
+                  "disabled": "form.saving || form.invalid"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Save PDF",
+                  "variant": "outline",
+                  "icon": "file-down",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "savepdf"
+                },
+                "rules": {
+                  "disabled": "form.saving || form.dirty"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Confirm",
+                  "icon": "check",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "confirm"
+                },
+                "rules": {
+                  "visible": "(form.values.status === 'draft' || form.values.status === 'sent') && !(form.values.state === 'archived')",
+                  "disabled": "form.saving || form.dirty || form.invalid"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Cancel",
+                  "variant": "ghost",
+                  "icon": "x",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "cancel"
+                },
+                "rules": {
+                  "visible": "(form.values.status === 'draft' || form.values.status === 'sent') && !(form.values.state === 'archived')",
+                  "disabled": "form.saving"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Draft invoice",
+                  "variant": "outline",
+                  "icon": "file-text",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "draft-invoice"
+                },
+                "rules": {
+                  "visible": "form.values.status === 'confirmed' && !(form.values.invoice && form.values.invoice.path) && (data.appops || []).some(o => o.app === 'invoicing' && o.operation === 'create-draft-invoice' && o.available)",
+                  "disabled": "form.saving || form.dirty"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Reopen",
+                  "variant": "outline",
+                  "icon": "rotate-ccw",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "reopen"
+                },
+                "rules": {
+                  "visible": "form.values.status === 'cancelled' && !(form.values.state === 'archived')",
+                  "disabled": "form.saving"
+                },
+                "slot": "actions"
               },
               {
                 "type": "canvas.stack",
@@ -211,176 +308,73 @@
                   {
                     "type": "canvas.button",
                     "props": {
-                      "label": "Copy details",
-                      "variant": "outline",
-                      "icon": "copy",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": "copy-customer"
-                    },
-                    "rules": {
-                      "visible": "(form.values.status === 'draft' || form.values.status === 'sent') && !!form.values.customerRef",
-                      "disabled": "form.saving || form.values.state === 'archived'"
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Mark sent",
-                      "variant": "outline",
-                      "icon": "send",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": "mark-sent"
-                    },
-                    "rules": {
-                      "visible": "form.values.status === 'draft' && !(form.values.state === 'archived')",
-                      "disabled": "form.saving || form.invalid"
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Confirm",
-                      "icon": "check",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": "confirm"
-                    },
-                    "rules": {
-                      "visible": "(form.values.status === 'draft' || form.values.status === 'sent') && !(form.values.state === 'archived')",
-                      "disabled": "form.saving || form.dirty || form.invalid"
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Cancel",
+                      "label": "Archive",
                       "variant": "ghost",
-                      "icon": "x",
+                      "icon": "archive",
                       "size": "sm"
                     },
                     "on": {
-                      "click": "cancel"
+                      "click": "archive"
                     },
                     "rules": {
-                      "visible": "(form.values.status === 'draft' || form.values.status === 'sent') && !(form.values.state === 'archived')",
-                      "disabled": "form.saving"
+                      "visible": "!(form.values.state === 'archived') && !(form.values.status === 'confirmed')",
+                      "disabled": "form.saving || form.dirty"
                     }
                   },
                   {
                     "type": "canvas.button",
                     "props": {
-                      "label": "Reopen",
+                      "label": "Restore",
                       "variant": "outline",
-                      "icon": "rotate-ccw",
+                      "icon": "archive-restore",
                       "size": "sm"
                     },
                     "on": {
-                      "click": "reopen"
+                      "click": "restore"
                     },
                     "rules": {
-                      "visible": "form.values.status === 'cancelled' && !(form.values.state === 'archived')",
-                      "disabled": "form.saving"
+                      "visible": "form.values.state === 'archived'",
+                      "disabled": "form.saving || form.dirty"
                     }
                   },
                   {
-                    "type": "canvas.stack",
-                    "layout": {
-                      "base": {
-                        "direction": "row",
-                        "wrap": true,
-                        "gap": 2,
-                        "align": "center"
-                      }
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Reset",
+                      "variant": "ghost",
+                      "size": "sm"
                     },
-                    "children": [
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Archive",
-                          "variant": "ghost",
-                          "icon": "archive",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "archive"
-                        },
-                        "rules": {
-                          "visible": "!(form.values.state === 'archived') && !(form.values.status === 'confirmed')",
-                          "disabled": "form.saving || form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Restore",
-                          "variant": "outline",
-                          "icon": "archive-restore",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "restore"
-                        },
-                        "rules": {
-                          "visible": "form.values.state === 'archived'",
-                          "disabled": "form.saving || form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Reset",
-                          "variant": "ghost",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "reset"
-                        },
-                        "rules": {
-                          "disabled": "form.saving || !form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Save",
-                          "icon": "save",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "save"
-                        },
-                        "rules": {
-                          "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (form.values.status === 'confirmed')"
-                        }
-                      }
-                    ]
+                    "on": {
+                      "click": "reset"
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Save",
+                      "icon": "save",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "save"
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (form.values.status === 'confirmed')"
+                    }
                   }
-                ]
+                ],
+                "slot": "actions"
               }
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "{{ data.$record.error }}"
-            },
-            "rules": {
-              "visible": "data.$record.status === 'error'"
-            }
-          },
-          {
-            "type": "canvas.text",
-            "props": {
-              "text": "Loading…",
-              "tone": "muted"
-            },
-            "rules": {
-              "visible": "data.$record.status === 'loading'"
+              "for": "record",
+              "compact": true
             }
           },
           {
@@ -522,6 +516,16 @@
             }
           },
           {
+            "type": "canvas.text",
+            "props": {
+              "text": "Install Invoicing to draft an invoice from a confirmed quotation.",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "form.values.status === 'confirmed' && !(form.values.invoice && form.values.invoice.path) && !((data.appops || []).some(o => o.app === 'invoicing' && o.operation === 'create-draft-invoice' && o.available))"
+            }
+          },
+          {
             "type": "canvas.grid",
             "layout": {
               "base": {
@@ -557,7 +561,8 @@
                           "label": "CRM customer",
                           "value": "{{ form.values.customerRef }}",
                           "description": "Optional. Choose a CRM customer, then Copy details.",
-                          "options": "{{ data.customeroptions }}"
+                          "options": "{{ data.customeroptions }}",
+                          "searchable": true
                         },
                         "layout": {
                           "tablet": {
@@ -601,10 +606,11 @@
                         }
                       },
                       {
-                        "type": "canvas.form.input",
+                        "type": "canvas.form.phone",
                         "props": {
                           "label": "Phone",
-                          "value": "{{ form.values.customer.phone }}"
+                          "value": "{{ form.values.customer.phone }}",
+                          "defaultCode": "{{ ({ ZA: '+27', NA: '+264', BW: '+267', ZW: '+263', MZ: '+258', LS: '+266', SZ: '+268', KE: '+254', NG: '+234', GB: '+44', IE: '+353', NL: '+31', DE: '+49', FR: '+33', US: '+1', CA: '+1', AU: '+61', NZ: '+64' })[form.values.customer && form.values.customer.address && form.values.customer.address.country] || '' }}"
                         },
                         "rules": {
                           "disabled": "(form.values.state === 'archived' || (form.values.status === 'confirmed'))"
@@ -621,56 +627,15 @@
                         }
                       },
                       {
-                        "type": "canvas.form.text-list",
+                        "type": "canvas.form.address",
                         "props": {
-                          "label": "Street",
-                          "value": "{{ form.values.customer.address.lines }}"
+                          "label": "Address",
+                          "value": "{{ form.values.customer.address }}"
                         },
                         "layout": {
                           "tablet": {
                             "colSpan": 2
                           }
-                        },
-                        "rules": {
-                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'confirmed'))"
-                        }
-                      },
-                      {
-                        "type": "canvas.form.input",
-                        "props": {
-                          "label": "City",
-                          "value": "{{ form.values.customer.address.city }}"
-                        },
-                        "rules": {
-                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'confirmed'))"
-                        }
-                      },
-                      {
-                        "type": "canvas.form.input",
-                        "props": {
-                          "label": "Region",
-                          "value": "{{ form.values.customer.address.region }}"
-                        },
-                        "rules": {
-                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'confirmed'))"
-                        }
-                      },
-                      {
-                        "type": "canvas.form.input",
-                        "props": {
-                          "label": "Postal code",
-                          "value": "{{ form.values.customer.address.postalCode }}"
-                        },
-                        "rules": {
-                          "disabled": "(form.values.state === 'archived' || (form.values.status === 'confirmed'))"
-                        }
-                      },
-                      {
-                        "type": "canvas.form.input",
-                        "props": {
-                          "label": "Country code",
-                          "value": "{{ form.values.customer.address.country }}",
-                          "placeholder": "ZA"
                         },
                         "rules": {
                           "disabled": "(form.values.state === 'archived' || (form.values.status === 'confirmed'))"
@@ -772,11 +737,11 @@
                     },
                     "children": [
                       {
-                        "type": "canvas.form.array",
+                        "type": "canvas.form.line-items",
                         "props": {
                           "label": "Lines",
                           "value": "{{ form.values.lines }}",
-                          "fields": [
+                          "columns": [
                             {
                               "key": "product",
                               "label": "Product",
@@ -786,21 +751,34 @@
                             {
                               "key": "description",
                               "label": "Description",
-                              "required": true
+                              "type": "text"
                             },
                             {
                               "key": "quantity",
                               "label": "Quantity",
-                              "required": true
+                              "type": "text",
+                              "align": "right",
+                              "sum": true
                             },
                             {
                               "key": "unitPrice",
                               "label": "Unit price",
-                              "required": true
+                              "type": "text",
+                              "align": "right"
                             },
                             {
                               "key": "discount",
-                              "label": "Discount %"
+                              "label": "Discount %",
+                              "type": "text"
+                            },
+                            {
+                              "key": "lineTotal",
+                              "label": "Line total",
+                              "type": "computed",
+                              "expr": "Number(row.quantity || 0) * Number(row.unitPrice || 0) * (1 - Number(row.discount || 0) / 100)",
+                              "decimals": 2,
+                              "sum": true,
+                              "align": "right"
                             }
                           ],
                           "defaultRow": {
@@ -810,11 +788,10 @@
                             "unitPrice": "",
                             "discount": ""
                           },
-                          "rowIds": false,
+                          "storeComputed": false,
                           "minimum": 1,
                           "maximum": 500,
-                          "addLabel": "Add line",
-                          "removeLabel": "Remove row"
+                          "addLabel": "Add line"
                         },
                         "layout": {
                           "tablet": {
@@ -828,6 +805,64 @@
                     ]
                   }
                 ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Preview",
+              "description": "How this looks printed or saved as PDF.",
+              "collapsible": true,
+              "defaultOpen": false
+            },
+            "children": [
+              {
+                "type": "canvas.document",
+                "props": {
+                  "title": "{{ 'Quotation ' + (form.values.code || '') }}",
+                  "subtitle": "{{ form.values.reference || form.values.quotation || \"\" }}",
+                  "parties": {
+                    "$expr": "[{ label: 'Quotation for', lines: ([form.values.customer && form.values.customer.name, form.values.customer && form.values.customer.legalName !== form.values.customer.name ? form.values.customer.legalName : ''].concat((form.values.customer && form.values.customer.address && form.values.customer.address.lines) || []).concat([form.values.customer && form.values.customer.address ? [form.values.customer.address.city, form.values.customer.address.postalCode].filter(part => part).join(' ') : '', form.values.customer && form.values.customer.address && form.values.customer.address.country, form.values.customer && form.values.customer.taxIdentifier ? 'Tax number ' + form.values.customer.taxIdentifier : '']).filter(line => line)).filter(line => line) }]"
+                  },
+                  "meta": {
+                    "$expr": "[{ label: 'Date', value: format(form.values.date, 'date') }, { label: 'Currency', value: form.values.currency }]"
+                  },
+                  "lines": {
+                    "$expr": "(form.values.lines || []).map(l => ({ item: l.description || ((data.productoptions || []).find(o => o.value === l.product) || {}).label || '', quantity: l.quantity, price: Number(l.unitPrice || 0).toFixed(2), discount: l.discount ? l.discount + '%' : '', amount: (Number(l.quantity || 0) * Number(l.unitPrice || 0) * (1 - Number(l.discount || 0) / 100)).toFixed(2) }))"
+                  },
+                  "columns": [
+                    {
+                      "key": "item",
+                      "label": "Item"
+                    },
+                    {
+                      "key": "quantity",
+                      "label": "Qty",
+                      "align": "right"
+                    },
+                    {
+                      "key": "price",
+                      "label": "Price",
+                      "align": "right"
+                    },
+                    {
+                      "key": "discount",
+                      "label": "Discount",
+                      "align": "right"
+                    },
+                    {
+                      "key": "amount",
+                      "label": "Amount",
+                      "align": "right"
+                    }
+                  ],
+                  "totals": {
+                    "$expr": "[{ label: 'Subtotal', value: form.values.totals ? form.values.totals.subtotal : (form.values.lines || []).reduce((s, l) => s + Number(l.quantity || 0) * Number(l.unitPrice || 0), 0).toFixed(2) }, { label: 'Discount', value: form.values.totals ? form.values.totals.discount : (form.values.lines || []).reduce((s, l) => s + Number(l.quantity || 0) * Number(l.unitPrice || 0) * Number(l.discount || 0) / 100, 0).toFixed(2) }, { label: 'Total ' + (form.values.currency || ''), value: form.values.totals ? form.values.totals.total : (form.values.lines || []).reduce((s, l) => s + Number(l.quantity || 0) * Number(l.unitPrice || 0) * (1 - Number(l.discount || 0) / 100), 0).toFixed(2), strong: true }]"
+                  },
+                  "footer": "{{ form.values.notes }}",
+                  "stamp": "{{ ['draft', 'cancelled'].includes(form.values.status) ? (form.values.status === 'draft' ? 'Draft' : 'Cancelled') : '' }}"
+                }
               }
             ]
           }
@@ -943,6 +978,70 @@
           }
         ]
       },
+      "savepdf": {
+        "steps": [
+          {
+            "render-pdf": {
+              "template": {
+                "title": "{{ 'Quotation ' + (form.values.code || '') }}",
+                "subtitle": "{{ form.values.reference || form.values.quotation || \"\" }}",
+                "parties": {
+                  "$expr": "[{ label: 'Quotation for', lines: ([form.values.customer && form.values.customer.name, form.values.customer && form.values.customer.legalName !== form.values.customer.name ? form.values.customer.legalName : ''].concat((form.values.customer && form.values.customer.address && form.values.customer.address.lines) || []).concat([form.values.customer && form.values.customer.address ? [form.values.customer.address.city, form.values.customer.address.postalCode].filter(part => part).join(' ') : '', form.values.customer && form.values.customer.address && form.values.customer.address.country, form.values.customer && form.values.customer.taxIdentifier ? 'Tax number ' + form.values.customer.taxIdentifier : '']).filter(line => line)).filter(line => line) }]"
+                },
+                "meta": {
+                  "$expr": "[{ label: 'Date', value: format(form.values.date, 'date') }, { label: 'Currency', value: form.values.currency }]"
+                },
+                "lines": {
+                  "$expr": "(form.values.lines || []).map(l => ({ item: l.description || ((data.productoptions || []).find(o => o.value === l.product) || {}).label || '', quantity: l.quantity, price: Number(l.unitPrice || 0).toFixed(2), discount: l.discount ? l.discount + '%' : '', amount: (Number(l.quantity || 0) * Number(l.unitPrice || 0) * (1 - Number(l.discount || 0) / 100)).toFixed(2) }))"
+                },
+                "columns": [
+                  {
+                    "key": "item",
+                    "label": "Item"
+                  },
+                  {
+                    "key": "quantity",
+                    "label": "Qty",
+                    "align": "right"
+                  },
+                  {
+                    "key": "price",
+                    "label": "Price",
+                    "align": "right"
+                  },
+                  {
+                    "key": "discount",
+                    "label": "Discount",
+                    "align": "right"
+                  },
+                  {
+                    "key": "amount",
+                    "label": "Amount",
+                    "align": "right"
+                  }
+                ],
+                "totals": {
+                  "$expr": "[{ label: 'Subtotal', value: form.values.totals ? form.values.totals.subtotal : (form.values.lines || []).reduce((s, l) => s + Number(l.quantity || 0) * Number(l.unitPrice || 0), 0).toFixed(2) }, { label: 'Discount', value: form.values.totals ? form.values.totals.discount : (form.values.lines || []).reduce((s, l) => s + Number(l.quantity || 0) * Number(l.unitPrice || 0) * Number(l.discount || 0) / 100, 0).toFixed(2) }, { label: 'Total ' + (form.values.currency || ''), value: form.values.totals ? form.values.totals.total : (form.values.lines || []).reduce((s, l) => s + Number(l.quantity || 0) * Number(l.unitPrice || 0) * (1 - Number(l.discount || 0) / 100), 0).toFixed(2), strong: true }]"
+                },
+                "footer": "{{ form.values.notes }}",
+                "stamp": "{{ ['draft', 'cancelled'].includes(form.values.status) ? (form.values.status === 'draft' ? 'Draft' : 'Cancelled') : '' }}",
+                "page": {
+                  "size": "A4",
+                  "margin": 18,
+                  "footer": "Page {page} of {pages}"
+                }
+              },
+              "path": "./documents/{{ form.values.code || 'document' }}.pdf"
+            }
+          },
+          {
+            "toast": {
+              "message": "Saved the PDF in Documents",
+              "variant": "success"
+            }
+          }
+        ]
+      },
       "confirm": {
         "permissions": [
           "execution.run",
@@ -950,9 +1049,46 @@
         ],
         "steps": [
           {
+            "set-state": {
+              "key": "lastresult",
+              "value": null
+            }
+          },
+          {
+            "set-state": {
+              "key": "appcall",
+              "value": null
+            }
+          },
+          {
+            "set-state": {
+              "key": "recorded",
+              "value": null
+            }
+          },
+          {
             "confirm": {
               "title": "Confirm quotation",
-              "message": "Confirm this quotation and create its sales order? Confirmed quotations cannot be edited."
+              "message": "Confirm this quotation and create its sales order? Confirmed quotations cannot be edited. When Invoicing is installed, it drafts the invoice.",
+              "fields": [
+                {
+                  "key": "prices",
+                  "label": "Prices and discounts are agreed with the customer",
+                  "type": "checkbox",
+                  "required": true
+                },
+                {
+                  "key": "delivery",
+                  "label": "The delivery date is agreed",
+                  "type": "checkbox",
+                  "required": true
+                },
+                {
+                  "key": "po",
+                  "label": "The customer’s order number is on the quotation (when they use one)",
+                  "type": "checkbox"
+                }
+              ]
             }
           },
           {
@@ -967,13 +1103,111 @@
             }
           },
           {
+            "call-app": {
+              "if": "(data.appops || []).some(o => o.app === 'invoicing' && o.operation === 'create-draft-invoice' && o.available) && !!state.lastresult && !!state.lastresult.invoiceRequest",
+              "app": "invoicing",
+              "operation": "create-draft-invoice",
+              "input": {
+                "$expr": "state.lastresult.invoiceRequest"
+              },
+              "idempotency-key": "{{ ('quotation-' + form.values.code) + '-' + Date.now() }}",
+              "assign": "appcall"
+            }
+          },
+          {
+            "run-script": {
+              "if": "(data.appops || []).some(o => o.app === 'invoicing' && o.operation === 'create-draft-invoice' && o.available) && !!state.lastresult && !!state.lastresult.invoiceRequest && !!state.appcall && !!state.appcall.path",
+              "file": "/applications/sales/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "record-invoice",
+                "path": "{{ ctx.file.path }}",
+                "invoice": "{{ state.appcall.path }}"
+              },
+              "assign": "recorded"
+            }
+          },
+          {
             "refresh-source": {
               "source": "record"
             }
           },
           {
             "toast": {
-              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "message": "{{ (state.recorded && state.recorded.message) || (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "draft-invoice": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "set-state": {
+              "key": "lastresult",
+              "value": null
+            }
+          },
+          {
+            "set-state": {
+              "key": "appcall",
+              "value": null
+            }
+          },
+          {
+            "set-state": {
+              "key": "recorded",
+              "value": null
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/sales/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "confirm-quotation",
+                "path": "{{ ctx.file.path }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "call-app": {
+              "if": "(data.appops || []).some(o => o.app === 'invoicing' && o.operation === 'create-draft-invoice' && o.available) && !!state.lastresult && !!state.lastresult.invoiceRequest",
+              "app": "invoicing",
+              "operation": "create-draft-invoice",
+              "input": {
+                "$expr": "state.lastresult.invoiceRequest"
+              },
+              "idempotency-key": "{{ ('quotation-' + form.values.code) + '-' + Date.now() }}",
+              "assign": "appcall"
+            }
+          },
+          {
+            "run-script": {
+              "if": "(data.appops || []).some(o => o.app === 'invoicing' && o.operation === 'create-draft-invoice' && o.available) && !!state.lastresult && !!state.lastresult.invoiceRequest && !!state.appcall && !!state.appcall.path",
+              "file": "/applications/sales/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "record-invoice",
+                "path": "{{ ctx.file.path }}",
+                "invoice": "{{ state.appcall.path }}"
+              },
+              "assign": "recorded"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.recorded && state.recorded.message) || (state.lastresult && state.lastresult.message) || 'Done' }}",
               "variant": "success"
             }
           }

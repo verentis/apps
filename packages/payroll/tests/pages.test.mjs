@@ -1,3 +1,4 @@
+import { apiContract } from '../../../tools/file-apps/build.mjs'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { parse } from 'yaml'
 import { describe, expect, it } from 'vitest'
@@ -20,13 +21,13 @@ const steps = document => Object.values(document.spec.actions ?? {}).flatMap(act
 describe('Payroll Canvas documents', () => {
   // The committed manifest and Canvas documents are YAML renderings of what src/build.mjs models; CI owns the
   // manifest's metadata.version.
-  it('are up to date with the generator', () => {
+  it('are up to date with the generator', async () => {
     const pages = buildPages()
     expect(Object.keys(documents).sort()).toEqual(Object.keys(pages).sort())
     for (const [name, document] of Object.entries(pages)) expect(documents[name], name).toEqual(plain(document))
     const { metadata: { version: _version, ...metadata }, ...installed } = read('payroll.app.yaml')
     const { metadata: { version: _source, ...expectedMetadata }, ...expected } = plain({
-      ...manifest, spec: { ...manifest.spec, 'file-access': [...documentFileAccess(pages), ...scriptConsents] },
+      ...manifest, spec: { ...manifest.spec, 'file-access': [...documentFileAccess(pages), ...scriptConsents], api: await apiContract(new URL('../', import.meta.url)) },
     })
     expect({ ...installed, metadata }).toEqual({ ...expected, metadata: expectedMetadata })
     expect(read('environments/feature.yaml')).toEqual(featureOverlay)
@@ -50,7 +51,9 @@ describe('Payroll Canvas documents', () => {
   it('runs the pay run script with enforced transitions from the pay run form', () => {
     const document = documents['payrun.form.yaml']
     const runs = steps(document).filter(step => 'run-script' in step).map(step => step['run-script'])
-    expect(runs.map(run => run.parameters.operation)).toEqual(['compute-run', 'approve-run', 'post-run'])
+    expect(runs.map(run => run.parameters.operation)).toEqual(['compute-run', 'approve-run', 'post-run', 'complete-run'])
+    // Accounting posts the journal through its API; the app never writes /journals.
+    expect(steps(documents[Object.keys(documents).find(name => JSON.stringify(documents[name]).includes('call-app'))]).filter(step => 'call-app' in step).map(step => step['call-app'].operation)).toEqual(['post-journal'])
     for (const run of runs) expect(run).toMatchObject({ file: postScriptPath, parameters: { path: '{{ ctx.file.path }}' } })
     expect(document.spec.permissions).toEqual(expect.arrayContaining(['execution.run']))
     // A script reloads the record afterwards, which a dirty form would refuse.

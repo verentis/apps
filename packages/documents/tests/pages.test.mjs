@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { parse } from 'yaml'
 import { describe, expect, it } from 'vitest'
+import { stagePanels } from '../../../tools/file-apps/test-helpers.mjs'
 import {
   createScriptFileAccess, createScriptName, featureOverlay, manifest, postScriptFileAccess, postScriptName,
   postScriptPath, productionOverlay, scriptConsents,
@@ -181,7 +182,7 @@ describe('Documents report pages', () => {
   it('lists only inbox documents on the inbox page', () => {
     const tableNode = documents['inbox.page.yaml'].spec.tree[0].children.find(node => node.type === 'canvas.table')
     expect(template(tableNode.props.rows, data).map(row => row.code)).toEqual(['DOC-1'])
-    expect(tableNode.on['row-click']).toEqual([{ 'open-file': { path: '{{ event.path }}', mode: 'edit' } }])
+    expect(tableNode.on['row-click']).toEqual([{ 'open-file': { path: '{{ event.path }}', mode: 'edit', open: 'side' } }])
   })
 
   it('groups documents per workspace by tags in the workspace browser', () => {
@@ -205,7 +206,7 @@ describe('Documents report pages', () => {
   })
 
   it('splits validated and archived documents in the library', () => {
-    const panels = documents['library.page.yaml'].spec.tree[0].children.find(node => node.type === 'canvas.tabs').children
+    const panels = stagePanels(documents['library.page.yaml'].spec.tree[0].children.find(node => node.type === 'canvas.tabs'))
     expect(panels.map(panel => panel.slot)).toEqual(['validated', 'archived'])
     const [validatedTable] = panels[0].children
     const [archivedTable] = panels[1].children

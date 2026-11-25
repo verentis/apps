@@ -2,10 +2,11 @@
 // list (launch page), the live dashboard viewer and the snapshots list. Tile values are computed live by Canvas
 // expressions over the source containers; freezing them is done by the take-snapshot script the snapshot form runs.
 // Spreadsheet *editing* belongs to the platform's Office integration — these pages only view computed values.
+import { views } from './views.mjs'
 import {
   archived, badge, baseActions, boundForm, button, card, column, folder, formControl, grid, heading,
   humanize, iconName, options, openFile, page, projectRegistration, recordButtons, row, scriptAction,
-  sectionCards, stat, stats, status, table, text, toneExpression,
+  sectionCards, stat, stats, status, table, text, toneExpression, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { containers, installRoot, mimeTypes, recordKinds, schemaId, settingsPath, sourceContainers } from './contracts.mjs'
 import { entities, postScriptPath, settingsFields } from './app.mjs'
@@ -45,7 +46,7 @@ const grouped = value => `(s.keys.length ? s.keys.map(k => ${value}) : [${rowOf(
 const tileRows = tiles => `${tiles}.slice().sort((a, b) => Number(a.sequence || 0) - Number(b.sequence || 0))`
   + `.map(t => ({ t: t, entries: ${sourcesMap}[t.source] }))`
   + `.map(c => ({ t: c.t, note: ${tileNote}, items: ${tileItems} }))`
-  + `.map(c => ({ c: c, numeric: c.items.filter(i => (typeof i.raw === 'number' || typeof i.raw === 'string') && i.raw !== '' && isFinite(Number(i.raw))), keys: c.items.map(i => i.key).filter((v, idx, a) => a.indexOf(v) === idx).sort() }))`
+  + `.map(c => ({ c: c, numeric: c.items.filter(i => (typeof i.raw === 'number' || typeof i.raw === 'string') && i.raw !== '' && Number.isFinite(Number(i.raw))), keys: c.items.map(i => i.key).filter((v, idx, a) => a.indexOf(v) === idx).sort() }))`
   + `.reduce((all, s) => all.concat(`
   + `s.c.note ? [${rowOf("''", "''", 's.c.note')}] : `
   + `s.c.t.kind === 'count' ? [${rowOf("''", 'String(s.c.items.length)', "''")}] : `
@@ -58,11 +59,7 @@ const tileColumns = [['title', 'Tile'], ['kind', 'Kind'], ['detail', 'Group'], [
 
 /** Kind-specific data, access, actions, header buttons and notices of a record form. */
 function recordExtras(kind) {
-  if (kind === 'dashboard') {
-    return {
-      access: [schemaAccess], data: {}, notices: [], buttons: [], actions: {}, panels: [], locked: 'false',
-    }
-  }
+  if (kind === 'dashboard') return tileBuilder()
   const resultRows = `(form.values.results || []).reduce((all, r) => all.concat(r.groups && r.groups.length`
     + ` ? r.groups.map(g => ({ title: r.title || '', detail: g.key || '', value: g.value === undefined ? '' : g.value, note: r.note || '' }))`
     + ` : [{ title: r.title || '', detail: '', value: r.value === undefined ? '' : r.value, note: r.note || '' }]), [])`
@@ -87,25 +84,100 @@ function recordExtras(kind) {
   }
 }
 
+
+/**
+ * The dashboard form's "Add tile" builder: a wizard in a side sheet. The field pickers read the chosen source's
+ * own records, and the last step previews the tile with live values before it is added to the tiles below.
+ */
+function tileBuilder() {
+  const entries = `(${'({ ' + sourceContainers.map(path => `'${path}': data.${sourceKey(path)}`).join(', ') + ' })'}[state.draft.source] || [])`
+  const records = `${entries}.filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived')`
+  const pick = path => `${path}.split('.').reduce((v, k) => (v == null ? v : v[k]), e.data)`
+  // Field paths found in the source's records, one level into nested objects (totals.gross).
+  const fieldPaths = `${records}.slice(0, 50).map(e => e.data).reduce((all, r) => all.concat(Object.keys(r).filter(k => !['$schema', 'schemaVersion', 'id', 'kind', 'state', 'createdAt', 'updatedAt'].includes(k)).reduce((ks, k) => ks.concat(r[k] && typeof r[k] === 'object' && !Array.isArray(r[k]) ? Object.keys(r[k]).map(sub => k + '.' + sub) : Array.isArray(r[k]) ? [] : [k]), [])), []).filter((k, i, all) => all.indexOf(k) === i).sort()`
+  const numeric = `${fieldPaths}.filter(f => ${records}.some(e => ${pick('f')} !== '' && ${pick('f')} != null && Number.isFinite(Number(${pick('f')}))))`
+  const filtered = `${records}.filter(e => !state.draft.filterField || String(${pick('state.draft.filterField')}) === String(state.draft.filterEquals))`
+  const grouped = `${filtered}.map(e => String(${pick('state.draft.groupByField')} ?? '')).filter((k, i, all) => all.indexOf(k) === i).map(k => ({ label: k || '(none)', value: ${filtered}.filter(e => String(${pick('state.draft.groupByField')} ?? '') === k).reduce((s, e) => s + (state.draft.kind === 'group-sum' ? Number(${pick('state.draft.valueField')}) || 0 : 1), 0) }))`
+  const single = `(state.draft.kind === 'sum' ? ${filtered}.reduce((s, e) => s + (Number(${pick('state.draft.valueField')}) || 0), 0) : ${filtered}.length)`
+  const needsValue = "['sum', 'group-sum'].includes(state.draft.kind)"
+  const needsGroup = "['group-count', 'group-sum'].includes(state.draft.kind)"
+  const draft = { source: '', kind: 'count', valueField: '', groupByField: '', title: '', filterField: '', filterEquals: '' }
+  const select = (label, key, options, extra = {}) => ({ type: 'canvas.form.select', props: { label, value: `{{ state.draft.${key} }}`, options, ...extra } })
+  return {
+    access: [schemaAccess, ...sourceContainers.map(path => ({ path, reason: `Offer the fields of ${path} and preview tiles (when the owning app is installed)` }))],
+    data: Object.fromEntries(sourceContainers.map(path => [sourceKey(path), { kind: 'folder', path, contents: true }])),
+    state: { builder: false, step: 'source', draft },
+    notices: [{
+      type: 'canvas.dialog',
+      props: { open: '{{ state.builder }}', title: 'Add tile', description: 'Pick a source, what to show, and check the preview.', placement: 'side', size: 'lg' },
+      on: { close: [{ 'set-state': { key: 'builder', value: false } }] },
+      children: [{
+        type: 'canvas.wizard',
+        props: {
+          step: '{{ state.step }}', finishLabel: 'Add tile',
+          steps: { $expr: `[{ value: 'source', label: 'Source', valid: !!state.draft.source, reason: 'Choose a source' }, { value: 'show', label: 'What to show', valid: (!(${needsValue}) || !!state.draft.valueField) && (!(${needsGroup}) || !!state.draft.groupByField), reason: 'Choose the fields this kind needs' }, { value: 'check', label: 'Name and check', valid: !!String(state.draft.title || '').trim(), reason: 'Give the tile a title' }]` },
+        },
+        on: {
+          change: [{ 'set-state': { key: 'step', value: '{{ event.step }}' } }],
+          cancel: [{ 'set-state': { key: 'builder', value: false } }],
+          finish: [
+            { 'patch-form': { values: { tiles: { $expr: "(form.values.tiles || []).concat([{ sequence: String((form.values.tiles || []).reduce((m, t) => Math.max(m, Number(t.sequence) || 0), 0) + 1), title: String(state.draft.title).trim(), source: state.draft.source, kind: state.draft.kind, valueField: state.draft.valueField, groupByField: state.draft.groupByField, filter: { field: state.draft.filterField, equals: state.draft.filterEquals } }])" } } } },
+            { 'set-state': { key: 'builder', value: false } },
+            { toast: { message: 'Tile added. Save the dashboard to keep it.', variant: 'success' } },
+          ],
+        },
+        children: [
+          { ...column([
+            select('Source', 'source', `{{ ${JSON.stringify(sourceContainers)}.map(path => ({ value: path, label: path, description: (({ ${sourceContainers.map(path => `'${path}': data.${sourceKey(path)}`).join(', ')} })[path] || []).filter(e => e.kind === 'file').length + ' records' })) }}`, { display: 'cards' }),
+            { ...text('This source has no records yet, or its app is not installed.', 'muted'), rules: { visible: `!!state.draft.source && ${records}.length === 0` } },
+          ], 3), slot: 'step:source' },
+          { ...column([
+            select('Kind', 'kind', [{ value: 'count', label: 'Count' }, { value: 'sum', label: 'Sum' }, { value: 'group-count', label: 'Count per group' }, { value: 'group-sum', label: 'Sum per group' }], { display: 'segmented' }),
+            { ...select('Value to add up', 'valueField', `{{ ${numeric}.map(f => ({ value: f, label: f })) }}`, { searchable: true, description: 'Fields whose values are numbers.' }), rules: { visible: needsValue } },
+            { ...select('Group by', 'groupByField', `{{ ${fieldPaths}.map(f => ({ value: f, label: f })) }}`, { searchable: true }), rules: { visible: needsGroup } },
+          ], 3), slot: 'step:show' },
+          { ...column([
+            { type: 'canvas.form.input', props: { label: 'Title', value: '{{ state.draft.title }}', required: true, placeholder: 'Open invoices by customer' } },
+            grid([
+              select('Only where', 'filterField', `{{ [{ value: '', label: 'Every record' }].concat(${fieldPaths}.map(f => ({ value: f, label: f }))) }}`, { searchable: true }),
+              { type: 'canvas.form.input', props: { label: 'equals', value: '{{ state.draft.filterEquals }}' }, rules: { visible: '!!state.draft.filterField' } },
+            ]),
+            heading('Preview', 3),
+            { type: 'canvas.dashboard.stat', props: { label: "{{ state.draft.title || 'Tile' }}", value: `{{ format(${single}, 'number') }}`, hint: `{{ ${filtered}.length + ' records' }}` }, rules: { visible: `!(${needsGroup})` } },
+            { type: 'canvas.chart', props: { kind: 'hbar', rows: { $expr: grouped }, x: 'label', y: 'value', sort: '-value', limit: 12, format: 'number', emptyText: 'Nothing to group' }, rules: { visible: needsGroup } },
+          ], 3), slot: 'step:check' },
+        ],
+      }],
+    }],
+    buttons: [button('Add tile', 'open-builder', { disabled: 'form.saving' }, 'outline', 'plus')],
+    actions: {
+      'open-builder': { steps: [
+        { 'set-state': { key: 'draft', value: draft } },
+        { 'set-state': { key: 'step', value: 'source' } },
+        { 'set-state': { key: 'builder', value: true } },
+      ] },
+    },
+    panels: [], locked: 'false',
+  }
+}
+
 function recordForm(kind) {
   const entity = entities[kind]
   const extras = recordExtras(kind)
   const readOnly = `${archived} || (${extras.locked})`
-  const header = row([
-    column([
-      row([
-        heading(`{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`),
+  const header = recordHeader(
+    `{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`,
+    [
         ...(entity.status ? [badge(humanize(entity.status), toneExpression(entity.status, statusTones), { visible: `!!form.values.${entity.status}` })] : []),
         badge('Archived', 'warning', { visible: archived }, 'archive'),
-      ]),
-      text(`${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`, 'muted'),
-    ]),
-    row([...extras.buttons, recordButtons(extras.locked)]),
-  ], 'between')
+    ],
+    `${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`,
+    [...extras.buttons, recordButtons(extras.locked)],
+  )
   const tree = [
     header,
-    ...status('record'),
-    badge(`This ${entity.singular.toLowerCase()} is archived. Restore it to edit.`, 'warning', { visible: archived }, 'archive'),
+    ...status('record'), ...lifecycle(entity),
+    archivedAlert(entity.singular),
     ...extras.notices,
     grid(sectionCards(entity.sections, readOnly)),
     ...extras.panels,
@@ -116,7 +188,7 @@ function recordForm(kind) {
       name: `spreadsheet-bi-${kind}`, displayName: `BI ${entity.singular.toLowerCase()}`,
       description: `View and edit a Spreadsheet BI ${entity.singular.toLowerCase()}.`, icon: iconName(entity.icon),
       mime: mimeTypes[kind], schemaId: schemaId(kind), schemaSource: `${installRoot}/schemas/${kind}.schema.json`,
-      access: extras.access, data: extras.data, tree,
+      access: extras.access, data: extras.data, ...(extras.state ? { state: extras.state } : {}), tree,
       actions: { ...baseActions, ...extras.actions },
     }),
   }
@@ -131,13 +203,13 @@ function settingsForm() {
       access: [dashboardsAccess('Choose the default dashboard for new snapshots'), schemaAccess],
       data: dashboardSources,
       tree: [
-        row([
-          column([heading('Spreadsheet BI settings'), text('The default dashboard for new snapshots. Code prefixes are app settings, managed with the installed app.', 'muted')]),
+        pageHeader(
+          [heading('Spreadsheet BI settings'), text('The default dashboard for new snapshots. Code prefixes are app settings, managed with the installed app.', 'muted')], [
           row([
             button('Reset', [{ 'reset-form': {} }], { disabled: 'form.saving || !form.dirty' }, 'ghost'),
             button('Save', [{ save: {} }, { toast: { message: 'Saved', variant: 'success' } }], { disabled: 'form.saving || !form.dirty || form.invalid' }, undefined, 'save'),
           ]),
-        ], 'between'),
+        ]),
         ...status('record'),
         ...status('dashboards', `The ${containers.dashboards.path} folder could not be read. Reinstall Spreadsheet BI to recreate it.`),
         grid([card('Defaults', [grid(settingsFields.map(field => formControl(field, null)))])], 1),
@@ -172,14 +244,14 @@ function homePage() {
           snapshots: folder(containers.snapshots.path, mimeTypes.snapshot),
         },
         tree: page([
-          row([
-            column([heading('Spreadsheet BI'), text('Dashboards are saved tile definitions computed live from sibling apps\' record files. Edit spreadsheets themselves with the Office integration; this app only computes and freezes values.', 'muted')]),
+          pageHeader(
+            [heading('Spreadsheet BI'), text('Dashboards are saved tile definitions computed live from sibling apps\' record files. Edit spreadsheets themselves with the Office integration; this app only computes and freezes values.', 'muted')], [
             row([
               button('Viewer', [openFile(`${installRoot}/canvas/viewer.page.yaml`)], undefined, 'outline', 'monitor'),
               button('Snapshots', [openFile(`${installRoot}/canvas/snapshots.page.yaml`)], undefined, 'outline', 'camera'),
               button('Settings', [openFile(settingsPath, 'edit')], undefined, 'ghost', 'settings'),
             ]),
-          ], 'between'),
+          ]),
           stats([
             stat('Dashboards', countOf('dashboards'), 'layout-dashboard', loading('dashboards')),
             stat('Snapshots', countOf('snapshots'), 'camera', loading('snapshots')),
@@ -219,13 +291,13 @@ function viewerPage() {
         },
         state: { dashboard: '' },
         tree: page([
-          row([
-            column([heading('Dashboard viewer'), text('Tile values are computed live from the source containers each time this page loads. Take a snapshot to freeze them.', 'muted')]),
+          pageHeader(
+            [heading('Dashboard viewer'), text('Tile values are computed live from the source containers each time this page loads. Take a snapshot to freeze them.', 'muted')], [
             row([
               button('Dashboards', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'layout-dashboard'),
               button('Snapshots', [openFile(`${installRoot}/canvas/snapshots.page.yaml`)], undefined, 'outline', 'camera'),
             ]),
-          ], 'between'),
+          ]),
           ...status('dashboards', `The ${containers.dashboards.path} folder could not be read. Reinstall Spreadsheet BI to recreate it.`),
           grid([
             { type: 'canvas.form.select', props: { label: 'Dashboard', value: '{{ state.dashboard }}', options: '{{ data.dashboardoptions }}' } },
@@ -257,13 +329,13 @@ function snapshotsPage() {
           dashboards: folder(containers.dashboards.path, mimeTypes.dashboard),
         },
         tree: page([
-          row([
-            column([heading('Snapshots'), text('Each snapshot freezes one dashboard computation: the take-snapshot script computes every tile with exact decimal math, stamps the time and locks the record.', 'muted')]),
+          pageHeader(
+            [heading('Snapshots'), text('Each snapshot freezes one dashboard computation: the take-snapshot script computes every tile with exact decimal math, stamps the time and locks the record.', 'muted')], [
             row([
               button('Dashboards', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'layout-dashboard'),
               button(`Open ${containers.snapshots.path}`, [openFile(containers.snapshots.path)], undefined, 'outline', 'folder-open'),
             ]),
-          ], 'between'),
+          ]),
           ...containerNotices(),
           stats([
             stat('Snapshots', countOf('snapshots'), 'camera', loading('snapshots')),
@@ -280,5 +352,5 @@ function snapshotsPage() {
 
 export function buildPages() {
   const documents = [homePage(), viewerPage(), snapshotsPage(), ...recordKinds.map(recordForm), settingsForm()]
-  return Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)]))
+  return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

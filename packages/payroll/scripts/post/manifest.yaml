@@ -22,9 +22,6 @@ file-access:
   - path: "/periods"
     mode: read
     reason: "Find the open period a pay run posts in"
-  - path: "/journals"
-    mode: write
-    reason: "Post one journal per pay run"
   - path: "/salary-structures"
     mode: read
     reason: "Read the salary structures payslips are computed from"

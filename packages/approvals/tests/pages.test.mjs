@@ -46,6 +46,13 @@ describe('Approvals Canvas documents', () => {
     for (const grant of spec.access) expect(grant.mode ?? 'read').toBe('read')
   })
 
+  it('lets only an approving role decide when the platform shares roles, and asks for the profile consent', () => {
+    const { spec } = documents['request.form.yaml']
+    expect(spec.roles.approve).toContain('system:admin')
+    expect(spec.capabilities).toContain('user-profile')
+    expect(JSON.stringify(spec.tree)).toContain("!ctx.can('approve')")
+  })
+
   it('runs the decision script with every status transition from the request form', () => {
     const document = documents['request.form.yaml']
     const runs = steps(document).filter(step => 'run-script' in step).map(step => step['run-script'])
@@ -53,7 +60,7 @@ describe('Approvals Canvas documents', () => {
     for (const run of runs) expect(run).toMatchObject({ file: postScriptPath, parameters: { path: '{{ ctx.file.path }}' } })
     for (const operation of ['approve', 'refuse']) {
       const run = runs.find(candidate => candidate.parameters.operation === operation)
-      expect(run.parameters.approver).toBe('{{ state.approver }}')
+      expect(run.parameters.approver).toBe("{{ state.approver || (ctx.user && ctx.user.name) || '' }}")
       expect(run.parameters.comment).toBe('{{ state.comment }}')
     }
     expect(document.spec.permissions).toEqual(expect.arrayContaining(['execution.run']))

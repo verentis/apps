@@ -9,16 +9,30 @@
   "spec": {
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Legal Matters",
+          "icon": "briefcase-business",
+          "active": "home.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Matters",
+              "icon": "briefcase-business"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/legal-matters/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            }
+          ]
         },
         "children": [
           {
@@ -31,19 +45,158 @@
           {
             "type": "canvas.text",
             "props": {
-              "text": "Synthetic pilot only. Do not enter real names, client instructions or confidential records. Everyone in this isolated workspace must be authorised for every pilot file."
+              "text": "Matter files are visible to everyone who can read /legal-matters. Keep matters for different teams apart with workspace or folder permissions."
             }
+          },
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "gap": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Matters"
+                }
+              },
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "Every matter from intake to open. A matter opens beside this list.",
+                  "tone": "muted"
+                }
+              },
+              {
+                "type": "canvas.board",
+                "props": {
+                  "rows": "{{ (data.matters || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
+                  "groupBy": "data.status",
+                  "columns": [
+                    {
+                      "value": "intake",
+                      "label": "Intake"
+                    },
+                    {
+                      "value": "screened",
+                      "label": "Screened"
+                    },
+                    {
+                      "value": "open",
+                      "label": "Open"
+                    },
+                    {
+                      "value": "declined",
+                      "label": "Declined"
+                    }
+                  ],
+                  "card": {
+                    "title": "data.title",
+                    "code": "data.code",
+                    "meta": [
+                      "data.disposition",
+                      "data.currency"
+                    ]
+                  },
+                  "readOnly": true,
+                  "rowKey": "path",
+                  "emptyText": "No matters yet"
+                },
+                "on": {
+                  "open": [
+                    {
+                      "open-file": {
+                        "path": "{{ event.row.path }}",
+                        "mode": "edit",
+                        "open": "side"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "canvas.table",
+                "props": {
+                  "rows": "{{ (data.matters || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
+                  "rowKey": "path",
+                  "clickable": true,
+                  "search": true,
+                  "sortable": true,
+                  "pageSize": 25,
+                  "narrow": "list",
+                  "emptyText": "No matters yet",
+                  "facets": [
+                    "data.status"
+                  ],
+                  "columns": [
+                    {
+                      "key": "data.code",
+                      "label": "Matter"
+                    },
+                    {
+                      "key": "data.title",
+                      "label": "Title"
+                    },
+                    {
+                      "key": "data.status",
+                      "label": "Status",
+                      "format": "badge",
+                      "labels": {
+                        "intake": "Intake",
+                        "screened": "Screened",
+                        "open": "Open",
+                        "declined": "Declined"
+                      }
+                    },
+                    {
+                      "key": "data.disposition",
+                      "label": "Conflict decision",
+                      "format": "badge",
+                      "labels": {
+                        "undecided": "Undecided",
+                        "clear": "Clear",
+                        "waiver-reviewed": "Waiver reviewed",
+                        "decline": "Decline"
+                      }
+                    },
+                    {
+                      "key": "data.reviewBy",
+                      "label": "Reviewed by"
+                    },
+                    {
+                      "key": "data.updatedAt",
+                      "label": "Updated",
+                      "format": "relative"
+                    }
+                  ]
+                },
+                "on": {
+                  "row-click": [
+                    {
+                      "open-file": {
+                        "path": "{{ event.path }}",
+                        "mode": "edit",
+                        "open": "side"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
           },
           {
             "type": "canvas.card",
             "props": {
-              "title": "Start a synthetic instruction"
+              "title": "Start an instruction"
             },
             "children": [
               {
                 "type": "canvas.text",
                 "props": {
-                  "text": "Disabled by default. The administrator must designate this isolated synthetic workspace before creating a matter. In Files choose New → Synthetic legal matter inside /legal-matters."
+                  "text": "In Files choose New → Legal matter inside /legal-matters. The new matter opens for intake and conflict screening."
                 }
               },
               {
@@ -82,6 +235,20 @@
           }
         ]
       }
-    ]
+    ],
+    "access": [
+      {
+        "path": "/legal-matters",
+        "reason": "List the matters and where each one stands"
+      }
+    ],
+    "data": {
+      "matters": {
+        "kind": "folder",
+        "path": "/legal-matters",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.legal-matters.matter+json"
+      }
+    }
   }
 }

@@ -122,74 +122,101 @@
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.validation-summary",
+            "props": {
+              "title": "Fix these before saving"
+            }
+          },
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "{{ form.values.candidateName || 'New referral' }}",
+              "note": "Referral {{ form.values.code || '' }}"
             },
             "children": [
               {
                 "type": "canvas.stack",
                 "layout": {
                   "base": {
-                    "gap": 1
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
                   }
                 },
                 "children": [
                   {
-                    "type": "canvas.stack",
-                    "layout": {
-                      "base": {
-                        "direction": "row",
-                        "wrap": true,
-                        "gap": 2,
-                        "align": "center"
-                      }
+                    "type": "canvas.dashboard.badge",
+                    "props": {
+                      "text": "{{ String(form.values.status || '').split('-').join(' ') }}",
+                      "tone": "{{ [\"hired\"].includes(form.values.status) ? 'success' : [\"in-process\"].includes(form.values.status) ? 'warning' : [\"not-hired\"].includes(form.values.status) ? 'danger' : 'neutral' }}"
                     },
-                    "children": [
-                      {
-                        "type": "canvas.heading",
-                        "props": {
-                          "level": 2,
-                          "text": "{{ form.values.candidateName || 'New referral' }}"
-                        }
-                      },
-                      {
-                        "type": "canvas.dashboard.badge",
-                        "props": {
-                          "text": "{{ String(form.values.status || '').split('-').join(' ') }}",
-                          "tone": "{{ [\"hired\"].includes(form.values.status) ? 'success' : [\"in-process\"].includes(form.values.status) ? 'warning' : [\"not-hired\"].includes(form.values.status) ? 'danger' : 'neutral' }}"
-                        },
-                        "rules": {
-                          "visible": "!!form.values.status"
-                        }
-                      },
-                      {
-                        "type": "canvas.dashboard.badge",
-                        "props": {
-                          "text": "Archived",
-                          "tone": "warning",
-                          "icon": "archive"
-                        },
-                        "rules": {
-                          "visible": "form.values.state === 'archived'"
-                        }
-                      }
-                    ]
+                    "rules": {
+                      "visible": "!!form.values.status"
+                    }
                   },
                   {
-                    "type": "canvas.text",
+                    "type": "canvas.dashboard.badge",
                     "props": {
-                      "text": "Referral {{ form.values.code || '' }} · {{ ctx.file.path }}",
-                      "tone": "muted"
+                      "text": "Archived",
+                      "tone": "warning",
+                      "icon": "archive"
+                    },
+                    "rules": {
+                      "visible": "form.values.state === 'archived'"
                     }
                   }
                 ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Mark hired",
+                  "icon": "check",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "mark-hired"
+                },
+                "rules": {
+                  "visible": "!(['hired','not-hired'].includes(form.values.status)) && !(form.values.state === 'archived')",
+                  "disabled": "form.saving || form.dirty"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Mark not hired",
+                  "variant": "outline",
+                  "icon": "x",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "mark-not-hired"
+                },
+                "rules": {
+                  "visible": "!(['hired','not-hired'].includes(form.values.status)) && !(form.values.state === 'archived')",
+                  "disabled": "form.saving || form.dirty"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Copy name",
+                  "variant": "ghost",
+                  "icon": "copy",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "copy-employee"
+                },
+                "rules": {
+                  "visible": "!(['hired','not-hired'].includes(form.values.status)) && !!form.values.referrerRef",
+                  "disabled": "form.saving || form.values.state === 'archived'"
+                },
+                "slot": "actions"
               },
               {
                 "type": "canvas.stack",
@@ -205,155 +232,119 @@
                   {
                     "type": "canvas.button",
                     "props": {
-                      "label": "Mark hired",
-                      "icon": "check",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": "mark-hired"
-                    },
-                    "rules": {
-                      "visible": "!(['hired','not-hired'].includes(form.values.status)) && !(form.values.state === 'archived')",
-                      "disabled": "form.saving || form.dirty"
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Mark not hired",
-                      "variant": "outline",
-                      "icon": "x",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": "mark-not-hired"
-                    },
-                    "rules": {
-                      "visible": "!(['hired','not-hired'].includes(form.values.status)) && !(form.values.state === 'archived')",
-                      "disabled": "form.saving || form.dirty"
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Copy name",
+                      "label": "Archive",
                       "variant": "ghost",
-                      "icon": "copy",
+                      "icon": "archive",
                       "size": "sm"
                     },
                     "on": {
-                      "click": "copy-employee"
+                      "click": "archive"
                     },
                     "rules": {
-                      "visible": "!(['hired','not-hired'].includes(form.values.status)) && !!form.values.referrerRef",
-                      "disabled": "form.saving || form.values.state === 'archived'"
+                      "visible": "!(form.values.state === 'archived') && !(['hired','not-hired'].includes(form.values.status))",
+                      "disabled": "form.saving || form.dirty"
                     }
                   },
                   {
-                    "type": "canvas.stack",
-                    "layout": {
-                      "base": {
-                        "direction": "row",
-                        "wrap": true,
-                        "gap": 2,
-                        "align": "center"
-                      }
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Restore",
+                      "variant": "outline",
+                      "icon": "archive-restore",
+                      "size": "sm"
                     },
-                    "children": [
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Archive",
-                          "variant": "ghost",
-                          "icon": "archive",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "archive"
-                        },
-                        "rules": {
-                          "visible": "!(form.values.state === 'archived') && !(['hired','not-hired'].includes(form.values.status))",
-                          "disabled": "form.saving || form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Restore",
-                          "variant": "outline",
-                          "icon": "archive-restore",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "restore"
-                        },
-                        "rules": {
-                          "visible": "form.values.state === 'archived'",
-                          "disabled": "form.saving || form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Reset",
-                          "variant": "ghost",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "reset"
-                        },
-                        "rules": {
-                          "disabled": "form.saving || !form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Save",
-                          "icon": "save",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "save"
-                        },
-                        "rules": {
-                          "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (['hired','not-hired'].includes(form.values.status))"
-                        }
-                      }
-                    ]
+                    "on": {
+                      "click": "restore"
+                    },
+                    "rules": {
+                      "visible": "form.values.state === 'archived'",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Reset",
+                      "variant": "ghost",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "reset"
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Save",
+                      "icon": "save",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "save"
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (['hired','not-hired'].includes(form.values.status))"
+                    }
                   }
-                ]
+                ],
+                "slot": "actions"
               }
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "{{ data.$record.error }}"
-            },
-            "rules": {
-              "visible": "data.$record.status === 'error'"
+              "for": "record",
+              "compact": true
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.status-steps",
             "props": {
-              "text": "Loading…",
-              "tone": "muted"
+              "value": "{{ form.values.status }}",
+              "steps": [
+                {
+                  "value": "submitted",
+                  "label": "Submitted"
+                },
+                {
+                  "value": "in-process",
+                  "label": "In Process"
+                },
+                {
+                  "value": "hired",
+                  "label": "Hired"
+                },
+                {
+                  "value": "not-hired",
+                  "label": "Not Hired"
+                }
+              ]
             },
             "rules": {
-              "visible": "data.$record.status === 'loading'"
+              "visible": "!!form.values.status"
             }
           },
           {
-            "type": "canvas.dashboard.badge",
+            "type": "canvas.alert",
             "props": {
-              "text": "This referral is archived. Restore it to edit.",
               "tone": "warning",
-              "icon": "archive"
+              "title": "This referral is archived",
+              "text": "Restore it to edit.",
+              "icon": "archive",
+              "action": {
+                "label": "Restore",
+                "id": "restore"
+              }
             },
             "rules": {
               "visible": "form.values.state === 'archived'"
+            },
+            "on": {
+              "action": "restore"
             }
           },
           {
@@ -440,7 +431,8 @@
                               "value": "not-hired",
                               "label": "Not Hired"
                             }
-                          ]
+                          ],
+                          "display": "segmented"
                         },
                         "rules": {
                           "disabled": "(form.values.state === 'archived' || (['hired','not-hired'].includes(form.values.status)))"
@@ -452,7 +444,8 @@
                           "label": "Job position",
                           "value": "{{ form.values.job }}",
                           "description": "Optional. A Recruitment job position (when Recruitment is installed).",
-                          "options": "{{ data.joboptions }}"
+                          "options": "{{ data.joboptions }}",
+                          "searchable": true
                         },
                         "rules": {
                           "disabled": "(form.values.state === 'archived' || (['hired','not-hired'].includes(form.values.status)))"
@@ -510,7 +503,8 @@
                           "label": "Employee record",
                           "value": "{{ form.values.referrerRef }}",
                           "description": "Optional. Choose an Employees record, then Copy name.",
-                          "options": "{{ data.employeeoptions }}"
+                          "options": "{{ data.employeeoptions }}",
+                          "searchable": true
                         },
                         "rules": {
                           "disabled": "(form.values.state === 'archived' || (['hired','not-hired'].includes(form.values.status)))"

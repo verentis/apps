@@ -13,6 +13,3 @@ file-access:
   - path: "/field-tasks"
     mode: write
     reason: "Schedule, start, complete and cancel field tasks"
-  - path: "/invoices"
-    mode: write
-    reason: "Draft an invoice for a completed task (when Invoicing is installed)"

@@ -1,7 +1,6 @@
 // File-based Field Service record contracts. Every record is one JSON file whose vendor MIME names its kind.
 import {
-  array, code, decimal, fillTemplate, money, object, optional, optionalDate, pathOrEmpty, requires,
-  schemas as schemaKit, timestamp,
+  array, checklistItem, code, decimal, fillTemplate, money, object, optional, optionalDate, pathOrEmpty, photo, requires, schemas as schemaKit, signature, timestamp,
 } from '../../../tools/file-apps/schema.mjs'
 
 export const installRoot = '/applications/field-service'
@@ -85,6 +84,14 @@ export const schemas = {
     hours: decimal,
     materials: array(material, 0, 200),
     materialsTotal: money,
+    // On site: the checklist the technician ticks, and the customer's sign-off.
+    // Where the job is, for the map: typed or pasted from a map app. Nothing is looked up online.
+    latitude: { type: 'string', pattern: '^(-?(90(\\.0+)?|[0-8]?[0-9](\\.[0-9]{1,8})?))?$' },
+    longitude: { type: 'string', pattern: '^(-?(180(\\.0+)?|(1[0-7][0-9]|[0-9]{1,2})(\\.[0-9]{1,8})?))?$' },
+    checklist: array(checklistItem, 0, 50),
+    photos: array(photo, 0, 8),
+    signature,
+    signedBy: optional(200),
     invoice: pathOrEmpty,
     completedAt: timestamp,
     cancelledAt: timestamp,
@@ -105,7 +112,7 @@ export const schemas = {
 export const templates = {
   task: recordTemplate('task', {
     customerName: '{{ name }}', customerRef: '', address: '', scheduledDate: '', windowStart: '', windowEnd: '',
-    technician: '', type: 'install', stage: 'new', workLog: '', hours: '', materials: [], materialsTotal: '',
+    technician: '', type: 'install', stage: 'new', workLog: '', hours: '', materials: [], materialsTotal: '', latitude: '', longitude: '', checklist: [], photos: [], signature: '', signedBy: '',
     invoice: '',
   }),
 }

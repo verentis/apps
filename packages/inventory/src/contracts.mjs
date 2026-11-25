@@ -11,12 +11,19 @@ export const settingsPath = '/settings/inventory.json'
 
 const vendor = kind => `application/vnd.verentis.inventory.${kind}+json`
 
+/**
+ * Products (required) owns the product catalogue: Inventory reads its product files (name, SKU, unit, reorder point)
+ * and changes them only through its API (`update-product`).
+ */
+export const products = {
+  path: '/products',
+  mime: 'application/vnd.verentis.products.product+json',
+}
+
 export const mimeTypes = {
-  products: 'application/vnd.verentis.inventory.products',
   warehouses: 'application/vnd.verentis.inventory.warehouses',
   moves: 'application/vnd.verentis.inventory.moves',
   adjustments: 'application/vnd.verentis.inventory.adjustments',
-  product: vendor('product'),
   warehouse: vendor('warehouse'),
   move: vendor('move'),
   adjustment: vendor('adjustment'),
@@ -25,18 +32,16 @@ export const mimeTypes = {
 
 // Containers are content-less typed nodes that hold records as children; the file browser lists them.
 export const containers = {
-  products: { path: '/products', mime: mimeTypes.products, holds: ['product'] },
   warehouses: { path: '/warehouses', mime: mimeTypes.warehouses, holds: ['warehouse'] },
   moves: { path: '/stock-moves', mime: mimeTypes.moves, holds: ['move'] },
   adjustments: { path: '/inventory-adjustments', mime: mimeTypes.adjustments, holds: ['adjustment'] },
 }
 
 /** Records are named by a generated code (`MOV-0001`) and stored without an extension in their container. */
-export const recordKinds = ['product', 'warehouse', 'move', 'adjustment']
-export const containerOf = { product: 'products', warehouse: 'warehouses', move: 'moves', adjustment: 'adjustments' }
+export const recordKinds = ['warehouse', 'move', 'adjustment']
+export const containerOf = { warehouse: 'warehouses', move: 'moves', adjustment: 'adjustments' }
 
 export const codeSettings = {
-  product: { key: 'product-code-prefix', default: 'PRD-', label: 'Product code prefix' },
   warehouse: { key: 'warehouse-code-prefix', default: 'WH-', label: 'Warehouse code prefix' },
   move: { key: 'move-code-prefix', default: 'MOV-', label: 'Stock move code prefix' },
   adjustment: { key: 'adjustment-code-prefix', default: 'ADJ-', label: 'Adjustment code prefix' },
@@ -51,14 +56,6 @@ export const quantity = money
 
 // Draft records may be incomplete on disk (a generated record opens straight into its form); posting checks them.
 export const schemas = {
-  product: recordSchema('product', 'product', {
-    code,
-    name: text,
-    sku: optional(64),
-    unit: optional(32),
-    category: optional(100),
-    reorderPoint: quantity,
-  }, ['code', 'name', 'sku', 'unit', 'category', 'reorderPoint']),
   warehouse: recordSchema('warehouse', 'warehouse', {
     code,
     name: text,
@@ -103,7 +100,6 @@ export const schemas = {
  * the generated `code` and fills an empty date with today and an empty warehouse with the default warehouse.
  */
 export const templates = {
-  product: recordTemplate('product', { name: '{{ name }}', sku: '', unit: 'ea', category: '', reorderPoint: '' }),
   warehouse: recordTemplate('warehouse', { name: '{{ name }}', locations: [] }),
   move: recordTemplate('move', {
     product: '', quantity: '', fromWarehouse: '', fromLocation: '', toWarehouse: '', toLocation: '',
@@ -126,19 +122,10 @@ const seeded = (kind, codeValue, id, fields) => ({
   createdAt: seedTime, updatedAt: seedTime, code: codeValue, ...fields,
 })
 
-/** A sample warehouse, a few products and opening stock moves, seeded once. */
+/** A sample warehouse and opening stock moves of Products' sample products, seeded once. */
 export const starterRecords = [
   seeded('warehouse', 'WH-0001', '7a1b2c3d-4e5f-4a6b-8c9d-0e1f2a3b4c01', {
     name: 'Main warehouse', locations: ['Stock', 'Input', 'Output'],
-  }),
-  seeded('product', 'PRD-0001', '7a1b2c3d-4e5f-4a6b-8c9d-0e1f2a3b4c02', {
-    name: 'Standing desk', sku: 'DESK-001', unit: 'ea', category: 'Furniture', reorderPoint: '5',
-  }),
-  seeded('product', 'PRD-0002', '7a1b2c3d-4e5f-4a6b-8c9d-0e1f2a3b4c03', {
-    name: 'Office chair', sku: 'CHAIR-001', unit: 'ea', category: 'Furniture', reorderPoint: '10',
-  }),
-  seeded('product', 'PRD-0003', '7a1b2c3d-4e5f-4a6b-8c9d-0e1f2a3b4c04', {
-    name: 'Copier paper A4', sku: 'PAPER-A4', unit: 'box', category: 'Supplies', reorderPoint: '20',
   }),
   seeded('move', 'MOV-0001', '7a1b2c3d-4e5f-4a6b-8c9d-0e1f2a3b4c05', {
     product: '/products/PRD-0001', quantity: '20', fromWarehouse: '', fromLocation: '',

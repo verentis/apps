@@ -128,6 +128,99 @@
       "type": "string",
       "pattern": "^((0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?)?$"
     },
+    "latitude": {
+      "type": "string",
+      "pattern": "^(-?(90(\\.0+)?|[0-8]?[0-9](\\.[0-9]{1,8})?))?$"
+    },
+    "longitude": {
+      "type": "string",
+      "pattern": "^(-?(180(\\.0+)?|(1[0-7][0-9]|[0-9]{1,2})(\\.[0-9]{1,8})?))?$"
+    },
+    "checklist": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "done": {
+            "type": "boolean"
+          },
+          "doneAt": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "seconds": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 31536000
+          },
+          "startedAt": {
+            "type": "string",
+            "maxLength": 40
+          }
+        },
+        "required": [
+          "label"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "maxItems": 50
+    },
+    "photos": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "src": {
+            "type": "string",
+            "maxLength": 400000,
+            "pattern": "^data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$"
+          },
+          "takenAt": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "src"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "maxItems": 8
+    },
+    "signature": {
+      "type": "string",
+      "maxLength": 200000,
+      "pattern": "^(<svg [\\s\\S]*</svg>)?$"
+    },
+    "signedBy": {
+      "type": "string",
+      "maxLength": 200
+    },
     "invoice": {
       "type": "string",
       "maxLength": 4096,

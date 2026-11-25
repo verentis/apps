@@ -118,74 +118,101 @@
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.validation-summary",
+            "props": {
+              "title": "Fix these before saving"
+            }
+          },
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "{{ form.values.attendeeName || 'New registration' }}",
+              "note": "Registration {{ form.values.code || '' }}"
             },
             "children": [
               {
                 "type": "canvas.stack",
                 "layout": {
                   "base": {
-                    "gap": 1
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
                   }
                 },
                 "children": [
                   {
-                    "type": "canvas.stack",
-                    "layout": {
-                      "base": {
-                        "direction": "row",
-                        "wrap": true,
-                        "gap": 2,
-                        "align": "center"
-                      }
+                    "type": "canvas.dashboard.badge",
+                    "props": {
+                      "text": "{{ String(form.values.status || '').split('-').join(' ') }}",
+                      "tone": "{{ [\"confirmed\",\"attended\"].includes(form.values.status) ? 'success' : [\"cancelled\"].includes(form.values.status) ? 'danger' : 'neutral' }}"
                     },
-                    "children": [
-                      {
-                        "type": "canvas.heading",
-                        "props": {
-                          "level": 2,
-                          "text": "{{ form.values.attendeeName || 'New registration' }}"
-                        }
-                      },
-                      {
-                        "type": "canvas.dashboard.badge",
-                        "props": {
-                          "text": "{{ String(form.values.status || '').split('-').join(' ') }}",
-                          "tone": "{{ [\"confirmed\",\"attended\"].includes(form.values.status) ? 'success' : [\"cancelled\"].includes(form.values.status) ? 'danger' : 'neutral' }}"
-                        },
-                        "rules": {
-                          "visible": "!!form.values.status"
-                        }
-                      },
-                      {
-                        "type": "canvas.dashboard.badge",
-                        "props": {
-                          "text": "Archived",
-                          "tone": "warning",
-                          "icon": "archive"
-                        },
-                        "rules": {
-                          "visible": "form.values.state === 'archived'"
-                        }
-                      }
-                    ]
+                    "rules": {
+                      "visible": "!!form.values.status"
+                    }
                   },
                   {
-                    "type": "canvas.text",
+                    "type": "canvas.dashboard.badge",
                     "props": {
-                      "text": "Registration {{ form.values.code || '' }} · {{ ctx.file.path }}",
-                      "tone": "muted"
+                      "text": "Archived",
+                      "tone": "warning",
+                      "icon": "archive"
+                    },
+                    "rules": {
+                      "visible": "form.values.state === 'archived'"
                     }
                   }
                 ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Confirm",
+                  "icon": "check",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "confirm"
+                },
+                "rules": {
+                  "visible": "form.values.status === 'draft' && !(form.values.state === 'archived')",
+                  "disabled": "form.saving || form.dirty || !form.values.event"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Check in",
+                  "variant": "outline",
+                  "icon": "user-check",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "check-in"
+                },
+                "rules": {
+                  "visible": "form.values.status === 'confirmed' && !(form.values.state === 'archived')",
+                  "disabled": "form.saving || form.dirty"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Cancel registration",
+                  "variant": "ghost",
+                  "icon": "x",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "cancel-registration"
+                },
+                "rules": {
+                  "visible": "[\"draft\",\"confirmed\"].includes(form.values.status) && !(form.values.state === 'archived')",
+                  "disabled": "form.saving || form.dirty"
+                },
+                "slot": "actions"
               },
               {
                 "type": "canvas.stack",
@@ -201,155 +228,121 @@
                   {
                     "type": "canvas.button",
                     "props": {
-                      "label": "Confirm",
-                      "icon": "check",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": "confirm"
-                    },
-                    "rules": {
-                      "visible": "form.values.status === 'draft' && !(form.values.state === 'archived')",
-                      "disabled": "form.saving || form.dirty || !form.values.event"
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Check in",
-                      "variant": "outline",
-                      "icon": "user-check",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": "check-in"
-                    },
-                    "rules": {
-                      "visible": "form.values.status === 'confirmed' && !(form.values.state === 'archived')",
-                      "disabled": "form.saving || form.dirty"
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Cancel registration",
+                      "label": "Archive",
                       "variant": "ghost",
-                      "icon": "x",
+                      "icon": "archive",
                       "size": "sm"
                     },
                     "on": {
-                      "click": "cancel-registration"
+                      "click": "archive"
                     },
                     "rules": {
-                      "visible": "[\"draft\",\"confirmed\"].includes(form.values.status) && !(form.values.state === 'archived')",
+                      "visible": "!(form.values.state === 'archived') && !([\"attended\",\"cancelled\"].includes(form.values.status))",
                       "disabled": "form.saving || form.dirty"
                     }
                   },
                   {
-                    "type": "canvas.stack",
-                    "layout": {
-                      "base": {
-                        "direction": "row",
-                        "wrap": true,
-                        "gap": 2,
-                        "align": "center"
-                      }
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Restore",
+                      "variant": "outline",
+                      "icon": "archive-restore",
+                      "size": "sm"
                     },
-                    "children": [
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Archive",
-                          "variant": "ghost",
-                          "icon": "archive",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "archive"
-                        },
-                        "rules": {
-                          "visible": "!(form.values.state === 'archived') && !([\"attended\",\"cancelled\"].includes(form.values.status))",
-                          "disabled": "form.saving || form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Restore",
-                          "variant": "outline",
-                          "icon": "archive-restore",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "restore"
-                        },
-                        "rules": {
-                          "visible": "form.values.state === 'archived'",
-                          "disabled": "form.saving || form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Reset",
-                          "variant": "ghost",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "reset"
-                        },
-                        "rules": {
-                          "disabled": "form.saving || !form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Save",
-                          "icon": "save",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "save"
-                        },
-                        "rules": {
-                          "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || ([\"attended\",\"cancelled\"].includes(form.values.status))"
-                        }
-                      }
-                    ]
+                    "on": {
+                      "click": "restore"
+                    },
+                    "rules": {
+                      "visible": "form.values.state === 'archived'",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Reset",
+                      "variant": "ghost",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "reset"
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Save",
+                      "icon": "save",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "save"
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || ([\"attended\",\"cancelled\"].includes(form.values.status))"
+                    }
                   }
-                ]
+                ],
+                "slot": "actions"
               }
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "{{ data.$record.error }}"
-            },
-            "rules": {
-              "visible": "data.$record.status === 'error'"
+              "for": "record",
+              "compact": true
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.status-steps",
             "props": {
-              "text": "Loading…",
-              "tone": "muted"
+              "value": "{{ form.values.status }}",
+              "steps": [
+                {
+                  "value": "draft",
+                  "label": "Draft"
+                },
+                {
+                  "value": "confirmed",
+                  "label": "Confirmed"
+                },
+                {
+                  "value": "attended",
+                  "label": "Attended"
+                }
+              ],
+              "branches": [
+                {
+                  "value": "cancelled",
+                  "label": "Cancelled"
+                }
+              ]
             },
             "rules": {
-              "visible": "data.$record.status === 'loading'"
+              "visible": "!!form.values.status"
             }
           },
           {
-            "type": "canvas.dashboard.badge",
+            "type": "canvas.alert",
             "props": {
-              "text": "This registration is archived. Restore it to edit.",
               "tone": "warning",
-              "icon": "archive"
+              "title": "This registration is archived",
+              "text": "Restore it to edit.",
+              "icon": "archive",
+              "action": {
+                "label": "Restore",
+                "id": "restore"
+              }
             },
             "rules": {
               "visible": "form.values.state === 'archived'"
+            },
+            "on": {
+              "action": "restore"
             }
           },
           {
@@ -418,7 +411,8 @@
                           "label": "Event",
                           "value": "{{ form.values.event }}",
                           "description": "The event this registration belongs to.",
-                          "options": "{{ data.eventoptions }}"
+                          "options": "{{ data.eventoptions }}",
+                          "searchable": true
                         },
                         "layout": {
                           "tablet": {
@@ -488,7 +482,8 @@
                               "value": "cancelled",
                               "label": "Cancelled"
                             }
-                          ]
+                          ],
+                          "display": "segmented"
                         },
                         "rules": {
                           "disabled": "(form.values.state === 'archived' || ([\"attended\",\"cancelled\"].includes(form.values.status)))"

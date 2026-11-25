@@ -13,13 +13,16 @@ const charge = object({
   writeDown: money, reason: optional(500), recoverability: optional(500),
 })
 const defaults = {
-  revision: '{{ id }}', pilot: 'synthetic-only', title: '{{ name }}', status: 'intake', parties: [], team: [], links: [],
+  revision: '{{ id }}', title: '{{ name }}', status: 'intake', parties: [], team: [], links: [],
   project: '', engagement: '', currency: 'ZAR', rates: [], fixedFee: '', reviewBy: '', reviewReason: '',
   disposition: 'undecided', charges: [], billingReviewer: '', chronology: [], invoices: [],
 }
 export const template = kit.recordTemplate('matter', defaults)
 export const schema = kit.recordSchema('matter', 'matter', {
-  code, revision: {type:'string',format:'uuid'}, pilot: { const: 'synthetic-only' }, title: optional(200), status: { enum: ['intake', 'screened', 'declined', 'open'] },
+  code, revision: {type:'string',format:'uuid'},
+  // Set on matters created during the synthetic pilot; no longer written or required.
+  pilot: { type: 'string', maxLength: 40 },
+  title: optional(200), status: { enum: ['intake', 'screened', 'declined', 'open'] },
   parties: array(party, 0, 100), team: array(optional(200), 0, 100),
   links: array(object({ kind: { enum: ['document', 'task', 'deadline'] }, description: optional(500), path: pathOrEmpty, date: optionalDate }), 0, 200),
   project: pathOrEmpty, engagement: optional(5000), currency: { type: 'string', pattern: '^[A-Z]{3}$' },

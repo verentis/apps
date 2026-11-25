@@ -11,9 +11,23 @@
   },
   "marketplace": {
     "logo": "./icons/app.svg",
-      "hero": {"source": "./marketplace/hero.svg", "alt": "Sales cover"},
-      "images": [{"source": "./marketplace/overview.png", "alt": "Sales overview in Canvas", "caption": "Sales overview"}, {"source": "./marketplace/detail.png", "alt": "Quotations in Canvas", "caption": "Quotations"}],
-      "readme": "./marketplace/README.md",
+    "hero": {
+      "source": "./marketplace/hero.svg",
+      "alt": "Sales cover"
+    },
+    "images": [
+      {
+        "source": "./marketplace/overview.png",
+        "alt": "Sales overview in Canvas",
+        "caption": "Sales overview"
+      },
+      {
+        "source": "./marketplace/detail.png",
+        "alt": "Quotations in Canvas",
+        "caption": "Quotations"
+      }
+    ],
+    "readme": "./marketplace/README.md",
     "keywords": [
       "sales",
       "quotations",
@@ -69,13 +83,6 @@
     ],
     "settings": [
       {
-        "key": "product-code-prefix",
-        "display-name": "Product code prefix",
-        "type": "string",
-        "default": "PROD-",
-        "description": "Prefix of generated product numbers, e.g. PROD-0001."
-      },
-      {
         "key": "quotation-code-prefix",
         "display-name": "Quotation number prefix",
         "type": "string",
@@ -104,6 +111,10 @@
       },
       {
         "package": "verentis/nodejs",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/products",
         "version": "latest"
       },
       {
@@ -148,12 +159,6 @@
         "mime": "application/json"
       },
       {
-        "from": "seed/products",
-        "to": "/products",
-        "mode": "seed",
-        "mime": "application/vnd.verentis.sales.products"
-      },
-      {
         "from": "seed/quotations",
         "to": "/quotations",
         "mode": "seed",
@@ -173,22 +178,6 @@
       }
     ],
     "creatables": [
-      {
-        "id": "product",
-        "display-name": "Product",
-        "description": "A new product",
-        "icon": "lucide:package",
-        "mime": "application/vnd.verentis.sales.product+json",
-        "parents": [
-          "application/vnd.verentis.sales.products"
-        ],
-        "folder-names": [
-          "products",
-          "sales"
-        ],
-        "script": "./scripts/create",
-        "template": "./templates/product.json"
-      },
       {
         "id": "quotation",
         "display-name": "Quotation",
@@ -230,15 +219,6 @@
     },
     "file-access": [
       {
-        "path": "/products",
-        "mode": "read",
-        "reason": "List products",
-        "origin": {
-          "kind": "document",
-          "id": "canvas/home.page.yaml"
-        }
-      },
-      {
         "path": "/quotations",
         "mode": "read",
         "reason": "List quotations",
@@ -257,6 +237,15 @@
         }
       },
       {
+        "path": "/products",
+        "mode": "read",
+        "reason": "List the products Sales quotes",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
         "path": "/quotations",
         "mode": "read",
         "reason": "List quotations by status",
@@ -267,8 +256,8 @@
       },
       {
         "path": "/sales-orders",
-        "mode": "read",
-        "reason": "List sales orders by delivery status",
+        "mode": "write",
+        "reason": "List sales orders by delivery status; move records between columns",
         "origin": {
           "kind": "document",
           "id": "canvas/orders.page.yaml"
@@ -293,15 +282,6 @@
         }
       },
       {
-        "path": "/applications/sales/",
-        "mode": "read",
-        "reason": "Read the Sales schemas and run the confirm script",
-        "origin": {
-          "kind": "document",
-          "id": "sales-product"
-        }
-      },
-      {
         "path": "/customers",
         "mode": "read",
         "reason": "Offer CRM customers to quote (when CRM is installed)",
@@ -313,7 +293,7 @@
       {
         "path": "/products",
         "mode": "read",
-        "reason": "Offer products on quotation lines",
+        "reason": "Offer Products' products on quotation lines",
         "origin": {
           "kind": "document",
           "id": "sales-quotation"
@@ -338,6 +318,15 @@
         }
       },
       {
+        "path": "/products",
+        "mode": "read",
+        "reason": "Name the product on each order line",
+        "origin": {
+          "kind": "document",
+          "id": "sales-order"
+        }
+      },
+      {
         "path": "/applications/sales/",
         "mode": "read",
         "reason": "Read the Sales schemas and run the confirm script",
@@ -353,15 +342,6 @@
         "origin": {
           "kind": "document",
           "id": "sales-settings"
-        }
-      },
-      {
-        "path": "/products",
-        "mode": "write",
-        "reason": "Create products with the next number",
-        "origin": {
-          "kind": "script",
-          "id": "sales-create"
         }
       },
       {
@@ -403,7 +383,7 @@
       {
         "path": "/products",
         "mode": "read",
-        "reason": "Check that quoted products exist and are active",
+        "reason": "Check that quoted products exist and are active (Products)",
         "origin": {
           "kind": "script",
           "id": "sales-post"
@@ -426,17 +406,22 @@
           "kind": "script",
           "id": "sales-post"
         }
-      },
-      {
-        "path": "/invoices",
-        "mode": "write",
-        "reason": "Draft an invoice for a confirmed quotation when Invoicing is installed",
-        "origin": {
-          "kind": "script",
-          "id": "sales-post"
-        }
       }
-    ]
+    ],
+    "api": {
+      "uses": [
+        {
+          "app": "invoicing",
+          "operation": "create-draft-invoice",
+          "reason": "Draft the invoice of a confirmed quotation"
+        },
+        {
+          "app": "products",
+          "operation": "create-product",
+          "reason": "Add a product to the catalogue Sales quotes"
+        }
+      ]
+    }
   },
   "packaging": {
     "publisher": "verentis",

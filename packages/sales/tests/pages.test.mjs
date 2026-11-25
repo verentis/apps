@@ -1,3 +1,4 @@
+import { apiContract } from '../../../tools/file-apps/build.mjs'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { parse } from 'yaml'
 import { describe, expect, it } from 'vitest'
@@ -20,13 +21,13 @@ const steps = document => Object.values(document.spec.actions ?? {}).flatMap(act
 describe('Sales Canvas documents', () => {
   // The committed manifest and Canvas documents are YAML renderings of what src/build.mjs models; CI owns the
   // manifest's metadata.version.
-  it('are up to date with the generator', () => {
+  it('are up to date with the generator', async () => {
     const pages = buildPages()
     expect(Object.keys(documents).sort()).toEqual(Object.keys(pages).sort())
     for (const [name, document] of Object.entries(pages)) expect(documents[name], name).toEqual(plain(document))
     const { metadata: { version: _version, ...metadata }, ...installed } = read('sales.app.yaml')
     const { metadata: { version: _source, ...expectedMetadata }, ...expected } = plain({
-      ...manifest, spec: { ...manifest.spec, 'file-access': [...documentFileAccess(pages), ...scriptConsents] },
+      ...manifest, spec: { ...manifest.spec, 'file-access': [...documentFileAccess(pages), ...scriptConsents], api: await apiContract(new URL('../', import.meta.url)) },
     })
     expect({ ...installed, metadata }).toEqual({ ...expected, metadata: expectedMetadata })
     expect(read('environments/feature.yaml')).toEqual(featureOverlay)
@@ -49,7 +50,10 @@ describe('Sales Canvas documents', () => {
   it('runs the confirm script from the quotation form', () => {
     const document = documents['quotation.form.yaml']
     const runs = steps(document).filter(step => 'run-script' in step).map(step => step['run-script'])
-    expect(runs.map(run => run.parameters.operation)).toEqual(['confirm-quotation'])
+    // Confirm, then record the invoice Invoicing drafted (both steps of the confirm action, and of Draft invoice).
+    expect([...new Set(runs.map(run => run.parameters.operation))]).toEqual(['confirm-quotation', 'record-invoice'])
+    const calls = steps(document).filter(step => 'call-app' in step).map(step => step['call-app'])
+    expect(calls[0]).toMatchObject({ app: 'invoicing', operation: 'create-draft-invoice' })
     for (const run of runs) expect(run).toMatchObject({ file: postScriptPath, parameters: { path: '{{ ctx.file.path }}' } })
     expect(document.spec.permissions).toEqual(expect.arrayContaining(['execution.run']))
     // The script reloads the record afterwards, which a dirty form would refuse.
@@ -64,7 +68,7 @@ describe('Sales Canvas documents', () => {
   })
 
   it('locks confirmed quotations but leaves sales orders editable', () => {
-    const save = form => documents[form].spec.tree[0].children[0].children[1].children.at(-1).children.find(node => node.props?.label === 'Save')
+    const save = form => documents[form].spec.tree[0].children.find(node => node.type !== 'canvas.validation-summary').children.at(-1).children.find(node => node.props?.label === 'Save')
     expect(save('quotation.form.yaml').rules.disabled).toContain("form.values.status === 'confirmed'")
     expect(save('order.form.yaml').rules.disabled).not.toContain('deliveryStatus')
   })
@@ -89,10 +93,11 @@ describe('Sales manifest', () => {
   const files = manifest.packaging.files.map(globToRegExp)
   const consent = read('sales.app.yaml').spec['file-access']
 
-  it('depends on the latest Canvas and nodejs engine, and optionally CRM and Invoicing', () => {
+  it('depends on the latest Canvas, nodejs engine and Products, and optionally CRM and Invoicing', () => {
     expect(manifest.metadata.version).toBe('0.1.0')
     expect(spec.dependencies).toEqual([
       { package: 'verentis/canvas', version: 'latest' }, { package: 'verentis/nodejs', version: 'latest' },
+      { package: 'verentis/products', version: 'latest' },
       { package: 'verentis/crm', version: 'latest', optional: true },
       { package: 'verentis/invoicing', version: 'latest', optional: true },
     ])

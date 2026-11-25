@@ -250,3 +250,19 @@ export async function reverseJournal(files, journalPath, { date, reason, now, uu
   }
   return reversalPath
 }
+
+/**
+ * What Accounting's `post-journal` operation needs to post a record's journal (through its API, from the record's form);
+ * the record names the journal (`/journals/EXP-0001`). Apps never write /journals themselves.
+ */
+export function journalRequest(path, date, description, currency, lines) {
+  return { source: { path, code: nameOf(path) }, date, description, currency, lines }
+}
+
+/** The journal Accounting posted for a record: named after it, sourced from it and posted. */
+export async function postedJournalFor(files, path, journalPath) {
+  if (journalPath !== `${accounting.journals}/${nameOf(path)}`) fail('Accounting returned another journal.')
+  const posted = await readRecord(files, journalPath, 'journal')
+  if (posted.record.source?.path !== path || posted.record.status !== 'posted') fail(`${nameOf(journalPath)} is not this record's posted journal.`)
+  return journalPath
+}

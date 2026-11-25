@@ -11,7 +11,8 @@
     "access": [
       {
         "path": "/tasks",
-        "reason": "Group tasks by stage"
+        "reason": "Group tasks by stage; move records between columns",
+        "mode": "write"
       },
       {
         "path": "/projects",
@@ -34,18 +35,58 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Project",
+          "icon": "folder-kanban",
+          "active": "board.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Projects",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "board.page.yaml",
+              "label": "Board",
+              "icon": "kanban"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/project/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/project.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Task board",
+              "note": "Every active task, grouped by stage. Click a task to open its form; complete it from there."
+            },
+            "children": []
+          },
           {
             "type": "canvas.stack",
             "layout": {
@@ -54,48 +95,27 @@
                 "wrap": true,
                 "gap": 2,
                 "align": "center",
-                "justify": "between"
+                "justify": "end"
               }
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Task board"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Every active task, grouped by stage. Click a task to open its form; complete it from there.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.button",
+                "type": "canvas.form.select",
                 "props": {
-                  "label": "Project",
-                  "variant": "ghost",
-                  "icon": "folder-kanban",
-                  "size": "sm"
-                },
-                "on": {
-                  "click": [
+                  "label": "Lanes",
+                  "value": "{{ state.lanes }}",
+                  "options": [
                     {
-                      "open-file": {
-                        "path": "/applications/project/canvas/home.page.yaml"
-                      }
+                      "value": "",
+                      "label": "None"
+                    },
+                    {
+                      "value": "project",
+                      "label": "By project"
+                    },
+                    {
+                      "value": "data.assignee",
+                      "label": "By assignee"
                     }
                   ]
                 }
@@ -103,22 +123,157 @@
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.board",
             "props": {
-              "text": "The /tasks folder could not be read. Reinstall Project to recreate it."
+              "rows": "{{ (data.tasks || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, name: e.name, kind: e.kind, data: e.data, project: ((((data.projects || []).find(p => p.path === e.data.project) || {}).data || {}).name || '') || 'No project' })) }}",
+              "groupBy": "data.stage",
+              "columns": [
+                {
+                  "value": "backlog",
+                  "label": "Backlog"
+                },
+                {
+                  "value": "in-progress",
+                  "label": "In progress"
+                },
+                {
+                  "value": "review",
+                  "label": "Review"
+                },
+                {
+                  "value": "done",
+                  "label": "Done"
+                }
+              ],
+              "card": {
+                "title": "data.title",
+                "code": "data.code",
+                "meta": [
+                  "data.assignee",
+                  "data.dueDate"
+                ],
+                "badge": "data.priority"
+              },
+              "readOnly": false,
+              "rowKey": "path",
+              "emptyText": "Nothing here",
+              "laneBy": "{{ state.lanes }}",
+              "allowAdd": true,
+              "lockedWhen": "[\"done\"].includes(row.data.stage)"
             },
-            "rules": {
-              "visible": "data.$tasks.status === 'error'"
+            "on": {
+              "open": [
+                {
+                  "open-file": {
+                    "path": "{{ event.row.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ],
+              "add": [
+                {
+                  "run-script": {
+                    "file": "/applications/project/scripts/create",
+                    "timeout": 60,
+                    "assign": "created",
+                    "parameters": {
+                      "operation": "create",
+                      "creatable": "task",
+                      "parentPath": "/tasks",
+                      "mime": "application/vnd.verentis.project.task+json",
+                      "template": {
+                        "$expr": "'{\"$schema\":\"https://schemas.verentis.io/project/v1/task.schema.json\",\"schemaVersion\":1,\"kind\":\"task\",\"id\":\"{{ id }}\",\"state\":\"active\",\"createdAt\":\"{{ now }}\",\"updatedAt\":\"{{ now }}\",\"code\":\"\",\"project\":\"\",\"title\":\"{{ name }}\",\"stage\":\"backlog\",\"priority\":\"medium\",\"assignee\":\"\",\"dueDate\":\"\",\"description\":\"\"}'"
+                      },
+                      "siblings": "{{ (data.tasks || []).map(e => e.name) }}"
+                    }
+                  }
+                },
+                {
+                  "patch-record": {
+                    "path": "{{ state.created.path }}",
+                    "values": {
+                      "stage": "{{ event.column }}",
+                      "updatedAt": "{{ Date() }}"
+                    }
+                  }
+                },
+                {
+                  "patch-record": {
+                    "if": "state.lanes === 'data.assignee' && !!event.lane",
+                    "path": "{{ state.created.path }}",
+                    "values": {
+                      "assignee": "{{ event.lane }}"
+                    }
+                  }
+                },
+                {
+                  "refresh-source": {
+                    "source": "tasks"
+                  }
+                },
+                {
+                  "open-file": {
+                    "path": "{{ state.created.path }}"
+                  }
+                }
+              ],
+              "move": [
+                {
+                  "confirm": {
+                    "if": "event.to === 'done'",
+                    "title": "Move to Done?",
+                    "message": "{{ event.row.data.code }} moves to Done. A completed task is locked.",
+                    "confirm-label": "Move to Done"
+                  }
+                },
+                {
+                  "run-script": {
+                    "if": "event.to === 'done'",
+                    "file": "/applications/project/scripts/post",
+                    "timeout": 120,
+                    "parameters": {
+                      "operation": "complete-task",
+                      "path": "{{ event.path }}"
+                    },
+                    "assign": "lastmove"
+                  }
+                },
+                {
+                  "patch-record": {
+                    "if": "![\"done\"].includes(event.to)",
+                    "path": "{{ event.path }}",
+                    "values": {
+                      "stage": "{{ event.to }}",
+                      "updatedAt": "{{ Date() }}"
+                    }
+                  }
+                },
+                {
+                  "refresh-source": {
+                    "source": "tasks"
+                  }
+                },
+                {
+                  "refresh-source": {
+                    "source": "projects"
+                  }
+                },
+                {
+                  "toast": {
+                    "message": "{{ [\"done\"].includes(event.to) ? ((state.lastmove && state.lastmove.message) || 'Done') : 'Moved to ' + ({\"backlog\":\"Backlog\",\"in-progress\":\"In progress\",\"review\":\"Review\",\"done\":\"Done\"}[event.to] || event.to) }}",
+                    "variant": "success"
+                  }
+                }
+              ]
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "Loading…",
-              "tone": "muted"
-            },
-            "rules": {
-              "visible": "data.$tasks.status === 'loading'"
+              "for": "tasks",
+              "compact": true,
+              "description": "The /tasks folder could not be read. Reinstall Project to recreate it."
             }
           },
           {
@@ -220,6 +375,10 @@
                         }
                       ],
                       "emptyText": "No backlog tasks",
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
                       "clickable": true
                     },
                     "on": {
@@ -227,7 +386,8 @@
                         {
                           "open-file": {
                             "path": "{{ event.path }}",
-                            "mode": "edit"
+                            "mode": "edit",
+                            "open": "side"
                           }
                         }
                       ]
@@ -272,6 +432,10 @@
                         }
                       ],
                       "emptyText": "No in progress tasks",
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
                       "clickable": true
                     },
                     "on": {
@@ -279,7 +443,8 @@
                         {
                           "open-file": {
                             "path": "{{ event.path }}",
-                            "mode": "edit"
+                            "mode": "edit",
+                            "open": "side"
                           }
                         }
                       ]
@@ -324,6 +489,10 @@
                         }
                       ],
                       "emptyText": "No review tasks",
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
                       "clickable": true
                     },
                     "on": {
@@ -331,7 +500,8 @@
                         {
                           "open-file": {
                             "path": "{{ event.path }}",
-                            "mode": "edit"
+                            "mode": "edit",
+                            "open": "side"
                           }
                         }
                       ]
@@ -376,6 +546,10 @@
                         }
                       ],
                       "emptyText": "No done tasks",
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
                       "clickable": true
                     },
                     "on": {
@@ -383,7 +557,8 @@
                         {
                           "open-file": {
                             "path": "{{ event.path }}",
-                            "mode": "edit"
+                            "mode": "edit",
+                            "open": "side"
                           }
                         }
                       ]
@@ -392,9 +567,74 @@
                 ]
               }
             ]
+          },
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "gap": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Timeline"
+                }
+              },
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "Tasks from when they were created to when they are due. Drag a bar to change its due date.",
+                  "tone": "muted"
+                }
+              },
+              {
+                "type": "canvas.gantt",
+                "props": {
+                  "rows": "{{ (data.tasks || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').filter(e => !!e.data.dueDate).map(e => ({ path: e.path, title: e.data.title || e.data.code, stage: e.data.stage, start: String(e.data.createdAt || e.data.dueDate).slice(0, 10), end: e.data.dueDate, project: ((((data.projects || []).find(p => p.path === e.data.project) || {}).data || {}).name) || 'No project' })) }}",
+                  "laneKey": "project",
+                  "colorBy": "stage",
+                  "days": 28,
+                  "conflicts": false,
+                  "lockedWhen": "row.stage === 'done'"
+                },
+                "on": {
+                  "open": [
+                    {
+                      "open-file": {
+                        "path": "{{ event.row.path }}",
+                        "mode": "edit",
+                        "open": "side"
+                      }
+                    }
+                  ],
+                  "reschedule": [
+                    {
+                      "patch-record": {
+                        "path": "{{ event.path }}",
+                        "values": {
+                          "dueDate": "{{ event.end }}",
+                          "updatedAt": "{{ Date() }}"
+                        }
+                      }
+                    },
+                    {
+                      "refresh-source": {
+                        "source": "tasks"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
           }
         ]
       }
-    ]
+    ],
+    "state": {
+      "lanes": ""
+    }
   }
 }

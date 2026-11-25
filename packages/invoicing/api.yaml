@@ -1,0 +1,71 @@
+# Invoicing's API: what other apps and agents may ask Invoicing to do. The platform checks a caller lists the
+# operation under `uses` in its own api.yaml, validates the input against `input-schema`, and runs scripts/api with
+# Invoicing's own file access. Callers never write /invoices themselves.
+api-version: verentis.io/v1
+kind: Api
+metadata:
+  id: invoicing
+spec:
+  operations:
+    - key: create-draft-invoice
+      title: Draft an invoice
+      description: >-
+        Drafts an invoice for a customer from another app's record (a confirmed quotation, a returned rental, a
+        completed task, an approved pre-bill). Invoicing numbers it. Calling again for the same source record returns
+        the draft already made instead of a second one.
+      effect: write
+      timeout-seconds: 60
+      input-schema:
+        type: object
+        additionalProperties: false
+        required: [source, customer, lines]
+        properties:
+          source:
+            type: object
+            additionalProperties: false
+            required: [path]
+            properties:
+              path: { type: string, minLength: 1, maxLength: 1000 }
+              code: { type: string, maxLength: 100 }
+          # Empty when the asking app does not know it; the draft is completed in Invoicing.
+          currency: { type: string, pattern: "^([A-Z]{3})?$" }
+          reference: { type: string, maxLength: 200 }
+          # Optional: the asking app's agreed terms (an approved pre-bill); otherwise set in Invoicing.
+          issueDate: { type: string, pattern: "^([0-9]{4}-[0-9]{2}-[0-9]{2})?$" }
+          dueDate: { type: string, pattern: "^([0-9]{4}-[0-9]{2}-[0-9]{2})?$" }
+          customerRef: { type: string, maxLength: 1000 }
+          customer:
+            type: object
+            required: [name]
+            properties:
+              name: { type: string, minLength: 1, maxLength: 1000 }
+          lines:
+            type: array
+            minItems: 1
+            maxItems: 500
+            items:
+              type: object
+              additionalProperties: false
+              required: [description, quantity, unitPrice]
+              properties:
+                description: { type: string, minLength: 1, maxLength: 1000 }
+                quantity: { type: string, pattern: "^(0|[1-9][0-9]{0,11})(\\.[0-9]{1,6})?$" }
+                unitPrice: { type: string, pattern: "^(-?(0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?)?$" }
+                taxRate: { type: string, pattern: "^((0|[1-9][0-9]{0,11})(\\.[0-9]{1,6})?)?$" }
+          notes: { type: string, maxLength: 10000 }
+      output-schema:
+        type: object
+        properties:
+          path: { type: string }
+          code: { type: string }
+          created: { type: boolean }
+      implementation:
+        type: script
+        script: scripts/api
+  uses:
+    - app: accounting
+      operation: post-journal
+      reason: Post issued invoices, credit notes and payments to the ledger
+    - app: accounting
+      operation: reverse-journal
+      reason: Reverse a payment's journal

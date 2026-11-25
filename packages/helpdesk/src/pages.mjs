@@ -1,10 +1,11 @@
 // Generates the Helpdesk Canvas documents: a bound form per record kind, the settings form, the launch page,
 // the ticket list by stage, the SLA/overdue report and the team workload summary. Resolving and closing
 // (stage transitions, resolution text, locking) are done by the action script the ticket form runs.
+import { views } from './views.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   humanize, iconName, options, openFile, page, panel, projectRegistration, recordButtons, row, scriptAction,
-  sectionCards, stat, stats, status, table, tabs, text, toneExpression,
+  sectionCards, stat, stats, status, table, tabs, text, toneExpression, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { containers, crm, installRoot, mimeTypes, openStages, recordKinds, schemaId, settingsPath, stages } from './contracts.mjs'
 import { entities, postScriptPath, settingsFields } from './app.mjs'
@@ -76,21 +77,19 @@ function recordForm(kind) {
   const entity = entities[kind]
   const extras = recordExtras(kind)
   const readOnly = `${archived} || (${extras.locked})`
-  const header = row([
-    column([
-      row([
-        heading(`{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`),
+  const header = recordHeader(
+    `{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`,
+    [
         ...(entity.status ? [badge(humanize(entity.status), toneExpression(entity.status, stageTones), { visible: `!!form.values.${entity.status}` })] : []),
         badge('Archived', 'warning', { visible: archived }, 'archive'),
-      ]),
-      text(`${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`, 'muted'),
-    ]),
-    row([...extras.buttons, recordButtons(extras.locked)]),
-  ], 'between')
+    ],
+    `${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`,
+    [...extras.buttons, recordButtons(extras.locked)],
+  )
   const tree = [
     header,
-    ...status('record'),
-    badge(`This ${entity.singular.toLowerCase()} is archived. Restore it to edit.`, 'warning', { visible: archived }, 'archive'),
+    ...status('record'), ...lifecycle(entity),
+    archivedAlert(entity.singular),
     ...extras.notices,
     grid(sectionCards(entity.sections, readOnly)),
     // Record discussion: a hidden chat channel attached to this ticket file (canvas.collab.discussion
@@ -127,13 +126,13 @@ function settingsForm() {
       access: [teamsAccess('Choose the default team for new tickets'), schemaAccess],
       data: teamSources,
       tree: [
-        row([
-          column([heading('Helpdesk settings'), text('The default team for new tickets. Code prefixes are app settings, managed with the installed app.', 'muted')]),
+        pageHeader(
+          [heading('Helpdesk settings'), text('The default team for new tickets. Code prefixes are app settings, managed with the installed app.', 'muted')], [
           row([
             button('Reset', [{ 'reset-form': {} }], { disabled: 'form.saving || !form.dirty' }, 'ghost'),
             button('Save', [{ save: {} }, { toast: { message: 'Saved', variant: 'success' } }], { disabled: 'form.saving || !form.dirty || form.invalid' }, undefined, 'save'),
           ]),
-        ], 'between'),
+        ]),
         ...status('record'),
         ...status('teams', `The ${containers.teams.path} folder could not be read. Reinstall Helpdesk to recreate it.`),
         grid([card('Defaults', [grid(settingsFields.map(field => formControl(field, null)))])], 1),
@@ -174,15 +173,15 @@ function homePage() {
         access: pageAccess('Count tickets and show the teams and tickets'),
         data: ticketSources,
         tree: page([
-          row([
-            column([heading('Helpdesk'), text('Teams and tickets are files in your workspace. Draft tickets in /tickets, work them by stage, then resolve and close them from their forms.', 'muted')]),
+          pageHeader(
+            [heading('Helpdesk'), text('Teams and tickets are files in your workspace. Draft tickets in /tickets, work them by stage, then resolve and close them from their forms.', 'muted')], [
             row([
               button('Tickets', [openFile(`${installRoot}/canvas/tickets.page.yaml`)], undefined, 'outline', 'ticket'),
               button('SLA report', [openFile(`${installRoot}/canvas/sla.page.yaml`)], undefined, 'outline', 'alarm-clock'),
               button('Workload', [openFile(`${installRoot}/canvas/workload.page.yaml`)], undefined, 'outline', 'users'),
               button('Settings', [openFile(settingsPath, 'edit')], undefined, 'ghost', 'settings'),
             ]),
-          ], 'between'),
+          ]),
           stats([
             stat('Open tickets', countOf(openStage('r.stage')), 'ticket', loading('tickets')),
             stat('Overdue', countOf('r.overdue'), 'alarm-clock', loading('tickets')),
@@ -220,10 +219,10 @@ function ticketsPage() {
         access: pageAccess('List tickets by stage with their team names'),
         data: ticketSources,
         tree: page([
-          row([
-            column([heading('Tickets by stage'), text('Every active ticket, grouped by its stage. Click a row to open the ticket.', 'muted')]),
+          pageHeader(
+            [heading('Tickets by stage'), text('Every active ticket, grouped by its stage. Click a row to open the ticket.', 'muted')], [
             button('Helpdesk', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'ticket'),
-          ], 'between'),
+          ]),
           ...containerNotices(),
           stats(stages.map(stage => stat(stageLabel(stage), countOf(`r.stage === '${stage}'`), 'ticket', loading('tickets'))), 5),
           tabs(stages.map(stage => ({ value: stage, label: stageLabel(stage), icon: 'ticket' })),
@@ -246,10 +245,10 @@ function slaPage() {
         access: pageAccess('Compare open tickets against their SLA deadlines'),
         data: ticketSources,
         tree: page([
-          row([
-            column([heading('SLA report'), text('Open tickets by SLA deadline. The deadline is computed from the team\'s SLA hours when a ticket is created.', 'muted')]),
+          pageHeader(
+            [heading('SLA report'), text('Open tickets by SLA deadline. The deadline is computed from the team\'s SLA hours when a ticket is created.', 'muted')], [
             button('Helpdesk', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'ticket'),
-          ], 'between'),
+          ]),
           ...containerNotices(),
           stats([
             stat('Open', `{{ ${openRows}.length }}`, 'ticket', loading('tickets')),
@@ -277,10 +276,10 @@ function workloadPage() {
         access: pageAccess('Sum open tickets per team and assignee'),
         data: ticketSources,
         tree: page([
-          row([
-            column([heading('Team workload'), text('Open tickets per team and per assignee. Click a team to open it.', 'muted')]),
+          pageHeader(
+            [heading('Team workload'), text('Open tickets per team and per assignee. Click a team to open it.', 'muted')], [
             button('Helpdesk', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'ticket'),
-          ], 'between'),
+          ]),
           ...containerNotices(),
           card('Teams', [table(teamRows, [['team', 'Team'], ['members', 'Members', 'end'], ['slaHours', 'SLA hours', 'end'],
             ['open', 'Open', 'end'], ['overdue', 'Overdue', 'end'], ['solved', 'Solved', 'end']], 'No teams yet', true)]),
@@ -293,5 +292,5 @@ function workloadPage() {
 
 export function buildPages() {
   const documents = [homePage(), ticketsPage(), slaPage(), workloadPage(), ...recordKinds.map(recordForm), settingsForm()]
-  return Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)]))
+  return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

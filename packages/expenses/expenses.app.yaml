@@ -11,9 +11,23 @@
   },
   "marketplace": {
     "logo": "./icons/app.svg",
-      "hero": {"source": "./marketplace/hero.svg", "alt": "Expenses cover"},
-      "images": [{"source": "./marketplace/overview.png", "alt": "Expenses overview in Canvas", "caption": "Expenses overview"}, {"source": "./marketplace/detail.png", "alt": "Expense reports in Canvas", "caption": "Expense reports"}],
-      "readme": "./marketplace/README.md",
+    "hero": {
+      "source": "./marketplace/hero.svg",
+      "alt": "Expenses cover"
+    },
+    "images": [
+      {
+        "source": "./marketplace/overview.png",
+        "alt": "Expenses overview in Canvas",
+        "caption": "Expenses overview"
+      },
+      {
+        "source": "./marketplace/detail.png",
+        "alt": "Expense reports in Canvas",
+        "caption": "Expense reports"
+      }
+    ],
+    "readme": "./marketplace/README.md",
     "keywords": [
       "expenses",
       "expense reports",
@@ -382,15 +396,6 @@
         }
       },
       {
-        "path": "/journals",
-        "mode": "write",
-        "reason": "Post approved expense reports as journals",
-        "origin": {
-          "kind": "script",
-          "id": "expenses-post"
-        }
-      },
-      {
         "path": "/expense-reports",
         "mode": "write",
         "reason": "Mark reports submitted, approved, refused or posted",
@@ -399,7 +404,16 @@
           "id": "expenses-post"
         }
       }
-    ]
+    ],
+    "api": {
+      "uses": [
+        {
+          "app": "accounting",
+          "operation": "post-journal",
+          "reason": "Post approved expense reports to the ledger"
+        }
+      ]
+    }
   },
   "packaging": {
     "publisher": "verentis",

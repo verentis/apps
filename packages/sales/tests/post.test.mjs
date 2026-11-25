@@ -2,7 +2,9 @@ import Ajv2020 from 'ajv/dist/2020.js'
 import addFormats from 'ajv-formats'
 import { describe, expect, it } from 'vitest'
 import { defaultSettings, schemas, templates } from '../src/contracts.mjs'
-import { schemas as invoicingSchemas } from '../../invoicing/src/contracts.mjs'
+import { templates as productTemplates } from '../../products/src/contracts.mjs'
+import { readFile } from 'node:fs/promises'
+import { parse } from 'yaml'
 import { quoteTotals, run } from '../scripts/post/main.mjs'
 import { memoryFiles } from '../../../tools/file-apps/memory-files.mjs'
 
@@ -11,7 +13,8 @@ let ids = 0
 const options = { now, uuid: () => `00000000-0000-4000-8000-${String(++ids).padStart(12, '0')}` }
 const record = (kind, values, source = templates) => ({ ...source[kind], id: options.uuid(), createdAt: now, updatedAt: now, ...values })
 
-const product = (values = {}) => record('product', { code: 'PROD-0001', name: 'Chair', unit: 'each', listPrice: '499.99', ...values })
+// Products owns the catalogue Sales quotes; quoted products are its files.
+const product = (values = {}) => record('product', { code: 'PROD-0001', name: 'Chair', unit: 'each', listPrice: '499.99', ...values }, productTemplates)
 const quotation = (values = {}) => record('quotation', {
   code: 'QUO-0001', date: '2026-03-02', currency: 'ZAR',
   customer: { ...templates.quotation.customer, name: 'Globex' },
@@ -31,7 +34,7 @@ function workspace(extra = {}) {
   })
 }
 
-const call = (files, operation, path) => run({ operation, path }, files, options)
+const call = (files, operation, path, extra = {}) => run({ operation, path, ...extra }, files, options)
 const confirm = files => call(files, 'confirm-quotation', '/quotations/QUO-0001')
 
 describe('Sales quotation totals', () => {
@@ -87,38 +90,48 @@ describe('Sales confirm script', () => {
     expect(files.json('/sales-orders/QUO-0001').currency).toBe('ZAR')
   })
 
-  it('drafts an Invoicing invoice when Invoicing is installed', async () => {
+  it('returns what Invoicing needs to draft the invoice, and never writes Invoicing\'s files', async () => {
     const files = workspace({ '/invoices': '' })
-    expect(await confirm(files)).toMatchObject({ message: 'Confirmed QUO-0001 into QUO-0001 and drafted invoice QUO-0001' })
-    expect(files.json('/quotations/QUO-0001').invoice).toEqual({ path: '/invoices/QUO-0001' })
-    const invoice = files.json('/invoices/QUO-0001')
-    expect(invoice).toMatchObject({
-      kind: 'invoice', status: 'draft', currency: 'ZAR', customer: { name: 'Globex' },
+    const result = await confirm(files)
+    expect(result.message).toBe('Confirmed QUO-0001 into QUO-0001')
+    expect(result.invoiceRequest).toMatchObject({
+      source: { path: '/quotations/QUO-0001', code: 'QUO-0001' }, currency: 'ZAR', customer: { name: 'Globex' },
       lines: [
-        { description: '3 × Chair (10% discount)', quantity: '1', unitPrice: '1349.97', taxRate: '' },
-        { description: '1 × Delivery', quantity: '1', unitPrice: '0.05', taxRate: '' },
+        { description: '3 × Chair (10% discount)', quantity: '1', unitPrice: '1349.97' },
+        { description: '1 × Delivery', quantity: '1', unitPrice: '0.05' },
       ],
     })
-    expect(files.nodes.get('/invoices/QUO-0001').contentType).toBe('application/vnd.verentis.invoicing.invoice+json')
-    const ajv = new Ajv2020({ allErrors: true, strict: true })
+    expect(files.writes.some(path => path.startsWith('/invoices/'))).toBe(false)
+    // The request matches Invoicing's create-draft-invoice input schema.
+    const contract = parse(await readFile(new URL('../../invoicing/api.yaml', import.meta.url), 'utf8'))
+    const ajv = new Ajv2020({ allErrors: true, strict: false })
     addFormats(ajv)
-    expect(ajv.validate(invoicingSchemas.invoice, invoice), JSON.stringify(ajv.errors)).toBe(true)
+    const schema = contract.spec.operations.find(operation => operation.key === 'create-draft-invoice')['input-schema']
+    expect(ajv.validate(schema, result.invoiceRequest), JSON.stringify(ajv.errors)).toBe(true)
+  })
+
+  it('records the invoice Invoicing drafted, and asks again for a confirmed quotation without one', async () => {
+    const files = workspace({})
+    await confirm(files)
+    const again = await confirm(files)
+    expect(again.invoiceRequest.source.code).toBe('QUO-0001')
+    await call(files, 'record-invoice', '/quotations/QUO-0001', { invoice: '/invoices/INV-0007' })
+    expect(files.json('/quotations/QUO-0001').invoice).toEqual({ path: '/invoices/INV-0007' })
+    expect((await confirm(files)).invoiceRequest).toBeUndefined()
+    await expect(call(files, 'record-invoice', '/quotations/QUO-0001', { invoice: '/elsewhere/x' })).rejects.toThrow('Invoicing returned no invoice')
   })
 
   it('completes a confirm interrupted after its order was created', async () => {
-    const files = workspace({ '/invoices': '' })
+    const files = workspace({})
     const write = files.write
     files.write = async (path, ...args) => { if (path === '/quotations/QUO-0001') throw new Error('network'); return write(path, ...args) }
     await expect(confirm(files)).rejects.toThrow('network')
     expect(files.nodes.has('/sales-orders/QUO-0001')).toBe(true)
     files.write = write
     await confirm(files)
-    const saved = files.json('/quotations/QUO-0001')
-    expect(saved.status).toBe('confirmed')
-    expect(saved.invoice).toEqual({ path: '/invoices/QUO-0001' })
-    // The order and invoice created by the first attempt are kept, not rewritten.
+    expect(files.json('/quotations/QUO-0001').status).toBe('confirmed')
+    // The order created by the first attempt is kept, not rewritten.
     expect(files.writes.filter(path => path === '/sales-orders/QUO-0001')).toHaveLength(1)
-    expect(files.writes.filter(path => path === '/invoices/QUO-0001')).toHaveLength(1)
   })
 
   it('refuses a stranger already sitting at the order\'s deterministic name', async () => {

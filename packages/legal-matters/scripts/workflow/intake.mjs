@@ -19,12 +19,12 @@ async function screen(files, current) {
     const page = response?.children ?? response
     check(Array.isArray(page?.data) && Number.isSafeInteger(page.pageCount) && page.pageCount >= 0 &&
       page.pageCount <= 20 && (page.pageNumber === undefined || page.pageNumber === number),
-    'Unexpected or oversized matter listing; cannot complete the pilot screen.')
+    'Unexpected or oversized matter listing; cannot complete the conflict screen.')
     for (const child of page.data) {
       const path = direct(child.path ?? `${matters}/${child.name}`,matters)
       if (path === current.path || (child.mimeType && child.mimeType !== mime)) continue
       const other = await files.readJson(path)
-      check(other.kind === 'matter' && other.pilot === 'synthetic-only' && Array.isArray(other.parties), 'Cannot screen an unexpected matter file.')
+      check(other.kind === 'matter' && Array.isArray(other.parties), 'Cannot screen an unexpected matter file.')
       const overlap = [...keys(other.parties)].filter(key => ours.has(key)).sort()
       if (overlap.length) signals.push(digest([other.id, overlap]))
     }

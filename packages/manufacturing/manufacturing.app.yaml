@@ -11,9 +11,23 @@
   },
   "marketplace": {
     "logo": "./icons/app.svg",
-      "hero": {"source": "./marketplace/hero.svg", "alt": "Manufacturing cover"},
-      "images": [{"source": "./marketplace/overview.png", "alt": "Manufacturing overview in Canvas", "caption": "Manufacturing overview"}, {"source": "./marketplace/detail.png", "alt": "Manufacturing orders in Canvas", "caption": "Manufacturing orders"}],
-      "readme": "./marketplace/README.md",
+    "hero": {
+      "source": "./marketplace/hero.svg",
+      "alt": "Manufacturing cover"
+    },
+    "images": [
+      {
+        "source": "./marketplace/overview.png",
+        "alt": "Manufacturing overview in Canvas",
+        "caption": "Manufacturing overview"
+      },
+      {
+        "source": "./marketplace/detail.png",
+        "alt": "Manufacturing orders in Canvas",
+        "caption": "Manufacturing orders"
+      }
+    ],
+    "readme": "./marketplace/README.md",
     "keywords": [
       "manufacturing",
       "mrp",
@@ -93,6 +107,11 @@
       {
         "package": "verentis/nodejs",
         "version": "latest"
+      },
+      {
+        "package": "verentis/products",
+        "version": "latest",
+        "optional": true
       },
       {
         "package": "verentis/inventory",
@@ -224,7 +243,7 @@
       {
         "path": "/products",
         "mode": "read",
-        "reason": "Offer Inventory products to build (when Inventory is installed)",
+        "reason": "Offer the products to build (when Products is installed)",
         "origin": {
           "kind": "document",
           "id": "manufacturing-bom"
@@ -243,6 +262,24 @@
         "path": "/bills-of-materials",
         "mode": "read",
         "reason": "Choose the bill of materials to build",
+        "origin": {
+          "kind": "document",
+          "id": "manufacturing-order"
+        }
+      },
+      {
+        "path": "/stock-moves",
+        "mode": "read",
+        "reason": "Show what is in stock for the components (when Inventory is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "manufacturing-order"
+        }
+      },
+      {
+        "path": "/products",
+        "mode": "read",
+        "reason": "Name the components (when Products is installed)",
         "origin": {
           "kind": "document",
           "id": "manufacturing-order"
@@ -292,26 +329,17 @@
           "kind": "script",
           "id": "manufacturing-post"
         }
-      },
-      {
-        "path": "/stock-moves",
-        "mode": "write",
-        "reason": "Emit consumption and production stock moves for completed orders when Inventory is installed",
-        "origin": {
-          "kind": "script",
-          "id": "manufacturing-post"
-        }
-      },
-      {
-        "path": "/settings/inventory.json",
-        "mode": "read",
-        "reason": "Stamp emitted stock moves with the Inventory default warehouse when it is set",
-        "origin": {
-          "kind": "script",
-          "id": "manufacturing-post"
-        }
       }
-    ]
+    ],
+    "api": {
+      "uses": [
+        {
+          "app": "inventory",
+          "operation": "record-production",
+          "reason": "Move consumed components out and the produced output in when an order completes"
+        }
+      ]
+    }
   },
   "packaging": {
     "publisher": "verentis",

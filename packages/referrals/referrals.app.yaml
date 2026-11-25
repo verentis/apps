@@ -175,8 +175,8 @@
       },
       {
         "path": "/referrals",
-        "mode": "read",
-        "reason": "List referrals by status",
+        "mode": "write",
+        "reason": "List referrals by status; move records between columns",
         "origin": {
           "kind": "document",
           "id": "canvas/referrals.page.yaml"

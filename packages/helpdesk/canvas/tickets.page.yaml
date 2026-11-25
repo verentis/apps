@@ -15,7 +15,8 @@
       },
       {
         "path": "/tickets",
-        "reason": "List tickets by stage with their team names"
+        "reason": "List tickets by stage with their team names; move records between columns",
+        "mode": "write"
       }
     ],
     "data": {
@@ -38,90 +39,85 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Helpdesk",
+          "icon": "ticket",
+          "active": "tickets.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Queue",
+              "icon": "inbox",
+              "count": "{{ (data.rows || []).filter(r => !['solved', 'closed'].includes(r.stage)).length }}"
+            },
+            {
+              "id": "tickets.page.yaml",
+              "label": "Board",
+              "icon": "kanban"
+            },
+            {
+              "id": "sla.page.yaml",
+              "label": "SLA",
+              "icon": "alarm-clock",
+              "count": "{{ (data.rows || []).filter(r => !['solved', 'closed'].includes(r.stage)).filter(r => r.overdue).length }}",
+              "tone": "danger"
+            },
+            {
+              "id": "workload.page.yaml",
+              "label": "Workload",
+              "icon": "users"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/helpdesk/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/helpdesk.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Tickets by stage",
+              "note": "Every active ticket, grouped by its stage. Click a row to open the ticket."
             },
-            "children": [
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Tickets by stage"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Every active ticket, grouped by its stage. Click a row to open the ticket.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.button",
-                "props": {
-                  "label": "Helpdesk",
-                  "variant": "ghost",
-                  "icon": "ticket",
-                  "size": "sm"
-                },
-                "on": {
-                  "click": [
-                    {
-                      "open-file": {
-                        "path": "/applications/helpdesk/canvas/home.page.yaml"
-                      }
-                    }
-                  ]
-                }
-              }
-            ]
+            "children": []
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /helpdesk-teams folder could not be read. Reinstall Helpdesk to recreate it."
-            },
-            "rules": {
-              "visible": "data.$teams.status === 'error'"
+              "for": "teams",
+              "compact": true,
+              "description": "The /helpdesk-teams folder could not be read. Reinstall Helpdesk to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /tickets folder could not be read. Reinstall Helpdesk to recreate it."
-            },
-            "rules": {
-              "visible": "data.$tickets.status === 'error'"
+              "for": "tickets",
+              "compact": true,
+              "description": "The /tickets folder could not be read. Reinstall Helpdesk to recreate it."
             }
           },
           {
@@ -186,31 +182,18 @@
           {
             "type": "canvas.tabs",
             "props": {
+              "variant": "pill",
+              "persist": true,
               "items": [
                 {
-                  "value": "new",
-                  "label": "New",
-                  "icon": "ticket"
+                  "value": "board",
+                  "label": "Board",
+                  "icon": "kanban"
                 },
                 {
-                  "value": "in-progress",
-                  "label": "In Progress",
-                  "icon": "ticket"
-                },
-                {
-                  "value": "waiting",
-                  "label": "Waiting",
-                  "icon": "ticket"
-                },
-                {
-                  "value": "solved",
-                  "label": "Solved",
-                  "icon": "ticket"
-                },
-                {
-                  "value": "closed",
-                  "label": "Closed",
-                  "icon": "ticket"
+                  "value": "list",
+                  "label": "List",
+                  "icon": "list"
                 }
               ]
             },
@@ -224,51 +207,139 @@
                 },
                 "children": [
                   {
-                    "type": "canvas.table",
+                    "type": "canvas.board",
                     "props": {
-                      "rows": "{{ (data.rows || []).filter(r => r.stage === 'new') }}",
+                      "rows": "{{ (data.rows || []) }}",
+                      "groupBy": "stage",
+                      "readOnly": false,
+                      "rowKey": "path",
                       "columns": [
                         {
-                          "key": "code",
-                          "label": "Ticket"
+                          "value": "new",
+                          "label": "New"
                         },
                         {
-                          "key": "subject",
-                          "label": "Subject"
+                          "value": "in-progress",
+                          "label": "In Progress"
                         },
                         {
-                          "key": "team",
-                          "label": "Team"
+                          "value": "waiting",
+                          "label": "Waiting"
                         },
                         {
-                          "key": "priority",
-                          "label": "Priority"
+                          "value": "solved",
+                          "label": "Solved"
                         },
                         {
-                          "key": "assignee",
-                          "label": "Assignee"
-                        },
-                        {
-                          "key": "deadline",
-                          "label": "SLA deadline"
+                          "value": "closed",
+                          "label": "Closed"
                         }
                       ],
-                      "emptyText": "No new tickets",
-                      "clickable": true
+                      "card": {
+                        "title": "subject",
+                        "code": "code",
+                        "meta": [
+                          "team",
+                          "priority",
+                          "assignee"
+                        ]
+                      },
+                      "emptyText": "Nothing here",
+                      "lockedWhen": "[\"closed\"].includes(row.stage)"
                     },
                     "on": {
-                      "row-click": [
+                      "open": [
                         {
                           "open-file": {
+                            "path": "{{ event.row.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ],
+                      "move": [
+                        {
+                          "confirm": {
+                            "if": "event.to === 'closed'",
+                            "title": "Move to Closed?",
+                            "message": "{{ event.row.code }} moves to Closed. A closed ticket can no longer be edited.",
+                            "confirm-label": "Move to Closed"
+                          }
+                        },
+                        {
+                          "confirm": {
+                            "if": "event.to === 'solved'",
+                            "title": "Move to Solved",
+                            "message": "{{ event.row.code }} moves to Solved.",
+                            "confirm-label": "Move to Solved",
+                            "fields": [
+                              {
+                                "key": "resolution",
+                                "label": "Resolution",
+                                "type": "textarea",
+                                "required": true,
+                                "description": "What was done. The customer sees this."
+                              }
+                            ],
+                            "assign": "moveanswer"
+                          }
+                        },
+                        {
+                          "run-script": {
+                            "if": "event.to === 'solved'",
+                            "file": "/applications/helpdesk/scripts/post",
+                            "timeout": 120,
+                            "parameters": {
+                              "operation": "resolve",
+                              "path": "{{ event.path }}",
+                              "resolution": "{{ state.moveanswer.resolution }}"
+                            },
+                            "assign": "lastmove"
+                          }
+                        },
+                        {
+                          "run-script": {
+                            "if": "event.to === 'closed'",
+                            "file": "/applications/helpdesk/scripts/post",
+                            "timeout": 120,
+                            "parameters": {
+                              "operation": "close",
+                              "path": "{{ event.path }}"
+                            },
+                            "assign": "lastmove"
+                          }
+                        },
+                        {
+                          "patch-record": {
+                            "if": "![\"solved\",\"closed\"].includes(event.to)",
                             "path": "{{ event.path }}",
-                            "mode": "edit"
+                            "values": {
+                              "stage": "{{ event.to }}",
+                              "updatedAt": "{{ Date() }}"
+                            }
+                          }
+                        },
+                        {
+                          "refresh-source": {
+                            "source": "tickets"
+                          }
+                        },
+                        {
+                          "refresh-source": {
+                            "source": "teams"
+                          }
+                        },
+                        {
+                          "toast": {
+                            "message": "{{ [\"solved\",\"closed\"].includes(event.to) ? ((state.lastmove && state.lastmove.message) || 'Done') : 'Moved to ' + ({\"new\":\"New\",\"in-progress\":\"In Progress\",\"waiting\":\"Waiting\",\"solved\":\"Solved\",\"closed\":\"Closed\"}[event.to] || event.to) }}",
+                            "variant": "success"
                           }
                         }
                       ]
                     }
                   }
                 ],
-                "slot": "new"
+                "slot": "board"
               },
               {
                 "type": "canvas.stack",
@@ -281,7 +352,7 @@
                   {
                     "type": "canvas.table",
                     "props": {
-                      "rows": "{{ (data.rows || []).filter(r => r.stage === 'in-progress') }}",
+                      "rows": "{{ (data.rows || []) }}",
                       "columns": [
                         {
                           "key": "code",
@@ -306,189 +377,73 @@
                         {
                           "key": "deadline",
                           "label": "SLA deadline"
+                        },
+                        {
+                          "key": "stage",
+                          "label": "Stage",
+                          "format": "badge",
+                          "labels": {
+                            "new": "New",
+                            "in-progress": "In Progress",
+                            "waiting": "Waiting",
+                            "solved": "Solved",
+                            "closed": "Closed"
+                          }
                         }
                       ],
-                      "emptyText": "No in progress tickets",
-                      "clickable": true
+                      "views": [
+                        {
+                          "value": "all",
+                          "label": "All"
+                        },
+                        {
+                          "value": "new",
+                          "label": "New",
+                          "where": "row.stage === 'new'"
+                        },
+                        {
+                          "value": "in-progress",
+                          "label": "In Progress",
+                          "where": "row.stage === 'in-progress'"
+                        },
+                        {
+                          "value": "waiting",
+                          "label": "Waiting",
+                          "where": "row.stage === 'waiting'"
+                        },
+                        {
+                          "value": "solved",
+                          "label": "Solved",
+                          "where": "row.stage === 'solved'"
+                        },
+                        {
+                          "value": "closed",
+                          "label": "Closed",
+                          "where": "row.stage === 'closed'"
+                        }
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
+                      "emptyText": "Nothing here"
                     },
                     "on": {
                       "row-click": [
                         {
                           "open-file": {
                             "path": "{{ event.path }}",
-                            "mode": "edit"
+                            "mode": "edit",
+                            "open": "side"
                           }
                         }
                       ]
                     }
                   }
                 ],
-                "slot": "in-progress"
-              },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 4
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.table",
-                    "props": {
-                      "rows": "{{ (data.rows || []).filter(r => r.stage === 'waiting') }}",
-                      "columns": [
-                        {
-                          "key": "code",
-                          "label": "Ticket"
-                        },
-                        {
-                          "key": "subject",
-                          "label": "Subject"
-                        },
-                        {
-                          "key": "team",
-                          "label": "Team"
-                        },
-                        {
-                          "key": "priority",
-                          "label": "Priority"
-                        },
-                        {
-                          "key": "assignee",
-                          "label": "Assignee"
-                        },
-                        {
-                          "key": "deadline",
-                          "label": "SLA deadline"
-                        }
-                      ],
-                      "emptyText": "No waiting tickets",
-                      "clickable": true
-                    },
-                    "on": {
-                      "row-click": [
-                        {
-                          "open-file": {
-                            "path": "{{ event.path }}",
-                            "mode": "edit"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ],
-                "slot": "waiting"
-              },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 4
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.table",
-                    "props": {
-                      "rows": "{{ (data.rows || []).filter(r => r.stage === 'solved') }}",
-                      "columns": [
-                        {
-                          "key": "code",
-                          "label": "Ticket"
-                        },
-                        {
-                          "key": "subject",
-                          "label": "Subject"
-                        },
-                        {
-                          "key": "team",
-                          "label": "Team"
-                        },
-                        {
-                          "key": "priority",
-                          "label": "Priority"
-                        },
-                        {
-                          "key": "assignee",
-                          "label": "Assignee"
-                        },
-                        {
-                          "key": "deadline",
-                          "label": "SLA deadline"
-                        }
-                      ],
-                      "emptyText": "No solved tickets",
-                      "clickable": true
-                    },
-                    "on": {
-                      "row-click": [
-                        {
-                          "open-file": {
-                            "path": "{{ event.path }}",
-                            "mode": "edit"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ],
-                "slot": "solved"
-              },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 4
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.table",
-                    "props": {
-                      "rows": "{{ (data.rows || []).filter(r => r.stage === 'closed') }}",
-                      "columns": [
-                        {
-                          "key": "code",
-                          "label": "Ticket"
-                        },
-                        {
-                          "key": "subject",
-                          "label": "Subject"
-                        },
-                        {
-                          "key": "team",
-                          "label": "Team"
-                        },
-                        {
-                          "key": "priority",
-                          "label": "Priority"
-                        },
-                        {
-                          "key": "assignee",
-                          "label": "Assignee"
-                        },
-                        {
-                          "key": "deadline",
-                          "label": "SLA deadline"
-                        }
-                      ],
-                      "emptyText": "No closed tickets",
-                      "clickable": true
-                    },
-                    "on": {
-                      "row-click": [
-                        {
-                          "open-file": {
-                            "path": "{{ event.path }}",
-                            "mode": "edit"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ],
-                "slot": "closed"
+                "slot": "list"
               }
             ]
           }

@@ -1,0 +1,476 @@
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "products",
+    "name": "Products",
+    "description": "One product catalogue for every app: what you sell, stock and make.",
+    "icon": "./icons/app.svg",
+    "version": "0.1.0",
+    "author": "Verentis"
+  },
+  "marketplace": {
+    "logo": "./icons/app.svg",
+    "hero": {
+      "source": "./marketplace/hero.svg",
+      "alt": "Products cover"
+    },
+    "readme": "./marketplace/README.md",
+    "keywords": [
+      "products",
+      "catalogue",
+      "catalog",
+      "items",
+      "sku",
+      "price list",
+      "inventory",
+      "sales"
+    ]
+  },
+  "spec": {
+    "install-root": "/applications/products",
+    "entry": "https://canvas.apps.localtest.me",
+    "scope": "global",
+    "entry-points": [
+      {
+        "id": "home",
+        "display-name": "Products",
+        "route": "/render?document=.%2Fcanvas%2Fhome.page.yaml",
+        "order": 10
+      }
+    ],
+    "launch": {
+      "enabled": true,
+      "entry-point": "home",
+      "pinnable": true
+    },
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run"
+    ],
+    "scopes": [
+      "products.default"
+    ],
+    "settings": [
+      {
+        "key": "product-code-prefix",
+        "display-name": "Product code prefix",
+        "type": "string",
+        "default": "PRD-",
+        "description": "Prefix of generated product codes, e.g. PRD-0001."
+      },
+      {
+        "key": "code-digits",
+        "display-name": "Code digits",
+        "type": "number",
+        "default": 4,
+        "description": "Minimum number of digits in generated codes (zero-padded)."
+      }
+    ],
+    "dependencies": [
+      {
+        "package": "verentis/canvas",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/nodejs",
+        "version": "latest"
+      }
+    ],
+    "engine": "verentis/nodejs",
+    "scripts": [
+      "scripts/create",
+      "scripts/post",
+      "scripts/api"
+    ],
+    "install": [
+      {
+        "from": "canvas/*.form.yaml",
+        "to": "/applications/products/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.form+yaml"
+      },
+      {
+        "from": "canvas/*.page.yaml",
+        "to": "/applications/products/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.page+yaml"
+      },
+      {
+        "from": "schemas/*.schema.json",
+        "to": "/applications/products/schemas/",
+        "mode": "managed",
+        "mime": "application/schema+json"
+      },
+      {
+        "from": "templates/*.json",
+        "to": "/applications/products/templates/",
+        "mode": "managed",
+        "mime": "application/json"
+      },
+      {
+        "from": "seed/products",
+        "to": "/products",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.products.products"
+      },
+      {
+        "from": "seed/starter/PRD-0001.json",
+        "to": "/products/PRD-0001",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.products.product+json"
+      },
+      {
+        "from": "seed/starter/PRD-0002.json",
+        "to": "/products/PRD-0002",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.products.product+json"
+      },
+      {
+        "from": "seed/starter/PRD-0003.json",
+        "to": "/products/PRD-0003",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.products.product+json"
+      }
+    ],
+    "creatables": [
+      {
+        "id": "product",
+        "display-name": "Product",
+        "description": "A new product",
+        "icon": "lucide:package",
+        "mime": "application/vnd.verentis.products.product+json",
+        "parents": [
+          "application/vnd.verentis.products.products",
+          "application/vnd.verentis.sales.products",
+          "application/vnd.verentis.inventory.products"
+        ],
+        "folder-names": [
+          "products",
+          "catalog",
+          "catalogue"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/product.json"
+      }
+    ],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-forms": true,
+      "allow-popups": false
+    },
+    "file-access": [
+      {
+        "path": "/products",
+        "mode": "read",
+        "reason": "List the products",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/applications/products/",
+        "mode": "read",
+        "reason": "Read the Products schemas and run its scripts",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/stock-moves",
+        "mode": "read",
+        "reason": "Show the stock moves of this product (when Inventory is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "products-product"
+        }
+      },
+      {
+        "path": "/applications/products/",
+        "mode": "read",
+        "reason": "Read the Products schemas and run its scripts",
+        "origin": {
+          "kind": "document",
+          "id": "products-product"
+        }
+      },
+      {
+        "path": "/products",
+        "mode": "write",
+        "reason": "Create products with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "products-create"
+        }
+      },
+      {
+        "path": "/products",
+        "mode": "write",
+        "reason": "Adopt earlier Sales and Inventory products into the shared format",
+        "origin": {
+          "kind": "script",
+          "id": "products-post"
+        }
+      },
+      {
+        "path": "/products",
+        "mode": "write",
+        "reason": "Create and update the products other apps ask for",
+        "origin": {
+          "kind": "script",
+          "id": "products-api"
+        }
+      }
+    ],
+    "api": {
+      "operations": [
+        {
+          "key": "create-product",
+          "title": "Add a product",
+          "description": "Adds a product to the shared catalogue, numbered like any new product. When a product with the same SKU already exists it is returned instead of a second one.",
+          "effect": "write",
+          "timeout-seconds": 60,
+          "input-schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1000
+              },
+              "type": {
+                "enum": [
+                  "goods",
+                  "service"
+                ]
+              },
+              "sku": {
+                "type": "string",
+                "maxLength": 64
+              },
+              "unit": {
+                "type": "string",
+                "maxLength": 32
+              },
+              "category": {
+                "type": "string",
+                "maxLength": 100
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 2000
+              },
+              "listPrice": {
+                "type": "string",
+                "pattern": "^((0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?)?$"
+              },
+              "reorderPoint": {
+                "type": "string",
+                "pattern": "^((0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?)?$"
+              }
+            }
+          },
+          "output-schema": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "created": {
+                "type": "boolean"
+              }
+            }
+          },
+          "implementation": {
+            "type": "script",
+            "script": "scripts/api"
+          }
+        },
+        {
+          "key": "update-product",
+          "title": "Change a product",
+          "description": "Changes the given fields of a product (name, type, SKU, unit, category, description, list price, reorder point). A product edited meanwhile is refused rather than overwritten; archived products are not changed.",
+          "effect": "write",
+          "timeout-seconds": 60,
+          "input-schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "values"
+            ],
+            "properties": {
+              "path": {
+                "type": "string",
+                "pattern": "^/products/[^/]+$"
+              },
+              "values": {
+                "type": "object",
+                "additionalProperties": false,
+                "minProperties": 1,
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1000
+                  },
+                  "type": {
+                    "enum": [
+                      "goods",
+                      "service"
+                    ]
+                  },
+                  "sku": {
+                    "type": "string",
+                    "maxLength": 64
+                  },
+                  "unit": {
+                    "type": "string",
+                    "maxLength": 32
+                  },
+                  "category": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "listPrice": {
+                    "type": "string",
+                    "pattern": "^((0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?)?$"
+                  },
+                  "reorderPoint": {
+                    "type": "string",
+                    "pattern": "^((0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?)?$"
+                  }
+                }
+              }
+            }
+          },
+          "output-schema": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "changed": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "implementation": {
+            "type": "script",
+            "script": "scripts/api"
+          }
+        },
+        {
+          "key": "find-products",
+          "title": "Find products",
+          "description": "Finds products by text (name, code or SKU), exact SKU, category or type. Archived products are left out unless asked for.",
+          "effect": "read",
+          "timeout-seconds": 60,
+          "input-schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "query": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "sku": {
+                "type": "string",
+                "maxLength": 64
+              },
+              "category": {
+                "type": "string",
+                "maxLength": 100
+              },
+              "type": {
+                "enum": [
+                  "goods",
+                  "service"
+                ]
+              },
+              "includeArchived": {
+                "type": "boolean"
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 500
+              }
+            }
+          },
+          "output-schema": {
+            "type": "object",
+            "properties": {
+              "products": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "created": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              },
+              "total": {
+                "type": "integer"
+              }
+            }
+          },
+          "implementation": {
+            "type": "script",
+            "script": "scripts/api"
+          }
+        }
+      ]
+    }
+  },
+  "packaging": {
+    "publisher": "verentis",
+    "files": [
+      "canvas/**",
+      "schemas/**",
+      "templates/**",
+      "seed/**",
+      "scripts/**",
+      "README.md"
+    ],
+    "templates": [
+      "canvas/*.yaml"
+    ],
+    "variables": {
+      "canvas-origin": "https://canvas.apps.localtest.me"
+    },
+    "encryption": "none"
+  }
+}

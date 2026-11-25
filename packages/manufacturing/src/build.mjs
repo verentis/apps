@@ -1,6 +1,6 @@
 // Generates the Manufacturing package outputs: manifest, Canvas documents, JSON Schemas, templates, seeds and
 // the generated parts of the scripts. `--check` fails instead of writing when an output is stale.
-import { generate, json, scriptManifest, sharedSource } from '../../../tools/file-apps/build.mjs'
+import { apiContract, generate, json, scriptManifest, sharedSource } from '../../../tools/file-apps/build.mjs'
 import { documentFileAccess } from '../../../tools/file-apps/canvas.mjs'
 import { containers, schemas, templates } from './contracts.mjs'
 import {
@@ -10,12 +10,13 @@ import {
 import { buildPages } from './pages.mjs'
 
 const pages = buildPages()
+const api = await apiContract(new URL('../', import.meta.url))
 
 await generate({
   root: new URL('../', import.meta.url),
   label: 'Manufacturing',
   outputs: {
-    'manufacturing.app.yaml': json({ ...manifest, spec: { ...manifest.spec, 'file-access': [...documentFileAccess(pages), ...scriptConsents] } }),
+    'manufacturing.app.yaml': json({ ...manifest, spec: { ...manifest.spec, 'file-access': [...documentFileAccess(pages), ...scriptConsents], ...(api ? { api } : {}) } }),
     'environments/feature.yaml': json(featureOverlay),
     'environments/production.yaml': json(productionOverlay),
     ...Object.fromEntries(Object.keys(containers).map(name => [`seed/${name}`, ''])),

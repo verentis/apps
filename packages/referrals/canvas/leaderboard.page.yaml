@@ -28,81 +28,99 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Referrals",
+          "icon": "gift",
+          "active": "leaderboard.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "My referrals",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "referrals.page.yaml",
+              "label": "All referrals",
+              "icon": "kanban"
+            },
+            {
+              "id": "leaderboard.page.yaml",
+              "label": "Leaderboard",
+              "icon": "trophy"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/referrals/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/referrals.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Leaderboard",
+              "note": "Referrers ranked by awarded points. Points are awarded when a referral is marked hired."
+            },
+            "children": []
+          },
           {
             "type": "canvas.stack",
             "layout": {
               "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
+                "gap": 2
               }
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Leaderboard"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Referrers ranked by awarded points. Points are awarded when a referral is marked hired.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Points earned"
+                }
               },
               {
-                "type": "canvas.button",
+                "type": "canvas.chart",
                 "props": {
-                  "label": "Referrals",
-                  "variant": "ghost",
-                  "icon": "gift",
-                  "size": "sm"
-                },
-                "on": {
-                  "click": [
-                    {
-                      "open-file": {
-                        "path": "/applications/referrals/canvas/home.page.yaml"
-                      }
-                    }
-                  ]
+                  "rows": "{{ (data.rows || []).map(r => r.referrer || 'Unknown').filter((name, index, all) => all.indexOf(name) === index).map(name => ({ label: name, value: (data.rows || []).filter(r => (r.referrer || 'Unknown') === name).reduce((sum, r) => sum + (Number(r.points) || 0), 0) })) }}",
+                  "showLegend": true,
+                  "emptyText": "Nothing to chart yet",
+                  "kind": "hbar",
+                  "x": "label",
+                  "y": "value",
+                  "format": "integer",
+                  "sort": "-value"
                 }
               }
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /referrals folder could not be read. Reinstall Referrals to recreate it."
-            },
-            "rules": {
-              "visible": "data.$referrals.status === 'error'"
+              "for": "referrals",
+              "compact": true,
+              "description": "The /referrals folder could not be read. Reinstall Referrals to recreate it."
             }
           },
           {
@@ -186,7 +204,11 @@
                       "align": "end"
                     }
                   ],
-                  "emptyText": "No referrals yet"
+                  "emptyText": "No referrals yet",
+                  "search": true,
+                  "sortable": true,
+                  "pageSize": 25,
+                  "narrow": "list"
                 }
               }
             ]

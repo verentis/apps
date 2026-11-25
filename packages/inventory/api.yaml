@@ -1,0 +1,60 @@
+# Inventory's API: what other apps and agents may ask Inventory to do, and what Inventory asks of others. The platform
+# checks the caller lists the operation under `uses`, validates the input, and runs scripts/api with Inventory's own
+# file access. Callers never write /stock-moves themselves.
+api-version: verentis.io/v1
+kind: Api
+metadata:
+  id: inventory
+spec:
+  operations:
+    - key: record-production
+      title: Record a production run
+      description: >-
+        Records produced output and the components it consumed as done stock moves through the default warehouse.
+        Recording the same run again returns the same moves instead of moving stock twice.
+      effect: write
+      timeout-seconds: 60
+      input-schema:
+        type: object
+        additionalProperties: false
+        required: [source, consumed, produced]
+        properties:
+          source:
+            type: object
+            additionalProperties: false
+            required: [path]
+            properties:
+              path: { type: string, minLength: 1, maxLength: 1000 }
+              code: { type: string, pattern: "^[A-Za-z0-9][A-Za-z0-9-]{0,63}$" }
+          date: { type: string, pattern: "^([0-9]{4}-[0-9]{2}-[0-9]{2})?$" }
+          consumed:
+            type: array
+            maxItems: 200
+            items:
+              type: object
+              additionalProperties: false
+              required: [product, quantity]
+              properties:
+                product: { type: string, minLength: 1, maxLength: 1000 }
+                quantity: { type: string, pattern: "^(0|[1-9][0-9]{0,11})(\\.[0-9]{1,4})?$" }
+          produced:
+            type: object
+            additionalProperties: false
+            required: [product, quantity]
+            properties:
+              product: { type: string, minLength: 1, maxLength: 1000 }
+              quantity: { type: string, pattern: "^(0|[1-9][0-9]{0,11})(\\.[0-9]{1,4})?$" }
+      output-schema:
+        type: object
+        properties:
+          moves: { type: array, items: { type: string } }
+      implementation:
+        type: script
+        script: scripts/api
+  uses:
+    - app: purchase
+      operation: create-draft-order
+      reason: Draft a purchase order for products at or below their reorder point
+    - app: products
+      operation: update-product
+      reason: Set a product's reorder point from the stock levels

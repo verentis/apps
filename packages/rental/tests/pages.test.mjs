@@ -1,3 +1,4 @@
+import { apiContract } from '../../../tools/file-apps/build.mjs'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { parse } from 'yaml'
 import { describe, expect, it } from 'vitest'
@@ -20,13 +21,13 @@ const steps = document => Object.values(document.spec.actions ?? {}).flatMap(act
 describe('Rental Canvas documents', () => {
   // The committed manifest and Canvas documents are YAML renderings of what src/build.mjs models; CI owns the
   // manifest's metadata.version.
-  it('are up to date with the generator', () => {
+  it('are up to date with the generator', async () => {
     const pages = buildPages()
     expect(Object.keys(documents).sort()).toEqual(Object.keys(pages).sort())
     for (const [name, document] of Object.entries(pages)) expect(documents[name], name).toEqual(plain(document))
     const { metadata: { version: _version, ...metadata }, ...installed } = read('rental.app.yaml')
     const { metadata: { version: _source, ...expectedMetadata }, ...expected } = plain({
-      ...manifest, spec: { ...manifest.spec, 'file-access': [...documentFileAccess(pages), ...scriptConsents] },
+      ...manifest, spec: { ...manifest.spec, 'file-access': [...documentFileAccess(pages), ...scriptConsents], api: await apiContract(new URL('../', import.meta.url)) },
     })
     expect({ ...installed, metadata }).toEqual({ ...expected, metadata: expectedMetadata })
     expect(read('environments/feature.yaml')).toEqual(featureOverlay)
@@ -49,9 +50,11 @@ describe('Rental Canvas documents', () => {
   it('runs the booking script from the booking form', () => {
     const document = documents['booking.form.yaml']
     const runs = steps(document).filter(step => 'run-script' in step).map(step => step['run-script'])
-    expect(runs.map(run => run.parameters.operation)).toEqual(['confirm-booking', 'pickup-booking', 'return-booking', 'cancel-booking'])
+    expect([...new Set(runs.map(run => run.parameters.operation))]).toEqual(['confirm-booking', 'pickup-booking', 'return-booking', 'record-invoice', 'cancel-booking'])
+    // Returning asks Invoicing (through the platform) to draft the invoice; Rental never writes /invoices.
+    expect(steps(document).filter(step => 'call-app' in step).map(step => step['call-app'].app)).toContain('invoicing')
     for (const run of runs) expect(run).toMatchObject({ file: postScriptPath, parameters: { path: '{{ ctx.file.path }}' } })
-    expect(runs.find(run => run.parameters.operation === 'return-booking').parameters.date).toBe('{{ state.returndate }}')
+    expect(runs.find(run => run.parameters.operation === 'return-booking' && run.parameters.date).parameters.date).toBe('{{ state.returndate }}')
     expect(document.spec.permissions).toEqual(expect.arrayContaining(['execution.run']))
     // The script reloads the record afterwards, which a dirty form would refuse.
     expect(JSON.stringify(document.spec.tree)).toMatch(/form\.saving \|\| form\.dirty/)
@@ -65,7 +68,7 @@ describe('Rental Canvas documents', () => {
   })
 
   it('locks confirmed, picked-up and returned bookings but leaves products editable', () => {
-    const save = form => documents[form].spec.tree[0].children[0].children[1].children.at(-1).children.find(node => node.props?.label === 'Save')
+    const save = form => documents[form].spec.tree[0].children.find(node => node.type !== 'canvas.validation-summary').children.at(-1).children.find(node => node.props?.label === 'Save')
     expect(save('booking.form.yaml').rules.disabled).toContain("['confirmed', 'picked-up', 'returned'].includes(form.values.status)")
     expect(save('product.form.yaml').rules.disabled).not.toContain('status')
   })

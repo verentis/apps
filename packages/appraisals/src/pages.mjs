@@ -1,10 +1,11 @@
 // Generates the Appraisals Canvas documents: the bound appraisal form, the settings form, the launch page,
 // the appraisals list by status and the scores summary. Scheduling and completing (status transitions, ratings
 // check, overall score computation, locking) are done by the action script the appraisal form runs.
+import { views } from './views.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   humanize, iconName, options, openFile, page, panel, projectRegistration, recordButtons, row, scriptAction,
-  sectionCards, stat, stats, status, table, tabs, text, toneExpression,
+  sectionCards, stat, stats, status, table, tabs, text, toneExpression, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { containers, employees, installRoot, mimeTypes, recordKinds, schemaId, settingsPath, statuses } from './contracts.mjs'
 import { entities, postScriptPath, settingsFields } from './app.mjs'
@@ -58,21 +59,19 @@ function recordForm(kind) {
   const entity = entities[kind]
   const extras = recordExtras()
   const readOnly = `${archived} || (${extras.locked})`
-  const header = row([
-    column([
-      row([
-        heading(`{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`),
+  const header = recordHeader(
+    `{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`,
+    [
         badge(humanize(entity.status), toneExpression(entity.status, statusTones), { visible: `!!form.values.${entity.status}` }),
         badge('Archived', 'warning', { visible: archived }, 'archive'),
-      ]),
-      text(`${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`, 'muted'),
-    ]),
-    row([...extras.buttons, recordButtons(extras.locked)]),
-  ], 'between')
+    ],
+    `${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`,
+    [...extras.buttons, recordButtons(extras.locked)],
+  )
   const tree = [
     header,
-    ...status('record'),
-    badge(`This ${entity.singular.toLowerCase()} is archived. Restore it to edit.`, 'warning', { visible: archived }, 'archive'),
+    ...status('record'), ...lifecycle(entity),
+    archivedAlert(entity.singular),
     ...extras.notices,
     grid(sectionCards(entity.sections, readOnly)),
   ]
@@ -97,13 +96,13 @@ function settingsForm() {
       access: [schemaAccess],
       data: {},
       tree: [
-        row([
-          column([heading('Appraisals settings'), text('The default manager for new appraisals. Code prefixes are app settings, managed with the installed app.', 'muted')]),
+        pageHeader(
+          [heading('Appraisals settings'), text('The default manager for new appraisals. Code prefixes are app settings, managed with the installed app.', 'muted')], [
           row([
             button('Reset', [{ 'reset-form': {} }], { disabled: 'form.saving || !form.dirty' }, 'ghost'),
             button('Save', [{ save: {} }, { toast: { message: 'Saved', variant: 'success' } }], { disabled: 'form.saving || !form.dirty || form.invalid' }, undefined, 'save'),
           ]),
-        ], 'between'),
+        ]),
         ...status('record'),
         grid([card('Defaults', [grid(settingsFields.map(field => formControl(field, null)))])], 1),
       ],
@@ -143,14 +142,14 @@ function homePage() {
         access: pageAccess('Count appraisals and show them'),
         data: appraisalSources,
         tree: page([
-          row([
-            column([heading('Appraisals'), text('Employee appraisals are files in your workspace. Draft them in /appraisals, schedule them, rate the criteria, then complete them from their forms.', 'muted')]),
+          pageHeader(
+            [heading('Appraisals'), text('Employee appraisals are files in your workspace. Draft them in /appraisals, schedule them, rate the criteria, then complete them from their forms.', 'muted')], [
             row([
               button('By status', [openFile(`${installRoot}/canvas/appraisals.page.yaml`)], undefined, 'outline', 'list'),
               button('Scores', [openFile(`${installRoot}/canvas/scores.page.yaml`)], undefined, 'outline', 'star'),
               button('Settings', [openFile(settingsPath, 'edit')], undefined, 'ghost', 'settings'),
             ]),
-          ], 'between'),
+          ]),
           stats([
             stat('Draft', countOf("r.status === 'draft'"), 'pencil', loading('appraisals')),
             stat('Scheduled', countOf("r.status === 'scheduled'"), 'calendar', loading('appraisals')),
@@ -180,10 +179,10 @@ function appraisalsPage() {
         access: pageAccess('List appraisals by status'),
         data: appraisalSources,
         tree: page([
-          row([
-            column([heading('Appraisals by status'), text('Every active appraisal, grouped by its status. Click a row to open the appraisal.', 'muted')]),
+          pageHeader(
+            [heading('Appraisals by status'), text('Every active appraisal, grouped by its status. Click a row to open the appraisal.', 'muted')], [
             button('Appraisals', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'clipboard-check'),
-          ], 'between'),
+          ]),
           containerNotice(),
           stats(statuses.map(value => stat(statusLabel(value), countOf(`r.status === '${value}'`), 'clipboard-check', loading('appraisals'))), 4),
           tabs(statuses.map(value => ({ value, label: statusLabel(value), icon: 'clipboard-check' })),
@@ -206,10 +205,10 @@ function scoresPage() {
         access: pageAccess('Summarise completed appraisals\' overall scores'),
         data: appraisalSources,
         tree: page([
-          row([
-            column([heading('Scores summary'), text('Completed appraisals by overall score, and the average per manager. Click a row to open the appraisal.', 'muted')]),
+          pageHeader(
+            [heading('Scores summary'), text('Completed appraisals by overall score, and the average per manager. Click a row to open the appraisal.', 'muted')], [
             button('Appraisals', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'clipboard-check'),
-          ], 'between'),
+          ]),
           containerNotice(),
           stats([
             stat('Completed', `{{ ${doneRows}.length }}`, 'check', loading('appraisals')),
@@ -228,5 +227,5 @@ function scoresPage() {
 
 export function buildPages() {
   const documents = [homePage(), appraisalsPage(), scoresPage(), ...recordKinds.map(recordForm), settingsForm()]
-  return Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)]))
+  return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

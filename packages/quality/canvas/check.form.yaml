@@ -86,6 +86,10 @@
       "pointoptions": {
         "kind": "computed",
         "expr": "(data.points || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.active !== false)).map(e => ({ label: (e.data.code || e.name) + ' · ' + (e.data.title || ''), value: e.path }))"
+      },
+      "spec": {
+        "kind": "computed",
+        "expr": "(((data.points || []).find(p => p.kind === 'file' && p.data && p.path === form.values.point) || {}).data || {})"
       }
     },
     "tree": [
@@ -103,74 +107,84 @@
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.validation-summary",
+            "props": {
+              "title": "Fix these before saving"
+            }
+          },
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "{{ form.values.reference || 'New quality check' }}",
+              "note": "Quality check {{ form.values.code || '' }}"
             },
             "children": [
               {
                 "type": "canvas.stack",
                 "layout": {
                   "base": {
-                    "gap": 1
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
                   }
                 },
                 "children": [
                   {
-                    "type": "canvas.stack",
-                    "layout": {
-                      "base": {
-                        "direction": "row",
-                        "wrap": true,
-                        "gap": 2,
-                        "align": "center"
-                      }
+                    "type": "canvas.dashboard.badge",
+                    "props": {
+                      "text": "{{ String(form.values.result || '').split('-').join(' ') }}",
+                      "tone": "{{ [\"pass\"].includes(form.values.result) ? 'success' : [\"pending\"].includes(form.values.result) ? 'warning' : [\"fail\"].includes(form.values.result) ? 'danger' : 'neutral' }}"
                     },
-                    "children": [
-                      {
-                        "type": "canvas.heading",
-                        "props": {
-                          "level": 2,
-                          "text": "{{ form.values.reference || 'New quality check' }}"
-                        }
-                      },
-                      {
-                        "type": "canvas.dashboard.badge",
-                        "props": {
-                          "text": "{{ String(form.values.result || '').split('-').join(' ') }}",
-                          "tone": "{{ [\"pass\"].includes(form.values.result) ? 'success' : [\"pending\"].includes(form.values.result) ? 'warning' : [\"fail\"].includes(form.values.result) ? 'danger' : 'neutral' }}"
-                        },
-                        "rules": {
-                          "visible": "!!form.values.result"
-                        }
-                      },
-                      {
-                        "type": "canvas.dashboard.badge",
-                        "props": {
-                          "text": "Archived",
-                          "tone": "warning",
-                          "icon": "archive"
-                        },
-                        "rules": {
-                          "visible": "form.values.state === 'archived'"
-                        }
-                      }
-                    ]
+                    "rules": {
+                      "visible": "!!form.values.result"
+                    }
                   },
                   {
-                    "type": "canvas.text",
+                    "type": "canvas.dashboard.badge",
                     "props": {
-                      "text": "Quality check {{ form.values.code || '' }} · {{ ctx.file.path }}",
-                      "tone": "muted"
+                      "text": "Archived",
+                      "tone": "warning",
+                      "icon": "archive"
+                    },
+                    "rules": {
+                      "visible": "form.values.state === 'archived'"
                     }
                   }
                 ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Record pass",
+                  "icon": "check",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "record-pass"
+                },
+                "rules": {
+                  "visible": "(!form.values.result || form.values.result === 'pending') && !(form.values.state === 'archived')",
+                  "disabled": "form.saving || form.dirty || form.invalid"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Record fail",
+                  "variant": "outline",
+                  "icon": "x",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "record-fail"
+                },
+                "rules": {
+                  "visible": "(!form.values.result || form.values.result === 'pending') && !(form.values.state === 'archived')",
+                  "disabled": "form.saving || form.dirty || form.invalid"
+                },
+                "slot": "actions"
               },
               {
                 "type": "canvas.stack",
@@ -186,139 +200,115 @@
                   {
                     "type": "canvas.button",
                     "props": {
-                      "label": "Record pass",
-                      "icon": "check",
+                      "label": "Archive",
+                      "variant": "ghost",
+                      "icon": "archive",
                       "size": "sm"
                     },
                     "on": {
-                      "click": "record-pass"
+                      "click": "archive"
                     },
                     "rules": {
-                      "visible": "(!form.values.result || form.values.result === 'pending') && !(form.values.state === 'archived')",
-                      "disabled": "form.saving || form.dirty || form.invalid"
+                      "visible": "!(form.values.state === 'archived') && !(!(!form.values.result || form.values.result === 'pending'))",
+                      "disabled": "form.saving || form.dirty"
                     }
                   },
                   {
                     "type": "canvas.button",
                     "props": {
-                      "label": "Record fail",
+                      "label": "Restore",
                       "variant": "outline",
-                      "icon": "x",
+                      "icon": "archive-restore",
                       "size": "sm"
                     },
                     "on": {
-                      "click": "record-fail"
+                      "click": "restore"
                     },
                     "rules": {
-                      "visible": "(!form.values.result || form.values.result === 'pending') && !(form.values.state === 'archived')",
-                      "disabled": "form.saving || form.dirty || form.invalid"
+                      "visible": "form.values.state === 'archived'",
+                      "disabled": "form.saving || form.dirty"
                     }
                   },
                   {
-                    "type": "canvas.stack",
-                    "layout": {
-                      "base": {
-                        "direction": "row",
-                        "wrap": true,
-                        "gap": 2,
-                        "align": "center"
-                      }
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Reset",
+                      "variant": "ghost",
+                      "size": "sm"
                     },
-                    "children": [
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Archive",
-                          "variant": "ghost",
-                          "icon": "archive",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "archive"
-                        },
-                        "rules": {
-                          "visible": "!(form.values.state === 'archived') && !(!(!form.values.result || form.values.result === 'pending'))",
-                          "disabled": "form.saving || form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Restore",
-                          "variant": "outline",
-                          "icon": "archive-restore",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "restore"
-                        },
-                        "rules": {
-                          "visible": "form.values.state === 'archived'",
-                          "disabled": "form.saving || form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Reset",
-                          "variant": "ghost",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "reset"
-                        },
-                        "rules": {
-                          "disabled": "form.saving || !form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Save",
-                          "icon": "save",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "save"
-                        },
-                        "rules": {
-                          "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (!(!form.values.result || form.values.result === 'pending'))"
-                        }
-                      }
-                    ]
+                    "on": {
+                      "click": "reset"
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Save",
+                      "icon": "save",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "save"
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (!(!form.values.result || form.values.result === 'pending'))"
+                    }
                   }
-                ]
+                ],
+                "slot": "actions"
               }
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "{{ data.$record.error }}"
-            },
-            "rules": {
-              "visible": "data.$record.status === 'error'"
+              "for": "record",
+              "compact": true
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.status-steps",
             "props": {
-              "text": "Loading…",
-              "tone": "muted"
+              "value": "{{ form.values.result }}",
+              "steps": [
+                {
+                  "value": "pending",
+                  "label": "Pending"
+                },
+                {
+                  "value": "pass",
+                  "label": "Pass"
+                },
+                {
+                  "value": "fail",
+                  "label": "Fail"
+                }
+              ]
             },
             "rules": {
-              "visible": "data.$record.status === 'loading'"
+              "visible": "!!form.values.result"
             }
           },
           {
-            "type": "canvas.dashboard.badge",
+            "type": "canvas.alert",
             "props": {
-              "text": "This quality check is archived. Restore it to edit.",
               "tone": "warning",
-              "icon": "archive"
+              "title": "This quality check is archived",
+              "text": "Restore it to edit.",
+              "icon": "archive",
+              "action": {
+                "label": "Restore",
+                "id": "restore"
+              }
             },
             "rules": {
               "visible": "form.values.state === 'archived'"
+            },
+            "on": {
+              "action": "restore"
             }
           },
           {
@@ -389,6 +379,19 @@
             }
           },
           {
+            "type": "canvas.meter",
+            "rules": {
+              "visible": "data.spec.checkType === 'measure' && form.values.measuredValue !== '' && form.values.measuredValue != null && Number.isFinite(Number(form.values.measuredValue)) && data.spec.toleranceMin !== '' && data.spec.toleranceMin != null && data.spec.toleranceMax !== '' && data.spec.toleranceMax != null"
+            },
+            "props": {
+              "label": "{{ 'Tolerance ' + data.spec.toleranceMin + ' to ' + data.spec.toleranceMax }}",
+              "value": "{{ Math.max(0, Math.min(Math.max(Number(data.spec.toleranceMax) - Number(data.spec.toleranceMin), 0), Number(form.values.measuredValue) - Number(data.spec.toleranceMin))) }}",
+              "max": "{{ Math.max(Number(data.spec.toleranceMax) - Number(data.spec.toleranceMin), 0) }}",
+              "tone": "{{ (Number(form.values.measuredValue) >= Number(data.spec.toleranceMin) && Number(form.values.measuredValue) <= Number(data.spec.toleranceMax)) ? 'success' : 'danger' }}",
+              "text": "{{ 'Measured ' + form.values.measuredValue + ((Number(form.values.measuredValue) >= Number(data.spec.toleranceMin) && Number(form.values.measuredValue) <= Number(data.spec.toleranceMax)) ? ', within tolerance' : ', outside tolerance by ' + Number(Math.max(Number(data.spec.toleranceMin) - Number(form.values.measuredValue), Number(form.values.measuredValue) - Number(data.spec.toleranceMax)).toFixed(4))) }}"
+            }
+          },
+          {
             "type": "canvas.grid",
             "layout": {
               "base": {
@@ -425,7 +428,8 @@
                           "value": "{{ form.values.point }}",
                           "required": true,
                           "description": "The control point this check verifies. Measure points judge the measured value.",
-                          "options": "{{ data.pointoptions }}"
+                          "options": "{{ data.pointoptions }}",
+                          "searchable": true
                         },
                         "layout": {
                           "tablet": {
@@ -511,7 +515,8 @@
                               "value": "fail",
                               "label": "Fail"
                             }
-                          ]
+                          ],
+                          "display": "segmented"
                         },
                         "rules": {
                           "disabled": "(form.values.state === 'archived' || (!(!form.values.result || form.values.result === 'pending'))) || (true)"

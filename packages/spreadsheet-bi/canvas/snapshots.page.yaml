@@ -34,121 +34,97 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Spreadsheet BI",
+          "icon": "layout-dashboard",
+          "active": "snapshots.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "viewer.page.yaml",
+              "label": "Dashboard",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "snapshots.page.yaml",
+              "label": "Snapshots",
+              "icon": "camera"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/spreadsheet-bi/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/spreadsheet-bi.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Snapshots",
+              "note": "Each snapshot freezes one dashboard computation: the take-snapshot script computes every tile with exact decimal math, stamps the time and locks the record."
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
+                "type": "canvas.button",
+                "props": {
+                  "label": "Open /bi-snapshots",
+                  "variant": "outline",
+                  "icon": "folder-open",
+                  "size": "sm"
                 },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Snapshots"
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/bi-snapshots"
+                      }
                     }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Each snapshot freezes one dashboard computation: the take-snapshot script computes every tile with exact decimal math, stamps the time and locks the record.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "direction": "row",
-                    "wrap": true,
-                    "gap": 2,
-                    "align": "center"
-                  }
+                  ]
                 },
-                "children": [
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Dashboards",
-                      "variant": "ghost",
-                      "icon": "layout-dashboard",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/spreadsheet-bi/canvas/home.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Open /bi-snapshots",
-                      "variant": "outline",
-                      "icon": "folder-open",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/bi-snapshots"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ]
+                "slot": "actions"
               }
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /bi-dashboards folder could not be read. Reinstall Spreadsheet BI to recreate it."
-            },
-            "rules": {
-              "visible": "data.$dashboards.status === 'error'"
+              "for": "dashboards",
+              "compact": true,
+              "description": "The /bi-dashboards folder could not be read. Reinstall Spreadsheet BI to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /bi-snapshots folder could not be read. Reinstall Spreadsheet BI to recreate it."
-            },
-            "rules": {
-              "visible": "data.$snapshots.status === 'error'"
+              "for": "snapshots",
+              "compact": true,
+              "description": "The /bi-snapshots folder could not be read. Reinstall Spreadsheet BI to recreate it."
             }
           },
           {
@@ -220,6 +196,10 @@
                 }
               ],
               "emptyText": "No snapshots yet. Use New in /bi-snapshots.",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
               "clickable": true
             },
             "on": {
@@ -227,7 +207,8 @@
                 {
                   "open-file": {
                     "path": "{{ event.path }}",
-                    "mode": "edit"
+                    "mode": "edit",
+                    "open": "side"
                   }
                 }
               ]

@@ -38,90 +38,191 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Documents",
+          "icon": "folder-kanban",
+          "active": "inbox.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "inbox.page.yaml",
+              "label": "Inbox",
+              "icon": "inbox",
+              "count": "{{ (data.rows || []).filter(r => r.status === 'inbox').length }}"
+            },
+            {
+              "id": "workspaces.page.yaml",
+              "label": "Workspaces",
+              "icon": "folders"
+            },
+            {
+              "id": "library.page.yaml",
+              "label": "All documents",
+              "icon": "library"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/documents/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/documents.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Inbox",
+              "note": "New document cards land here. File them into a workspace, tag them and send them to review from their form."
             },
-            "children": [
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Inbox"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "New document cards land here. File them into a workspace, tag them and send them to review from their form.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.button",
-                "props": {
-                  "label": "Documents",
-                  "variant": "ghost",
-                  "icon": "folder-kanban",
-                  "size": "sm"
-                },
-                "on": {
-                  "click": [
-                    {
-                      "open-file": {
-                        "path": "/applications/documents/canvas/home.page.yaml"
-                      }
-                    }
-                  ]
-                }
-              }
-            ]
+            "children": []
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.board",
             "props": {
-              "text": "The /document-cards folder could not be read. Reinstall Documents to recreate it."
+              "rows": "{{ (data.rows || []).filter(r => r.status !== 'archived-status').map(r => ({ path: r.path, code: r.code, title: r.title, status: r.status, workspace: r.workspace, owner: r.owner, tags: r.tags, filePath: r.filePath, type: r.filePath && r.filePath.includes('.') ? r.filePath.split('.').pop().toUpperCase().slice(0, 5) : 'No file' })) }}",
+              "groupBy": "status",
+              "columns": [
+                {
+                  "value": "inbox",
+                  "label": "Inbox"
+                },
+                {
+                  "value": "in-review",
+                  "label": "In review"
+                },
+                {
+                  "value": "validated",
+                  "label": "Validated"
+                }
+              ],
+              "card": {
+                "title": "title",
+                "code": "code",
+                "meta": [
+                  "workspace",
+                  "owner",
+                  "tags"
+                ],
+                "badge": "type"
+              },
+              "readOnly": false,
+              "rowKey": "path",
+              "emptyText": "Nothing here",
+              "lockedWhen": "[\"validated\"].includes(row.status)"
             },
-            "rules": {
-              "visible": "data.$cards.status === 'error'"
+            "on": {
+              "open": [
+                {
+                  "open-file": {
+                    "path": "{{ event.row.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ],
+              "move": [
+                {
+                  "confirm": {
+                    "if": "event.to === 'validated'",
+                    "title": "Move to Validated?",
+                    "message": "{{ event.row.code }} moves to Validated. Validated documents are stamped and locked; they can only be archived.",
+                    "confirm-label": "Move to Validated"
+                  }
+                },
+                {
+                  "run-script": {
+                    "if": "event.to === 'inbox'",
+                    "file": "/applications/documents/scripts/post",
+                    "timeout": 120,
+                    "parameters": {
+                      "operation": "return-to-inbox",
+                      "path": "{{ event.path }}"
+                    },
+                    "assign": "lastmove"
+                  }
+                },
+                {
+                  "run-script": {
+                    "if": "event.to === 'in-review'",
+                    "file": "/applications/documents/scripts/post",
+                    "timeout": 120,
+                    "parameters": {
+                      "operation": "send-to-review",
+                      "path": "{{ event.path }}"
+                    },
+                    "assign": "lastmove"
+                  }
+                },
+                {
+                  "run-script": {
+                    "if": "event.to === 'validated'",
+                    "file": "/applications/documents/scripts/post",
+                    "timeout": 120,
+                    "parameters": {
+                      "operation": "validate",
+                      "path": "{{ event.path }}"
+                    },
+                    "assign": "lastmove"
+                  }
+                },
+                {
+                  "refresh-source": {
+                    "source": "cards"
+                  }
+                },
+                {
+                  "refresh-source": {
+                    "source": "workspaces"
+                  }
+                },
+                {
+                  "toast": {
+                    "message": "{{ [\"inbox\",\"in-review\",\"validated\"].includes(event.to) ? ((state.lastmove && state.lastmove.message) || 'Done') : 'Moved to ' + ({\"inbox\":\"Inbox\",\"in-review\":\"In review\",\"validated\":\"Validated\"}[event.to] || event.to) }}",
+                    "variant": "success"
+                  }
+                }
+              ]
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /document-workspaces folder could not be read. Reinstall Documents to recreate it."
-            },
-            "rules": {
-              "visible": "data.$workspaces.status === 'error'"
+              "for": "cards",
+              "compact": true,
+              "description": "The /document-cards folder could not be read. Reinstall Documents to recreate it."
+            }
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "workspaces",
+              "compact": true,
+              "description": "The /document-workspaces folder could not be read. Reinstall Documents to recreate it."
             }
           },
           {
@@ -205,6 +306,10 @@
                 }
               ],
               "emptyText": "The inbox is empty",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
               "clickable": true
             },
             "on": {
@@ -212,7 +317,8 @@
                 {
                   "open-file": {
                     "path": "{{ event.path }}",
-                    "mode": "edit"
+                    "mode": "edit",
+                    "open": "side"
                   }
                 }
               ]

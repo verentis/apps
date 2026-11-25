@@ -261,8 +261,8 @@ spec:
         kind: document
         id: canvas/home.page.yaml
     - path: /deals
-      mode: read
-      reason: List deals and the pipeline
+      mode: write
+      reason: List deals and the pipeline; move records between columns
       origin:
         kind: document
         id: canvas/home.page.yaml
@@ -364,8 +364,7 @@ spec:
         id: crm-case
     - path: /customers
       mode: write
-      reason: Create customers and contacts with the next code, and their activities
-        and notes
+      reason: Create customers and contacts with the next code, and their activities and notes
       origin:
         kind: script
         id: crm-create

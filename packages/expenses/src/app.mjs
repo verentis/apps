@@ -31,7 +31,6 @@ export const postScriptFileAccess = [
   { path: accounting.accounts, mode: 'read', reason: 'Check that posted accounts exist and are active' },
   { path: accounting.periods, mode: 'read', reason: 'Find the open period a posting date falls in' },
   { path: containers.categories.path, mode: 'read', reason: 'Read the expense account of each line\'s category' },
-  { path: accounting.journals, mode: 'write', reason: 'Post approved expense reports as journals' },
   { path: containers.reports.path, mode: 'write', reason: 'Mark reports submitted, approved, refused or posted' },
 ]
 
@@ -57,6 +56,8 @@ export const entities = {
         text('employeeName', 'Employee', { required: true }),
         text('employeeRef', 'Employee reference', { placeholder: 'HR number' }),
         { key: 'date', label: 'Report date', type: 'date', required: true }] },
+      { title: 'Receipts', description: 'A photo of each receipt. On a phone, Add photo opens the camera.', fields: [
+        { key: 'receipts', label: 'Receipts', type: 'photos', max: 10 }] },
       { title: 'Expenses', description: 'Exact decimal amounts. Submitting checks every line has a category, a description and a positive amount.', fields: [
         { key: 'lines', label: 'Lines', type: 'rows', minimum: 1, maximum: 200, span: 2, addLabel: 'Add expense',
           defaultRow: { category: '', description: '', amount: '', date: '' },

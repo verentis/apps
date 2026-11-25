@@ -48,129 +48,82 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Fleet",
+          "icon": "car",
+          "active": "costs.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Vehicles",
+              "icon": "car"
+            },
+            {
+              "id": "contracts.page.yaml",
+              "label": "Contracts",
+              "icon": "file-signature"
+            },
+            {
+              "id": "costs.page.yaml",
+              "label": "Costs",
+              "icon": "chart-column"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/fleet/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/fleet.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Costs",
+              "note": "Per vehicle: the monthly cost of its active contracts and the total cost of its done service logs. Draft service logs and inactive contracts are ignored."
             },
-            "children": [
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Costs"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Per vehicle: the monthly cost of its active contracts and the total cost of its done service logs. Draft service logs and inactive contracts are ignored.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.button",
-                "props": {
-                  "label": "Fleet",
-                  "variant": "ghost",
-                  "icon": "car",
-                  "size": "sm"
-                },
-                "on": {
-                  "click": [
-                    {
-                      "open-file": {
-                        "path": "/applications/fleet/canvas/home.page.yaml"
-                      }
-                    }
-                  ]
-                }
-              }
-            ]
+            "children": []
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "{{ data.$vehicles.error }}"
-            },
-            "rules": {
-              "visible": "data.$vehicles.status === 'error'"
+              "for": "vehicles",
+              "compact": true
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "Loading…",
-              "tone": "muted"
-            },
-            "rules": {
-              "visible": "data.$vehicles.status === 'loading'"
+              "for": "contracts",
+              "compact": true
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "{{ data.$contracts.error }}"
-            },
-            "rules": {
-              "visible": "data.$contracts.status === 'error'"
-            }
-          },
-          {
-            "type": "canvas.text",
-            "props": {
-              "text": "Loading…",
-              "tone": "muted"
-            },
-            "rules": {
-              "visible": "data.$contracts.status === 'loading'"
-            }
-          },
-          {
-            "type": "canvas.text",
-            "props": {
-              "text": "{{ data.$services.error }}"
-            },
-            "rules": {
-              "visible": "data.$services.status === 'error'"
-            }
-          },
-          {
-            "type": "canvas.text",
-            "props": {
-              "text": "Loading…",
-              "tone": "muted"
-            },
-            "rules": {
-              "visible": "data.$services.status === 'loading'"
+              "for": "services",
+              "compact": true
             }
           },
           {
@@ -247,6 +200,10 @@
                 }
               ],
               "emptyText": "No vehicles yet",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
               "clickable": true
             },
             "on": {
@@ -254,11 +211,49 @@
                 {
                   "open-file": {
                     "path": "{{ event.path }}",
-                    "mode": "edit"
+                    "mode": "edit",
+                    "open": "side"
                   }
                 }
               ]
             }
+          },
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "gap": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Monthly cost per vehicle"
+                }
+              },
+              {
+                "type": "canvas.chart",
+                "props": {
+                  "rows": "{{ (data.costs || []).map(v => ({ path: v.path, label: v.licensePlate || v.vehicle || v.code, contracts: (v.monthlyUnits || 0) / 100, services: (v.serviceUnits || 0) / 100 })) }}",
+                  "showLegend": true,
+                  "emptyText": "Nothing to chart yet",
+                  "kind": "stacked-hbar",
+                  "x": "label",
+                  "y": [
+                    "contracts",
+                    "services"
+                  ],
+                  "labels": {
+                    "contracts": "Contracts per month",
+                    "services": "Service spend"
+                  },
+                  "format": "number",
+                  "decimals": 2
+                }
+              }
+            ]
           }
         ]
       }

@@ -309,6 +309,51 @@
         }
       },
       {
+        "path": "/leave-requests",
+        "mode": "read",
+        "reason": "Show this person's time off (when that app is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "employees-employee"
+        }
+      },
+      {
+        "path": "/timesheets",
+        "mode": "read",
+        "reason": "Show this person's timesheets (when that app is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "employees-employee"
+        }
+      },
+      {
+        "path": "/appraisals",
+        "mode": "read",
+        "reason": "Show this person's appraisals (when that app is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "employees-employee"
+        }
+      },
+      {
+        "path": "/shifts",
+        "mode": "read",
+        "reason": "Show this person's shifts (when that app is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "employees-employee"
+        }
+      },
+      {
+        "path": "/tickets",
+        "mode": "read",
+        "reason": "Show this person's tickets (when that app is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "employees-employee"
+        }
+      },
+      {
         "path": "/departments",
         "mode": "read",
         "reason": "Choose the default department for new employees",

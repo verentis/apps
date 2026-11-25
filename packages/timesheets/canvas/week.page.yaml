@@ -11,11 +11,17 @@
     "access": [
       {
         "path": "/timesheets",
-        "reason": "Sum this week's hours by project"
+        "reason": "Sum this week's hours by project; change records from this page",
+        "mode": "write"
       },
       {
         "path": "/projects",
         "reason": "Show project names (when Project is installed)"
+      },
+      {
+        "path": "/settings/timesheets.json",
+        "mode": "read",
+        "reason": "Show the default employee's week"
       }
     ],
     "data": {
@@ -34,71 +40,234 @@
       "weekly": {
         "kind": "computed",
         "expr": "(data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.date >= Date(Date.now() - 6 * 86400000).slice(0, 10) && e.data.date <= Date().slice(0, 10))).map(e => e.data.project || '').filter((key, index, keys) => keys.indexOf(key) === index).map(key => ({ key, project: ((((data.projects || []).find(p => p.path === key) || {}).data || {}).name || key || '(no project)'), entries: (data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.date >= Date(Date.now() - 6 * 86400000).slice(0, 10) && e.data.date <= Date().slice(0, 10))).filter(e => (e.data.project || '') === key).length, validated: (data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.date >= Date(Date.now() - 6 * 86400000).slice(0, 10) && e.data.date <= Date().slice(0, 10))).filter(e => (e.data.project || '') === key && (e.data.status === 'validated') === true).reduce((s, e) => s + Math.round(Number(e.data.hours || 0) * 10000), 0), draft: (data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.date >= Date(Date.now() - 6 * 86400000).slice(0, 10) && e.data.date <= Date().slice(0, 10))).filter(e => (e.data.project || '') === key && (e.data.status === 'validated') === false).reduce((s, e) => s + Math.round(Number(e.data.hours || 0) * 10000), 0) })).sort((a, b) => (b.validated + b.draft) - (a.validated + a.draft))"
+      },
+      "settings": {
+        "kind": "file",
+        "path": "/settings/timesheets.json",
+        "parse": "json"
       }
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Timesheets",
+          "icon": "clock",
+          "active": "week.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Entries",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "week.page.yaml",
+              "label": "Week",
+              "icon": "calendar-days"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/timesheets/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/timesheets.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "This week",
+              "note": "Hours by project over the last seven days, today inclusive (since {{ Date(Date.now() - 6 * 86400000).slice(0, 10) }})."
+            },
+            "children": []
+          },
           {
             "type": "canvas.stack",
             "layout": {
               "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
+                "gap": 2
               }
             },
             "children": [
               {
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Week"
+                }
+              },
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "Type hours into a day. Validated days are locked; a day with two entries for one project is changed on the entries themselves.",
+                  "tone": "muted"
+                }
+              },
+              {
                 "type": "canvas.stack",
                 "layout": {
                   "base": {
-                    "gap": 1
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center",
+                    "justify": "end"
                   }
                 },
                 "children": [
                   {
-                    "type": "canvas.heading",
+                    "type": "canvas.form.select",
                     "props": {
-                      "level": 2,
-                      "text": "This week"
+                      "label": "Employee",
+                      "value": "{{ (state.employee || (data.settings && data.settings.employee) || (ctx.user && ctx.user.name) || '') }}",
+                      "options": "{{ (data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && !!e.data.employee).map(e => e.data.employee).filter((name, index, names) => names.indexOf(name) === index).sort().concat((state.employee || (data.settings && data.settings.employee) || (ctx.user && ctx.user.name) || '') && !(data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && !!e.data.employee).map(e => e.data.employee).filter((name, index, names) => names.indexOf(name) === index).sort().includes((state.employee || (data.settings && data.settings.employee) || (ctx.user && ctx.user.name) || '')) ? [(state.employee || (data.settings && data.settings.employee) || (ctx.user && ctx.user.name) || '')] : []).map(name => ({ value: name, label: name })) }}"
+                    },
+                    "on": {
+                      "update": [
+                        {
+                          "set-state": {
+                            "key": "employee",
+                            "value": "{{ event.value }}"
+                          }
+                        }
+                      ]
                     }
                   },
                   {
-                    "type": "canvas.text",
+                    "type": "canvas.button",
                     "props": {
-                      "text": "Hours by project over the last seven days, today inclusive (since {{ Date(Date.now() - 6 * 86400000).slice(0, 10) }}).",
-                      "tone": "muted"
+                      "label": "Validate week ({{ (data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && Array.from({ length: 7 }, (_, i) => Date(Date.now() - (6 - i) * 86400000).slice(0, 10)).includes(e.data.date) && (!(state.employee || (data.settings && data.settings.employee) || (ctx.user && ctx.user.name) || '') || e.data.employee === (state.employee || (data.settings && data.settings.employee) || (ctx.user && ctx.user.name) || ''))).filter(e => (e.data.status || 'draft') === 'draft' && Number(e.data.hours || 0) > 0).length }})",
+                      "icon": "check-check",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "confirm": {
+                            "title": "Validate this week",
+                            "message": "Validate {{ (data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && Array.from({ length: 7 }, (_, i) => Date(Date.now() - (6 - i) * 86400000).slice(0, 10)).includes(e.data.date) && (!(state.employee || (data.settings && data.settings.employee) || (ctx.user && ctx.user.name) || '') || e.data.employee === (state.employee || (data.settings && data.settings.employee) || (ctx.user && ctx.user.name) || ''))).filter(e => (e.data.status || 'draft') === 'draft' && Number(e.data.hours || 0) > 0).length }} draft entries of the last seven days? Each one's hours are checked and it is locked."
+                          }
+                        },
+                        {
+                          "for-each": {
+                            "items": "{{ (data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && Array.from({ length: 7 }, (_, i) => Date(Date.now() - (6 - i) * 86400000).slice(0, 10)).includes(e.data.date) && (!(state.employee || (data.settings && data.settings.employee) || (ctx.user && ctx.user.name) || '') || e.data.employee === (state.employee || (data.settings && data.settings.employee) || (ctx.user && ctx.user.name) || ''))).filter(e => (e.data.status || 'draft') === 'draft' && Number(e.data.hours || 0) > 0).map(e => e.path) }}",
+                            "as": "entry",
+                            "steps": [
+                              {
+                                "run-script": {
+                                  "file": "/applications/timesheets/scripts/post",
+                                  "timeout": 120,
+                                  "parameters": {
+                                    "operation": "validate-entry",
+                                    "path": "{{ entry }}"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "refresh-source": {
+                            "source": "entries"
+                          }
+                        },
+                        {
+                          "toast": {
+                            "message": "Week validated",
+                            "variant": "success"
+                          }
+                        }
+                      ]
+                    },
+                    "rules": {
+                      "disabled": "(data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && Array.from({ length: 7 }, (_, i) => Date(Date.now() - (6 - i) * 86400000).slice(0, 10)).includes(e.data.date) && (!(state.employee || (data.settings && data.settings.employee) || (ctx.user && ctx.user.name) || '') || e.data.employee === (state.employee || (data.settings && data.settings.employee) || (ctx.user && ctx.user.name) || ''))).filter(e => (e.data.status || 'draft') === 'draft' && Number(e.data.hours || 0) > 0).length === 0"
                     }
                   }
                 ]
               },
               {
-                "type": "canvas.button",
+                "type": "canvas.matrix",
                 "props": {
-                  "label": "Timesheets",
-                  "variant": "ghost",
-                  "icon": "clock",
-                  "size": "sm"
+                  "rows": "{{ (data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && Array.from({ length: 7 }, (_, i) => Date(Date.now() - (6 - i) * 86400000).slice(0, 10)).includes(e.data.date) && (!(state.employee || (data.settings && data.settings.employee) || (ctx.user && ctx.user.name) || '') || e.data.employee === (state.employee || (data.settings && data.settings.employee) || (ctx.user && ctx.user.name) || ''))).map(e => ({ path: e.path, project: e.data.project || '', date: e.data.date, hours: Number(e.data.hours || 0), status: e.data.status, shared: (data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && Array.from({ length: 7 }, (_, i) => Date(Date.now() - (6 - i) * 86400000).slice(0, 10)).includes(e.data.date) && (!(state.employee || (data.settings && data.settings.employee) || (ctx.user && ctx.user.name) || '') || e.data.employee === (state.employee || (data.settings && data.settings.employee) || (ctx.user && ctx.user.name) || ''))).filter(o => (o.data.project || '') === (e.data.project || '') && o.data.date === e.data.date).length > 1 })) }}",
+                  "rowKey": "project",
+                  "columnKey": "date",
+                  "value": "hours",
+                  "rowHeading": "Project",
+                  "rowOptions": "{{ (data.projects || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && e.data.status !== 'done').map(e => ({ value: e.path, label: e.data.name || e.data.code })) }}",
+                  "columns": "{{ Array.from({ length: 7 }, (_, i) => Date(Date.now() - (6 - i) * 86400000).slice(0, 10)).map(d => ({ value: d, label: format(d, 'date') })) }}",
+                  "editable": true,
+                  "lockedWhen": "row.status === 'validated' || row.shared",
+                  "rowMax": 0,
+                  "format": "number",
+                  "decimals": 2,
+                  "emptyText": "Add a project to log time against it."
                 },
                 "on": {
-                  "click": [
+                  "change": [
                     {
-                      "open-file": {
-                        "path": "/applications/timesheets/canvas/home.page.yaml"
+                      "patch-record": {
+                        "if": "event.records.length === 1",
+                        "path": "{{ event.records[0].path }}",
+                        "values": {
+                          "hours": "{{ event.value.toFixed(2) }}",
+                          "updatedAt": "{{ Date() }}"
+                        }
+                      }
+                    },
+                    {
+                      "run-script": {
+                        "if": "event.records.length === 0",
+                        "file": "/applications/timesheets/scripts/create",
+                        "timeout": 60,
+                        "assign": "created",
+                        "parameters": {
+                          "operation": "create",
+                          "creatable": "entry",
+                          "parentPath": "/timesheets",
+                          "mime": "application/vnd.verentis.timesheets.entry+json",
+                          "template": {
+                            "$expr": "'{\"$schema\":\"https://schemas.verentis.io/timesheets/v1/entry.schema.json\",\"schemaVersion\":1,\"kind\":\"entry\",\"id\":\"{{ id }}\",\"state\":\"active\",\"createdAt\":\"{{ now }}\",\"updatedAt\":\"{{ now }}\",\"code\":\"\",\"employee\":\"\",\"date\":\"\",\"project\":\"\",\"task\":\"\",\"hours\":\"\",\"description\":\"{{ name }}\",\"status\":\"draft\"}'"
+                          },
+                          "siblings": "{{ (data.entries || []).map(e => e.name) }}"
+                        }
+                      }
+                    },
+                    {
+                      "patch-record": {
+                        "if": "event.records.length === 0",
+                        "path": "{{ state.created.path }}",
+                        "values": {
+                          "date": "{{ event.column }}",
+                          "project": "{{ event.row }}",
+                          "employee": "{{ (state.employee || (data.settings && data.settings.employee) || (ctx.user && ctx.user.name) || '') }}",
+                          "hours": "{{ event.value.toFixed(2) }}",
+                          "updatedAt": "{{ Date() }}"
+                        }
+                      }
+                    },
+                    {
+                      "refresh-source": {
+                        "source": "entries"
                       }
                     }
                   ]
@@ -107,22 +276,10 @@
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "{{ data.$entries.error }}"
-            },
-            "rules": {
-              "visible": "data.$entries.status === 'error'"
-            }
-          },
-          {
-            "type": "canvas.text",
-            "props": {
-              "text": "Loading…",
-              "tone": "muted"
-            },
-            "rules": {
-              "visible": "data.$entries.status === 'loading'"
+              "for": "entries",
+              "compact": true
             }
           },
           {
@@ -196,11 +353,59 @@
                   "align": "end"
                 }
               ],
-              "emptyText": "No hours logged this week"
+              "emptyText": "No hours logged this week",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list"
             }
+          },
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "gap": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Hours per project"
+                }
+              },
+              {
+                "type": "canvas.chart",
+                "props": {
+                  "rows": "{{ (data.weekly || []).map(w => ({ label: w.project, validated: Number(w.validated) || 0, draft: Number(w.draft) || 0 })) }}",
+                  "showLegend": true,
+                  "emptyText": "Nothing to chart yet",
+                  "kind": "stacked-hbar",
+                  "x": "label",
+                  "y": [
+                    "validated",
+                    "draft"
+                  ],
+                  "labels": {
+                    "validated": "Validated",
+                    "draft": "Draft"
+                  },
+                  "palette": {
+                    "validated": "success",
+                    "draft": "warning"
+                  },
+                  "format": "number",
+                  "decimals": 2
+                }
+              }
+            ]
           }
         ]
       }
-    ]
+    ],
+    "state": {
+      "employee": ""
+    }
   }
 }

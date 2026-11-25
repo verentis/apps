@@ -82,115 +82,69 @@
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.validation-summary",
+            "props": {
+              "title": "Fix these before saving"
+            }
+          },
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Referrals settings",
+              "note": "The points Mark hired awards. Code prefixes are app settings, managed with the installed app."
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
+                "type": "canvas.button",
+                "props": {
+                  "label": "Reset",
+                  "variant": "ghost",
+                  "size": "sm"
                 },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Referrals settings"
+                "on": {
+                  "click": [
+                    {
+                      "reset-form": {}
                     }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "The points Mark hired awards. Code prefixes are app settings, managed with the installed app.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
+                  ]
+                },
+                "rules": {
+                  "disabled": "form.saving || !form.dirty"
+                },
+                "slot": "actions"
               },
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "direction": "row",
-                    "wrap": true,
-                    "gap": 2,
-                    "align": "center"
-                  }
+                "type": "canvas.button",
+                "props": {
+                  "label": "Save",
+                  "icon": "save",
+                  "size": "sm"
                 },
-                "children": [
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Reset",
-                      "variant": "ghost",
-                      "size": "sm"
+                "on": {
+                  "click": [
+                    {
+                      "save": {}
                     },
-                    "on": {
-                      "click": [
-                        {
-                          "reset-form": {}
-                        }
-                      ]
-                    },
-                    "rules": {
-                      "disabled": "form.saving || !form.dirty"
+                    {
+                      "toast": {
+                        "message": "Saved",
+                        "variant": "success"
+                      }
                     }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Save",
-                      "icon": "save",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "save": {}
-                        },
-                        {
-                          "toast": {
-                            "message": "Saved",
-                            "variant": "success"
-                          }
-                        }
-                      ]
-                    },
-                    "rules": {
-                      "disabled": "form.saving || !form.dirty || form.invalid"
-                    }
-                  }
-                ]
+                  ]
+                },
+                "rules": {
+                  "disabled": "form.saving || !form.dirty || form.invalid"
+                },
+                "slot": "actions"
               }
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "{{ data.$record.error }}"
-            },
-            "rules": {
-              "visible": "data.$record.status === 'error'"
-            }
-          },
-          {
-            "type": "canvas.text",
-            "props": {
-              "text": "Loading…",
-              "tone": "muted"
-            },
-            "rules": {
-              "visible": "data.$record.status === 'loading'"
+              "for": "record",
+              "compact": true
             }
           },
           {

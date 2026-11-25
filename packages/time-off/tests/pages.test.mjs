@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { parse } from 'yaml'
 import { describe, expect, it } from 'vitest'
+import { stagePanels } from '../../../tools/file-apps/test-helpers.mjs'
 import {
   createScriptFileAccess, createScriptName, featureOverlay, manifest, postScriptFileAccess, postScriptName,
   postScriptPath, productionOverlay, scriptConsents,
@@ -187,11 +188,11 @@ describe('Time Off report pages', () => {
   })
 
   it('groups requests by status on the requests page', () => {
-    const panels = documents['requests.page.yaml'].spec.tree[0].children.find(node => node.type === 'canvas.tabs').children
+    const panels = stagePanels(documents['requests.page.yaml'].spec.tree[0].children.find(node => node.type === 'canvas.tabs'))
     expect(panels.map(panel => panel.slot)).toEqual(['draft', 'submitted', 'approved', 'refused'])
     const submitted = panels.find(panel => panel.slot === 'submitted').children[0]
     expect(template(submitted.props.rows, data).map(row => [row.code, row.daysText])).toEqual([['TO-4', '4.00']])
-    expect(submitted.on['row-click']).toEqual([{ 'open-file': { path: '{{ event.path }}', mode: 'edit' } }])
+    expect(submitted.on['row-click']).toEqual([{ 'open-file': { path: '{{ event.path }}', mode: 'edit', open: 'side' } }])
   })
 
   it('sums approved days against each type\'s allocation per employee', () => {

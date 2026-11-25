@@ -44,145 +44,90 @@
         "path": "/document-tags",
         "contents": true,
         "mime-pattern": "application/vnd.verentis.documents.tag+json"
+      },
+      "listdocumentcards": {
+        "kind": "folder",
+        "path": "/document-cards",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.documents.document+json"
+      },
+      "listdocumentworkspaces": {
+        "kind": "folder",
+        "path": "/document-workspaces",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.documents.workspace+json"
+      },
+      "listdocumenttags": {
+        "kind": "folder",
+        "path": "/document-tags",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.documents.tag+json"
       }
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Documents",
+          "icon": "folder-kanban",
+          "active": "home.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "inbox.page.yaml",
+              "label": "Inbox",
+              "icon": "inbox",
+              "count": "{{ (data.rows || []).filter(r => r.status === 'inbox').length }}"
+            },
+            {
+              "id": "workspaces.page.yaml",
+              "label": "Workspaces",
+              "icon": "folders"
+            },
+            {
+              "id": "library.page.yaml",
+              "label": "All documents",
+              "icon": "library"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/documents/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/documents.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Documents",
+              "note": "A tagging and review workflow over files already in your workspace. Cards in /document-cards reference VFS paths; the files themselves stay where they are."
             },
-            "children": [
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Documents"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "A tagging and review workflow over files already in your workspace. Cards in /document-cards reference VFS paths; the files themselves stay where they are.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "direction": "row",
-                    "wrap": true,
-                    "gap": 2,
-                    "align": "center"
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Inbox",
-                      "variant": "outline",
-                      "icon": "inbox",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/documents/canvas/inbox.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Workspaces",
-                      "variant": "outline",
-                      "icon": "folder-kanban",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/documents/canvas/workspaces.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Library",
-                      "variant": "outline",
-                      "icon": "library",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/documents/canvas/library.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Settings",
-                      "variant": "ghost",
-                      "icon": "settings",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/settings/documents.json",
-                            "mode": "edit"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ]
-              }
-            ]
+            "children": []
           },
           {
             "type": "canvas.grid",
@@ -235,30 +180,27 @@
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /document-cards folder could not be read. Reinstall Documents to recreate it."
-            },
-            "rules": {
-              "visible": "data.$cards.status === 'error'"
+              "for": "cards",
+              "compact": true,
+              "description": "The /document-cards folder could not be read. Reinstall Documents to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /document-workspaces folder could not be read. Reinstall Documents to recreate it."
-            },
-            "rules": {
-              "visible": "data.$workspaces.status === 'error'"
+              "for": "workspaces",
+              "compact": true,
+              "description": "The /document-workspaces folder could not be read. Reinstall Documents to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /document-tags folder could not be read. Reinstall Documents to recreate it."
-            },
-            "rules": {
-              "visible": "data.$tags.status === 'error'"
+              "for": "tags",
+              "compact": true,
+              "description": "The /document-tags folder could not be read. Reinstall Documents to recreate it."
             }
           },
           {
@@ -323,17 +265,19 @@
                     ]
                   },
                   {
-                    "type": "canvas.files",
+                    "type": "canvas.empty-state",
                     "props": {
-                      "path": "/document-cards/",
-                      "mimeTypes": [
-                        "application/vnd.verentis.documents.document+json"
-                      ],
-                      "showFolders": false,
-                      "navigable": false,
+                      "for": "listdocumentcards",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listdocumentcards || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
                       "columns": [
                         {
-                          "key": "name",
+                          "key": "data.code",
                           "label": "Document"
                         },
                         {
@@ -342,7 +286,8 @@
                         },
                         {
                           "key": "data.status",
-                          "label": "Status"
+                          "label": "Status",
+                          "format": "badge"
                         },
                         {
                           "key": "data.owner",
@@ -353,7 +298,30 @@
                           "label": "File"
                         }
                       ],
+                      "facets": [
+                        "data.status"
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
                       "emptyText": "No document cards yet. Use New in /document-cards."
+                    },
+                    "rules": {
+                      "visible": "data.$listdocumentcards.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
                     }
                   }
                 ],
@@ -399,17 +367,19 @@
                     ]
                   },
                   {
-                    "type": "canvas.files",
+                    "type": "canvas.empty-state",
                     "props": {
-                      "path": "/document-workspaces/",
-                      "mimeTypes": [
-                        "application/vnd.verentis.documents.workspace+json"
-                      ],
-                      "showFolders": false,
-                      "navigable": false,
+                      "for": "listdocumentworkspaces",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listdocumentworkspaces || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
                       "columns": [
                         {
-                          "key": "name",
+                          "key": "data.code",
                           "label": "Workspace"
                         },
                         {
@@ -421,7 +391,27 @@
                           "label": "Description"
                         }
                       ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
                       "emptyText": "No workspaces yet. Use New in /document-workspaces."
+                    },
+                    "rules": {
+                      "visible": "data.$listdocumentworkspaces.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
                     }
                   }
                 ],
@@ -467,17 +457,19 @@
                     ]
                   },
                   {
-                    "type": "canvas.files",
+                    "type": "canvas.empty-state",
                     "props": {
-                      "path": "/document-tags/",
-                      "mimeTypes": [
-                        "application/vnd.verentis.documents.tag+json"
-                      ],
-                      "showFolders": false,
-                      "navigable": false,
+                      "for": "listdocumenttags",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listdocumenttags || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
                       "columns": [
                         {
-                          "key": "name",
+                          "key": "data.code",
                           "label": "Tag"
                         },
                         {
@@ -489,7 +481,27 @@
                           "label": "Category"
                         }
                       ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
                       "emptyText": "No tags yet. Use New in /document-tags."
+                    },
+                    "rules": {
+                      "visible": "data.$listdocumenttags.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
                     }
                   }
                 ],

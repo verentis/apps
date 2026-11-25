@@ -28,122 +28,75 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Manufacturing",
+          "icon": "factory",
+          "active": "boms.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "boms.page.yaml",
+              "label": "Bills of materials",
+              "icon": "list-tree"
+            },
+            {
+              "id": "orders.page.yaml",
+              "label": "Orders",
+              "icon": "kanban"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/manufacturing/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Bills of materials",
+              "note": "What each product is built from. Archived BoMs cannot be confirmed against."
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
+                "type": "canvas.button",
+                "props": {
+                  "label": "Open /bills-of-materials",
+                  "variant": "outline",
+                  "icon": "folder-open",
+                  "size": "sm"
                 },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Bills of materials"
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/bills-of-materials"
+                      }
                     }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "What each product is built from. Archived BoMs cannot be confirmed against.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "direction": "row",
-                    "wrap": true,
-                    "gap": 2,
-                    "align": "center"
-                  }
+                  ]
                 },
-                "children": [
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Open /bills-of-materials",
-                      "variant": "outline",
-                      "icon": "folder-open",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/bills-of-materials"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Manufacturing",
-                      "variant": "ghost",
-                      "icon": "factory",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/manufacturing/canvas/home.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ]
+                "slot": "actions"
               }
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "{{ data.$boms.error }}"
-            },
-            "rules": {
-              "visible": "data.$boms.status === 'error'"
-            }
-          },
-          {
-            "type": "canvas.text",
-            "props": {
-              "text": "Loading…",
-              "tone": "muted"
-            },
-            "rules": {
-              "visible": "data.$boms.status === 'loading'"
+              "for": "boms",
+              "compact": true
             }
           },
           {
@@ -176,6 +129,10 @@
                 }
               ],
               "emptyText": "No bills of materials yet. Use New in /bills-of-materials.",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
               "clickable": true
             },
             "on": {
@@ -183,7 +140,8 @@
                 {
                   "open-file": {
                     "path": "{{ event.path }}",
-                    "mode": "edit"
+                    "mode": "edit",
+                    "open": "side"
                   }
                 }
               ]

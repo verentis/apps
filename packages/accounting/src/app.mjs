@@ -11,12 +11,23 @@ export const createScript = 'scripts/create'
 export const createScriptName = 'accounting-create'
 export const postScript = 'scripts/post'
 export const postScriptName = 'accounting-post'
+/** The API script: the ledger operations other apps call through the platform (api.yaml). */
+export const apiScript = 'scripts/api'
+export const apiScriptName = 'accounting-api'
 /** Where `spec.install` places the posting script; Canvas actions run it by path. */
 export const postScriptPath = `${installRoot}/${postScript}`
 /** The Canvas page behind the "Balances" dashboard widget. */
 export const balancesWidgetFile = 'balances.widget.page.yaml'
 
 /** What the create script may touch: it writes new records create-only and reads the base currency. */
+/** What the API script may touch: it checks and posts other apps' journals, and reverses the ones they posted. */
+export const apiScriptFileAccess = [
+  { path: settingsPath, mode: 'read', reason: 'Check the base currency and precision of journals other apps post' },
+  { path: containers.accounts.path, mode: 'read', reason: 'Check that posted accounts exist and are active' },
+  { path: containers.periods.path, mode: 'read', reason: 'Find the open period a posting date falls in' },
+  { path: containers.journals.path, mode: 'write', reason: 'Post and reverse journals other apps ask for' },
+]
+
 export const createScriptFileAccess = [
   ...recordKinds.map(kind => ({
     path: containers[containerOf[kind]].path, mode: 'write', reason: `Create ${kind === 'account' ? 'accounts' : `${kind}s`} with the next code`,
@@ -61,6 +72,15 @@ export const entities = {
         { key: 'date', label: 'Date', type: 'date', required: true }, text('currency', 'Currency', { placeholder: 'ZAR', required: true })] },
       { title: 'Lines', description: 'Debits must equal credits. Amounts are exact decimals, e.g. 1250.00.', span: 2, fields: [
         { key: 'lines', label: 'Journal lines', type: 'rows', minimum: 2, maximum: 1000, span: 2, addLabel: 'Add line',
+          // A live check while typing; the posting script is what enforces that a journal balances.
+          summary: [
+            { label: 'Debits', expr: "rows.filter(row => row.direction === 'debit').reduce((total, row) => total + Math.round(Number(row.amount || 0) * 100), 0) / 100", format: 'number' },
+            { label: 'Credits', expr: "rows.filter(row => row.direction === 'credit').reduce((total, row) => total + Math.round(Number(row.amount || 0) * 100), 0) / 100", format: 'number' },
+          ],
+          assert: {
+            expr: "rows.filter(row => row.direction === 'debit').reduce((total, row) => total + Math.round(Number(row.amount || 0) * 100), 0) === rows.filter(row => row.direction === 'credit').reduce((total, row) => total + Math.round(Number(row.amount || 0) * 100), 0)",
+            ok: 'Debits equal credits', error: 'Debits and credits differ',
+          },
           defaultRow: { account: '', direction: 'debit', amount: '' },
           fields: [
             { key: 'account', label: 'Account', type: 'select', required: true, options: '{{ data.accountoptions }}' },
@@ -170,7 +190,7 @@ export const manifest = {
     settings,
     dependencies: [{ package: 'verentis/canvas', version: 'latest' }, { package: 'verentis/nodejs', version: 'latest' }],
     engine: 'verentis/nodejs',
-    scripts: [createScript, postScript],
+    scripts: [createScript, postScript, apiScript],
     install,
     creatables,
     sandbox: { 'allow-scripts': true, 'allow-same-origin': true, 'allow-forms': true, 'allow-popups': false },
@@ -200,6 +220,7 @@ export const productionOverlay = {
 export const scriptConsents = [
   ...scriptConsent(createScriptName, createScriptFileAccess),
   ...scriptConsent(postScriptName, postScriptFileAccess),
+  ...scriptConsent(apiScriptName, apiScriptFileAccess),
 ]
 
 /** What the create script needs to know about each kind (generated into `scripts/create/config.mjs`). */

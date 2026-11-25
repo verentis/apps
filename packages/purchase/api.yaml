@@ -1,0 +1,57 @@
+# Purchase's API: what other apps and agents may ask Purchase to do, and what Purchase asks of others. The platform
+# checks the caller lists the operation under `uses`, validates the input, and runs scripts/api with Purchase's own
+# file access. Callers never write /purchase-orders themselves.
+api-version: verentis.io/v1
+kind: Api
+metadata:
+  id: purchase
+spec:
+  operations:
+    - key: create-draft-order
+      title: Draft a purchase order
+      description: >-
+        Drafts a purchase order with the given lines (for example products at or below their reorder point). Purchase
+        numbers it; the vendor and prices are completed on the order. Calling again for the same source returns the
+        draft already made instead of a second one.
+      effect: write
+      timeout-seconds: 60
+      input-schema:
+        type: object
+        additionalProperties: false
+        required: [source, lines]
+        properties:
+          source:
+            type: object
+            additionalProperties: false
+            required: [path]
+            properties:
+              path: { type: string, minLength: 1, maxLength: 1000 }
+              code: { type: string, maxLength: 100 }
+          vendorName: { type: string, maxLength: 200 }
+          currency: { type: string, pattern: "^([A-Z]{3})?$" }
+          lines:
+            type: array
+            minItems: 1
+            maxItems: 500
+            items:
+              type: object
+              additionalProperties: false
+              required: [description, quantity]
+              properties:
+                description: { type: string, minLength: 1, maxLength: 1000 }
+                quantity: { type: string, pattern: "^(0|[1-9][0-9]{0,11})(\\.[0-9]{1,6})?$" }
+                unitPrice: { type: string, pattern: "^((0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?)?$" }
+          notes: { type: string, maxLength: 10000 }
+      output-schema:
+        type: object
+        properties:
+          path: { type: string }
+          code: { type: string }
+          created: { type: boolean }
+      implementation:
+        type: script
+        script: scripts/api
+  uses:
+    - app: invoicing
+      operation: create-draft-invoice
+      reason: Draft the vendor bill of a received purchase order

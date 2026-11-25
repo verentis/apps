@@ -105,28 +105,17 @@
                 "props": {
                   "label": "Jurisdiction",
                   "value": "{{ state.country }}",
+                  "display": "segmented",
                   "options": "{{ [{label:'All jurisdictions',value:''}].concat(data.countries || []) }}"
                 }
               }
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "{{ data.$packs.error }}"
-            },
-            "rules": {
-              "visible": "data.$packs.status === 'error'"
-            }
-          },
-          {
-            "type": "canvas.text",
-            "props": {
-              "text": "Loading…",
-              "tone": "muted"
-            },
-            "rules": {
-              "visible": "data.$packs.status === 'loading'"
+              "for": "packs",
+              "compact": true
             }
           },
           {
@@ -141,18 +130,25 @@
           {
             "type": "canvas.text",
             "props": {
-              "text": "{{ (data.results || []).length }} matches. Showing up to 12; narrow the search for a particular instrument.",
+              "text": "{{ (data.results || []).length }} {{ (data.results || []).length === 1 ? 'match' : 'matches' }}",
               "tone": "muted"
             }
           },
           {
             "type": "canvas.table",
             "props": {
-              "rows": "{{ (data.results || []).slice(0,12) }}",
+              "rows": "{{ data.results || [] }}",
+              "rowKey": "id",
+              "selected": "{{ state.selected }}",
+              "clickable": true,
+              "sortable": true,
+              "pageSize": 12,
+              "narrow": "list",
               "columns": [
                 {
                   "key": "jurisdiction",
-                  "label": "Jurisdiction"
+                  "label": "Jurisdiction",
+                  "format": "badge"
                 },
                 {
                   "key": "citation",
@@ -167,8 +163,7 @@
                   "label": "Coverage"
                 }
               ],
-              "emptyText": "No matching authority.",
-              "clickable": true
+              "emptyText": "No matching authority."
             },
             "on": {
               "row-click": [

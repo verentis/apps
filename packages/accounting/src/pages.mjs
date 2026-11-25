@@ -1,10 +1,11 @@
 // Generates the Accounting Canvas documents: one bound form per record kind, the settings form, the launch page
 // and the financial reports page. Ledger rules (balancing, open periods, immutability once posted) are enforced by
 // the posting script the forms run; the forms only lock what the script has posted.
+import { views } from './views.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, documentsPanel, folder, grid, heading, iconName,
   jsonFile, linkButton, openFile, options, page, panel, projectRegistration, recordButtons, row, saveSteps, scriptAction,
-  sectionCards, stat, stats, status, table, tabs, text, formControl, toneExpression, humanize,
+  sectionCards, stat, stats, status, table, tabs, text, formControl, toneExpression, humanize, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { containers, installRoot, mimeTypes, recordKinds, schemaId, settingsPath } from './contracts.mjs'
 import { balancesWidgetFile, entities, postScriptPath, settingsFields } from './app.mjs'
@@ -62,6 +63,28 @@ function recordExtras(kind) {
   if (kind === 'period') {
     return {
       locked: "form.values.status === 'closed'",
+      // What has to be true before the period closes, computed from the records; Close period stays available,
+      // the checklist only says what is still open.
+      access: [
+        { path: containers.journals.path, reason: 'Check for draft journals in this period' },
+        { path: containers.expenses.path, reason: 'Check for draft expenses in this period' },
+        { path: containers.periods.path, reason: 'Check that earlier periods are closed' },
+      ],
+      data: {
+        journals: folder(containers.journals.path, mimeTypes.journal),
+        expenses: folder(containers.expenses.path, mimeTypes.expense),
+        periods: folder(containers.periods.path, mimeTypes.period),
+        draftjournals: { kind: 'computed', expr: "(data.journals || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (!e.data.status || e.data.status === 'draft') && e.data.date >= form.values.startDate && e.data.date <= form.values.endDate)" },
+        draftexpenses: { kind: 'computed', expr: "(data.expenses || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (!e.data.status || e.data.status === 'draft') && e.data.date >= form.values.startDate && e.data.date <= form.values.endDate)" },
+        openearlier: { kind: 'computed', expr: "(data.periods || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && e.path !== ctx.file.path && e.data.status !== 'closed' && e.data.endDate < form.values.startDate)" },
+      },
+      notices: [card('Before closing', [{
+        type: 'canvas.checklist',
+        props: {
+          readOnly: true,
+          checks: { $expr: "[{ label: 'No draft journals dated in this period', ok: (data.draftjournals || []).length === 0, detail: (data.draftjournals || []).map(e => e.data.code).join(', ') }, { label: 'No draft expenses dated in this period', ok: (data.draftexpenses || []).length === 0, detail: (data.draftexpenses || []).map(e => e.data.code).join(', ') }, { label: 'Every earlier period is closed', ok: (data.openearlier || []).length === 0, detail: (data.openearlier || []).map(e => e.data.name || e.data.code).join(', ') }]" },
+        },
+      }], 'Post or archive what is listed, then close the period.')],
       buttons: [
         button('Close period', 'close-period', { visible: `form.values.status === 'open' && !(${archived})`, disabled: idle }, 'outline', 'lock'),
         button('Reopen', 'reopen-period', { visible: "form.values.status === 'closed'", disabled: idle }, 'ghost', 'lock-open'),
@@ -146,17 +169,15 @@ function recordForm(kind) {
   const extras = recordExtras(kind)
   const locked = extras.locked ?? 'false'
   const readOnly = `${archived} || (${locked})`
-  const header = row([
-    column([
-      row([
-        heading(`{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`),
+  const header = recordHeader(
+    `{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`,
+    [
         badge(humanize(entity.status), toneExpression(entity.status, statusTones), { visible: `!!form.values.${entity.status}` }),
         badge('Archived', 'warning', { visible: archived }, 'archive'),
-      ]),
-      text(`${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`, 'muted'),
-    ]),
-    row([...(extras.buttons ?? []), recordButtons(locked)]),
-  ], 'between')
+    ],
+    `${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`,
+    [...(extras.buttons ?? []), recordButtons(locked)],
+  )
   const overview = [
     ...(extras.links?.length ? [row(extras.links)] : []),
     ...(extras.notices ?? []),
@@ -164,8 +185,8 @@ function recordForm(kind) {
   ]
   const tree = [
     header,
-    ...status('record'),
-    badge(`This ${entity.singular.toLowerCase()} is archived. Restore it to edit.`, 'warning', { visible: archived }, 'archive'),
+    ...status('record'), ...lifecycle(entity),
+    archivedAlert(entity.singular),
     ...(extras.tabs
       ? [tabs([{ value: 'overview', label: 'Overview', icon: iconName(entity.icon) }, ...extras.tabs], [panel('overview', overview), ...extras.panels])]
       : overview),
@@ -192,13 +213,13 @@ function settingsForm() {
       access: [accountsAccess('Choose the account each tax code posts to'), schemaAccess],
       data: accountSources,
       tree: [
-        row([
-          column([heading('Accounting settings'), text('The ledger currency and precision, the fiscal year and the tax codes expenses and invoices use. Code prefixes are app settings, managed with the installed app.', 'muted')]),
+        pageHeader(
+          [heading('Accounting settings'), text('The ledger currency and precision, the fiscal year and the tax codes expenses and invoices use. Code prefixes are app settings, managed with the installed app.', 'muted')], [
           row([
             button('Reset', [{ 'reset-form': {} }], { disabled: 'form.saving || !form.dirty' }, 'ghost'),
             button('Save', [{ save: {} }, { toast: { message: 'Saved', variant: 'success' } }], { disabled: 'form.saving || !form.dirty || form.invalid' }, undefined, 'save'),
           ]),
-        ], 'between'),
+        ]),
         ...status('record'),
         { ...text(`Set the base currency before posting: the ledger is kept in one currency.`, 'muted'), rules: { visible: '!form.values.baseCurrency' } },
         card('Settings', [grid(settingsFields.map(field => formControl(field, null)))]),
@@ -236,13 +257,13 @@ function homePage() {
           periods: folder(containers.periods.path, mimeTypes.period),
         },
         tree: page([
-          row([
-            column([heading('Accounting'), text('A double-entry ledger as files in your workspace. Draft journals and expenses in their folders, then post them from their forms.', 'muted')]),
+          pageHeader(
+            [heading('Accounting'), text('A double-entry ledger as files in your workspace. Draft journals and expenses in their folders, then post them from their forms.', 'muted')], [
             row([
               button('Reports', [openFile(`${installRoot}/canvas/reports.page.yaml`)], undefined, 'outline', 'chart-column'),
               button('Settings', [openFile(settingsPath, 'edit')], undefined, 'ghost', 'settings'),
             ]),
-          ], 'between'),
+          ]),
           stats([
             stat('Accounts', count('accounts'), 'book-open', loading('accounts')),
             stat('Open periods', count('periods', "e.data.status === 'open'"), 'calendar-range', loading('periods')),
@@ -300,10 +321,10 @@ function reportsPage() {
         },
         state: { fromdate: '', todate: '' },
         tree: page([
-          row([
-            column([heading('Financial reports'), text('Computed from posted journals. Choose dates to limit the period; the balance sheet shows positions at the end date.', 'muted')]),
+          pageHeader(
+            [heading('Financial reports'), text('Computed from posted journals. Choose dates to limit the period; the balance sheet shows positions at the end date.', 'muted')], [
             button('Accounting', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'book-open'),
-          ], 'between'),
+          ]),
           grid([
             { type: 'canvas.form.date', props: { label: 'From', value: '{{ state.fromdate }}' } },
             { type: 'canvas.form.date', props: { label: 'To', value: '{{ state.todate }}' } },
@@ -373,10 +394,10 @@ function balancesWidget() {
           balances: { kind: 'computed', expr: balances },
         },
         tree: [column([
-          row([
-            column([heading('Balances', 3), text(`Assets ${total('asset')} · Liabilities ${total('liability')}`, 'muted')]),
+          pageHeader(
+            [heading('Balances', 3), text(`Assets ${total('asset')} · Liabilities ${total('liability')}`, 'muted')], [
             button('Reports', [openFile(`${installRoot}/canvas/reports.page.yaml`)], undefined, 'ghost', 'chart-column'),
-          ], 'between'),
+          ]),
           status('accounts')[0], status('journals')[0],
           { ...text('Loading…', 'muted'), rules: { visible: "data.$accounts.status === 'loading' || data.$journals.status === 'loading'" } },
           table(`{{ (data.balances || []).map(b => ({ path: b.path, account: [b.number, b.name].filter(Boolean).join(' '), type: b.type, balance: ${display('b.units')} })) }}`,
@@ -389,5 +410,5 @@ function balancesWidget() {
 
 export function buildPages() {
   const documents = [homePage(), reportsPage(), balancesWidget(), ...recordKinds.map(recordForm), settingsForm()]
-  return Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)]))
+  return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

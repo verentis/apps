@@ -28,81 +28,108 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Appraisals",
+          "icon": "clipboard-check",
+          "active": "scores.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Current cycle",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "appraisals.page.yaml",
+              "label": "Cycle board",
+              "icon": "kanban",
+              "count": "{{ (data.rows || []).filter(r => r.status === 'scheduled').length }}"
+            },
+            {
+              "id": "scores.page.yaml",
+              "label": "Scores",
+              "icon": "star"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/appraisals/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/appraisals.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Scores summary",
+              "note": "Completed appraisals by overall score, and the average per manager. Click a row to open the appraisal."
+            },
+            "children": []
+          },
           {
             "type": "canvas.stack",
             "layout": {
               "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
+                "gap": 2
               }
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Scores summary"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Completed appraisals by overall score, and the average per manager. Click a row to open the appraisal.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Overall score"
+                }
               },
               {
-                "type": "canvas.button",
+                "type": "canvas.text",
                 "props": {
-                  "label": "Appraisals",
-                  "variant": "ghost",
-                  "icon": "clipboard-check",
-                  "size": "sm"
-                },
-                "on": {
-                  "click": [
-                    {
-                      "open-file": {
-                        "path": "/applications/appraisals/canvas/home.page.yaml"
-                      }
-                    }
-                  ]
+                  "text": "Completed appraisals, highest first.",
+                  "tone": "muted"
+                }
+              },
+              {
+                "type": "canvas.chart",
+                "props": {
+                  "rows": "{{ (data.rows || []).filter(r => r.status === 'done' && r.overallScore != null && r.overallScore !== '').map(r => ({ path: r.path, label: r.employee || r.code, value: Number(r.overallScore) })) }}",
+                  "showLegend": true,
+                  "emptyText": "No completed appraisals yet",
+                  "kind": "hbar",
+                  "x": "label",
+                  "y": "value",
+                  "format": "number",
+                  "decimals": 1,
+                  "sort": "-value"
                 }
               }
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /appraisals folder could not be read. Reinstall Appraisals to recreate it."
-            },
-            "rules": {
-              "visible": "data.$appraisals.status === 'error'"
+              "for": "appraisals",
+              "compact": true,
+              "description": "The /appraisals folder could not be read. Reinstall Appraisals to recreate it."
             }
           },
           {
@@ -194,6 +221,10 @@
                     }
                   ],
                   "emptyText": "No completed appraisals yet",
+                  "search": true,
+                  "sortable": true,
+                  "pageSize": 25,
+                  "narrow": "list",
                   "clickable": true
                 },
                 "on": {
@@ -201,7 +232,8 @@
                     {
                       "open-file": {
                         "path": "{{ event.path }}",
-                        "mode": "edit"
+                        "mode": "edit",
+                        "open": "side"
                       }
                     }
                   ]
@@ -235,7 +267,11 @@
                       "align": "end"
                     }
                   ],
-                  "emptyText": "No completed appraisals yet"
+                  "emptyText": "No completed appraisals yet",
+                  "search": true,
+                  "sortable": true,
+                  "pageSize": 25,
+                  "narrow": "list"
                 }
               }
             ]

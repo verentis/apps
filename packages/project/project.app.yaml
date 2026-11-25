@@ -202,8 +202,8 @@
       },
       {
         "path": "/tasks",
-        "mode": "read",
-        "reason": "Group tasks by stage",
+        "mode": "write",
+        "reason": "Group tasks by stage; move records between columns",
         "origin": {
           "kind": "document",
           "id": "canvas/board.page.yaml"

@@ -1,6 +1,7 @@
+import { callingCode } from '../../../tools/file-apps/canvas.mjs'
 import {
   codeDigits, codeSettings, containerOf, containers, createDefaults, deliveryStatuses, installRoot, invoicing,
-  mimeTypes, recordKinds, settingsPath,
+  mimeTypes, products, recordKinds, settingsPath,
 } from './contracts.mjs'
 import { scriptConsent } from '../../../tools/file-apps/build.mjs'
 
@@ -17,7 +18,7 @@ export const postScriptName = 'sales-post'
 /** Where `spec.install` places the confirm script; Canvas actions run it by path. */
 export const postScriptPath = `${installRoot}/${postScript}`
 
-const plural = { product: 'products', quotation: 'quotations', order: 'sales orders' }
+const plural = { quotation: 'quotations', order: 'sales orders' }
 
 /** What the create script may touch: it writes new records create-only and reads the defaults they start with. */
 export const createScriptFileAccess = [
@@ -28,10 +29,9 @@ export const createScriptFileAccess = [
 /** What the confirm script may touch: it validates a quotation, writes its sales order and marks it confirmed. */
 export const postScriptFileAccess = [
   { path: settingsPath, mode: 'read', reason: 'Default the currency when a quotation leaves it empty' },
-  { path: containers.products.path, mode: 'read', reason: 'Check that quoted products exist and are active' },
+  { path: products.path, mode: 'read', reason: 'Check that quoted products exist and are active (Products)' },
   { path: containers.quotations.path, mode: 'write', reason: 'Mark quotations confirmed with their computed totals' },
   { path: containers.orders.path, mode: 'write', reason: 'Create the sales order a confirmed quotation becomes' },
-  { path: invoicing.invoices, mode: 'write', reason: 'Draft an invoice for a confirmed quotation when Invoicing is installed' },
 ]
 
 const text = (key, label, extra = {}) => ({ key, label, ...extra })
@@ -40,11 +40,11 @@ const humanized = value => value[0].toUpperCase() + value.slice(1).split('-').jo
 
 const partyFields = prefix => [
   text(`${prefix}.name`, 'Name', { required: prefix === 'customer' }), text(`${prefix}.legalName`, 'Legal name'),
-  text(`${prefix}.email`, 'Email', { type: 'email' }), text(`${prefix}.phone`, 'Phone'),
+  text(`${prefix}.email`, 'Email', { type: 'email' }),
+  // Stored in international form once complete; a national number takes the country's calling code.
+  { key: `${prefix}.phone`, label: 'Phone', type: 'phone', defaultCode: callingCode(`form.values.${prefix} && form.values.${prefix}.address && form.values.${prefix}.address.country`) },
   text(`${prefix}.taxIdentifier`, 'Tax number'),
-  { key: `${prefix}.address.lines`, label: 'Street', type: 'text-list', span: 2 },
-  text(`${prefix}.address.city`, 'City'), text(`${prefix}.address.region`, 'Region'),
-  text(`${prefix}.address.postalCode`, 'Postal code'), text(`${prefix}.address.country`, 'Country code', { placeholder: 'ZA' }),
+  { key: `${prefix}.address`, label: 'Address', type: 'address', span: 2 },
 ]
 
 const quotedLines = {
@@ -62,16 +62,6 @@ const linesSection = { title: 'Lines', description: 'Exact decimals. Each line i
 
 /** Record kinds: labels, icons and the sections of their bound Canvas form. `span: 2` fields take a full row. */
 export const entities = {
-  product: {
-    singular: 'Product', plural: 'Products', titleKey: 'name', icon: 'lucide:package',
-    folderNames: ['products', 'sales'],
-    sections: [
-      { title: 'Product', fields: [
-        text('name', 'Name', { required: true }), text('unit', 'Unit', { placeholder: 'each' }),
-        text('listPrice', 'List price', { placeholder: '0.00' }),
-        { key: 'description', label: 'Description', type: 'textarea', span: 2 }] },
-    ],
-  },
   quotation: {
     singular: 'Quotation', plural: 'Quotations', titleKey: 'customer.name', icon: 'lucide:file-text', status: 'status',
     folderNames: ['quotations', 'sales'],
@@ -175,6 +165,8 @@ export const manifest = {
     dependencies: [
       { package: 'verentis/canvas', version: 'latest' },
       { package: 'verentis/nodejs', version: 'latest' },
+      // Products owns the catalogue Sales quotes; installing Sales installs it.
+      { package: 'verentis/products', version: 'latest' },
       { package: 'verentis/crm', version: 'latest', optional: true },
       { package: 'verentis/invoicing', version: 'latest', optional: true },
     ],

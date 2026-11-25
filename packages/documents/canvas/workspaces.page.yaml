@@ -38,90 +38,83 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Documents",
+          "icon": "folder-kanban",
+          "active": "workspaces.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "inbox.page.yaml",
+              "label": "Inbox",
+              "icon": "inbox",
+              "count": "{{ (data.rows || []).filter(r => r.status === 'inbox').length }}"
+            },
+            {
+              "id": "workspaces.page.yaml",
+              "label": "Workspaces",
+              "icon": "folders"
+            },
+            {
+              "id": "library.page.yaml",
+              "label": "All documents",
+              "icon": "library"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/documents/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/documents.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Workspace browser",
+              "note": "Every workspace with its document cards, grouped by tags. Click a workspace to open it."
             },
-            "children": [
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Workspace browser"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Every workspace with its document cards, grouped by tags. Click a workspace to open it.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.button",
-                "props": {
-                  "label": "Documents",
-                  "variant": "ghost",
-                  "icon": "folder-kanban",
-                  "size": "sm"
-                },
-                "on": {
-                  "click": [
-                    {
-                      "open-file": {
-                        "path": "/applications/documents/canvas/home.page.yaml"
-                      }
-                    }
-                  ]
-                }
-              }
-            ]
+            "children": []
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /document-cards folder could not be read. Reinstall Documents to recreate it."
-            },
-            "rules": {
-              "visible": "data.$cards.status === 'error'"
+              "for": "cards",
+              "compact": true,
+              "description": "The /document-cards folder could not be read. Reinstall Documents to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /document-workspaces folder could not be read. Reinstall Documents to recreate it."
-            },
-            "rules": {
-              "visible": "data.$workspaces.status === 'error'"
+              "for": "workspaces",
+              "compact": true,
+              "description": "The /document-workspaces folder could not be read. Reinstall Documents to recreate it."
             }
           },
           {
@@ -169,6 +162,10 @@
                     }
                   ],
                   "emptyText": "No workspaces yet",
+                  "search": true,
+                  "sortable": true,
+                  "pageSize": 25,
+                  "narrow": "list",
                   "clickable": true
                 },
                 "on": {
@@ -176,7 +173,8 @@
                     {
                       "open-file": {
                         "path": "{{ event.path }}",
-                        "mode": "edit"
+                        "mode": "edit",
+                        "open": "side"
                       }
                     }
                   ]
@@ -205,7 +203,11 @@
                       "align": "end"
                     }
                   ],
-                  "emptyText": "No document cards yet"
+                  "emptyText": "No document cards yet",
+                  "search": true,
+                  "sortable": true,
+                  "pageSize": 25,
+                  "narrow": "list"
                 }
               }
             ]
@@ -247,6 +249,10 @@
                     }
                   ],
                   "emptyText": "No document cards yet",
+                  "search": true,
+                  "sortable": true,
+                  "pageSize": 25,
+                  "narrow": "list",
                   "clickable": true
                 },
                 "on": {
@@ -254,7 +260,8 @@
                     {
                       "open-file": {
                         "path": "{{ event.path }}",
-                        "mode": "edit"
+                        "mode": "edit",
+                        "open": "side"
                       }
                     }
                   ]

@@ -1,3 +1,4 @@
+import { callingCode } from '../../../tools/file-apps/canvas.mjs'
 import {
   accounting, accountingSettingsPath, codeDigits, codeSettings, containerOf, containers, createDefaults, installRoot,
   mimeTypes, paymentMethods, recordKinds, settingsPath,
@@ -14,6 +15,9 @@ export const createScript = 'scripts/create'
 export const createScriptName = 'invoicing-create'
 export const postScript = 'scripts/post'
 export const postScriptName = 'invoicing-post'
+/** The API script: the operations other apps call through the platform (api.yaml). */
+export const apiScript = 'scripts/api'
+export const apiScriptName = 'invoicing-api'
 /** Where `spec.install` places the posting script; Canvas actions run it by path. */
 export const postScriptPath = `${installRoot}/${postScript}`
 /** The Canvas page behind the "Invoices due" dashboard widget. */
@@ -30,13 +34,17 @@ export const createScriptFileAccess = [
   { path: accountingSettingsPath, mode: 'read', reason: 'Default new records to the ledger\'s base currency' },
 ]
 
-/** What the posting script may touch: it validates against the ledger, posts journals and marks records issued or posted. */
+/** What the API script may touch: it drafts invoices other apps ask for, numbered like any new invoice. */
+export const apiScriptFileAccess = [
+  { path: containers.invoices.path, mode: 'write', reason: 'Draft invoices other apps ask for, with the next number' },
+]
+
+/** What the posting script may touch: it checks against the ledger (Accounting posts the journals) and marks records issued or posted. */
 export const postScriptFileAccess = [
   { path: settingsPath, mode: 'read', reason: 'Read the seller details and posting accounts' },
   { path: accountingSettingsPath, mode: 'read', reason: 'Read the ledger\'s base currency and precision' },
   { path: accounting.accounts, mode: 'read', reason: 'Check that posted accounts exist and are active' },
   { path: accounting.periods, mode: 'read', reason: 'Find the open period a posting date falls in' },
-  { path: accounting.journals, mode: 'write', reason: 'Post invoice, credit note and payment journals and their reversals' },
   { path: containers.invoices.path, mode: 'write', reason: 'Mark invoices issued and store their document copy' },
   { path: containers.credits.path, mode: 'write', reason: 'Mark credit notes issued and store their document copy' },
   { path: containers.payments.path, mode: 'write', reason: 'Mark payments posted or reversed' },
@@ -48,11 +56,11 @@ const humanized = value => value[0].toUpperCase() + value.slice(1).split('-').jo
 
 const partyFields = prefix => [
   text(`${prefix}.name`, 'Name', { required: prefix === 'customer' }), text(`${prefix}.legalName`, 'Legal name'),
-  text(`${prefix}.email`, 'Email', { type: 'email' }), text(`${prefix}.phone`, 'Phone'),
+  text(`${prefix}.email`, 'Email', { type: 'email' }),
+  // Stored in international form once complete; a national number takes the country's calling code.
+  { key: `${prefix}.phone`, label: 'Phone', type: 'phone', defaultCode: callingCode(`form.values.${prefix} && form.values.${prefix}.address && form.values.${prefix}.address.country`) },
   text(`${prefix}.taxIdentifier`, 'Tax number'),
-  { key: `${prefix}.address.lines`, label: 'Street', type: 'text-list', span: 2 },
-  text(`${prefix}.address.city`, 'City'), text(`${prefix}.address.region`, 'Region'),
-  text(`${prefix}.address.postalCode`, 'Postal code'), text(`${prefix}.address.country`, 'Country code', { placeholder: 'ZA' }),
+  { key: `${prefix}.address`, label: 'Address', type: 'address', span: 2 },
 ]
 
 const billedLines = {
@@ -207,7 +215,7 @@ export const manifest = {
       { package: 'verentis/crm', version: 'latest', optional: true },
     ],
     engine: 'verentis/nodejs',
-    scripts: [createScript, postScript],
+    scripts: [createScript, postScript, apiScript],
     install,
     creatables,
     sandbox: { 'allow-scripts': true, 'allow-same-origin': true, 'allow-forms': true, 'allow-popups': false },
@@ -237,6 +245,7 @@ export const productionOverlay = {
 export const scriptConsents = [
   ...scriptConsent(createScriptName, createScriptFileAccess),
   ...scriptConsent(postScriptName, postScriptFileAccess),
+  ...scriptConsent(apiScriptName, apiScriptFileAccess),
 ]
 
 /** What the create script needs to know about each kind (generated into `scripts/create/config.mjs`). */

@@ -1,18 +1,21 @@
 import { describe, expect, it } from 'vitest'
 import { starterRecords, templates } from '../src/contracts.mjs'
+import { starterRecords as starterProducts, templates as productTemplates } from '../../products/src/contracts.mjs'
 import { run } from '../scripts/post/main.mjs'
 import { memoryFiles } from '../../../tools/file-apps/memory-files.mjs'
 
 const now = '2026-03-10T08:00:00Z'
 let ids = 0
 const options = { now, uuid: () => `00000000-0000-4000-8000-${String(++ids).padStart(12, '0')}` }
-const record = (kind, values) => ({ ...templates[kind], id: options.uuid(), createdAt: now, updatedAt: now, ...values })
+// Products owns the catalogue: its sample products are the ones Inventory's sample moves stock.
+const record = (kind, values) => ({ ...(kind === 'product' ? productTemplates : templates)[kind], id: options.uuid(), createdAt: now, updatedAt: now, ...values })
 const wh = '/warehouses/WH-0001'
 const desk = '/products/PRD-0001'
 
 function stock(extra = {}) {
   return memoryFiles({
-    ...Object.fromEntries(starterRecords.map(item => [`/${item.kind === 'warehouse' ? 'warehouses' : item.kind === 'product' ? 'products' : 'stock-moves'}/${item.code}`, item])),
+    ...Object.fromEntries(starterProducts.map(item => [`/products/${item.code}`, item])),
+    ...Object.fromEntries(starterRecords.map(item => [`/${item.kind === 'warehouse' ? 'warehouses' : 'stock-moves'}/${item.code}`, item])),
     ...extra,
   })
 }

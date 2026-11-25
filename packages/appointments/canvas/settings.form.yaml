@@ -101,134 +101,77 @@
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.validation-summary",
+            "props": {
+              "title": "Fix these before saving"
+            }
+          },
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Appointments settings",
+              "note": "The default type for new appointments. Code prefixes are app settings, managed with the installed app."
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
+                "type": "canvas.button",
+                "props": {
+                  "label": "Reset",
+                  "variant": "ghost",
+                  "size": "sm"
                 },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Appointments settings"
+                "on": {
+                  "click": [
+                    {
+                      "reset-form": {}
                     }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "The default type for new appointments. Code prefixes are app settings, managed with the installed app.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
+                  ]
+                },
+                "rules": {
+                  "disabled": "form.saving || !form.dirty"
+                },
+                "slot": "actions"
               },
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "direction": "row",
-                    "wrap": true,
-                    "gap": 2,
-                    "align": "center"
-                  }
+                "type": "canvas.button",
+                "props": {
+                  "label": "Save",
+                  "icon": "save",
+                  "size": "sm"
                 },
-                "children": [
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Reset",
-                      "variant": "ghost",
-                      "size": "sm"
+                "on": {
+                  "click": [
+                    {
+                      "save": {}
                     },
-                    "on": {
-                      "click": [
-                        {
-                          "reset-form": {}
-                        }
-                      ]
-                    },
-                    "rules": {
-                      "disabled": "form.saving || !form.dirty"
+                    {
+                      "toast": {
+                        "message": "Saved",
+                        "variant": "success"
+                      }
                     }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Save",
-                      "icon": "save",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "save": {}
-                        },
-                        {
-                          "toast": {
-                            "message": "Saved",
-                            "variant": "success"
-                          }
-                        }
-                      ]
-                    },
-                    "rules": {
-                      "disabled": "form.saving || !form.dirty || form.invalid"
-                    }
-                  }
-                ]
+                  ]
+                },
+                "rules": {
+                  "disabled": "form.saving || !form.dirty || form.invalid"
+                },
+                "slot": "actions"
               }
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "{{ data.$record.error }}"
-            },
-            "rules": {
-              "visible": "data.$record.status === 'error'"
+              "for": "record",
+              "compact": true
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "Loading…",
-              "tone": "muted"
-            },
-            "rules": {
-              "visible": "data.$record.status === 'loading'"
-            }
-          },
-          {
-            "type": "canvas.text",
-            "props": {
-              "text": "The /appointment-types folder could not be read. Reinstall Appointments to recreate it."
-            },
-            "rules": {
-              "visible": "data.$types.status === 'error'"
-            }
-          },
-          {
-            "type": "canvas.text",
-            "props": {
-              "text": "Loading…",
-              "tone": "muted"
-            },
-            "rules": {
-              "visible": "data.$types.status === 'loading'"
+              "for": "types",
+              "compact": true,
+              "description": "The /appointment-types folder could not be read. Reinstall Appointments to recreate it."
             }
           },
           {
@@ -267,7 +210,8 @@
                           "label": "Default type",
                           "value": "{{ form.values.defaultType }}",
                           "description": "New appointments start with this type.",
-                          "options": "{{ data.typeoptions }}"
+                          "options": "{{ data.typeoptions }}",
+                          "searchable": true
                         },
                         "layout": {
                           "tablet": {

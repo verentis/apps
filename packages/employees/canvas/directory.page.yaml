@@ -41,90 +41,124 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Employees",
+          "icon": "user-round",
+          "active": "directory.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "directory.page.yaml",
+              "label": "Directory",
+              "icon": "users"
+            },
+            {
+              "id": "departments.page.yaml",
+              "label": "Departments",
+              "icon": "network"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/employees/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/employees.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Employee directory",
+              "note": "Every employee with their department, manager and status. Click a row to open the employee."
+            },
+            "children": []
+          },
+          {
+            "type": "canvas.repeat",
+            "props": {
+              "items": "{{ (data.rows || []).filter(r => r.status !== 'terminated') }}",
+              "layout": "grid",
+              "columns": 3,
+              "emptyText": "No employees yet",
+              "groupBy": "department"
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Employee directory"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Every employee with their department, manager and status. Click a row to open the employee.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.button",
+                "type": "canvas.card",
                 "props": {
-                  "label": "Employees",
-                  "variant": "ghost",
-                  "icon": "user-round",
-                  "size": "sm"
+                  "title": "{{ item.name || item.code }}",
+                  "description": "{{ [item.jobTitle, item.manager ? 'Reports to ' + item.manager : ''].filter(part => part).join(' · ') }}",
+                  "clickable": true
                 },
                 "on": {
                   "click": [
                     {
                       "open-file": {
-                        "path": "/applications/employees/canvas/home.page.yaml"
+                        "path": "{{ item.path }}",
+                        "mode": "edit",
+                        "open": "side"
                       }
                     }
                   ]
-                }
+                },
+                "children": [
+                  {
+                    "type": "canvas.dashboard.badge",
+                    "props": {
+                      "value": "{{ item.status }}",
+                      "labels": {
+                        "active": "Active",
+                        "on-leave": "On leave"
+                      },
+                      "tones": {
+                        "active": "success",
+                        "on-leave": "warning"
+                      }
+                    }
+                  }
+                ]
               }
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /departments folder could not be read. Reinstall Employees to recreate it."
-            },
-            "rules": {
-              "visible": "data.$departments.status === 'error'"
+              "for": "departments",
+              "compact": true,
+              "description": "The /departments folder could not be read. Reinstall Employees to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /employees folder could not be read. Reinstall Employees to recreate it."
-            },
-            "rules": {
-              "visible": "data.$staff.status === 'error'"
+              "for": "staff",
+              "compact": true,
+              "description": "The /employees folder could not be read. Reinstall Employees to recreate it."
             }
           },
           {
@@ -210,6 +244,10 @@
                 }
               ],
               "emptyText": "No employees yet",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
               "clickable": true
             },
             "on": {
@@ -217,7 +255,8 @@
                 {
                   "open-file": {
                     "path": "{{ event.path }}",
-                    "mode": "edit"
+                    "mode": "edit",
+                    "open": "side"
                   }
                 }
               ]

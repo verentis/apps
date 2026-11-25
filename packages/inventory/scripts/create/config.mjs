@@ -2,12 +2,6 @@
 export default {
   "app": "Inventory",
   "kinds": {
-    "product": {
-      "code": {
-        "key": "product-code-prefix",
-        "default": "PRD-"
-      }
-    },
     "warehouse": {
       "code": {
         "key": "warehouse-code-prefix",
@@ -42,7 +36,6 @@ export default {
     "default": 4
   },
   "writableRoots": [
-    "/products",
     "/warehouses",
     "/stock-moves",
     "/inventory-adjustments"

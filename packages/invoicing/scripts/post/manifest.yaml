@@ -22,9 +22,6 @@ file-access:
   - path: "/periods"
     mode: read
     reason: "Find the open period a posting date falls in"
-  - path: "/journals"
-    mode: write
-    reason: "Post invoice, credit note and payment journals and their reversals"
   - path: "/invoices"
     mode: write
     reason: "Mark invoices issued and store their document copy"

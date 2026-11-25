@@ -38,67 +38,101 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Maintenance",
+          "icon": "wrench",
+          "active": "preventive.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "requests.page.yaml",
+              "label": "Requests",
+              "icon": "kanban",
+              "count": "{{ (data.rows || []).filter(r => !['done', 'cancelled'].includes(r.stage)).length }}"
+            },
+            {
+              "id": "equipment.page.yaml",
+              "label": "Equipment",
+              "icon": "wrench"
+            },
+            {
+              "id": "preventive.page.yaml",
+              "label": "Calendar",
+              "icon": "calendar"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/maintenance/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            }
+          ]
         },
         "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Preventive plan",
+              "note": "Open preventive maintenance by scheduled date: overdue, upcoming within 30 days, or planned."
+            },
+            "children": []
+          },
           {
             "type": "canvas.stack",
             "layout": {
               "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
+                "gap": 2
               }
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Preventive plan"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Open preventive maintenance by scheduled date: overdue, upcoming within 30 days, or planned.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Maintenance calendar"
+                }
               },
               {
-                "type": "canvas.button",
+                "type": "canvas.text",
                 "props": {
-                  "label": "Maintenance",
-                  "variant": "ghost",
-                  "icon": "wrench",
-                  "size": "sm"
+                  "text": "Preventive and corrective requests by scheduled date.",
+                  "tone": "muted"
+                }
+              },
+              {
+                "type": "canvas.calendar",
+                "props": {
+                  "rows": "{{ (data.rows || []).filter(r => !!r.scheduledDate).map(r => ({ path: r.path, title: r.equipment || r.code, type: r.type, at: r.scheduledDate })) }}",
+                  "views": [
+                    "month",
+                    "week",
+                    "agenda"
+                  ],
+                  "showLegend": true,
+                  "emptyText": "Nothing scheduled",
+                  "start": "at",
+                  "title": "title",
+                  "colorBy": "type",
+                  "view": "month"
                 },
                 "on": {
-                  "click": [
+                  "open": [
                     {
                       "open-file": {
-                        "path": "/applications/maintenance/canvas/home.page.yaml"
+                        "path": "{{ event.row.path }}",
+                        "mode": "edit",
+                        "open": "side"
                       }
                     }
                   ]
@@ -107,21 +141,19 @@
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /equipment folder could not be read. Reinstall Maintenance to recreate it."
-            },
-            "rules": {
-              "visible": "data.$equipment.status === 'error'"
+              "for": "equipment",
+              "compact": true,
+              "description": "The /equipment folder could not be read. Reinstall Maintenance to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /maintenance-requests folder could not be read. Reinstall Maintenance to recreate it."
-            },
-            "rules": {
-              "visible": "data.$requests.status === 'error'"
+              "for": "requests",
+              "compact": true,
+              "description": "The /maintenance-requests folder could not be read. Reinstall Maintenance to recreate it."
             }
           },
           {
@@ -205,6 +237,10 @@
                 }
               ],
               "emptyText": "No open preventive requests",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
               "clickable": true
             },
             "on": {
@@ -212,7 +248,8 @@
                 {
                   "open-file": {
                     "path": "{{ event.path }}",
-                    "mode": "edit"
+                    "mode": "edit",
+                    "open": "side"
                   }
                 }
               ]

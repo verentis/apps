@@ -38,90 +38,78 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Recruitment",
+          "icon": "briefcase",
+          "active": "positions.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "pipeline.page.yaml",
+              "label": "Pipeline",
+              "icon": "kanban",
+              "count": "{{ (data.rows || []).filter(r => ['new', 'screening', 'interview', 'offer'].includes(r.stage)).length }}"
+            },
+            {
+              "id": "positions.page.yaml",
+              "label": "Jobs",
+              "icon": "briefcase"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/recruitment/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/recruitment.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Job positions",
+              "note": "Every active position with its pipeline and hire counts. Click a row to open the position."
             },
-            "children": [
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Job positions"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Every active position with its pipeline and hire counts. Click a row to open the position.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.button",
-                "props": {
-                  "label": "Recruitment",
-                  "variant": "ghost",
-                  "icon": "briefcase",
-                  "size": "sm"
-                },
-                "on": {
-                  "click": [
-                    {
-                      "open-file": {
-                        "path": "/applications/recruitment/canvas/home.page.yaml"
-                      }
-                    }
-                  ]
-                }
-              }
-            ]
+            "children": []
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /job-positions folder could not be read. Reinstall Recruitment to recreate it."
-            },
-            "rules": {
-              "visible": "data.$jobs.status === 'error'"
+              "for": "jobs",
+              "compact": true,
+              "description": "The /job-positions folder could not be read. Reinstall Recruitment to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /candidates folder could not be read. Reinstall Recruitment to recreate it."
-            },
-            "rules": {
-              "visible": "data.$candidates.status === 'error'"
+              "for": "candidates",
+              "compact": true,
+              "description": "The /candidates folder could not be read. Reinstall Recruitment to recreate it."
             }
           },
           {
@@ -212,6 +200,10 @@
                 }
               ],
               "emptyText": "No job positions yet",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
               "clickable": true
             },
             "on": {
@@ -219,7 +211,8 @@
                 {
                   "open-file": {
                     "path": "{{ event.path }}",
-                    "mode": "edit"
+                    "mode": "edit",
+                    "open": "side"
                   }
                 }
               ]

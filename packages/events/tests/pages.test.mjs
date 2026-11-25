@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { parse } from 'yaml'
 import { describe, expect, it } from 'vitest'
+import { stagePanels } from '../../../tools/file-apps/test-helpers.mjs'
 import {
   createScriptFileAccess, createScriptName, featureOverlay, manifest, postScriptFileAccess, postScriptName,
   postScriptPath, productionOverlay, scriptConsents,
@@ -177,7 +178,7 @@ describe('Events report pages', () => {
       { path: '/events/EVT-1', code: 'EVT-1', name: 'Event EVT-1', status: 'published', capacity: 10, taken: 7, remaining: 3, fill: '70%' },
       { path: '/events/EVT-2', code: 'EVT-2', name: 'Event EVT-2', status: 'draft', capacity: 5, taken: 1, remaining: 4, fill: '20%' },
     ])
-    expect(summaryTable.on['row-click']).toEqual([{ 'open-file': { path: '{{ event.path }}', mode: 'edit' } }])
+    expect(summaryTable.on['row-click']).toEqual([{ 'open-file': { path: '{{ event.path }}', mode: 'edit', open: 'side' } }])
     const [registrationTable] = cards[1].children
     expect(template(registrationTable.props.rows, data).map(row => [row.code, row.event, row.status])).toEqual([
       ['EVR-1', 'Event EVT-1', 'confirmed'], ['EVR-2', 'Event EVT-1', 'attended'], ['EVR-3', 'Event EVT-1', 'draft'],
@@ -187,7 +188,7 @@ describe('Events report pages', () => {
 
   it('groups events by status on the events page', () => {
     const page = documents['events.page.yaml']
-    const panels = page.spec.tree[0].children.find(node => node.type === 'canvas.tabs').children
+    const panels = stagePanels(page.spec.tree[0].children.find(node => node.type === 'canvas.tabs'))
     expect(panels.map(panel => panel.slot)).toEqual(['draft', 'published', 'ongoing', 'done', 'cancelled'])
     const published = panels.find(panel => panel.slot === 'published').children[0]
     expect(template(published.props.rows, data).map(row => row.code)).toEqual(['EVT-1'])

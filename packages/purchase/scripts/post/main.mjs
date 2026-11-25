@@ -2,26 +2,19 @@
 // validates the lines and the vendor, computes the exact total, then marks the order confirmed or received with
 // the file access its installer consented to (manifest `file-access`).
 //
-// Integrity model: vendor bill drafts get deterministic names (`/invoices/PO-0001-BILL`) and are created
-// create-only, so a retried operation never drafts twice; records are updated conditionally (If-Match), so a
-// concurrent edit fails instead of being overwritten. The steps are not one transaction: if a run stops between
-// drafting the bill and updating the order, running the same operation again completes it.
-import { randomUUID } from 'node:crypto'
+// Receiving returns what Invoicing needs to draft the vendor bill; the form asks Invoicing through the platform
+// (Invoicing returns the same draft when asked again) and `record-bill` stores the link. Purchase never writes
+// Invoicing's files. Records are updated conditionally (If-Match), so a concurrent edit fails instead of being
+// overwritten.
 import {
   divideHalfUp, fail, formatMinor, nameOf, nowIso, parseDecimal, readRecord, saveRecord, statusOf, toMinor,
 } from './ledger.mjs'
 
-export const operations = ['confirm-order', 'receive-order']
+export const operations = ['confirm-order', 'receive-order', 'record-bill']
 export const purchase = {
   vendors: '/vendors',
   orders: '/purchase-orders',
   mime: kind => `application/vnd.verentis.purchase.${kind}+json`,
-}
-/** Invoicing (optional): when its /invoices container exists, receiving drafts a vendor bill into it. */
-export const invoicing = {
-  invoices: '/invoices',
-  invoiceMime: 'application/vnd.verentis.invoicing.invoice+json',
-  invoiceSchema: 'https://schemas.verentis.io/invoicing/v1/invoice.schema.json',
 }
 /** Purchase orders carry no ledger, so amounts are fixed at two minor digits. */
 export const digits = 2
@@ -93,63 +86,57 @@ export async function confirmOrder(files, path, { now }) {
   return { message: `Confirmed ${label(record)} · ${[record.currency, record.total].filter(Boolean).join(' ')}`, path }
 }
 
-/** A draft vendor bill in Invoicing's invoice format; `reference` links it back to the purchase order. */
-export function draftBill(record, path, { now, id }) {
-  return {
-    $schema: invoicing.invoiceSchema, schemaVersion: 1, kind: 'invoice', id, state: 'active',
-    createdAt: now, updatedAt: now,
-    code: `${record.code || nameOf(path)}-BILL`, issueDate: '', dueDate: '',
-    currency: record.currency || '', reference: path, customerRef: '',
-    customer: {
-      name: record.vendorName || '', legalName: '', email: '', phone: '', taxIdentifier: '',
-      address: { lines: [], city: '', region: '', postalCode: '', country: '' },
-    },
-    lines: record.lines.map(item => ({ description: item.description, quantity: item.quantity, unitPrice: item.unitPrice, taxRate: '' })),
-    notes: `Draft vendor bill for purchase order ${record.code || nameOf(path)}.`,
-    status: 'draft',
-  }
-}
-
 /**
- * Drafts the vendor bill create-only under its deterministic name. If an earlier, interrupted attempt already
- * wrote it (its `reference` pointing at the same order), the existing bill is kept: retrying never drafts twice.
+ * What Invoicing needs to draft the received order's vendor bill (its `create-draft-invoice` operation; Invoicing keeps
+ * vendor bills as invoices addressed to the vendor). The order form asks Invoicing through the platform; Purchase never
+ * writes Invoicing's files.
  */
-async function createBill(files, path, bill) {
-  const billPath = `${invoicing.invoices}/${bill.code}`
-  try {
-    await files.write(billPath, JSON.stringify(bill, null, 2), { contentType: invoicing.invoiceMime, ifNoneMatch: '*' })
-    return billPath
-  } catch (error) {
-    if (statusOf(error) !== 412) throw error
+export function billRequest(record, path) {
+  return {
+    source: { path, code: record.code || nameOf(path) },
+    currency: record.currency || '',
+    reference: record.code || nameOf(path),
+    customer: { name: record.vendorName || '' },
+    lines: record.lines.map(item => ({ description: item.description, quantity: item.quantity, unitPrice: item.unitPrice })),
+    notes: `Draft vendor bill for purchase order ${record.code || nameOf(path)}.`,
   }
-  const existing = await files.readJson(billPath)
-  if (existing?.kind !== 'invoice' || existing.reference !== path) {
-    fail(`${billPath} already exists and belongs to something else. Rename it and try again.`)
-  }
-  return billPath
 }
 
-export async function receiveOrder(files, path, { now, uuid }) {
+/** Records the vendor bill Invoicing drafted for a received order (the path its operation returned). */
+export async function recordBill(files, path, billPath, { now }) {
+  const order = await readRecord(files, checkPath(path, purchase.orders), 'order')
+  const { record } = order
+  if (record.status !== 'received') fail(`${label(record)} is not received.`)
+  if (typeof billPath !== 'string' || !billPath.startsWith('/invoices/')) fail('Invoicing returned no bill.')
+  if (record.bill?.path === billPath) return { message: `${label(record)} already links ${nameOf(billPath)}`, path }
+  Object.assign(record, { bill: { path: billPath }, updatedAt: now })
+  await saveRecord(files, order, purchase.mime('order'))
+  return { message: `Drafted vendor bill ${nameOf(billPath)} for ${label(record)}`, path }
+}
+
+export async function receiveOrder(files, path, { now }) {
   const order = await readRecord(files, checkPath(path, purchase.orders), 'order')
   const { record } = order
   checkActive(record)
-  if (record.status === 'received') return { message: `${label(record)} is already received`, path: record.bill?.path ?? path }
+  if (record.status === 'received') {
+    return { message: `${label(record)} is already received`, path: record.bill?.path ?? path, ...(record.bill?.path ? {} : { invoiceRequest: billRequest(record, path) }) }
+  }
   if (record.status !== 'confirmed') fail(`${label(record)} is ${record.status || 'draft'}. Confirm it before receiving.`)
-  // Invoicing is an optional dependency: the draft vendor bill is only emitted when its container exists.
-  const billPath = (await files.stat(invoicing.invoices)) ? await createBill(files, path, draftBill(record, path, { now, id: uuid() })) : null
-  Object.assign(record, {
-    status: 'received', receivedAt: now, updatedAt: now,
-    ...(billPath ? { bill: { path: billPath } } : {}),
-  })
+  Object.assign(record, { status: 'received', receivedAt: now, updatedAt: now })
   await saveRecord(files, order, purchase.mime('order'))
-  return { message: `Received ${label(record)}${billPath ? ` and drafted vendor bill ${nameOf(billPath)}` : ''}`, path: billPath ?? path }
+  // Counted lines that came in short are named in the message, so the buyer can chase the vendor.
+  const short = (record.lines ?? []).filter(line => line.received !== undefined && line.received !== '' && Number(line.received) < Number(line.quantity))
+  const shortNote = short.length ? `; ${short.length} ${short.length === 1 ? 'line' : 'lines'} short (${short.map(line => `${line.description || 'line'}: ${line.received} of ${line.quantity}`).join(', ')})` : ''
+  // The form asks Invoicing (when installed) to draft the vendor bill from this, then records the link.
+  return { message: `Received ${label(record)}${shortNote}`, path, invoiceRequest: billRequest(record, path) }
 }
 
-export async function run(parameters, files, { now = nowIso(), uuid = randomUUID } = {}) {
+export async function run(parameters, files, { now = nowIso() } = {}) {
   const { operation, path } = parameters ?? {}
-  const options = { now, uuid }
+  const options = { now }
   if (operation === 'confirm-order') return confirmOrder(files, path, options)
   if (operation === 'receive-order') return receiveOrder(files, path, options)
+  if (operation === 'record-bill') return recordBill(files, path, parameters.bill, options)
   return fail(`Unsupported operation ${JSON.stringify(operation ?? '')}. Expected one of ${operations.join(', ')}.`)
 }
 

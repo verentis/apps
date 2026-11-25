@@ -177,6 +177,17 @@
       "type": "string",
       "format": "date-time",
       "pattern": "Z$"
+    },
+    "postedBy": {
+      "type": "object",
+      "properties": {
+        "app": {
+          "type": "string",
+          "maxLength": 100
+        }
+      },
+      "required": [],
+      "additionalProperties": false
     }
   },
   "required": [

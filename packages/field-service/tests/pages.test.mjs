@@ -1,6 +1,8 @@
+import { apiContract } from '../../../tools/file-apps/build.mjs'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { parse } from 'yaml'
 import { describe, expect, it } from 'vitest'
+import { stagePanels } from '../../../tools/file-apps/test-helpers.mjs'
 import {
   createScriptFileAccess, createScriptName, featureOverlay, manifest, postScriptFileAccess, postScriptName,
   postScriptPath, productionOverlay, scriptConsents,
@@ -21,13 +23,13 @@ const unboundPages = ['home.page.yaml', 'tasks.page.yaml', 'schedule.page.yaml']
 describe('Field Service Canvas documents', () => {
   // The committed manifest and Canvas documents are YAML renderings of what src/build.mjs models; CI owns the
   // manifest's metadata.version.
-  it('are up to date with the generator', () => {
+  it('are up to date with the generator', async () => {
     const pages = buildPages()
     expect(Object.keys(documents).sort()).toEqual(Object.keys(pages).sort())
     for (const [name, document] of Object.entries(pages)) expect(documents[name], name).toEqual(plain(document))
     const { metadata: { version: _version, ...metadata }, ...installed } = read('field-service.app.yaml')
     const { metadata: { version: _source, ...expectedMetadata }, ...expected } = plain({
-      ...manifest, spec: { ...manifest.spec, 'file-access': [...documentFileAccess(pages), ...scriptConsents] },
+      ...manifest, spec: { ...manifest.spec, 'file-access': [...documentFileAccess(pages), ...scriptConsents], api: await apiContract(new URL('../', import.meta.url)) },
     })
     expect({ ...installed, metadata }).toEqual({ ...expected, metadata: expectedMetadata })
     expect(read('environments/feature.yaml')).toEqual(featureOverlay)
@@ -50,7 +52,7 @@ describe('Field Service Canvas documents', () => {
   it('runs the task action script from the task form', () => {
     const document = documents['task.form.yaml']
     const runs = steps(document).filter(step => 'run-script' in step).map(step => step['run-script'])
-    expect(runs.map(run => run.parameters.operation)).toEqual(['schedule', 'start', 'complete', 'cancel'])
+    expect([...new Set(runs.map(run => run.parameters.operation))]).toEqual(['schedule', 'start', 'complete', 'record-invoice', 'cancel'])
     for (const run of runs) expect(run).toMatchObject({ file: postScriptPath, parameters: { path: '{{ ctx.file.path }}' } })
     expect(document.spec.permissions).toEqual(expect.arrayContaining(['execution.run']))
     // A script reloads the record afterwards, which a dirty form would refuse.
@@ -118,8 +120,9 @@ describe('Field Service manifest', () => {
       }
     })
 
-  it('may draft invoices: the post script asks to write /invoices', () => {
-    expect(postScriptFileAccess).toContainEqual(expect.objectContaining({ path: '/invoices', mode: 'write' }))
+  it('never writes Invoicing\'s files: it asks Invoicing through its API contract', () => {
+    expect(postScriptFileAccess.some(grant => grant.path === '/invoices')).toBe(false)
+    expect(read('field-service.app.yaml').spec.api.uses).toEqual([expect.objectContaining({ app: 'invoicing', operation: 'create-draft-invoice' })])
   })
 
   it('declares valid creatables named by the create script', () => {
@@ -184,12 +187,12 @@ describe('Field Service report pages', () => {
       { technician: 'Sipho', tasks: 2, onsite: 1 },
       { technician: 'Unassigned', tasks: 1, onsite: 0 },
     ])
-    expect(dayTable.on['row-click']).toEqual([{ 'open-file': { path: '{{ event.path }}', mode: 'edit' } }])
+    expect(dayTable.on['row-click']).toEqual([{ 'open-file': { path: '{{ event.path }}', mode: 'edit', open: 'side' } }])
   })
 
   it('groups tasks by stage on the tasks page', () => {
     const page = documents['tasks.page.yaml']
-    const panels = page.spec.tree[0].children.find(node => node.type === 'canvas.tabs').children
+    const panels = stagePanels(page.spec.tree[0].children.find(node => node.type === 'canvas.tabs'))
     expect(panels.map(panel => panel.slot)).toEqual(['new', 'scheduled', 'on-site', 'done', 'cancelled'])
     const scheduled = panels.find(panel => panel.slot === 'scheduled').children[0]
     expect(template(scheduled.props.rows, data).map(row => row.code)).toEqual(['FST-1', 'FST-3', 'FST-4'])

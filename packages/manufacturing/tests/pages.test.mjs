@@ -1,3 +1,4 @@
+import { apiContract } from '../../../tools/file-apps/build.mjs'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { parse } from 'yaml'
 import { describe, expect, it } from 'vitest'
@@ -20,13 +21,13 @@ const steps = document => Object.values(document.spec.actions ?? {}).flatMap(act
 describe('Manufacturing Canvas documents', () => {
   // The committed manifest and Canvas documents are YAML renderings of what src/build.mjs models; CI owns the
   // manifest's metadata.version.
-  it('are up to date with the generator', () => {
+  it('are up to date with the generator', async () => {
     const pages = buildPages()
     expect(Object.keys(documents).sort()).toEqual(Object.keys(pages).sort())
     for (const [name, document] of Object.entries(pages)) expect(documents[name], name).toEqual(plain(document))
     const { metadata: { version: _version, ...metadata }, ...installed } = read('manufacturing.app.yaml')
     const { metadata: { version: _source, ...expectedMetadata }, ...expected } = plain({
-      ...manifest, spec: { ...manifest.spec, 'file-access': [...documentFileAccess(pages), ...scriptConsents] },
+      ...manifest, spec: { ...manifest.spec, 'file-access': [...documentFileAccess(pages), ...scriptConsents], api: await apiContract(new URL('../', import.meta.url)) },
     })
     expect({ ...installed, metadata }).toEqual({ ...expected, metadata: expectedMetadata })
     expect(read('environments/feature.yaml')).toEqual(featureOverlay)
@@ -50,7 +51,7 @@ describe('Manufacturing Canvas documents', () => {
   it('runs the production script against order files, in transition order', () => {
     const document = documents['order.form.yaml']
     const runs = steps(document).filter(step => 'run-script' in step).map(step => step['run-script'])
-    expect(runs.map(run => run.parameters.operation)).toEqual(['confirm-mo', 'start-mo', 'complete-mo'])
+    expect([...new Set(runs.map(run => run.parameters.operation))]).toEqual(['confirm-mo', 'start-mo', 'complete-mo', 'record-moves'])
     for (const run of runs) {
       expect(run.file).toBe(postScriptPath)
       expect(run.parameters.path).toBe('{{ ctx.file.path }}')
@@ -63,9 +64,9 @@ describe('Manufacturing Canvas documents', () => {
     expect(tree).toContain("!(!form.values.status || form.values.status === 'draft')")
   })
 
-  it('offers Inventory products on the BoM form and lets both references degrade', () => {
+  it('offers Products\' products on the BoM form and lets both references degrade', () => {
     const bom = documents['bom.form.yaml']
-    expect(bom.spec.data.products).toMatchObject({ kind: 'folder', path: '/products', 'mime-pattern': 'application/vnd.verentis.inventory.product+json' })
+    expect(bom.spec.data.products).toMatchObject({ kind: 'folder', path: '/products', 'mime-pattern': 'application/vnd.verentis.products.product+json' })
     expect(bom.spec.access.map(grant => grant.path)).toContain('/products')
     const order = documents['order.form.yaml']
     expect(order.spec.data.boms).toMatchObject({ kind: 'folder', path: containers.boms.path, 'mime-pattern': mimeTypes.bom })
@@ -91,11 +92,12 @@ describe('Manufacturing manifest', () => {
   const files = manifest.packaging.files.map(globToRegExp)
   const consent = read('manufacturing.app.yaml').spec['file-access']
 
-  it('depends on the latest Canvas and nodejs engine, with Inventory optional', () => {
+  it('depends on the latest Canvas and nodejs engine, with Products and Inventory optional', () => {
     expect(manifest.metadata.version).toBe('0.1.0')
     expect(spec.dependencies).toEqual([
       { package: 'verentis/canvas', version: 'latest' },
       { package: 'verentis/nodejs', version: 'latest' },
+      { package: 'verentis/products', version: 'latest', optional: true },
       { package: 'verentis/inventory', version: 'latest', optional: true },
     ])
     expect(spec.scripts).toEqual(['scripts/create', 'scripts/post'])
@@ -122,9 +124,9 @@ describe('Manufacturing manifest', () => {
       }
     })
 
-  it('may write stock moves and read the Inventory settings for the optional emission', () => {
-    expect(postScriptFileAccess).toContainEqual(expect.objectContaining({ path: '/stock-moves', mode: 'write' }))
-    expect(postScriptFileAccess).toContainEqual(expect.objectContaining({ path: '/settings/inventory.json', mode: 'read' }))
+  it('never writes Inventory\'s files: it asks Inventory to record production through its API', () => {
+    expect(postScriptFileAccess.some(grant => grant.path === '/stock-moves')).toBe(false)
+    expect(read('manufacturing.app.yaml').spec.api.uses).toEqual([expect.objectContaining({ app: 'inventory', operation: 'record-production' })])
   })
 
   it('declares valid creatables named by the create script', () => {

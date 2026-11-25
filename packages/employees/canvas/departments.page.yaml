@@ -38,90 +38,77 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Employees",
+          "icon": "user-round",
+          "active": "departments.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "directory.page.yaml",
+              "label": "Directory",
+              "icon": "users"
+            },
+            {
+              "id": "departments.page.yaml",
+              "label": "Departments",
+              "icon": "network"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/employees/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/employees.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Departments",
+              "note": "Headcount per department: active and on-leave employees, with the department manager. Click a department to open it."
             },
-            "children": [
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Departments"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Headcount per department: active and on-leave employees, with the department manager. Click a department to open it.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.button",
-                "props": {
-                  "label": "Employees",
-                  "variant": "ghost",
-                  "icon": "user-round",
-                  "size": "sm"
-                },
-                "on": {
-                  "click": [
-                    {
-                      "open-file": {
-                        "path": "/applications/employees/canvas/home.page.yaml"
-                      }
-                    }
-                  ]
-                }
-              }
-            ]
+            "children": []
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /departments folder could not be read. Reinstall Employees to recreate it."
-            },
-            "rules": {
-              "visible": "data.$departments.status === 'error'"
+              "for": "departments",
+              "compact": true,
+              "description": "The /departments folder could not be read. Reinstall Employees to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /employees folder could not be read. Reinstall Employees to recreate it."
-            },
-            "rules": {
-              "visible": "data.$staff.status === 'error'"
+              "for": "staff",
+              "compact": true,
+              "description": "The /employees folder could not be read. Reinstall Employees to recreate it."
             }
           },
           {
@@ -205,6 +192,10 @@
                     }
                   ],
                   "emptyText": "No departments yet",
+                  "search": true,
+                  "sortable": true,
+                  "pageSize": 25,
+                  "narrow": "list",
                   "clickable": true
                 },
                 "on": {
@@ -212,7 +203,65 @@
                     {
                       "open-file": {
                         "path": "{{ event.path }}",
-                        "mode": "edit"
+                        "mode": "edit",
+                        "open": "side"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "gap": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Org chart"
+                }
+              },
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "Who reports to whom, from each employee’s manager. Open a person to edit them.",
+                  "tone": "muted"
+                }
+              },
+              {
+                "type": "canvas.org-chart",
+                "props": {
+                  "rows": "{{ (data.staff || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && e.data.status !== 'terminated').map(e => ({ path: e.path, name: e.data.name || e.data.code, title: e.data.jobTitle, manager: e.data.manager, status: e.data.status })) }}",
+                  "idKey": "path",
+                  "managerKey": "manager",
+                  "title": "name",
+                  "subtitle": "title",
+                  "depth": 3,
+                  "badge": {
+                    "key": "status",
+                    "labels": {
+                      "active": "Active",
+                      "on-leave": "On leave"
+                    },
+                    "tones": {
+                      "active": "success",
+                      "on-leave": "warning"
+                    }
+                  }
+                },
+                "on": {
+                  "open": [
+                    {
+                      "open-file": {
+                        "path": "{{ event.row.path }}",
+                        "mode": "edit",
+                        "open": "side"
                       }
                     }
                   ]

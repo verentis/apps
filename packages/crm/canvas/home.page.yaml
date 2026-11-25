@@ -1,288 +1,748 @@
-api-version: canvas.verentis.io/v1
-kind: Page
-metadata:
-  id: crm-home
-  name: CRM
-  description: CRM overview.
-  icon: contact
-spec:
-  access:
-  - path: /customers
-    reason: List customers and contacts
-  - path: /deals
-    reason: List deals and the pipeline
-  - path: /cases
-    reason: List cases
-  data:
-    companies:
-      kind: folder
-      path: /customers
-      contents: true
-      mime-pattern: application/vnd.verentis.crm.company+json
-    contacts:
-      kind: folder
-      path: /customers
-      contents: true
-      mime-pattern: application/vnd.verentis.crm.contact+json
-    deals:
-      kind: folder
-      path: /deals
-      contents: true
-      mime-pattern: application/vnd.verentis.crm.deal+json
-    cases:
-      kind: folder
-      path: /cases
-      contents: true
-      mime-pattern: application/vnd.verentis.crm.case+json
-  tree:
-  - type: canvas.stack
-    layout:
-      base:
-        padding: 6
-        gap: 4
-        maxWidth: 72rem
-        margin:
-          x: auto
-    children:
-    - type: canvas.stack
-      layout:
-        base:
-          direction: row
-          wrap: true
-          gap: 2
-          align: center
-          justify: between
-      children:
-      - type: canvas.stack
-        layout:
-          base:
-            gap: 1
-        children:
-        - type: canvas.heading
-          props:
-            level: 2
-            text: CRM
-        - type: canvas.text
-          props:
-            text: Customers, contacts, deals and cases are files in your workspace. Emails, calls, meetings,
-              tasks, notes and documents live beneath the record they belong to.
-            tone: muted
-      - type: canvas.stack
-        layout:
-          base:
-            direction: row
-            wrap: true
-            gap: 2
-            align: center
-        children:
-        - type: canvas.button
-          props:
-            label: Customers
-            variant: outline
-            icon: building-2
-            size: sm
-          'on':
-            click:
-            - open-file:
-                path: /customers
-        - type: canvas.button
-          props:
-            label: Deals
-            variant: outline
-            icon: handshake
-            size: sm
-          'on':
-            click:
-            - open-file:
-                path: /deals
-        - type: canvas.button
-          props:
-            label: Cases
-            variant: outline
-            icon: life-buoy
-            size: sm
-          'on':
-            click:
-            - open-file:
-                path: /cases
-        - type: canvas.button
-          props:
-            label: Settings
-            variant: ghost
-            icon: settings
-            size: sm
-          'on':
-            click:
-            - open-file:
-                path: /settings/crm.json
-                mode: edit
-    - type: canvas.grid
-      layout:
-        base:
-          columns: 2
-          gap: 4
-        desktop:
-          columns: 5
-      children:
-      - type: canvas.dashboard.stat
-        props:
-          label: Customers
-          value: '{{ (data.companies || []).filter(e => e.kind === ''file'' && e.data && e.data.state
-            !== ''archived'' && (true)).length }}'
-          icon: building-2
-          loading: '{{ data.$companies.status === ''loading'' }}'
-      - type: canvas.dashboard.stat
-        props:
-          label: Contacts
-          value: '{{ (data.contacts || []).filter(e => e.kind === ''file'' && e.data && e.data.state !==
-            ''archived'' && (true)).length }}'
-          icon: user
-          loading: '{{ data.$contacts.status === ''loading'' }}'
-      - type: canvas.dashboard.stat
-        props:
-          label: Open deals
-          value: '{{ (data.deals || []).filter(e => e.kind === ''file'' && e.data && e.data.state !==
-            ''archived'' && (e.data.outcome === ''open'')).length }}'
-          icon: handshake
-          loading: '{{ data.$deals.status === ''loading'' }}'
-      - type: canvas.dashboard.stat
-        props:
-          label: Weighted pipeline
-          value: '{{ (data.deals || []).filter(e => e.kind === ''file'' && e.data && e.data.state !==
-            ''archived'' && e.data.outcome === ''open'').reduce((sum, e) => sum + Number(e.data.amount
-            || 0) * (e.data.probability == null ? 1 : e.data.probability / 100), 0).toFixed(2) }}'
-          icon: trending-up
-          loading: '{{ data.$deals.status === ''loading'' }}'
-      - type: canvas.dashboard.stat
-        props:
-          label: Open cases
-          value: '{{ (data.cases || []).filter(e => e.kind === ''file'' && e.data && e.data.state !==
-            ''archived'' && (![''resolved'', ''closed''].includes(e.data.status))).length }}'
-          icon: life-buoy
-          loading: '{{ data.$cases.status === ''loading'' }}'
-    - type: canvas.text
-      props:
-        text: The /customers folder could not be read. Reinstall CRM to recreate it.
-      rules:
-        visible: data.$companies.status === 'error'
-    - type: canvas.text
-      props:
-        text: The /deals folder could not be read. Reinstall CRM to recreate it.
-      rules:
-        visible: data.$deals.status === 'error'
-    - type: canvas.text
-      props:
-        text: The /cases folder could not be read. Reinstall CRM to recreate it.
-      rules:
-        visible: data.$cases.status === 'error'
-    - type: canvas.tabs
-      props:
-        items:
-        - value: customers
-          label: Customers
-          icon: building-2
-        - value: contacts
-          label: Contacts
-          icon: user
-        - value: deals
-          label: Deals
-          icon: handshake
-        - value: cases
-          label: Cases
-          icon: life-buoy
-      children:
-      - type: canvas.stack
-        layout:
-          base:
-            gap: 4
-        children:
-        - type: canvas.files
-          props:
-            path: /customers/
-            mimeTypes:
-            - application/vnd.verentis.crm.company+json
-            showFolders: false
-            navigable: false
-            columns:
-            - key: name
-              label: Code
-            - key: data.name
-              label: Name
-            - key: data.type
-              label: Relationship
-            - key: data.email
-              label: Email
-            emptyText: No customers yet. Use New in /customers.
-        slot: customers
-      - type: canvas.stack
-        layout:
-          base:
-            gap: 4
-        children:
-        - type: canvas.files
-          props:
-            path: /customers/
-            mimeTypes:
-            - application/vnd.verentis.crm.contact+json
-            showFolders: false
-            navigable: false
-            columns:
-            - key: name
-              label: Code
-            - key: data.givenName
-              label: Given name
-            - key: data.familyName
-              label: Family name
-            - key: data.email
-              label: Email
-            emptyText: No contacts yet. Use New in /customers.
-        slot: contacts
-      - type: canvas.stack
-        layout:
-          base:
-            gap: 4
-        children:
-        - type: canvas.files
-          props:
-            path: /deals/
-            mimeTypes:
-            - application/vnd.verentis.crm.deal+json
-            showFolders: false
-            navigable: false
-            columns:
-            - key: name
-              label: Code
-            - key: data.title
-              label: Title
-            - key: data.stageId
-              label: Stage
-            - key: data.amount
-              label: Amount
-              align: end
-            - key: data.outcome
-              label: Outcome
-            emptyText: No deals yet. Use New in /deals.
-        slot: deals
-      - type: canvas.stack
-        layout:
-          base:
-            gap: 4
-        children:
-        - type: canvas.files
-          props:
-            path: /cases/
-            mimeTypes:
-            - application/vnd.verentis.crm.case+json
-            showFolders: false
-            navigable: false
-            columns:
-            - key: name
-              label: Code
-            - key: data.subject
-              label: Subject
-            - key: data.status
-              label: Status
-            - key: data.priority
-              label: Priority
-            emptyText: No cases yet. Use New in /cases.
-        slot: cases
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "crm-home",
+    "name": "CRM",
+    "description": "CRM overview.",
+    "icon": "contact"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/customers",
+        "reason": "List customers and contacts"
+      },
+      {
+        "path": "/deals",
+        "reason": "List deals and the pipeline; move records between columns",
+        "mode": "write"
+      },
+      {
+        "path": "/cases",
+        "reason": "List cases"
+      }
+    ],
+    "data": {
+      "companies": {
+        "kind": "folder",
+        "path": "/customers",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.crm.company+json"
+      },
+      "contacts": {
+        "kind": "folder",
+        "path": "/customers",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.crm.contact+json"
+      },
+      "deals": {
+        "kind": "folder",
+        "path": "/deals",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.crm.deal+json"
+      },
+      "cases": {
+        "kind": "folder",
+        "path": "/cases",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.crm.case+json"
+      },
+      "listcustomers": {
+        "kind": "folder",
+        "path": "/customers",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.crm.contact+json"
+      },
+      "listdeals": {
+        "kind": "folder",
+        "path": "/deals",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.crm.deal+json"
+      },
+      "listcases": {
+        "kind": "folder",
+        "path": "/cases",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.crm.case+json"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "CRM",
+          "icon": "contact",
+          "active": "home.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
+            }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/crm/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/crm.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "gap": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Pipeline"
+                }
+              },
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "Open deals by stage. Open a deal to move it.",
+                  "tone": "muted"
+                }
+              },
+              {
+                "type": "canvas.board",
+                "props": {
+                  "rows": "{{ (data.deals || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && !e.data.outcome) }}",
+                  "groupBy": "data.stageId",
+                  "columns": [],
+                  "card": {
+                    "title": "data.title",
+                    "code": "data.code",
+                    "meta": [
+                      "data.owner",
+                      "data.expectedCloseDate"
+                    ],
+                    "trailing": "data.amount"
+                  },
+                  "readOnly": false,
+                  "rowKey": "path",
+                  "emptyText": "No open deals",
+                  "labels": {
+                    "lead": "Lead",
+                    "qualified": "Qualified",
+                    "proposal": "Proposal",
+                    "negotiation": "Negotiation"
+                  }
+                },
+                "on": {
+                  "open": [
+                    {
+                      "open-file": {
+                        "path": "{{ event.row.path }}",
+                        "mode": "edit",
+                        "open": "side"
+                      }
+                    }
+                  ],
+                  "move": [
+                    {
+                      "patch-record": {
+                        "if": "![].includes(event.to)",
+                        "path": "{{ event.path }}",
+                        "values": {
+                          "stageId": "{{ event.to }}",
+                          "updatedAt": "{{ Date() }}"
+                        }
+                      }
+                    },
+                    {
+                      "refresh-source": {
+                        "source": "companies"
+                      }
+                    },
+                    {
+                      "refresh-source": {
+                        "source": "contacts"
+                      }
+                    },
+                    {
+                      "refresh-source": {
+                        "source": "deals"
+                      }
+                    },
+                    {
+                      "refresh-source": {
+                        "source": "cases"
+                      }
+                    },
+                    {
+                      "refresh-source": {
+                        "source": "listcustomers"
+                      }
+                    },
+                    {
+                      "refresh-source": {
+                        "source": "listdeals"
+                      }
+                    },
+                    {
+                      "refresh-source": {
+                        "source": "listcases"
+                      }
+                    },
+                    {
+                      "toast": {
+                        "message": "{{ [].includes(event.to) ? ((state.lastmove && state.lastmove.message) || 'Done') : 'Moved to ' + ({}[event.to] || event.to) }}",
+                        "variant": "success"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "gap": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Open cases by priority"
+                }
+              },
+              {
+                "type": "canvas.chart",
+                "props": {
+                  "rows": "{{ ['urgent', 'high', 'normal', 'low'].map(priority => ({ label: priority, value: (data.cases || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && !['resolved', 'closed'].includes(e.data.status)).filter(e => (e.data.priority || 'normal') === priority).length })) }}",
+                  "showLegend": true,
+                  "emptyText": "No open cases",
+                  "kind": "strip",
+                  "x": "label",
+                  "y": "value",
+                  "labels": {
+                    "urgent": "Urgent",
+                    "high": "High",
+                    "normal": "Normal",
+                    "low": "Low"
+                  },
+                  "palette": {
+                    "urgent": "danger",
+                    "high": "warning",
+                    "normal": "chart-1",
+                    "low": "muted"
+                  },
+                  "format": "integer"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "CRM"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Customers, contacts, deals and cases are files in your workspace. Emails, calls, meetings, tasks, notes and documents live beneath the record they belong to.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Customers",
+                      "variant": "outline",
+                      "icon": "building-2",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/customers"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Deals",
+                      "variant": "outline",
+                      "icon": "handshake",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/deals"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Cases",
+                      "variant": "outline",
+                      "icon": "life-buoy",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "open-file": {
+                            "path": "/cases"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 5
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Customers",
+                  "value": "{{ (data.companies || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).length }}",
+                  "icon": "building-2",
+                  "loading": "{{ data.$companies.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Contacts",
+                  "value": "{{ (data.contacts || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).length }}",
+                  "icon": "user",
+                  "loading": "{{ data.$contacts.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Open deals",
+                  "value": "{{ (data.deals || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.outcome === 'open')).length }}",
+                  "icon": "handshake",
+                  "loading": "{{ data.$deals.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Weighted pipeline",
+                  "value": "{{ (data.deals || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && e.data.outcome === 'open').reduce((sum, e) => sum + Number(e.data.amount || 0) * (e.data.probability == null ? 1 : e.data.probability / 100), 0).toFixed(2) }}",
+                  "icon": "trending-up",
+                  "loading": "{{ data.$deals.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Open cases",
+                  "value": "{{ (data.cases || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (!['resolved', 'closed'].includes(e.data.status))).length }}",
+                  "icon": "life-buoy",
+                  "loading": "{{ data.$cases.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "companies",
+              "compact": true,
+              "description": "The /customers folder could not be read. Reinstall CRM to recreate it."
+            }
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "deals",
+              "compact": true,
+              "description": "The /deals folder could not be read. Reinstall CRM to recreate it."
+            }
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "cases",
+              "compact": true,
+              "description": "The /cases folder could not be read. Reinstall CRM to recreate it."
+            }
+          },
+          {
+            "type": "canvas.tabs",
+            "props": {
+              "items": [
+                {
+                  "value": "customers",
+                  "label": "Customers",
+                  "icon": "building-2"
+                },
+                {
+                  "value": "contacts",
+                  "label": "Contacts",
+                  "icon": "user"
+                },
+                {
+                  "value": "deals",
+                  "label": "Deals",
+                  "icon": "handshake"
+                },
+                {
+                  "value": "cases",
+                  "label": "Cases",
+                  "icon": "life-buoy"
+                }
+              ]
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.empty-state",
+                    "props": {
+                      "for": "listcustomers",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listcustomers || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
+                      "columns": [
+                        {
+                          "key": "data.code",
+                          "label": "Code"
+                        },
+                        {
+                          "key": "data.name",
+                          "label": "Name"
+                        },
+                        {
+                          "key": "data.type",
+                          "label": "Relationship"
+                        },
+                        {
+                          "key": "data.email",
+                          "label": "Email"
+                        }
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
+                      "emptyText": "No customers yet. Use New in /customers."
+                    },
+                    "rules": {
+                      "visible": "data.$listcustomers.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "customers"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.empty-state",
+                    "props": {
+                      "for": "listcustomers",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listcustomers || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
+                      "columns": [
+                        {
+                          "key": "data.code",
+                          "label": "Code"
+                        },
+                        {
+                          "key": "data.givenName",
+                          "label": "Given name"
+                        },
+                        {
+                          "key": "data.familyName",
+                          "label": "Family name"
+                        },
+                        {
+                          "key": "data.email",
+                          "label": "Email"
+                        }
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
+                      "emptyText": "No contacts yet. Use New in /customers."
+                    },
+                    "rules": {
+                      "visible": "data.$listcustomers.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "contacts"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.empty-state",
+                    "props": {
+                      "for": "listdeals",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listdeals || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
+                      "columns": [
+                        {
+                          "key": "data.code",
+                          "label": "Code"
+                        },
+                        {
+                          "key": "data.title",
+                          "label": "Title"
+                        },
+                        {
+                          "key": "data.stageId",
+                          "label": "Stage"
+                        },
+                        {
+                          "key": "data.amount",
+                          "label": "Amount"
+                        },
+                        {
+                          "key": "data.outcome",
+                          "label": "Outcome"
+                        }
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
+                      "emptyText": "No deals yet. Use New in /deals."
+                    },
+                    "rules": {
+                      "visible": "data.$listdeals.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "deals"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.empty-state",
+                    "props": {
+                      "for": "listcases",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listcases || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
+                      "columns": [
+                        {
+                          "key": "data.code",
+                          "label": "Code"
+                        },
+                        {
+                          "key": "data.subject",
+                          "label": "Subject"
+                        },
+                        {
+                          "key": "data.status",
+                          "label": "Status",
+                          "format": "badge"
+                        },
+                        {
+                          "key": "data.priority",
+                          "label": "Priority",
+                          "format": "badge"
+                        }
+                      ],
+                      "facets": [
+                        "data.status"
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
+                      "emptyText": "No cases yet. Use New in /cases."
+                    },
+                    "rules": {
+                      "visible": "data.$listcases.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "cases"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

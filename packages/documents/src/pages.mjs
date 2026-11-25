@@ -2,10 +2,11 @@
 // the inbox list, the per-workspace browser grouped by tags and the validated/archived library. The review
 // workflow (status transitions, validation stamp, locking) is done by the action script the document form runs.
 // Document cards only reference VFS paths — no page or form ever reads or writes the referenced files.
+import { views } from './views.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   iconName, linkButton, openFile, options, page, panel, projectRegistration, recordButtons, row, scriptAction,
-  sectionCards, stat, stats, status, table, tabs, text, toneExpression,
+  sectionCards, stat, stats, status, table, tabs, text, toneExpression, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { containers, installRoot, mimeTypes, recordKinds, schemaId, settingsPath, statusLabels, statuses } from './contracts.mjs'
 import { entities, postScriptPath, settingsFields } from './app.mjs'
@@ -43,7 +44,8 @@ function recordExtras(kind) {
         rules: { visible: "form.values.status === 'archived-status'" } },
     ],
     buttons: [
-      linkButton('Open file', 'form.values.filePath', 'external-link'),
+      // The file opens beside its card in whichever app views it (an image or PDF viewer); Documents never reads it.
+      button('Open file beside', [openFile('{{ form.values.filePath }}', undefined, 'side')], { visible: '!!(form.values.filePath)' }, 'outline', 'panel-right-open'),
       button('Send to review', 'send-to-review', { visible: `${inInbox} && !(${archived})`, disabled: idle }, undefined, 'send'),
       button('Validate', 'validate', { visible: `${inReview} && !(${archived})`, disabled: idle }, undefined, 'check'),
       button('Return to inbox', 'return-to-inbox', { visible: `${inReview} && !(${archived})`,
@@ -72,22 +74,20 @@ function recordForm(kind) {
   const entity = entities[kind]
   const extras = recordExtras(kind)
   const readOnly = `${archived} || (${extras.locked})`
-  const header = row([
-    column([
-      row([
-        heading(`{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`),
+  const header = recordHeader(
+    `{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`,
+    [
         ...(entity.status ? [badge(`{{ ${JSON.stringify(statusLabels)}[form.values.${entity.status}] || '' }}`,
           toneExpression(entity.status, statusTones), { visible: `!!form.values.${entity.status}` })] : []),
         badge('Archived', 'warning', { visible: archived }, 'archive'),
-      ]),
-      text(`${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`, 'muted'),
-    ]),
-    row([...extras.buttons, recordButtons(extras.locked)]),
-  ], 'between')
+    ],
+    `${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`,
+    [...extras.buttons, recordButtons(extras.locked)],
+  )
   const tree = [
     header,
-    ...status('record'),
-    badge(`This ${entity.singular.toLowerCase()} is archived. Restore it to edit.`, 'warning', { visible: archived }, 'archive'),
+    ...status('record'), ...lifecycle(entity),
+    archivedAlert(entity.singular),
     ...extras.notices,
     grid(sectionCards(entity.sections, readOnly)),
   ]
@@ -112,13 +112,13 @@ function settingsForm() {
       access: [workspacesAccess('Choose the default workspace for new document cards'), schemaAccess],
       data: workspaceSources,
       tree: [
-        row([
-          column([heading('Documents settings'), text('The default workspace for new document cards. Code prefixes are app settings, managed with the installed app.', 'muted')]),
+        pageHeader(
+          [heading('Documents settings'), text('The default workspace for new document cards. Code prefixes are app settings, managed with the installed app.', 'muted')], [
           row([
             button('Reset', [{ 'reset-form': {} }], { disabled: 'form.saving || !form.dirty' }, 'ghost'),
             button('Save', [{ save: {} }, { toast: { message: 'Saved', variant: 'success' } }], { disabled: 'form.saving || !form.dirty || form.invalid' }, undefined, 'save'),
           ]),
-        ], 'between'),
+        ]),
         ...status('record'),
         ...status('workspaces', `The ${containers.workspaces.path} folder could not be read. Reinstall Documents to recreate it.`),
         grid([card('Defaults', [grid(settingsFields.map(field => formControl(field, null)))])], 1),
@@ -157,15 +157,15 @@ function homePage() {
           { path: containers.tags.path, reason: 'Show the curated tag set' }],
         data: { ...cardSources, tags: folder(containers.tags.path, mimeTypes.tag) },
         tree: page([
-          row([
-            column([heading('Documents'), text('A tagging and review workflow over files already in your workspace. Cards in /document-cards reference VFS paths; the files themselves stay where they are.', 'muted')]),
+          pageHeader(
+            [heading('Documents'), text('A tagging and review workflow over files already in your workspace. Cards in /document-cards reference VFS paths; the files themselves stay where they are.', 'muted')], [
             row([
               button('Inbox', [openFile(`${installRoot}/canvas/inbox.page.yaml`)], undefined, 'outline', 'inbox'),
               button('Workspaces', [openFile(`${installRoot}/canvas/workspaces.page.yaml`)], undefined, 'outline', 'folder-kanban'),
               button('Library', [openFile(`${installRoot}/canvas/library.page.yaml`)], undefined, 'outline', 'library'),
               button('Settings', [openFile(settingsPath, 'edit')], undefined, 'ghost', 'settings'),
             ]),
-          ], 'between'),
+          ]),
           stats(statuses.map(value => stat(statusLabels[value], countOf(`r.status === '${value}'`), 'file-text', loading('cards')))),
           ...containerNotices(['cards', 'workspaces', 'tags']),
           tabs([
@@ -201,10 +201,10 @@ function inboxPage() {
         access: pageAccess('List inbox document cards with their workspace names'),
         data: cardSources,
         tree: page([
-          row([
-            column([heading('Inbox'), text('New document cards land here. File them into a workspace, tag them and send them to review from their form.', 'muted')]),
+          pageHeader(
+            [heading('Inbox'), text('New document cards land here. File them into a workspace, tag them and send them to review from their form.', 'muted')], [
             button('Documents', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'folder-kanban'),
-          ], 'between'),
+          ]),
           ...containerNotices(),
           stats([
             stat('In the inbox', countOf("r.status === 'inbox'"), 'inbox', loading('cards')),
@@ -233,10 +233,10 @@ function workspacesPage() {
         access: pageAccess('Browse document cards per workspace, grouped by their tags'),
         data: cardSources,
         tree: page([
-          row([
-            column([heading('Workspace browser'), text('Every workspace with its document cards, grouped by tags. Click a workspace to open it.', 'muted')]),
+          pageHeader(
+            [heading('Workspace browser'), text('Every workspace with its document cards, grouped by tags. Click a workspace to open it.', 'muted')], [
             button('Documents', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'folder-kanban'),
-          ], 'between'),
+          ]),
           ...containerNotices(),
           card('Workspaces', [table(workspaceRows, [['code', 'Workspace'], ['name', 'Name'], ['defaultTags', 'Default tags'],
             ['documents', 'Documents', 'end'], ['inbox', 'Inbox', 'end'], ['inReview', 'In review', 'end'], ['validated', 'Validated', 'end']],
@@ -262,10 +262,10 @@ function libraryPage() {
         access: pageAccess('List validated and archived document cards'),
         data: cardSources,
         tree: page([
-          row([
-            column([heading('Library'), text('Validated documents are stamped and locked; archived documents are retired. Both keep referencing their files in the VFS.', 'muted')]),
+          pageHeader(
+            [heading('Library'), text('Validated documents are stamped and locked; archived documents are retired. Both keep referencing their files in the VFS.', 'muted')], [
             button('Documents', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'folder-kanban'),
-          ], 'between'),
+          ]),
           ...containerNotices(),
           stats([
             stat('Validated', countOf("r.status === 'validated'"), 'check', loading('cards')),
@@ -288,5 +288,5 @@ function libraryPage() {
 
 export function buildPages() {
   const documents = [homePage(), inboxPage(), workspacesPage(), libraryPage(), ...recordKinds.map(recordForm), settingsForm()]
-  return Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)]))
+  return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

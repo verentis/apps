@@ -4,7 +4,7 @@
   "metadata": {
     "id": "legal-matters",
     "name": "Legal Matters",
-    "description": "Synthetic matter intake, human conflict review and traceable pre-billing.",
+    "description": "Matter intake, human conflict review and traceable pre-billing.",
     "icon": "./icons/app.svg",
     "version": "0.1.0",
     "author": "Verentis"
@@ -25,12 +25,12 @@
     "images": [
       {
         "source": "./marketplace/overview.png",
-        "alt": "Synthetic-only Legal Matters launch page",
-        "caption": "Open the isolated pilot intake folder"
+        "alt": "Legal Matters launch page",
+        "caption": "Every matter from intake to open"
       },
       {
         "source": "./marketplace/detail.png",
-        "alt": "Synthetic instruction and human conflict review in Canvas",
+        "alt": "Instruction and human conflict review in Canvas",
         "caption": "Review linked parties and agreed terms"
       }
     ]
@@ -91,22 +91,7 @@
         "version": "latest"
       }
     ],
-    "settings": [
-      {
-        "key": "pilot-mode",
-        "display-name": "Pilot mode",
-        "type": "string",
-        "default": "disabled",
-        "description": "Only isolated-synthetic enables workflows. Real client mode is not supported."
-      },
-      {
-        "key": "synthetic-workspace-id",
-        "display-name": "Isolated synthetic workspace UUID",
-        "type": "string",
-        "default": "",
-        "description": "Must equal the actual runtime workspace UUID. Do not set in a shared or client workspace."
-      }
-    ],
+    "settings": [],
     "engine": "verentis/nodejs",
     "scripts": [
       "scripts/workflow"
@@ -122,9 +107,36 @@
         }
       },
       {
+        "path": "/timesheets",
+        "mode": "read",
+        "reason": "Offer this matter’s validated time as charges",
+        "origin": {
+          "kind": "document",
+          "id": "legal-matters-matter"
+        }
+      },
+      {
+        "path": "/expense-reports",
+        "mode": "read",
+        "reason": "Offer approved expense reports as recoverable expenses",
+        "origin": {
+          "kind": "document",
+          "id": "legal-matters-matter"
+        }
+      },
+      {
+        "path": "/legal-matters",
+        "mode": "read",
+        "reason": "List the matters and where each one stands",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
         "path": "/legal-matters",
         "mode": "write",
-        "reason": "Create, screen and update synthetic pilot matters",
+        "reason": "Create, screen and update matters",
         "origin": {
           "kind": "script",
           "id": "legal-matters-workflow"
@@ -192,15 +204,6 @@
           "kind": "script",
           "id": "legal-matters-workflow"
         }
-      },
-      {
-        "path": "/invoices",
-        "mode": "write",
-        "reason": "Create ordinary draft invoices without overwriting them",
-        "origin": {
-          "kind": "script",
-          "id": "legal-matters-workflow"
-        }
       }
     ],
     "install": [
@@ -244,8 +247,8 @@
     "creatables": [
       {
         "id": "matter",
-        "display-name": "Synthetic legal matter",
-        "description": "Guarded intake in an isolated pilot workspace",
+        "display-name": "Legal matter",
+        "description": "A new instruction, screened for conflicts before it opens",
         "icon": "lucide:briefcase-business",
         "mime": "application/vnd.verentis.legal-matters.matter+json",
         "parents": [
@@ -260,6 +263,15 @@
       "allow-same-origin": true,
       "allow-forms": true,
       "allow-popups": false
+    },
+    "api": {
+      "uses": [
+        {
+          "app": "invoicing",
+          "operation": "create-draft-invoice",
+          "reason": "Draft the invoice of an approved pre-bill"
+        }
+      ]
     }
   },
   "packaging": {

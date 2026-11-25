@@ -215,8 +215,8 @@
       },
       {
         "path": "/candidates",
-        "mode": "read",
-        "reason": "List candidates by stage with their job position titles",
+        "mode": "write",
+        "reason": "List candidates by stage with their job position titles; move records between columns",
         "origin": {
           "kind": "document",
           "id": "canvas/pipeline.page.yaml"

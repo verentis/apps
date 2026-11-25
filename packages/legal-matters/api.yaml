@@ -1,0 +1,11 @@
+# Legal Matters' API contract: it offers no operations yet; it asks Invoicing to draft the invoice of an approved
+# pre-bill (the reserved batch keys the request, so a resumed approval returns the same draft).
+api-version: verentis.io/v1
+kind: Api
+metadata:
+  id: legal-matters
+spec:
+  uses:
+    - app: invoicing
+      operation: create-draft-invoice
+      reason: Draft the invoice of an approved pre-bill

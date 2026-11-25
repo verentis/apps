@@ -7,14 +7,12 @@
 // retried operation never posts twice; records are updated conditionally (If-Match), so a concurrent edit fails
 // instead of being overwritten. The steps are not one transaction: if a run stops between writing the journal and
 // updating the record, running the same operation again completes it.
-import { randomUUID } from 'node:crypto'
 import {
-  accounting, balanceLines, createJournal, divideHalfUp, fail, formatMinor, journalLine, ledgerSettings, nameOf,
-  nowIso, openPeriodFor, parseDecimal, postedJournal, readAccounts, readFolder, readRecord, readSettings, saveRecord,
-  toMinor,
+  balanceLines, journalRequest, postedJournalFor, divideHalfUp, fail, formatMinor, journalLine, ledgerSettings,
+  nowIso, openPeriodFor, parseDecimal, readAccounts, readFolder, readRecord, readSettings, saveRecord, toMinor,
 } from './ledger.mjs'
 
-export const operations = ['compute-run', 'approve-run', 'post-run']
+export const operations = ['compute-run', 'approve-run', 'post-run', 'complete-run']
 export const payroll = {
   settingsPath: '/settings/payroll.json',
   structures: '/salary-structures',
@@ -171,7 +169,7 @@ export async function approveRun(files, path, { now }) {
   return { message: `Approved ${label(record)} for ${record.period}`, path }
 }
 
-export async function postRun(files, path, { now, uuid }) {
+export async function postRun(files, path, { now, journal }) {
   const run = await readRecord(files, checkPath(path, payroll.runs), 'payrun')
   const { record } = run
   checkActive(record)
@@ -202,22 +200,22 @@ export async function postRun(files, path, { now, uuid }) {
   balanceLines(lines, digits)
   await readAccounts(files, lines.map(item => item.account))
   const date = periodEnd(record.period)
-  const period = await openPeriodFor(files, date)
-  const journalPath = `${accounting.journals}/${nameOf(path)}`
-  await createJournal(files, journalPath, postedJournal({
-    code: nameOf(journalPath), date, description: `Pay run ${memo}`, currency, period: period.path, lines, source: path, now, id: uuid(),
-  }), 'source')
+  await openPeriodFor(files, date)
+  // Accounting posts the journal through its API (the form asks it); `complete-run` then marks the run posted.
+  if (!journal) return { message: `Posting ${label(record)} to the ledger`, journalRequest: journalRequest(path, date, `Pay run ${memo}`, currency, lines) }
+  const journalPath = await postedJournalFor(files, path, journal)
   Object.assign(record, { status: 'posted', postedAt: now, journal: { path: journalPath }, updatedAt: now })
   await saveRecord(files, run, payroll.mime('payrun'))
   return { message: `Posted ${label(record)} for ${record.period}`, path: journalPath }
 }
 
-export async function run(parameters, files, { now = nowIso(), uuid = randomUUID } = {}) {
+export async function run(parameters, files, { now = nowIso() } = {}) {
   const { operation, path } = parameters ?? {}
-  const options = { now, uuid }
+  const options = { now }
   if (operation === 'compute-run') return computeRun(files, path, options)
   if (operation === 'approve-run') return approveRun(files, path, options)
   if (operation === 'post-run') return postRun(files, path, options)
+  if (operation === 'complete-run') return postRun(files, path, { ...options, journal: parameters.journal })
   return fail(`Unsupported operation ${JSON.stringify(operation ?? '')}. Expected one of ${operations.join(', ')}.`)
 }
 

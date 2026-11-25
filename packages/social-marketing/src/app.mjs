@@ -63,7 +63,9 @@ export const entities = {
         { key: 'scheduledDate', label: 'Scheduled date', type: 'date', description: 'Required before Schedule.' },
         select('status', 'Status', labelled(statuses), { readOnly: 'true', description: 'Set by Schedule, Publish and Cancel.' })] },
       { title: 'Content', lock: 'closed', fields: [
-        { key: 'content', label: 'Content', type: 'textarea', span: 2, rows: 8, description: 'Required before Publish.' },
+        // The counter follows the account's network; going over is flagged, not blocked (the network decides).
+        { key: 'content', label: 'Content', type: 'textarea', span: 2, rows: 8, description: 'Required before Publish.',
+          limit: "{{ ({ x: 280, mastodon: 500, linkedin: 3000, facebook: 63206 })[((((data.accounts || []).find(a => a.path === form.values.account) || {}).data || {}).network)] || 0 }}" },
         text('mediaNote', 'Media note', { span: 2, placeholder: 'e.g. attach the launch banner' })] },
       { title: 'Publication', fields: [
         text('publishedAt', 'Published at', { readOnly: 'true', description: 'Stamped by Publish. Delivery to the network is a platform integration.' })] },

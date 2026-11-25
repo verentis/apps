@@ -290,8 +290,8 @@
       },
       {
         "path": "/quality-alerts",
-        "mode": "read",
-        "reason": "Board alerts by stage",
+        "mode": "write",
+        "reason": "Board alerts by stage; move records between columns",
         "origin": {
           "kind": "document",
           "id": "canvas/alerts.page.yaml"

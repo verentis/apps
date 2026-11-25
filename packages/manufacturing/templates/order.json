@@ -13,5 +13,6 @@
   "quantity": "1",
   "scheduledDate": "",
   "demand": [],
-  "status": "draft"
+  "status": "draft",
+  "operations": []
 }

@@ -1,10 +1,11 @@
 // Generates the Maintenance Canvas documents: one bound form per record kind, the launch page, the equipment
 // list, the requests board by stage and the preventive plan. Stage transitions and the equipment status sync
 // are enforced by the action script the request form runs; the forms only lock what the script has finished.
+import { views } from './views.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, grid, heading,
   humanize, iconName, linkButton, openFile, options, page, panel, projectRegistration, recordButtons, row,
-  scriptAction, sectionCards, stat, stats, status, table, tabs, text, toneExpression,
+  scriptAction, sectionCards, stat, stats, status, table, tabs, text, toneExpression, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { containers, equipmentStatuses, installRoot, mimeTypes, recordKinds, requestStages, schemaId } from './contracts.mjs'
 import { entities, postScriptPath } from './app.mjs'
@@ -67,21 +68,19 @@ function recordForm(kind) {
   const entity = entities[kind]
   const extras = recordExtras(kind)
   const readOnly = `${archived} || (${extras.locked})`
-  const header = row([
-    column([
-      row([
-        heading(`{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`),
+  const header = recordHeader(
+    `{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`,
+    [
         ...(entity.status ? [badge(humanize(entity.status), toneExpression(entity.status, stageTones), { visible: `!!form.values.${entity.status}` })] : []),
         badge('Archived', 'warning', { visible: archived }, 'archive'),
-      ]),
-      text(`${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`, 'muted'),
-    ]),
-    row([...extras.buttons, recordButtons(extras.locked)]),
-  ], 'between')
+    ],
+    `${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`,
+    [...extras.buttons, recordButtons(extras.locked)],
+  )
   const tree = [
     header,
-    ...status('record'),
-    badge(`This ${entity.singular.toLowerCase()} is archived. Restore it to edit.`, 'warning', { visible: archived }, 'archive'),
+    ...status('record'), ...lifecycle(entity),
+    archivedAlert(entity.singular),
     ...(extras.links.length ? [row(extras.links)] : []),
     ...extras.notices,
     grid(sectionCards(entity.sections, readOnly)),
@@ -128,14 +127,14 @@ function homePage() {
         access: pageAccess('Count equipment and requests and show the maintenance containers'),
         data: pageSources,
         tree: page([
-          row([
-            column([heading('Maintenance'), text('Equipment and maintenance requests are files in your workspace. Draft a request in /maintenance-requests, then start, complete or scrap it from its form.', 'muted')]),
+          pageHeader(
+            [heading('Maintenance'), text('Equipment and maintenance requests are files in your workspace. Draft a request in /maintenance-requests, then start, complete or scrap it from its form.', 'muted')], [
             row([
               button('Maintenance requests', [openFile(`${installRoot}/canvas/requests.page.yaml`)], undefined, 'outline', 'hammer'),
               button('Equipment', [openFile(`${installRoot}/canvas/equipment.page.yaml`)], undefined, 'outline', 'wrench'),
               button('Preventive plan', [openFile(`${installRoot}/canvas/preventive.page.yaml`)], undefined, 'outline', 'calendar-clock'),
             ]),
-          ], 'between'),
+          ]),
           stats([
             stat('Open requests', requestCount(openStageExpr), 'hammer', loading('requests')),
             stat('In progress', requestCount("r.stage === 'in-progress'"), 'play', loading('requests')),
@@ -174,10 +173,10 @@ function requestsPage() {
         access: pageAccess('Board requests by stage with their equipment names'),
         data: pageSources,
         tree: page([
-          row([
-            column([heading('Requests by stage'), text('Every active maintenance request, grouped by its stage. Click a row to open the request.', 'muted')]),
+          pageHeader(
+            [heading('Requests by stage'), text('Every active maintenance request, grouped by its stage. Click a row to open the request.', 'muted')], [
             button('Maintenance', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'wrench'),
-          ], 'between'),
+          ]),
           ...containerNotices(),
           stats(requestStages.map(stage => stat(stageLabel(stage), requestCount(`r.stage === '${stage}'`), 'hammer', loading('requests'))), 4),
           tabs(requestStages.map(stage => ({ value: stage, label: stageLabel(stage), icon: 'hammer' })),
@@ -199,13 +198,13 @@ function equipmentPage() {
         access: pageAccess('List equipment with their open request counts'),
         data: pageSources,
         tree: page([
-          row([
-            column([heading('Equipment'), text('Every active piece of equipment. The status follows its maintenance requests.', 'muted')]),
+          pageHeader(
+            [heading('Equipment'), text('Every active piece of equipment. The status follows its maintenance requests.', 'muted')], [
             row([
               button('Open /equipment', [openFile(containers.equipments.path)], undefined, 'outline', 'folder-open'),
               button('Maintenance', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'wrench'),
             ]),
-          ], 'between'),
+          ]),
           ...containerNotices(),
           stats(equipmentStatuses.map(value =>
             stat(stageLabel(value), equipmentCount(`(e.data.status || 'operational') === '${value}'`), 'wrench', loading('equipment'))), 3),
@@ -232,10 +231,10 @@ function preventivePage() {
         access: pageAccess('Compare open preventive requests against their scheduled dates'),
         data: pageSources,
         tree: page([
-          row([
-            column([heading('Preventive plan'), text('Open preventive maintenance by scheduled date: overdue, upcoming within 30 days, or planned.', 'muted')]),
+          pageHeader(
+            [heading('Preventive plan'), text('Open preventive maintenance by scheduled date: overdue, upcoming within 30 days, or planned.', 'muted')], [
             button('Maintenance', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'wrench'),
-          ], 'between'),
+          ]),
           ...containerNotices(),
           stats([
             stat('Open preventive', `{{ ${preventiveOpen}.length }}`, 'calendar-clock', loading('requests')),
@@ -253,5 +252,5 @@ function preventivePage() {
 
 export function buildPages() {
   const documents = [homePage(), requestsPage(), equipmentPage(), preventivePage(), ...recordKinds.map(recordForm)]
-  return Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)]))
+  return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

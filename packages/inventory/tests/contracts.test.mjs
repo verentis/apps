@@ -38,7 +38,6 @@ describe('Inventory file contracts', () => {
     expect(validators.move(record('move', { quantity: '-1' }))).toBe(false)
     expect(validators.move(record('move', { quantity: '1.23456' }))).toBe(false)
     expect(validators.adjustment(record('adjustment', { countedQty: 3 }))).toBe(false)
-    expect(validators.product(record('product', { reorderPoint: 5 }))).toBe(false)
   })
 
   it('requires the audit trail once done or applied', () => {
@@ -49,7 +48,7 @@ describe('Inventory file contracts', () => {
   })
 
   it('rejects unknown fields and non-UTC instants', () => {
-    expect(validators.product(record('product', { onHand: '1' }))).toBe(false)
+    expect(validators.move(record('move', { onHand: '1' }))).toBe(false)
     expect(validators.move(record('move', { updatedAt: '2026-01-02T03:04:05+01:00' }))).toBe(false)
   })
 

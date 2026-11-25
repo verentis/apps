@@ -1,217 +1,291 @@
-api-version: canvas.verentis.io/v1
-kind: Form
-metadata:
-  id: accounting-settings
-  name: Accounting settings
-  description: Edit the Accounting settings file.
-  icon: settings
-spec:
-  binds:
-  - pattern: application/vnd.verentis.accounting.settings+json
-    mode: edit
-    priority: 200
-    scope: global
-    json-schema:
-      id: https://schemas.verentis.io/accounting/v1/settings.schema.json
-      source: /applications/accounting/schemas/settings.schema.json
-      title: Accounting settings
-      version: '1'
-  entry: ${var:canvas-origin}/render?document=%2Fapplications%2Faccounting%2Fcanvas%2Fsettings.form.yaml
-  scope: global
-  mime-types:
-  - pattern: application/vnd.verentis.accounting.settings+json
-    mode: edit
-    priority: 200
-    json-schema:
-      id: https://schemas.verentis.io/accounting/v1/settings.schema.json
-      source: /applications/accounting/schemas/settings.schema.json
-      title: Accounting settings
-      version: '1'
-  permissions:
-  - file.read
-  - file.write
-  capabilities: []
-  sandbox:
-    allow-scripts: true
-    allow-same-origin: true
-    allow-popups: false
-    allow-forms: true
-  file-access:
-  - path: /chart-of-accounts
-    mode: read
-    reason: Choose the account each tax code posts to
-  - path: /applications/accounting/
-    mode: read
-    reason: Read the Accounting schemas and run the posting script
-  access:
-  - path: /chart-of-accounts
-    reason: Choose the account each tax code posts to
-  - path: /applications/accounting/
-    reason: Read the Accounting schemas and run the posting script
-  data:
-    record:
-      kind: document
-      consistency: conditional
-    accounts:
-      kind: folder
-      path: /chart-of-accounts
-      contents: true
-      mime-pattern: application/vnd.verentis.accounting.account+json
-    accountoptions:
-      kind: computed
-      expr: '(data.accounts || []).filter(e => e.kind === ''file'' && e.data && e.data.state !== ''archived''
-        && (true)).map(e => ({ label: (e.data.code || e.name) + '' · '' + ((e.data.number ? e.data.number
-        + '' '' : '''') + (e.data.name || '''')), value: e.path }))'
-  tree:
-  - type: canvas.stack
-    layout:
-      base:
-        padding: 6
-        gap: 4
-        maxWidth: 72rem
-        margin:
-          x: auto
-    children:
-    - type: canvas.stack
-      layout:
-        base:
-          direction: row
-          wrap: true
-          gap: 2
-          align: center
-          justify: between
-      children:
-      - type: canvas.stack
-        layout:
-          base:
-            gap: 1
-        children:
-        - type: canvas.heading
-          props:
-            level: 2
-            text: Accounting settings
-        - type: canvas.text
-          props:
-            text: The ledger currency and precision, the fiscal year and the tax codes expenses and invoices
-              use. Code prefixes are app settings, managed with the installed app.
-            tone: muted
-      - type: canvas.stack
-        layout:
-          base:
-            direction: row
-            wrap: true
-            gap: 2
-            align: center
-        children:
-        - type: canvas.button
-          props:
-            label: Reset
-            variant: ghost
-            size: sm
-          'on':
-            click:
-            - reset-form: {}
-          rules:
-            disabled: form.saving || !form.dirty
-        - type: canvas.button
-          props:
-            label: Save
-            icon: save
-            size: sm
-          'on':
-            click:
-            - save: {}
-            - toast:
-                message: Saved
-                variant: success
-          rules:
-            disabled: form.saving || !form.dirty || form.invalid
-    - type: canvas.text
-      props:
-        text: '{{ data.$record.error }}'
-      rules:
-        visible: data.$record.status === 'error'
-    - type: canvas.text
-      props:
-        text: Loading…
-        tone: muted
-      rules:
-        visible: data.$record.status === 'loading'
-    - type: canvas.text
-      props:
-        text: 'Set the base currency before posting: the ledger is kept in one currency.'
-        tone: muted
-      rules:
-        visible: '!form.values.baseCurrency'
-    - type: canvas.card
-      props:
-        title: Settings
-      children:
-      - type: canvas.grid
-        layout:
-          base:
-            columns: 1
-            gap: 4
-          tablet:
-            columns: 2
-        children:
-        - type: canvas.form.input
-          props:
-            label: Country code
-            value: '{{ form.values.country }}'
-            placeholder: ZA
-        - type: canvas.form.input
-          props:
-            label: Base currency
-            value: '{{ form.values.baseCurrency }}'
-            required: true
-            placeholder: ZAR
-        - type: canvas.form.number
-          props:
-            label: Currency decimal places
-            value: '{{ form.values.minorDigits }}'
-            required: true
-            min: 0
-            max: 4
-            step: 1
-        - type: canvas.form.number
-          props:
-            label: Fiscal year start month
-            value: '{{ form.values.fiscalYearStartMonth }}'
-            required: true
-            min: 1
-            max: 12
-            step: 1
-        - type: canvas.form.array
-          props:
-            label: Tax codes
-            value: '{{ form.values.taxCodes }}'
-            fields:
-            - key: code
-              label: Code
-              required: true
-            - key: name
-              label: Name
-              required: true
-            - key: ratePercent
-              label: Rate (%)
-              required: true
-            - key: account
-              label: Tax account
-              type: select
-              required: true
-              options: '{{ data.accountoptions }}'
-            defaultRow:
-              code: ''
-              name: ''
-              ratePercent: '0'
-              account: ''
-            rowIds: false
-            minimum: 0
-            maximum: 100
-            addLabel: Add tax code
-            removeLabel: Remove row
-          layout:
-            tablet:
-              colSpan: 2
-  actions: {}
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Form",
+  "metadata": {
+    "id": "accounting-settings",
+    "name": "Accounting settings",
+    "description": "Edit the Accounting settings file.",
+    "icon": "settings"
+  },
+  "spec": {
+    "binds": [
+      {
+        "pattern": "application/vnd.verentis.accounting.settings+json",
+        "mode": "edit",
+        "priority": 200,
+        "scope": "global",
+        "json-schema": {
+          "id": "https://schemas.verentis.io/accounting/v1/settings.schema.json",
+          "source": "/applications/accounting/schemas/settings.schema.json",
+          "title": "Accounting settings",
+          "version": "1"
+        }
+      }
+    ],
+    "entry": "${var:canvas-origin}/render?document=%2Fapplications%2Faccounting%2Fcanvas%2Fsettings.form.yaml",
+    "scope": "global",
+    "mime-types": [
+      {
+        "pattern": "application/vnd.verentis.accounting.settings+json",
+        "mode": "edit",
+        "priority": 200,
+        "json-schema": {
+          "id": "https://schemas.verentis.io/accounting/v1/settings.schema.json",
+          "source": "/applications/accounting/schemas/settings.schema.json",
+          "title": "Accounting settings",
+          "version": "1"
+        }
+      }
+    ],
+    "permissions": [
+      "file.read",
+      "file.write"
+    ],
+    "capabilities": [],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-popups": false,
+      "allow-forms": true
+    },
+    "file-access": [
+      {
+        "path": "/chart-of-accounts",
+        "mode": "read",
+        "reason": "Choose the account each tax code posts to"
+      },
+      {
+        "path": "/applications/accounting/",
+        "mode": "read",
+        "reason": "Read the Accounting schemas and run the posting script"
+      }
+    ],
+    "access": [
+      {
+        "path": "/chart-of-accounts",
+        "reason": "Choose the account each tax code posts to"
+      },
+      {
+        "path": "/applications/accounting/",
+        "reason": "Read the Accounting schemas and run the posting script"
+      }
+    ],
+    "data": {
+      "record": {
+        "kind": "document",
+        "consistency": "conditional"
+      },
+      "accounts": {
+        "kind": "folder",
+        "path": "/chart-of-accounts",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.accounting.account+json"
+      },
+      "accountoptions": {
+        "kind": "computed",
+        "expr": "(data.accounts || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + ((e.data.number ? e.data.number + ' ' : '') + (e.data.name || '')), value: e.path }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.validation-summary",
+            "props": {
+              "title": "Fix these before saving"
+            }
+          },
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Accounting settings",
+              "note": "The ledger currency and precision, the fiscal year and the tax codes expenses and invoices use. Code prefixes are app settings, managed with the installed app."
+            },
+            "children": [
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Reset",
+                  "variant": "ghost",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "reset-form": {}
+                    }
+                  ]
+                },
+                "rules": {
+                  "disabled": "form.saving || !form.dirty"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Save",
+                  "icon": "save",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "save": {}
+                    },
+                    {
+                      "toast": {
+                        "message": "Saved",
+                        "variant": "success"
+                      }
+                    }
+                  ]
+                },
+                "rules": {
+                  "disabled": "form.saving || !form.dirty || form.invalid"
+                },
+                "slot": "actions"
+              }
+            ]
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "record",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Set the base currency before posting: the ledger is kept in one currency.",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "!form.values.baseCurrency"
+            }
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Settings"
+            },
+            "children": [
+              {
+                "type": "canvas.grid",
+                "layout": {
+                  "base": {
+                    "columns": 1,
+                    "gap": 4
+                  },
+                  "tablet": {
+                    "columns": 2
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.form.input",
+                    "props": {
+                      "label": "Country code",
+                      "value": "{{ form.values.country }}",
+                      "placeholder": "ZA"
+                    }
+                  },
+                  {
+                    "type": "canvas.form.input",
+                    "props": {
+                      "label": "Base currency",
+                      "value": "{{ form.values.baseCurrency }}",
+                      "required": true,
+                      "placeholder": "ZAR"
+                    }
+                  },
+                  {
+                    "type": "canvas.form.number",
+                    "props": {
+                      "label": "Currency decimal places",
+                      "value": "{{ form.values.minorDigits }}",
+                      "required": true,
+                      "min": 0,
+                      "max": 4,
+                      "step": 1
+                    }
+                  },
+                  {
+                    "type": "canvas.form.number",
+                    "props": {
+                      "label": "Fiscal year start month",
+                      "value": "{{ form.values.fiscalYearStartMonth }}",
+                      "required": true,
+                      "min": 1,
+                      "max": 12,
+                      "step": 1
+                    }
+                  },
+                  {
+                    "type": "canvas.form.line-items",
+                    "props": {
+                      "label": "Tax codes",
+                      "value": "{{ form.values.taxCodes }}",
+                      "columns": [
+                        {
+                          "key": "code",
+                          "label": "Code",
+                          "type": "text"
+                        },
+                        {
+                          "key": "name",
+                          "label": "Name",
+                          "type": "text"
+                        },
+                        {
+                          "key": "ratePercent",
+                          "label": "Rate (%)",
+                          "type": "text",
+                          "align": "right"
+                        },
+                        {
+                          "key": "account",
+                          "label": "Tax account",
+                          "type": "select",
+                          "options": "{{ data.accountoptions }}"
+                        }
+                      ],
+                      "defaultRow": {
+                        "code": "",
+                        "name": "",
+                        "ratePercent": "0",
+                        "account": ""
+                      },
+                      "storeComputed": false,
+                      "minimum": 0,
+                      "maximum": 100,
+                      "addLabel": "Add tax code"
+                    },
+                    "layout": {
+                      "tablet": {
+                        "colSpan": 2
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "actions": {}
+  }
+}

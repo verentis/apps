@@ -23,126 +23,124 @@
       },
       "rows": {
         "kind": "computed",
-        "expr": "(data.tasks || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, customer: e.data.customerName || '', address: e.data.address || '', type: e.data.type || '', stage: e.data.stage || '', technician: e.data.technician || '', date: e.data.scheduledDate || '', window: [e.data.windowStart, e.data.windowEnd].filter(Boolean).join('–'), windowStart: e.data.windowStart || '', hours: e.data.hours || '', today: !!e.data.scheduledDate && e.data.scheduledDate === Date().slice(0, 10) }))"
+        "expr": "(data.tasks || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, customer: e.data.customerName || '', address: e.data.address || '', latitude: e.data.latitude || '', longitude: e.data.longitude || '', type: e.data.type || '', stage: e.data.stage || '', technician: e.data.technician || '', date: e.data.scheduledDate || '', window: [e.data.windowStart, e.data.windowEnd].filter(Boolean).join('–'), windowStart: e.data.windowStart || '', hours: e.data.hours || '', today: !!e.data.scheduledDate && e.data.scheduledDate === Date().slice(0, 10) }))"
+      },
+      "listfieldtasks": {
+        "kind": "folder",
+        "path": "/field-tasks",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.field-service.task+json"
       }
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Field Service",
+          "icon": "wrench",
+          "active": "home.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Today",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "tasks.page.yaml",
+              "label": "All tasks",
+              "icon": "kanban",
+              "count": "{{ (data.rows || []).filter(r => ['new', 'scheduled', 'on-site'].includes(r.stage)).length }}"
+            },
+            {
+              "id": "schedule.page.yaml",
+              "label": "Technicians",
+              "icon": "hard-hat"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/field-service/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/field-service.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Field Service",
+              "note": "Field tasks are files in your workspace. Draft tasks in /field-tasks, schedule a technician, work them on site, then complete them from their forms."
+            },
+            "children": []
+          },
           {
             "type": "canvas.stack",
             "layout": {
               "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
+                "gap": 2
               }
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Field Service"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Field tasks are files in your workspace. Draft tasks in /field-tasks, schedule a technician, work them on site, then complete them from their forms.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Schedule"
+                }
               },
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "direction": "row",
-                    "wrap": true,
-                    "gap": 2,
-                    "align": "center"
-                  }
+                "type": "canvas.text",
+                "props": {
+                  "text": "Tasks by technician and arrival window.",
+                  "tone": "muted"
+                }
+              },
+              {
+                "type": "canvas.calendar",
+                "props": {
+                  "rows": "{{ (data.rows || []).filter(r => !!r.date && r.stage !== 'cancelled').map(r => ({ path: r.path, title: [r.window, r.customer].filter(part => part).join(' · '), technician: r.technician || 'Unassigned', at: r.date + (r.windowStart ? 'T' + r.windowStart : '') })) }}",
+                  "views": [
+                    "day",
+                    "week",
+                    "agenda"
+                  ],
+                  "showLegend": true,
+                  "emptyText": "Nothing scheduled",
+                  "start": "at",
+                  "title": "title",
+                  "colorBy": "technician",
+                  "view": "day"
                 },
-                "children": [
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Tasks",
-                      "variant": "outline",
-                      "icon": "wrench",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/field-service/canvas/tasks.page.yaml"
-                          }
-                        }
-                      ]
+                "on": {
+                  "open": [
+                    {
+                      "open-file": {
+                        "path": "{{ event.row.path }}",
+                        "mode": "edit",
+                        "open": "side"
+                      }
                     }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Day schedule",
-                      "variant": "outline",
-                      "icon": "calendar",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/field-service/canvas/schedule.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Settings",
-                      "variant": "ghost",
-                      "icon": "settings",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/settings/field-service.json",
-                            "mode": "edit"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ]
+                  ]
+                }
               }
             ]
           },
@@ -197,22 +195,11 @@
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /field-tasks folder could not be read. Reinstall Field Service to recreate it."
-            },
-            "rules": {
-              "visible": "data.$tasks.status === 'error'"
-            }
-          },
-          {
-            "type": "canvas.text",
-            "props": {
-              "text": "Loading…",
-              "tone": "muted"
-            },
-            "rules": {
-              "visible": "data.$tasks.status === 'loading'"
+              "for": "tasks",
+              "compact": true,
+              "description": "The /field-tasks folder could not be read. Reinstall Field Service to recreate it."
             }
           },
           {
@@ -247,17 +234,19 @@
             ]
           },
           {
-            "type": "canvas.files",
+            "type": "canvas.empty-state",
             "props": {
-              "path": "/field-tasks/",
-              "mimeTypes": [
-                "application/vnd.verentis.field-service.task+json"
-              ],
-              "showFolders": false,
-              "navigable": false,
+              "for": "listfieldtasks",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.listfieldtasks || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
               "columns": [
                 {
-                  "key": "name",
+                  "key": "data.code",
                   "label": "Task"
                 },
                 {
@@ -270,7 +259,8 @@
                 },
                 {
                   "key": "data.stage",
-                  "label": "Stage"
+                  "label": "Stage",
+                  "format": "badge"
                 },
                 {
                   "key": "data.technician",
@@ -278,11 +268,100 @@
                 },
                 {
                   "key": "data.scheduledDate",
-                  "label": "Date"
+                  "label": "Date",
+                  "format": "date"
                 }
               ],
+              "facets": [
+                "data.stage"
+              ],
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
+              "clickable": true,
+              "rowKey": "path",
               "emptyText": "No tasks yet. Use New in /field-tasks."
+            },
+            "rules": {
+              "visible": "data.$listfieldtasks.status === 'ready'"
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ]
             }
+          },
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "gap": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Map"
+                }
+              },
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "Open tasks by technician. Tasks appear once they have a latitude and longitude.",
+                  "tone": "muted"
+                }
+              },
+              {
+                "type": "canvas.map",
+                "props": {
+                  "height": 320,
+                  "fit": "all",
+                  "showLegend": true,
+                  "layers": [
+                    {
+                      "kind": "pins",
+                      "rows": {
+                        "$expr": "(data.rows || []).filter(r => ['new', 'scheduled', 'on-site'].includes(r.stage) && r.latitude !== '' && r.longitude !== '' && r.latitude != null).map(r => ({ path: r.path, id: r.path, lat: Number(r.latitude), lng: Number(r.longitude), label: [r.window, r.customer].filter(part => part).join(' · '), technician: r.technician || 'Unassigned' }))"
+                      },
+                      "lat": "lat",
+                      "lng": "lng",
+                      "label": "label",
+                      "colorBy": "technician"
+                    }
+                  ]
+                },
+                "on": {
+                  "open": [
+                    {
+                      "open-file": {
+                        "path": "{{ event.row.path }}",
+                        "mode": "edit",
+                        "open": "side"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "{{ (data.rows || []).filter(r => ['new', 'scheduled', 'on-site'].includes(r.stage) && !(r.latitude && r.longitude)).length + ' open tasks have no location yet; add latitude and longitude on the task to place them.' }}",
+                  "tone": "muted"
+                },
+                "rules": {
+                  "visible": "(data.rows || []).some(r => ['new', 'scheduled', 'on-site'].includes(r.stage) && !(r.latitude && r.longitude))"
+                }
+              }
+            ]
           }
         ]
       }

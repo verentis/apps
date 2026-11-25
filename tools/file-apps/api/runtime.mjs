@@ -1,0 +1,103 @@
+// The runtime of an app's API script (`scripts/api`): the platform runs it for an operation the app offers in its
+// `api.yaml`, with `{ operation, input, caller }` parameters, after checking the caller declared the operation and
+// the input matches its schema. The script writes with this app's own consented file access; the caller never does.
+import { randomUUID } from 'node:crypto'
+
+export class OperationError extends Error {}
+
+/** Refuses the call with a message the calling app shows. */
+export function fail(message) {
+  throw new OperationError(message)
+}
+
+const statusOf = error => error?.statusCode ?? error?.status
+
+/** The names of a folder's entries (every page). Missing folder: an empty list. */
+export async function listNames(files, folder) {
+  const names = []
+  try {
+    for (let pageNo = 1; pageNo < 1000; pageNo++) {
+      const response = await files.list(folder, 500, pageNo)
+      const items = response?.items ?? response?.data ?? []
+      for (const item of items) if (item?.name) names.push(item.name)
+      if (items.length < 500) break
+    }
+  } catch (error) {
+    if (statusOf(error) !== 404) throw error
+  }
+  return names
+}
+
+/** Reads every JSON record in a folder: `[{ name, path, record }]`; unreadable entries are skipped. */
+export async function listRecords(files, folder) {
+  const records = []
+  for (const name of await listNames(files, folder)) {
+    try {
+      records.push({ name, path: `${folder}/${name}`, record: await files.readJson(`${folder}/${name}`) })
+    } catch {
+      // Not a record this operation understands.
+    }
+  }
+  return records
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/** The next code after the highest `<prefix><digits>` name, e.g. `INV-0042`. */
+export function nextCode(prefix, digits, names) {
+  const pattern = new RegExp(`^${escapeRegExp(prefix)}(\\d+)$`)
+  let highest = 0
+  for (const name of names) {
+    const match = typeof name === 'string' && name.match(pattern)
+    if (match) highest = Math.max(highest, Number(match[1]))
+  }
+  return `${prefix}${String(highest + 1).padStart(digits, '0')}`
+}
+
+/** A workspace setting of this app, or `fallback`. */
+export function setting(settings, key, fallback) {
+  const value = settings?.get?.(key)
+  return value === undefined || value === null || value === '' ? fallback : value
+}
+
+/**
+ * Writes a new record under the next free code, create-only: a name taken meanwhile moves on to the next code.
+ * `build(code)` returns the record. Returns `{ path, code }`.
+ */
+export async function createNumbered(files, folder, { prefix, digits, mime, build, attempts = 5 }) {
+  const names = await listNames(files, folder)
+  for (let attempt = 1; ; attempt++) {
+    const code = nextCode(prefix, digits, names)
+    const path = `${folder}/${code}`
+    try {
+      await files.write(path, JSON.stringify(build(code), null, 2), { contentType: mime, ifNoneMatch: '*' })
+      return { path, code }
+    } catch (error) {
+      if (statusOf(error) !== 412 || attempt >= attempts) throw error
+      names.push(code)
+    }
+  }
+}
+
+/** The common shape every record carries. */
+export function stamp(kind, schema, now = new Date().toISOString(), uuid = randomUUID) {
+  return { $schema: schema, schemaVersion: 1, kind, id: uuid(), state: 'active', createdAt: now, updatedAt: now }
+}
+
+/**
+ * The script's entry: dispatches the operation to its handler, `handler(input, context)`, and reports what it returns.
+ * `context` carries `files`, `settings`, `caller` (`{ app }`) and `now`.
+ */
+export function serve(operations) {
+  return async function api(engine) {
+    const { operation, input, caller } = engine.context.input.parameters ?? {}
+    const handler = Object.hasOwn(operations, operation) ? operations[operation] : null
+    if (!handler) fail(`Unknown operation ${operation}.`)
+    const result = await handler(input ?? {}, {
+      files: engine.files, settings: engine.settings, caller: caller ?? {}, now: new Date().toISOString(),
+    })
+    await engine.output.result(result ?? {})
+  }
+}

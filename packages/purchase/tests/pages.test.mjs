@@ -1,3 +1,4 @@
+import { apiContract } from '../../../tools/file-apps/build.mjs'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { parse } from 'yaml'
 import { describe, expect, it } from 'vitest'
@@ -20,13 +21,13 @@ const steps = document => Object.values(document.spec.actions ?? {}).flatMap(act
 describe('Purchase Canvas documents', () => {
   // The committed manifest and Canvas documents are YAML renderings of what src/build.mjs models; CI owns the
   // manifest's metadata.version.
-  it('are up to date with the generator', () => {
+  it('are up to date with the generator', async () => {
     const pages = buildPages()
     expect(Object.keys(documents).sort()).toEqual(Object.keys(pages).sort())
     for (const [name, document] of Object.entries(pages)) expect(documents[name], name).toEqual(plain(document))
     const { metadata: { version: _version, ...metadata }, ...installed } = read('purchase.app.yaml')
     const { metadata: { version: _source, ...expectedMetadata }, ...expected } = plain({
-      ...manifest, spec: { ...manifest.spec, 'file-access': [...documentFileAccess(pages), ...scriptConsents] },
+      ...manifest, spec: { ...manifest.spec, 'file-access': [...documentFileAccess(pages), ...scriptConsents], api: await apiContract(new URL('../', import.meta.url)) },
     })
     expect({ ...installed, metadata }).toEqual({ ...expected, metadata: expectedMetadata })
     expect(read('environments/feature.yaml')).toEqual(featureOverlay)
@@ -55,7 +56,7 @@ describe('Purchase Canvas documents', () => {
   it('runs the order script from the purchase order form', () => {
     const document = documents['order.form.yaml']
     const runs = steps(document).filter(step => 'run-script' in step).map(step => step['run-script'])
-    expect(runs.map(run => run.parameters.operation)).toEqual(['confirm-order', 'receive-order'])
+    expect([...new Set(runs.map(run => run.parameters.operation))]).toEqual(['confirm-order', 'receive-order', 'record-bill'])
     for (const run of runs) expect(run).toMatchObject({ file: postScriptPath, parameters: { path: '{{ ctx.file.path }}' } })
     expect(document.spec.permissions).toEqual(expect.arrayContaining(['execution.run']))
     // A script reloads the record afterwards, which a dirty form would refuse.
@@ -94,7 +95,7 @@ describe('Purchase manifest', () => {
       { package: 'verentis/canvas', version: 'latest' }, { package: 'verentis/nodejs', version: 'latest' },
       { package: 'verentis/invoicing', version: 'latest', optional: true },
     ])
-    expect(spec.scripts).toEqual(['scripts/create', 'scripts/post'])
+    expect(spec.scripts).toEqual(['scripts/create', 'scripts/post', 'scripts/api'])
   })
 
   it('asks install consent for every document\'s file access', () => {
@@ -117,11 +118,11 @@ describe('Purchase manifest', () => {
       }
     })
 
-  it('may write draft vendor bills into Invoicing\'s container only from the order script', () => {
-    expect(postScriptFileAccess).toContainEqual(expect.objectContaining({ path: '/invoices', mode: 'write' }))
-    for (const grant of consent.filter(grant => grant.path === '/invoices')) {
-      expect(grant.origin).toEqual({ kind: 'script', id: postScriptName })
-    }
+  it('never writes Invoicing\'s files: vendor bills go through Invoicing\'s API; reorders come in through its own', () => {
+    expect(consent.some(grant => grant.path === '/invoices')).toBe(false)
+    const { api } = read('purchase.app.yaml').spec
+    expect(api.uses).toEqual([expect.objectContaining({ app: 'invoicing', operation: 'create-draft-invoice' })])
+    expect(api.operations.map(operation => operation.key)).toEqual(['create-draft-order'])
   })
 
   it('declares valid creatables named by the create script', () => {

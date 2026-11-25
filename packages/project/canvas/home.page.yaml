@@ -34,107 +34,120 @@
         "path": "/tasks",
         "contents": true,
         "mime-pattern": "application/vnd.verentis.project.task+json"
+      },
+      "listprojects": {
+        "kind": "folder",
+        "path": "/projects",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.project.project+json"
+      },
+      "listtasks": {
+        "kind": "folder",
+        "path": "/tasks",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.project.task+json"
       }
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Project",
+          "icon": "folder-kanban",
+          "active": "home.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Projects",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "board.page.yaml",
+              "label": "Board",
+              "icon": "kanban"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/project/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/project.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Project",
+              "note": "Projects and tasks are files in your workspace. Draft them in their folders, then complete tasks from their forms."
+            },
+            "children": []
+          },
           {
             "type": "canvas.stack",
             "layout": {
               "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
+                "gap": 2
               }
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Project"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Projects and tasks are files in your workspace. Draft them in their folders, then complete tasks from their forms.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Due dates"
+                }
               },
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "direction": "row",
-                    "wrap": true,
-                    "gap": 2,
-                    "align": "center"
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Task board",
-                      "variant": "outline",
-                      "icon": "kanban",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/project/canvas/board.page.yaml"
-                          }
-                        }
-                      ]
-                    }
+                "type": "canvas.text",
+                "props": {
+                  "text": "Open tasks by due date. Late tasks are left of today.",
+                  "tone": "muted"
+                }
+              },
+              {
+                "type": "canvas.time-strip",
+                "props": {
+                  "rows": "{{ (data.tasks || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').filter(e => e.data.stage !== 'done' && !!e.data.dueDate).map(e => ({ path: e.path, title: e.data.title || e.data.code, at: e.data.dueDate })) }}",
+                  "emptyText": "Nothing due",
+                  "at": "at",
+                  "title": "title",
+                  "window": {
+                    "from": "-7d",
+                    "to": "28d"
                   },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Settings",
-                      "variant": "ghost",
-                      "icon": "settings",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/settings/project.json",
-                            "mode": "edit"
-                          }
-                        }
-                      ]
+                  "soon": "2d"
+                },
+                "on": {
+                  "open": [
+                    {
+                      "open-file": {
+                        "path": "{{ event.row.path }}",
+                        "mode": "edit",
+                        "open": "side"
+                      }
                     }
-                  }
-                ]
+                  ]
+                }
               }
             ]
           },
@@ -189,21 +202,19 @@
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /projects folder could not be read. Reinstall Project to recreate it."
-            },
-            "rules": {
-              "visible": "data.$projects.status === 'error'"
+              "for": "projects",
+              "compact": true,
+              "description": "The /projects folder could not be read. Reinstall Project to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /tasks folder could not be read. Reinstall Project to recreate it."
-            },
-            "rules": {
-              "visible": "data.$tasks.status === 'error'"
+              "for": "tasks",
+              "compact": true,
+              "description": "The /tasks folder could not be read. Reinstall Project to recreate it."
             }
           },
           {
@@ -263,17 +274,19 @@
                     ]
                   },
                   {
-                    "type": "canvas.files",
+                    "type": "canvas.empty-state",
                     "props": {
-                      "path": "/projects/",
-                      "mimeTypes": [
-                        "application/vnd.verentis.project.project+json"
-                      ],
-                      "showFolders": false,
-                      "navigable": false,
+                      "for": "listprojects",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listprojects || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
                       "columns": [
                         {
-                          "key": "name",
+                          "key": "data.code",
                           "label": "Code"
                         },
                         {
@@ -282,10 +295,34 @@
                         },
                         {
                           "key": "data.status",
-                          "label": "Status"
+                          "label": "Status",
+                          "format": "badge"
                         }
                       ],
+                      "facets": [
+                        "data.status"
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
                       "emptyText": "No projects yet. Use New in /projects."
+                    },
+                    "rules": {
+                      "visible": "data.$listprojects.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
                     }
                   }
                 ],
@@ -331,17 +368,19 @@
                     ]
                   },
                   {
-                    "type": "canvas.files",
+                    "type": "canvas.empty-state",
                     "props": {
-                      "path": "/tasks/",
-                      "mimeTypes": [
-                        "application/vnd.verentis.project.task+json"
-                      ],
-                      "showFolders": false,
-                      "navigable": false,
+                      "for": "listtasks",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listtasks || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
                       "columns": [
                         {
-                          "key": "name",
+                          "key": "data.code",
                           "label": "Code"
                         },
                         {
@@ -350,11 +389,13 @@
                         },
                         {
                           "key": "data.stage",
-                          "label": "Stage"
+                          "label": "Stage",
+                          "format": "badge"
                         },
                         {
                           "key": "data.priority",
-                          "label": "Priority"
+                          "label": "Priority",
+                          "format": "badge"
                         },
                         {
                           "key": "data.assignee",
@@ -362,10 +403,34 @@
                         },
                         {
                           "key": "data.dueDate",
-                          "label": "Due"
+                          "label": "Due",
+                          "format": "date"
                         }
                       ],
+                      "facets": [
+                        "data.stage"
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
                       "emptyText": "No tasks yet. Use New in /tasks."
+                    },
+                    "rules": {
+                      "visible": "data.$listtasks.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
                     }
                   }
                 ],

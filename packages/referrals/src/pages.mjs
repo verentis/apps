@@ -1,10 +1,11 @@
 // Generates the Referrals Canvas documents: the bound referral form, the settings form, the launch page, the
 // referrals list by status and the points leaderboard. Deciding referrals (status transitions, awarding points
 // from the settings, locking) is done by the action script the referral form runs.
+import { views } from './views.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   humanize, iconName, options, openFile, page, panel, projectRegistration, recordButtons, row, scriptAction,
-  sectionCards, stat, stats, status, table, tabs, text, toneExpression,
+  sectionCards, stat, stats, status, table, tabs, text, toneExpression, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { containers, employees, installRoot, mimeTypes, recordKinds, recruitment, schemaId, settingsPath, statuses } from './contracts.mjs'
 import { entities, postScriptPath, settingsFields } from './app.mjs'
@@ -61,21 +62,19 @@ function recordForm(kind) {
   const entity = entities[kind]
   const extras = recordExtras()
   const readOnly = `${archived} || (${extras.locked})`
-  const header = row([
-    column([
-      row([
-        heading(`{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`),
+  const header = recordHeader(
+    `{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`,
+    [
         badge(humanize(entity.status), toneExpression(entity.status, statusTones), { visible: `!!form.values.${entity.status}` }),
         badge('Archived', 'warning', { visible: archived }, 'archive'),
-      ]),
-      text(`${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`, 'muted'),
-    ]),
-    row([...extras.buttons, recordButtons(extras.locked)]),
-  ], 'between')
+    ],
+    `${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`,
+    [...extras.buttons, recordButtons(extras.locked)],
+  )
   const tree = [
     header,
-    ...status('record'),
-    badge(`This ${entity.singular.toLowerCase()} is archived. Restore it to edit.`, 'warning', { visible: archived }, 'archive'),
+    ...status('record'), ...lifecycle(entity),
+    archivedAlert(entity.singular),
     ...extras.notices,
     grid(sectionCards(entity.sections, readOnly)),
   ]
@@ -100,13 +99,13 @@ function settingsForm() {
       access: [schemaAccess],
       data: {},
       tree: [
-        row([
-          column([heading('Referrals settings'), text('The points Mark hired awards. Code prefixes are app settings, managed with the installed app.', 'muted')]),
+        pageHeader(
+          [heading('Referrals settings'), text('The points Mark hired awards. Code prefixes are app settings, managed with the installed app.', 'muted')], [
           row([
             button('Reset', [{ 'reset-form': {} }], { disabled: 'form.saving || !form.dirty' }, 'ghost'),
             button('Save', [{ save: {} }, { toast: { message: 'Saved', variant: 'success' } }], { disabled: 'form.saving || !form.dirty || form.invalid' }, undefined, 'save'),
           ]),
-        ], 'between'),
+        ]),
         ...status('record'),
         grid([card('Points', [grid(settingsFields.map(field => formControl(field, null)))])], 1),
       ],
@@ -149,14 +148,14 @@ function homePage() {
         access: pageAccess('Count referrals and show them'),
         data: referralSources,
         tree: page([
-          row([
-            column([heading('Referrals'), text('Employee referrals are files in your workspace. Submit them in /referrals, track them, then decide them from their forms. Hires award points from the settings.', 'muted')]),
+          pageHeader(
+            [heading('Referrals'), text('Employee referrals are files in your workspace. Submit them in /referrals, track them, then decide them from their forms. Hires award points from the settings.', 'muted')], [
             row([
               button('By status', [openFile(`${installRoot}/canvas/referrals.page.yaml`)], undefined, 'outline', 'list'),
               button('Leaderboard', [openFile(`${installRoot}/canvas/leaderboard.page.yaml`)], undefined, 'outline', 'trophy'),
               button('Settings', [openFile(settingsPath, 'edit')], undefined, 'ghost', 'settings'),
             ]),
-          ], 'between'),
+          ]),
           stats([
             stat('Open', countOf("['submitted','in-process'].includes(r.status)"), 'hourglass', loading('referrals')),
             stat('Hired', countOf("r.status === 'hired'"), 'check', loading('referrals')),
@@ -186,10 +185,10 @@ function referralsPage() {
         access: pageAccess('List referrals by status'),
         data: referralSources,
         tree: page([
-          row([
-            column([heading('Referrals by status'), text('Every active referral, grouped by its status. Click a row to open the referral.', 'muted')]),
+          pageHeader(
+            [heading('Referrals by status'), text('Every active referral, grouped by its status. Click a row to open the referral.', 'muted')], [
             button('Referrals', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'gift'),
-          ], 'between'),
+          ]),
           containerNotice(),
           stats(statuses.map(value => stat(statusLabel(value), countOf(`r.status === '${value}'`), 'gift', loading('referrals'))), 4),
           tabs(statuses.map(value => ({ value, label: statusLabel(value), icon: 'gift' })),
@@ -210,10 +209,10 @@ function leaderboardPage() {
         access: pageAccess('Sum referral points per referrer'),
         data: referralSources,
         tree: page([
-          row([
-            column([heading('Leaderboard'), text('Referrers ranked by awarded points. Points are awarded when a referral is marked hired.', 'muted')]),
+          pageHeader(
+            [heading('Leaderboard'), text('Referrers ranked by awarded points. Points are awarded when a referral is marked hired.', 'muted')], [
             button('Referrals', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'gift'),
-          ], 'between'),
+          ]),
           containerNotice(),
           stats([
             stat('Referrers', `{{ ${referrers}.length }}`, 'users', loading('referrals')),
@@ -232,5 +231,5 @@ function leaderboardPage() {
 
 export function buildPages() {
   const documents = [homePage(), referralsPage(), leaderboardPage(), ...recordKinds.map(recordForm), settingsForm()]
-  return Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)]))
+  return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

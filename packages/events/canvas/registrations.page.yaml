@@ -42,90 +42,198 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Events",
+          "icon": "calendar",
+          "active": "registrations.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "events.page.yaml",
+              "label": "Events",
+              "icon": "kanban",
+              "count": "{{ (data.rows || []).filter(r => ['published', 'ongoing'].includes(r.status)).length }}"
+            },
+            {
+              "id": "registrations.page.yaml",
+              "label": "Registrations",
+              "icon": "ticket"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/events/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/events.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Registrations",
+              "note": "Confirmed and attended seats per event, against its capacity. Click a row to open the record."
+            },
+            "children": []
+          },
           {
             "type": "canvas.stack",
             "layout": {
               "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
+                "gap": 2
               }
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Check-in"
+                }
+              },
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "Search for a confirmed attendee and check them in. The box clears for the next person.",
+                  "tone": "muted"
+                }
+              },
+              {
+                "type": "canvas.form.input",
+                "props": {
+                  "label": "Find an attendee",
+                  "value": "{{ state.door }}",
+                  "placeholder": "Name or registration number"
+                }
+              },
+              {
+                "type": "canvas.repeat",
+                "props": {
+                  "items": "{{ String(state.door || '').trim().length < 2 ? [] : (data.registrationrows || []).filter(r => r.status === 'confirmed' && [r.attendee, r.code].join(' ').toLowerCase().includes(String(state.door).trim().toLowerCase())).slice(0, 8) }}",
+                  "layout": "list",
+                  "emptyText": "{{ String(state.door || '').trim().length < 2 ? 'Type at least two letters' : 'No confirmed registration matches' }}"
                 },
                 "children": [
                   {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Registrations"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Confirmed and attended seats per event, against its capacity. Click a row to open the record.",
-                      "tone": "muted"
-                    }
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "align": "center",
+                        "justify": "space-between",
+                        "gap": 3,
+                        "padding": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.stack",
+                        "layout": {
+                          "base": {
+                            "gap": 0
+                          }
+                        },
+                        "children": [
+                          {
+                            "type": "canvas.heading",
+                            "props": {
+                              "level": 3,
+                              "text": "{{ item.attendee }}"
+                            }
+                          },
+                          {
+                            "type": "canvas.text",
+                            "props": {
+                              "tone": "muted",
+                              "text": "{{ [item.event, item.code, item.qty > 1 ? item.qty + ' places' : ''].filter(part => part).join(' · ') }}"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Check in",
+                          "icon": "check",
+                          "size": "lg"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "run-script": {
+                                "file": "/applications/events/scripts/post",
+                                "timeout": 60,
+                                "parameters": {
+                                  "operation": "check-in",
+                                  "path": "{{ item.path }}"
+                                },
+                                "assign": "checkedin"
+                              }
+                            },
+                            {
+                              "refresh-source": {
+                                "source": "registrations"
+                              }
+                            },
+                            {
+                              "set-state": {
+                                "key": "door",
+                                "value": ""
+                              }
+                            },
+                            {
+                              "toast": {
+                                "message": "{{ (state.checkedin && state.checkedin.message) || 'Checked in' }}",
+                                "variant": "success"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
                   }
                 ]
-              },
-              {
-                "type": "canvas.button",
-                "props": {
-                  "label": "Events",
-                  "variant": "ghost",
-                  "icon": "calendar",
-                  "size": "sm"
-                },
-                "on": {
-                  "click": [
-                    {
-                      "open-file": {
-                        "path": "/applications/events/canvas/home.page.yaml"
-                      }
-                    }
-                  ]
-                }
               }
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /events folder could not be read. Reinstall Events to recreate it."
-            },
-            "rules": {
-              "visible": "data.$events.status === 'error'"
+              "for": "events",
+              "compact": true,
+              "description": "The /events folder could not be read. Reinstall Events to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /event-registrations folder could not be read. Reinstall Events to recreate it."
-            },
-            "rules": {
-              "visible": "data.$registrations.status === 'error'"
+              "for": "registrations",
+              "compact": true,
+              "description": "The /event-registrations folder could not be read. Reinstall Events to recreate it."
             }
           },
           {
@@ -223,6 +331,10 @@
                     }
                   ],
                   "emptyText": "No events yet",
+                  "search": true,
+                  "sortable": true,
+                  "pageSize": 25,
+                  "narrow": "list",
                   "clickable": true
                 },
                 "on": {
@@ -230,7 +342,8 @@
                     {
                       "open-file": {
                         "path": "{{ event.path }}",
-                        "mode": "edit"
+                        "mode": "edit",
+                        "open": "side"
                       }
                     }
                   ]
@@ -272,6 +385,10 @@
                     }
                   ],
                   "emptyText": "No registrations yet",
+                  "search": true,
+                  "sortable": true,
+                  "pageSize": 25,
+                  "narrow": "list",
                   "clickable": true
                 },
                 "on": {
@@ -279,16 +396,61 @@
                     {
                       "open-file": {
                         "path": "{{ event.path }}",
-                        "mode": "edit"
+                        "mode": "edit",
+                        "open": "side"
                       }
                     }
                   ]
                 }
               }
             ]
+          },
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "gap": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Registrations by status"
+                }
+              },
+              {
+                "type": "canvas.chart",
+                "props": {
+                  "rows": "{{ ['draft', 'confirmed', 'attended', 'cancelled'].map(status => ({ label: status, value: (data.registrationrows || []).filter(r => r.status === status).length })) }}",
+                  "showLegend": true,
+                  "emptyText": "Nothing to chart yet",
+                  "kind": "strip",
+                  "x": "label",
+                  "y": "value",
+                  "labels": {
+                    "draft": "Draft",
+                    "confirmed": "Confirmed",
+                    "attended": "Attended",
+                    "cancelled": "Cancelled"
+                  },
+                  "palette": {
+                    "draft": "muted",
+                    "confirmed": "chart-1",
+                    "attended": "success",
+                    "cancelled": "danger"
+                  },
+                  "format": "integer"
+                }
+              }
+            ]
           }
         ]
       }
-    ]
+    ],
+    "state": {
+      "door": ""
+    }
   }
 }

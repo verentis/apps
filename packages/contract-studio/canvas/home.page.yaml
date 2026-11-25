@@ -128,16 +128,30 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Contract Studio",
+          "icon": "file-pen-line",
+          "active": "home.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Agreements",
+              "icon": "file-signature"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/contract-studio/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            }
+          ]
         },
         "children": [
           {
@@ -150,9 +164,171 @@
           {
             "type": "canvas.text",
             "props": {
-              "text": "Draft ordered points, review their sources, then issue a clean agreement. Use synthetic material until workspace isolation is verified.",
+              "text": "Draft ordered points, review their sources, then issue a clean agreement.",
               "tone": "muted"
             }
+          },
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "gap": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Agreements by stage"
+                }
+              },
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "Open an agreement to edit, review or issue it.",
+                  "tone": "muted"
+                }
+              },
+              {
+                "type": "canvas.board",
+                "props": {
+                  "rows": "{{ (data.agreements || []).filter(e => e.kind === 'file' && e.data) }}",
+                  "groupBy": "data.stage",
+                  "columns": [
+                    {
+                      "value": "draft",
+                      "label": "Draft"
+                    },
+                    {
+                      "value": "in-review",
+                      "label": "In review"
+                    },
+                    {
+                      "value": "approved",
+                      "label": "Approved"
+                    },
+                    {
+                      "value": "issued",
+                      "label": "Issued"
+                    }
+                  ],
+                  "card": {
+                    "title": "data.title",
+                    "code": "data.code",
+                    "meta": [
+                      "data.jurisdiction"
+                    ]
+                  },
+                  "readOnly": false,
+                  "rowKey": "path",
+                  "emptyText": "No agreements yet",
+                  "lockedWhen": "[\"issued\"].includes(row.data.stage)"
+                },
+                "on": {
+                  "open": [
+                    {
+                      "open-file": {
+                        "path": "{{ event.row.path }}",
+                        "mode": "edit",
+                        "open": "side"
+                      }
+                    }
+                  ],
+                  "move": [
+                    {
+                      "confirm": {
+                        "if": "event.to === 'issued'",
+                        "title": "Move to Issued?",
+                        "message": "{{ event.row.data.code }} moves to Issued. The approved snapshot becomes separate client and internal files.",
+                        "confirm-label": "Move to Issued"
+                      }
+                    },
+                    {
+                      "run-script": {
+                        "if": "event.to === 'in-review'",
+                        "file": "/applications/contract-studio/scripts/draft",
+                        "timeout": 120,
+                        "parameters": {
+                          "operation": "submit",
+                          "path": "{{ event.path }}",
+                          "version": "{{ event.row.data.version }}"
+                        },
+                        "assign": "lastmove"
+                      }
+                    },
+                    {
+                      "run-script": {
+                        "if": "event.to === 'draft'",
+                        "file": "/applications/contract-studio/scripts/draft",
+                        "timeout": 120,
+                        "parameters": {
+                          "operation": "return",
+                          "path": "{{ event.path }}",
+                          "version": "{{ event.row.data.version }}"
+                        },
+                        "assign": "lastmove"
+                      }
+                    },
+                    {
+                      "confirm": {
+                        "if": "event.to === 'approved'",
+                        "title": "Move to Approved",
+                        "message": "{{ event.row.data.code }} moves to Approved.",
+                        "confirm-label": "Move to Approved",
+                        "fields": [
+                          {
+                            "key": "reviewer",
+                            "label": "Reviewed by",
+                            "type": "text",
+                            "required": true
+                          }
+                        ],
+                        "assign": "moveanswer"
+                      }
+                    },
+                    {
+                      "run-script": {
+                        "if": "event.to === 'approved'",
+                        "file": "/applications/contract-studio/scripts/draft",
+                        "timeout": 120,
+                        "parameters": {
+                          "operation": "approve",
+                          "path": "{{ event.path }}",
+                          "version": "{{ event.row.data.version }}",
+                          "reviewer": "{{ state.moveanswer.reviewer }}"
+                        },
+                        "assign": "lastmove"
+                      }
+                    },
+                    {
+                      "run-script": {
+                        "if": "event.to === 'issued'",
+                        "file": "/applications/contract-studio/scripts/issue",
+                        "timeout": 120,
+                        "parameters": {
+                          "operation": "issue",
+                          "path": "{{ event.path }}",
+                          "version": "{{ event.row.data.version }}"
+                        },
+                        "assign": "lastmove"
+                      }
+                    },
+                    {
+                      "refresh-source": {
+                        "source": "agreements"
+                      }
+                    },
+                    {
+                      "toast": {
+                        "message": "{{ [\"in-review\",\"draft\",\"approved\",\"issued\"].includes(event.to) ? ((state.lastmove && state.lastmove.message) || 'Done') : 'Moved to ' + ({\"draft\":\"Draft\",\"in-review\":\"In review\",\"approved\":\"Approved\",\"issued\":\"Issued\"}[event.to] || event.to) }}",
+                        "variant": "success"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
           },
           {
             "type": "canvas.card",
@@ -215,22 +391,10 @@
             },
             "children": [
               {
-                "type": "canvas.text",
+                "type": "canvas.empty-state",
                 "props": {
-                  "text": "{{ data.$agreements.error }}"
-                },
-                "rules": {
-                  "visible": "data.$agreements.status === 'error'"
-                }
-              },
-              {
-                "type": "canvas.text",
-                "props": {
-                  "text": "Loading…",
-                  "tone": "muted"
-                },
-                "rules": {
-                  "visible": "data.$agreements.status === 'loading'"
+                  "for": "agreements",
+                  "compact": true
                 }
               },
               {
@@ -252,6 +416,10 @@
                     }
                   ],
                   "emptyText": "No agreements yet.",
+                  "search": true,
+                  "sortable": true,
+                  "pageSize": 25,
+                  "narrow": "list",
                   "clickable": true
                 },
                 "on": {
@@ -259,7 +427,8 @@
                     {
                       "open-file": {
                         "path": "{{ event.path }}",
-                        "mode": "edit"
+                        "mode": "edit",
+                        "open": "side"
                       }
                     }
                   ]

@@ -65,6 +65,31 @@
         "path": "/applications/employees/",
         "mode": "read",
         "reason": "Read the Employees schemas and run the employee action script"
+      },
+      {
+        "path": "/leave-requests",
+        "mode": "read",
+        "reason": "Show this person's time off (when that app is installed)"
+      },
+      {
+        "path": "/timesheets",
+        "mode": "read",
+        "reason": "Show this person's timesheets (when that app is installed)"
+      },
+      {
+        "path": "/appraisals",
+        "mode": "read",
+        "reason": "Show this person's appraisals (when that app is installed)"
+      },
+      {
+        "path": "/shifts",
+        "mode": "read",
+        "reason": "Show this person's shifts (when that app is installed)"
+      },
+      {
+        "path": "/tickets",
+        "mode": "read",
+        "reason": "Show this person's tickets (when that app is installed)"
       }
     ],
     "access": [
@@ -79,6 +104,26 @@
       {
         "path": "/applications/employees/",
         "reason": "Read the Employees schemas and run the employee action script"
+      },
+      {
+        "path": "/leave-requests",
+        "reason": "Show this person's time off (when that app is installed)"
+      },
+      {
+        "path": "/timesheets",
+        "reason": "Show this person's timesheets (when that app is installed)"
+      },
+      {
+        "path": "/appraisals",
+        "reason": "Show this person's appraisals (when that app is installed)"
+      },
+      {
+        "path": "/shifts",
+        "reason": "Show this person's shifts (when that app is installed)"
+      },
+      {
+        "path": "/tickets",
+        "reason": "Show this person's tickets (when that app is installed)"
       }
     ],
     "data": {
@@ -106,6 +151,36 @@
         "kind": "computed",
         "expr": "(data.staff || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status !== 'terminated')).map(e => ({ label: (e.data.code || e.name) + ' · ' + (e.data.name || ''), value: e.path }))"
       },
+      "leave": {
+        "kind": "folder",
+        "path": "/leave-requests",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.time-off.request+json"
+      },
+      "hours": {
+        "kind": "folder",
+        "path": "/timesheets",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.timesheets.entry+json"
+      },
+      "reviews": {
+        "kind": "folder",
+        "path": "/appraisals",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.appraisals.appraisal+json"
+      },
+      "shifts": {
+        "kind": "folder",
+        "path": "/shifts",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.planning.shift+json"
+      },
+      "tickets": {
+        "kind": "folder",
+        "path": "/tickets",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.helpdesk.ticket+json"
+      },
       "manageroptions": {
         "kind": "computed",
         "expr": "(data.staff || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status !== 'terminated')).map(e => ({ label: (e.data.code || e.name) + ' · ' + (e.data.name || ''), value: e.path }))"
@@ -129,74 +204,68 @@
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.validation-summary",
+            "props": {
+              "title": "Fix these before saving"
+            }
+          },
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "{{ form.values.name || 'New employee' }}",
+              "note": "Employee {{ form.values.code || '' }}"
             },
             "children": [
               {
                 "type": "canvas.stack",
                 "layout": {
                   "base": {
-                    "gap": 1
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
                   }
                 },
                 "children": [
                   {
-                    "type": "canvas.stack",
-                    "layout": {
-                      "base": {
-                        "direction": "row",
-                        "wrap": true,
-                        "gap": 2,
-                        "align": "center"
-                      }
+                    "type": "canvas.dashboard.badge",
+                    "props": {
+                      "text": "{{ String(form.values.status || '').split('-').join(' ') }}",
+                      "tone": "{{ [\"active\"].includes(form.values.status) ? 'success' : [\"on-leave\"].includes(form.values.status) ? 'warning' : [\"terminated\"].includes(form.values.status) ? 'danger' : 'neutral' }}"
                     },
-                    "children": [
-                      {
-                        "type": "canvas.heading",
-                        "props": {
-                          "level": 2,
-                          "text": "{{ form.values.name || 'New employee' }}"
-                        }
-                      },
-                      {
-                        "type": "canvas.dashboard.badge",
-                        "props": {
-                          "text": "{{ String(form.values.status || '').split('-').join(' ') }}",
-                          "tone": "{{ [\"active\"].includes(form.values.status) ? 'success' : [\"on-leave\"].includes(form.values.status) ? 'warning' : [\"terminated\"].includes(form.values.status) ? 'danger' : 'neutral' }}"
-                        },
-                        "rules": {
-                          "visible": "!!form.values.status"
-                        }
-                      },
-                      {
-                        "type": "canvas.dashboard.badge",
-                        "props": {
-                          "text": "Archived",
-                          "tone": "warning",
-                          "icon": "archive"
-                        },
-                        "rules": {
-                          "visible": "form.values.state === 'archived'"
-                        }
-                      }
-                    ]
+                    "rules": {
+                      "visible": "!!form.values.status"
+                    }
                   },
                   {
-                    "type": "canvas.text",
+                    "type": "canvas.dashboard.badge",
                     "props": {
-                      "text": "Employee {{ form.values.code || '' }} · {{ ctx.file.path }}",
-                      "tone": "muted"
+                      "text": "Archived",
+                      "tone": "warning",
+                      "icon": "archive"
+                    },
+                    "rules": {
+                      "visible": "form.values.state === 'archived'"
                     }
                   }
                 ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Terminate",
+                  "variant": "outline",
+                  "icon": "user-x",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "terminate"
+                },
+                "rules": {
+                  "visible": "form.values.status === 'active' && !(form.values.state === 'archived')",
+                  "disabled": "form.saving || form.dirty"
+                },
+                "slot": "actions"
               },
               {
                 "type": "canvas.stack",
@@ -212,124 +281,117 @@
                   {
                     "type": "canvas.button",
                     "props": {
-                      "label": "Terminate",
-                      "variant": "outline",
-                      "icon": "user-x",
+                      "label": "Archive",
+                      "variant": "ghost",
+                      "icon": "archive",
                       "size": "sm"
                     },
                     "on": {
-                      "click": "terminate"
+                      "click": "archive"
                     },
                     "rules": {
-                      "visible": "form.values.status === 'active' && !(form.values.state === 'archived')",
+                      "visible": "!(form.values.state === 'archived') && !(form.values.status === 'terminated')",
                       "disabled": "form.saving || form.dirty"
                     }
                   },
                   {
-                    "type": "canvas.stack",
-                    "layout": {
-                      "base": {
-                        "direction": "row",
-                        "wrap": true,
-                        "gap": 2,
-                        "align": "center"
-                      }
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Restore",
+                      "variant": "outline",
+                      "icon": "archive-restore",
+                      "size": "sm"
                     },
-                    "children": [
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Archive",
-                          "variant": "ghost",
-                          "icon": "archive",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "archive"
-                        },
-                        "rules": {
-                          "visible": "!(form.values.state === 'archived') && !(form.values.status === 'terminated')",
-                          "disabled": "form.saving || form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Restore",
-                          "variant": "outline",
-                          "icon": "archive-restore",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "restore"
-                        },
-                        "rules": {
-                          "visible": "form.values.state === 'archived'",
-                          "disabled": "form.saving || form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Reset",
-                          "variant": "ghost",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "reset"
-                        },
-                        "rules": {
-                          "disabled": "form.saving || !form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Save",
-                          "icon": "save",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "save"
-                        },
-                        "rules": {
-                          "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (form.values.status === 'terminated')"
-                        }
-                      }
-                    ]
+                    "on": {
+                      "click": "restore"
+                    },
+                    "rules": {
+                      "visible": "form.values.state === 'archived'",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Reset",
+                      "variant": "ghost",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "reset"
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Save",
+                      "icon": "save",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "save"
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (form.values.status === 'terminated')"
+                    }
                   }
-                ]
+                ],
+                "slot": "actions"
               }
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "{{ data.$record.error }}"
-            },
-            "rules": {
-              "visible": "data.$record.status === 'error'"
+              "for": "record",
+              "compact": true
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.status-steps",
             "props": {
-              "text": "Loading…",
-              "tone": "muted"
+              "value": "{{ form.values.status }}",
+              "steps": [
+                {
+                  "value": "active",
+                  "label": "Active"
+                },
+                {
+                  "value": "on-leave",
+                  "label": "On Leave"
+                }
+              ],
+              "branches": [
+                {
+                  "value": "terminated",
+                  "label": "Terminated"
+                }
+              ]
             },
             "rules": {
-              "visible": "data.$record.status === 'loading'"
+              "visible": "!!form.values.status"
             }
           },
           {
-            "type": "canvas.dashboard.badge",
+            "type": "canvas.alert",
             "props": {
-              "text": "This employee is archived. Restore it to edit.",
               "tone": "warning",
-              "icon": "archive"
+              "title": "This employee is archived",
+              "text": "Restore it to edit.",
+              "icon": "archive",
+              "action": {
+                "label": "Restore",
+                "id": "restore"
+              }
             },
             "rules": {
               "visible": "form.values.state === 'archived'"
+            },
+            "on": {
+              "action": "restore"
             }
           },
           {
@@ -445,7 +507,8 @@
                         "props": {
                           "label": "Department",
                           "value": "{{ form.values.department }}",
-                          "options": "{{ data.departmentoptions }}"
+                          "options": "{{ data.departmentoptions }}",
+                          "searchable": true
                         },
                         "rules": {
                           "disabled": "(form.values.state === 'archived' || (form.values.status === 'terminated'))"
@@ -456,7 +519,8 @@
                         "props": {
                           "label": "Manager",
                           "value": "{{ form.values.manager }}",
-                          "options": "{{ data.manageroptions }}"
+                          "options": "{{ data.manageroptions }}",
+                          "searchable": true
                         },
                         "rules": {
                           "disabled": "(form.values.state === 'archived' || (form.values.status === 'terminated'))"
@@ -556,7 +620,8 @@
                               "value": "terminated",
                               "label": "Terminated"
                             }
-                          ]
+                          ],
+                          "display": "segmented"
                         },
                         "rules": {
                           "disabled": "(form.values.state === 'archived' || (form.values.status === 'terminated'))"
@@ -576,6 +641,241 @@
                     ]
                   }
                 ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 1,
+                "gap": 4
+              },
+              "tablet": {
+                "columns": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Time off"
+                },
+                "children": [
+                  {
+                    "type": "canvas.related",
+                    "props": {
+                      "rows": "{{ (data.leave || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && String(e.data.employee || '').trim().toLowerCase() === String(form.values.name || '').trim().toLowerCase()).map(e => ({ path: e.path, type: e.data.type || 'Leave', startDate: e.data.startDate, endDate: e.data.endDate, status: e.data.status })).sort((a, b) => String(b.date || b.startDate || '') < String(a.date || a.startDate || '') ? -1 : 1) }}",
+                      "item": {
+                        "title": "type",
+                        "subtitle": [
+                          "startDate",
+                          "endDate"
+                        ],
+                        "badge": "status"
+                      },
+                      "limit": 5,
+                      "emptyText": "Nothing in Time off for this person"
+                    },
+                    "on": {
+                      "open": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.row.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ],
+                      "more": [
+                        {
+                          "open-file": {
+                            "path": "/leave-requests"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "rules": {
+                  "visible": "data.$leave.status === 'ready'"
+                }
+              },
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Timesheets"
+                },
+                "children": [
+                  {
+                    "type": "canvas.related",
+                    "props": {
+                      "rows": "{{ (data.hours || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && String(e.data.employee || '').trim().toLowerCase() === String(form.values.name || '').trim().toLowerCase()).map(e => ({ path: e.path, date: e.data.date, hours: (e.data.hours || '0') + ' h', status: e.data.status })).sort((a, b) => String(b.date || b.startDate || '') < String(a.date || a.startDate || '') ? -1 : 1) }}",
+                      "item": {
+                        "title": "date",
+                        "subtitle": [
+                          "hours"
+                        ],
+                        "badge": "status"
+                      },
+                      "limit": 5,
+                      "emptyText": "Nothing in Timesheets for this person"
+                    },
+                    "on": {
+                      "open": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.row.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ],
+                      "more": [
+                        {
+                          "open-file": {
+                            "path": "/timesheets"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "rules": {
+                  "visible": "data.$hours.status === 'ready'"
+                }
+              },
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Appraisals"
+                },
+                "children": [
+                  {
+                    "type": "canvas.related",
+                    "props": {
+                      "rows": "{{ (data.reviews || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && String(e.data.employee || '').trim().toLowerCase() === String(form.values.name || '').trim().toLowerCase()).map(e => ({ path: e.path, period: e.data.period || e.data.code, score: e.data.overallScore ? 'Score ' + e.data.overallScore : '', status: e.data.status })).sort((a, b) => String(b.date || b.startDate || '') < String(a.date || a.startDate || '') ? -1 : 1) }}",
+                      "item": {
+                        "title": "period",
+                        "subtitle": [
+                          "score"
+                        ],
+                        "badge": "status"
+                      },
+                      "limit": 5,
+                      "emptyText": "Nothing in Appraisals for this person"
+                    },
+                    "on": {
+                      "open": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.row.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ],
+                      "more": [
+                        {
+                          "open-file": {
+                            "path": "/appraisals"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "rules": {
+                  "visible": "data.$reviews.status === 'ready'"
+                }
+              },
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Shifts"
+                },
+                "children": [
+                  {
+                    "type": "canvas.related",
+                    "props": {
+                      "rows": "{{ (data.shifts || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && String(e.data.employee || '').trim().toLowerCase() === String(form.values.name || '').trim().toLowerCase()).map(e => ({ path: e.path, date: e.data.date, time: [e.data.startTime, e.data.endTime].filter(t => t).join(' to '), status: e.data.status })).sort((a, b) => String(b.date || b.startDate || '') < String(a.date || a.startDate || '') ? -1 : 1) }}",
+                      "item": {
+                        "title": "date",
+                        "subtitle": [
+                          "time"
+                        ],
+                        "badge": "status"
+                      },
+                      "limit": 5,
+                      "emptyText": "Nothing in Shifts for this person"
+                    },
+                    "on": {
+                      "open": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.row.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ],
+                      "more": [
+                        {
+                          "open-file": {
+                            "path": "/shifts"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "rules": {
+                  "visible": "data.$shifts.status === 'ready'"
+                }
+              },
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Tickets"
+                },
+                "children": [
+                  {
+                    "type": "canvas.related",
+                    "props": {
+                      "rows": "{{ (data.tickets || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && String(e.data.assignee || '').trim().toLowerCase() === String(form.values.name || '').trim().toLowerCase()).map(e => ({ path: e.path, subject: e.data.subject || e.data.code, code: e.data.code, stage: e.data.stage })).sort((a, b) => String(b.date || b.startDate || '') < String(a.date || a.startDate || '') ? -1 : 1) }}",
+                      "item": {
+                        "title": "subject",
+                        "subtitle": [
+                          "code"
+                        ],
+                        "badge": "stage"
+                      },
+                      "limit": 5,
+                      "emptyText": "Nothing in Tickets for this person"
+                    },
+                    "on": {
+                      "open": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.row.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ],
+                      "more": [
+                        {
+                          "open-file": {
+                            "path": "/tickets"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "rules": {
+                  "visible": "data.$tickets.status === 'ready'"
+                }
               }
             ]
           }

@@ -1,0 +1,11 @@
+# Manufacturing's API contract: it offers no operations yet; it asks Inventory to record a completed order's
+# consumption and output as stock moves.
+api-version: verentis.io/v1
+kind: Api
+metadata:
+  id: manufacturing
+spec:
+  uses:
+    - app: inventory
+      operation: record-production
+      reason: Move consumed components out and the produced output in when an order completes

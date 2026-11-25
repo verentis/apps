@@ -38,67 +38,106 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Planning",
+          "icon": "calendar-days",
+          "active": "week.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "week.page.yaml",
+              "label": "Week",
+              "icon": "calendar"
+            },
+            {
+              "id": "shifts.page.yaml",
+              "label": "Shifts",
+              "icon": "list",
+              "count": "{{ (data.rows || []).filter(r => r.status === 'draft').length }}"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/planning/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/planning.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Week schedule",
+              "note": "Shifts in the next seven days, grouped by date and employee. Click a shift to open it."
+            },
+            "children": []
+          },
           {
             "type": "canvas.stack",
             "layout": {
               "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
+                "gap": 2
               }
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Week schedule"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Shifts in the next seven days, grouped by date and employee. Click a shift to open it.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Rota"
+                }
               },
               {
-                "type": "canvas.button",
+                "type": "canvas.text",
                 "props": {
-                  "label": "Planning",
-                  "variant": "ghost",
-                  "icon": "calendar-days",
-                  "size": "sm"
+                  "text": "Who works when over the next seven days. Draft shifts are marked; open one to change it.",
+                  "tone": "muted"
+                }
+              },
+              {
+                "type": "canvas.matrix",
+                "props": {
+                  "rows": "{{ (data.rows || []).filter(r => !!r.date && r.status !== 'cancelled').map(r => ({ path: r.path, employee: r.employee || 'Unassigned', date: r.date, role: r.role || 'No role', label: [r.time, r.role].filter(part => part).join(' ') + (r.status === 'draft' ? ' · draft' : '') })) }}",
+                  "rowKey": "employee",
+                  "columnKey": "date",
+                  "mode": "items",
+                  "item": "label",
+                  "colorBy": "role",
+                  "rowHeading": "Person",
+                  "columns": "{{ Array.from({ length: 7 }, (_, i) => Date(Date.now() + i * 86400000).slice(0, 10)).map(d => ({ value: d, label: format(d, 'date') })) }}",
+                  "emptyText": "No shifts in the next seven days."
                 },
                 "on": {
-                  "click": [
+                  "open": [
                     {
                       "open-file": {
-                        "path": "/applications/planning/canvas/home.page.yaml"
+                        "path": "{{ event.row.path }}",
+                        "mode": "edit",
+                        "open": "side"
                       }
                     }
                   ]
@@ -107,21 +146,19 @@
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /shifts folder could not be read. Reinstall Planning to recreate it."
-            },
-            "rules": {
-              "visible": "data.$shifts.status === 'error'"
+              "for": "shifts",
+              "compact": true,
+              "description": "The /shifts folder could not be read. Reinstall Planning to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /shift-roles folder could not be read. Reinstall Planning to recreate it."
-            },
-            "rules": {
-              "visible": "data.$roles.status === 'error'"
+              "for": "roles",
+              "compact": true,
+              "description": "The /shift-roles folder could not be read. Reinstall Planning to recreate it."
             }
           },
           {
@@ -205,7 +242,11 @@
                       "align": "end"
                     }
                   ],
-                  "emptyText": "No shifts this week"
+                  "emptyText": "No shifts this week",
+                  "search": true,
+                  "sortable": true,
+                  "pageSize": 25,
+                  "narrow": "list"
                 }
               }
             ]
@@ -236,7 +277,11 @@
                       "align": "end"
                     }
                   ],
-                  "emptyText": "No shifts this week"
+                  "emptyText": "No shifts this week",
+                  "search": true,
+                  "sortable": true,
+                  "pageSize": 25,
+                  "narrow": "list"
                 }
               }
             ]
@@ -278,6 +323,10 @@
                     }
                   ],
                   "emptyText": "No shifts this week",
+                  "search": true,
+                  "sortable": true,
+                  "pageSize": 25,
+                  "narrow": "list",
                   "clickable": true
                 },
                 "on": {
@@ -285,7 +334,8 @@
                     {
                       "open-file": {
                         "path": "{{ event.path }}",
-                        "mode": "edit"
+                        "mode": "edit",
+                        "open": "side"
                       }
                     }
                   ]

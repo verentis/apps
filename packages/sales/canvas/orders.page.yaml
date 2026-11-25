@@ -11,7 +11,8 @@
     "access": [
       {
         "path": "/sales-orders",
-        "reason": "List sales orders by delivery status"
+        "reason": "List sales orders by delivery status; move records between columns",
+        "mode": "write"
       }
     ],
     "data": {
@@ -27,91 +28,139 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Sales",
+          "icon": "package",
+          "active": "orders.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "quotations.page.yaml",
+              "label": "Quotations",
+              "icon": "file-text"
+            },
+            {
+              "id": "orders.page.yaml",
+              "label": "Orders",
+              "icon": "package"
+            },
+            {
+              "id": "summary.page.yaml",
+              "label": "Summary",
+              "icon": "chart-column"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/sales/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/sales.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Sales orders",
+              "note": "What confirmed quotations became, tracked by delivery status."
             },
-            "children": [
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Sales orders"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "What confirmed quotations became, tracked by delivery status.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.button",
-                "props": {
-                  "label": "Sales",
-                  "variant": "ghost",
-                  "icon": "package",
-                  "size": "sm"
-                },
-                "on": {
-                  "click": [
-                    {
-                      "open-file": {
-                        "path": "/applications/sales/canvas/home.page.yaml"
-                      }
-                    }
-                  ]
-                }
-              }
-            ]
+            "children": []
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.board",
             "props": {
-              "text": "{{ data.$orders.error }}"
+              "rows": "{{ (data.orders || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
+              "groupBy": "data.deliveryStatus",
+              "columns": [
+                {
+                  "value": "pending",
+                  "label": "Pending"
+                },
+                {
+                  "value": "partial",
+                  "label": "Partial"
+                },
+                {
+                  "value": "delivered",
+                  "label": "Delivered"
+                }
+              ],
+              "card": {
+                "title": "data.customer.name",
+                "code": "data.code",
+                "meta": [
+                  "data.date",
+                  "data.quotation"
+                ]
+              },
+              "readOnly": false,
+              "rowKey": "path",
+              "emptyText": "Nothing here"
             },
-            "rules": {
-              "visible": "data.$orders.status === 'error'"
+            "on": {
+              "open": [
+                {
+                  "open-file": {
+                    "path": "{{ event.row.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ],
+              "move": [
+                {
+                  "patch-record": {
+                    "if": "![].includes(event.to)",
+                    "path": "{{ event.path }}",
+                    "values": {
+                      "deliveryStatus": "{{ event.to }}",
+                      "updatedAt": "{{ Date() }}"
+                    }
+                  }
+                },
+                {
+                  "refresh-source": {
+                    "source": "orders"
+                  }
+                },
+                {
+                  "toast": {
+                    "message": "{{ [].includes(event.to) ? ((state.lastmove && state.lastmove.message) || 'Done') : 'Moved to ' + ({\"pending\":\"Pending\",\"partial\":\"Partial\",\"delivered\":\"Delivered\"}[event.to] || event.to) }}",
+                    "variant": "success"
+                  }
+                }
+              ]
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "Loading…",
-              "tone": "muted"
-            },
-            "rules": {
-              "visible": "data.$orders.status === 'loading'"
+              "for": "orders",
+              "compact": true
             }
           },
           {
@@ -199,6 +248,10 @@
                 }
               ],
               "emptyText": "No sales orders yet",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
               "clickable": true
             },
             "on": {
@@ -206,7 +259,8 @@
                 {
                   "open-file": {
                     "path": "{{ event.path }}",
-                    "mode": "edit"
+                    "mode": "edit",
+                    "open": "side"
                   }
                 }
               ]

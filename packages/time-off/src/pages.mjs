@@ -1,10 +1,11 @@
 // Generates the Time Off Canvas documents: a bound form per record kind, the settings form, the launch page,
 // the request list by status and the remaining-allocation summary. Submitting, approving and refusing (weekday
 // counts, approvals, locking) are done by the action script the request form runs.
+import { views } from './views.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   humanize, iconName, options, openFile, page, panel, projectRegistration, recordButtons, row, scriptAction,
-  stat, stats, status, table, tabs, text, toneExpression,
+  stat, stats, status, table, tabs, text, toneExpression, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { containers, employees, installRoot, mimeTypes, recordKinds, schemaId, settingsPath, statuses } from './contracts.mjs'
 import { entities, postScriptPath, settingsFields } from './app.mjs'
@@ -47,16 +48,29 @@ function recordExtras(kind) {
     access: [
       typesAccess('Choose the leave type a request draws on'),
       { path: employees.directory, reason: 'Offer Employees records on requests (when Employees is installed)' },
+      { path: containers.requests.path, reason: 'Show who else is off on these dates and the days already taken' },
       schemaAccess,
     ],
     data: {
       ...typeSources,
       staff: folder(employees.directory, employees.employeeMime),
       employeeoptions: { kind: 'computed', expr: options('staff', "e.data.name || ''", "e.data.status !== 'terminated'") },
+      others: folder(containers.requests.path, mimeTypes.request),
+      // Submitted or approved requests of other people overlapping this one's dates.
+      clashes: { kind: 'computed', expr: `(data.others || []).filter(e => e.kind === 'file' && e.data && e.path !== ctx.file.path && ['submitted', 'approved'].includes(e.data.status) && !!form.values.startDate && !!e.data.startDate && e.data.employeeName !== form.values.employeeName && e.data.startDate <= (form.values.endDate || form.values.startDate) && (e.data.endDate || e.data.startDate) >= form.values.startDate).map(e => ({ path: e.path, name: e.data.employeeName || e.name, from: e.data.startDate, to: e.data.endDate || e.data.startDate, status: e.data.status }))` },
+      // This person's approved days of this leave type in the request's year, against the type's allocation.
+      allocated: { kind: 'computed', expr: `Number(${typeData('form.values.type')}.daysPerYear || 0)` },
+      taken: { kind: 'computed', expr: "(data.others || []).filter(e => e.kind === 'file' && e.data && e.path !== ctx.file.path && e.data.status === 'approved' && e.data.employeeName === form.values.employeeName && e.data.type === form.values.type && String(e.data.startDate || '').slice(0, 4) === String(form.values.startDate || '').slice(0, 4)).reduce((sum, e) => sum + Number(e.data.days || 0), 0)" },
     },
     state: { approver: '', refusalreason: '' },
     notices: [
       badge('Refused: {{ form.values.refusalReason }}', 'danger', { visible: "form.values.status === 'refused'" }),
+      {
+        type: 'canvas.alert',
+        rules: { visible: "(data.clashes || []).length > 0 && form.values.status !== 'refused' && form.values.status !== 'cancelled'" },
+        props: { tone: 'warning', title: 'Others are off on these dates', text: "{{ (data.clashes || []).map(c => c.name + ' (' + c.from + (c.to !== c.from ? ' to ' + c.to : '') + (c.status === 'submitted' ? ', waiting' : '') + ')').join(', ') }}" },
+      },
+      { ...text("{{ data.taken }} of {{ data.allocated }} days of this leave type taken this year; {{ data.allocated - data.taken }} left before this request.", 'muted'), rules: { visible: '!!form.values.type && !!form.values.employeeName && data.allocated > 0' } },
       { ...text('Approved by {{ form.values.approver }} on {{ form.values.approvedAt }}', 'muted'), rules: { visible: '!!form.values.approver' } },
       grid([
         { type: 'canvas.form.input', props: { label: 'Approver', placeholder: 'Who approves this request?', value: '{{ state.approver }}' }, rules: visibleWhenSubmitted },
@@ -91,21 +105,19 @@ function recordForm(kind) {
   const entity = entities[kind]
   const extras = recordExtras(kind)
   const readOnly = `${archived} || (${extras.locked})`
-  const header = row([
-    column([
-      row([
-        heading(`{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`),
+  const header = recordHeader(
+    `{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`,
+    [
         ...(entity.status ? [badge(humanize(entity.status), toneExpression(entity.status, statusTones), { visible: `!!form.values.${entity.status}` })] : []),
         badge('Archived', 'warning', { visible: archived }, 'archive'),
-      ]),
-      text(`${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`, 'muted'),
-    ]),
-    row([...extras.buttons, recordButtons(extras.locked)]),
-  ], 'between')
+    ],
+    `${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`,
+    [...extras.buttons, recordButtons(extras.locked)],
+  )
   const tree = [
     header,
-    ...status('record'),
-    badge(`This ${entity.singular.toLowerCase()} is archived. Restore it to edit.`, 'warning', { visible: archived }, 'archive'),
+    ...status('record'), ...lifecycle(entity),
+    archivedAlert(entity.singular),
     ...extras.notices,
     grid(sectionCards(entity.sections, readOnly)),
   ]
@@ -130,13 +142,13 @@ function settingsForm() {
       access: [typesAccess('Choose the default leave type for new requests'), schemaAccess],
       data: typeSources,
       tree: [
-        row([
-          column([heading('Time Off settings'), text('The default leave type for new requests. Code prefixes are app settings, managed with the installed app.', 'muted')]),
+        pageHeader(
+          [heading('Time Off settings'), text('The default leave type for new requests. Code prefixes are app settings, managed with the installed app.', 'muted')], [
           row([
             button('Reset', [{ 'reset-form': {} }], { disabled: 'form.saving || !form.dirty' }, 'ghost'),
             button('Save', [{ save: {} }, { toast: { message: 'Saved', variant: 'success' } }], { disabled: 'form.saving || !form.dirty || form.invalid' }, undefined, 'save'),
           ]),
-        ], 'between'),
+        ]),
         ...status('record'),
         ...status('types', `The ${containers.types.path} folder could not be read. Reinstall Time Off to recreate it.`),
         grid([card('Defaults', [grid(settingsFields.map(field => formControl(field, null)))])], 1),
@@ -182,14 +194,14 @@ function homePage() {
         access: pageAccess('Count leave requests and show the leave types and requests'),
         data: pageSources,
         tree: page([
-          row([
-            column([heading('Time Off'), text('Leave types and leave requests are files in your workspace. Draft requests in /leave-requests, then submit, approve or refuse them from their forms.', 'muted')]),
+          pageHeader(
+            [heading('Time Off'), text('Leave types and leave requests are files in your workspace. Draft requests in /leave-requests, then submit, approve or refuse them from their forms.', 'muted')], [
             row([
               button('Requests', [openFile(`${installRoot}/canvas/requests.page.yaml`)], undefined, 'outline', 'calendar-off'),
               button('Allocations', [openFile(`${installRoot}/canvas/allocations.page.yaml`)], undefined, 'outline', 'chart-pie'),
               button('Settings', [openFile(settingsPath, 'edit')], undefined, 'ghost', 'settings'),
             ]),
-          ], 'between'),
+          ]),
           stats([
             stat('Draft', countOf("r.status === 'draft'"), 'file-pen', loading('requests')),
             stat('Awaiting approval', countOf("r.status === 'submitted'"), 'hourglass', loading('requests')),
@@ -227,10 +239,10 @@ function requestsPage() {
         access: pageAccess('List leave requests by status with their leave type names'),
         data: pageSources,
         tree: page([
-          row([
-            column([heading('Leave requests by status'), text('Every active leave request, grouped by its status. Click a row to open the request.', 'muted')]),
+          pageHeader(
+            [heading('Leave requests by status'), text('Every active leave request, grouped by its status. Click a row to open the request.', 'muted')], [
             button('Time Off', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'calendar-off'),
-          ], 'between'),
+          ]),
           ...containerNotices(),
           stats(statuses.map(value => stat(statusLabel(value), countOf(`r.status === '${value}'`), 'calendar-off', loading('requests'))), 4),
           tabs(statuses.map(value => ({ value, label: statusLabel(value), icon: 'calendar-off' })),
@@ -255,10 +267,10 @@ function allocationsPage() {
         access: pageAccess('Compare approved leave days against each leave type\'s yearly allocation'),
         data: { ...pageSources, summary: { kind: 'computed', expr: summary } },
         tree: page([
-          row([
-            column([heading('Remaining allocations'), text('Approved leave days per employee and leave type against the type\'s yearly allocation.', 'muted')]),
+          pageHeader(
+            [heading('Remaining allocations'), text('Approved leave days per employee and leave type against the type\'s yearly allocation.', 'muted')], [
             button('Time Off', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'calendar-off'),
-          ], 'between'),
+          ]),
           ...containerNotices(),
           stats([
             stat('Leave types', `{{ (data.types || []).filter(e => ${active}).length }}`, 'tags', loading('types')),
@@ -275,5 +287,5 @@ function allocationsPage() {
 
 export function buildPages() {
   const documents = [homePage(), requestsPage(), allocationsPage(), ...recordKinds.map(recordForm), settingsForm()]
-  return Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)]))
+  return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

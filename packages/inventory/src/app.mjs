@@ -1,4 +1,4 @@
-import { codeDigits, codeSettings, containerOf, containers, createDefaults, installRoot, mimeTypes, recordKinds, recordPath, settingsPath, starterRecords } from './contracts.mjs'
+import { codeDigits, codeSettings, containerOf, containers, createDefaults, installRoot, mimeTypes, recordKinds, products, recordPath, settingsPath, starterRecords } from './contracts.mjs'
 import { scriptConsent } from '../../../tools/file-apps/build.mjs'
 
 export const version = '0.1.0'
@@ -11,12 +11,21 @@ export const createScript = 'scripts/create'
 export const createScriptName = 'inventory-create'
 export const postScript = 'scripts/post'
 export const postScriptName = 'inventory-post'
+/** The API script: the operations other apps call through the platform (api.yaml). */
+export const apiScript = 'scripts/api'
+export const apiScriptName = 'inventory-api'
 /** Where `spec.install` places the posting script; Canvas actions run it by path. */
 export const postScriptPath = `${installRoot}/${postScript}`
 /** The Canvas page behind the "Low stock" dashboard widget. */
 export const lowStockWidgetFile = 'low-stock.widget.page.yaml'
 
 /** What the create script may touch: it writes new records create-only and reads the default warehouse. */
+/** What the API script may touch: it records other apps' production as stock moves through the default warehouse. */
+export const apiScriptFileAccess = [
+  { path: containers.moves.path, mode: 'write', reason: 'Record production other apps report as done stock moves' },
+  { path: settingsPath, mode: 'read', reason: 'Move production through the default warehouse' },
+]
+
 export const createScriptFileAccess = [
   ...recordKinds.map(kind => ({
     path: containers[containerOf[kind]].path, mode: 'write', reason: `Create ${kind === 'warehouse' ? 'warehouses' : `${kind}s`} with the next code`,
@@ -26,7 +35,7 @@ export const createScriptFileAccess = [
 
 /** What the posting script may touch: it validates products and warehouses, marks moves done and applies counts. */
 export const postScriptFileAccess = [
-  { path: containers.products.path, mode: 'read', reason: 'Check that the moved or counted product exists and is active' },
+  { path: products.path, mode: 'read', reason: 'Check that the moved or counted product exists and is active (Products)' },
   { path: containers.warehouses.path, mode: 'read', reason: 'Check warehouses and their locations' },
   { path: containers.moves.path, mode: 'write', reason: 'Mark moves done and write corrective moves for applied adjustments' },
   { path: containers.adjustments.path, mode: 'write', reason: 'Mark adjustments applied' },
@@ -38,15 +47,6 @@ const qty = (key, label, extra = {}) => text(key, label, { placeholder: '0', ...
 
 /** Record kinds: labels, icons and the sections of their bound Canvas form. `span: 2` fields take a full row. */
 export const entities = {
-  product: {
-    singular: 'Product', plural: 'Products', titleKey: 'name', icon: 'lucide:package',
-    folderNames: ['products', 'catalog', 'inventory'],
-    sections: [{ title: 'Product', fields: [
-      text('name', 'Name', { required: true }), text('sku', 'SKU', { placeholder: 'DESK-001' }),
-      text('unit', 'Unit', { placeholder: 'ea' }), text('category', 'Category', { placeholder: 'Furniture' }),
-      qty('reorderPoint', 'Reorder point', { description: 'Flag the product on the stock report when on hand falls to this quantity.' }),
-    ] }],
-  },
   warehouse: {
     singular: 'Warehouse', plural: 'Warehouses', titleKey: 'name', icon: 'lucide:warehouse',
     folderNames: ['warehouses', 'inventory'],
@@ -164,9 +164,10 @@ export const manifest = {
     permissions: ['file.read', 'file.write', 'execution.run'],
     scopes: ['inventory.default'],
     settings,
-    dependencies: [{ package: 'verentis/canvas', version: 'latest' }, { package: 'verentis/nodejs', version: 'latest' }],
+    // Products owns the catalogue Inventory stocks; installing Inventory installs it.
+    dependencies: [{ package: 'verentis/canvas', version: 'latest' }, { package: 'verentis/nodejs', version: 'latest' }, { package: 'verentis/products', version: 'latest' }],
     engine: 'verentis/nodejs',
-    scripts: [createScript, postScript],
+    scripts: [createScript, postScript, apiScript],
     install,
     creatables,
     sandbox: { 'allow-scripts': true, 'allow-same-origin': true, 'allow-forms': true, 'allow-popups': false },
@@ -196,6 +197,7 @@ export const productionOverlay = {
 export const scriptConsents = [
   ...scriptConsent(createScriptName, createScriptFileAccess),
   ...scriptConsent(postScriptName, postScriptFileAccess),
+  ...scriptConsent(apiScriptName, apiScriptFileAccess),
 ]
 
 /** What the create script needs to know about each kind (generated into `scripts/create/config.mjs`). */

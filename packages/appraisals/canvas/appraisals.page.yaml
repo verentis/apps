@@ -11,7 +11,8 @@
     "access": [
       {
         "path": "/appraisals",
-        "reason": "List appraisals by status"
+        "reason": "List appraisals by status; move records between columns",
+        "mode": "write"
       }
     ],
     "data": {
@@ -28,81 +29,70 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Appraisals",
+          "icon": "clipboard-check",
+          "active": "appraisals.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Current cycle",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "appraisals.page.yaml",
+              "label": "Cycle board",
+              "icon": "kanban",
+              "count": "{{ (data.rows || []).filter(r => r.status === 'scheduled').length }}"
+            },
+            {
+              "id": "scores.page.yaml",
+              "label": "Scores",
+              "icon": "star"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/appraisals/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/appraisals.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Appraisals by status",
+              "note": "Every active appraisal, grouped by its status. Click a row to open the appraisal."
             },
-            "children": [
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Appraisals by status"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Every active appraisal, grouped by its status. Click a row to open the appraisal.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.button",
-                "props": {
-                  "label": "Appraisals",
-                  "variant": "ghost",
-                  "icon": "clipboard-check",
-                  "size": "sm"
-                },
-                "on": {
-                  "click": [
-                    {
-                      "open-file": {
-                        "path": "/applications/appraisals/canvas/home.page.yaml"
-                      }
-                    }
-                  ]
-                }
-              }
-            ]
+            "children": []
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /appraisals folder could not be read. Reinstall Appraisals to recreate it."
-            },
-            "rules": {
-              "visible": "data.$appraisals.status === 'error'"
+              "for": "appraisals",
+              "compact": true,
+              "description": "The /appraisals folder could not be read. Reinstall Appraisals to recreate it."
             }
           },
           {
@@ -158,26 +148,18 @@
           {
             "type": "canvas.tabs",
             "props": {
+              "variant": "pill",
+              "persist": true,
               "items": [
                 {
-                  "value": "draft",
-                  "label": "Draft",
-                  "icon": "clipboard-check"
+                  "value": "board",
+                  "label": "Board",
+                  "icon": "kanban"
                 },
                 {
-                  "value": "scheduled",
-                  "label": "Scheduled",
-                  "icon": "clipboard-check"
-                },
-                {
-                  "value": "done",
-                  "label": "Done",
-                  "icon": "clipboard-check"
-                },
-                {
-                  "value": "cancelled",
-                  "label": "Cancelled",
-                  "icon": "clipboard-check"
+                  "value": "list",
+                  "label": "List",
+                  "icon": "list"
                 }
               ]
             },
@@ -191,52 +173,111 @@
                 },
                 "children": [
                   {
-                    "type": "canvas.table",
+                    "type": "canvas.board",
                     "props": {
-                      "rows": "{{ (data.rows || []).filter(r => r.status === 'draft') }}",
+                      "rows": "{{ (data.rows || []) }}",
+                      "groupBy": "status",
+                      "readOnly": false,
+                      "rowKey": "path",
                       "columns": [
                         {
-                          "key": "code",
-                          "label": "Appraisal"
+                          "value": "draft",
+                          "label": "Draft"
                         },
                         {
-                          "key": "employee",
-                          "label": "Employee"
-                        },
-                        {
-                          "key": "period",
-                          "label": "Period"
-                        },
-                        {
-                          "key": "manager",
-                          "label": "Manager"
-                        },
-                        {
-                          "key": "scheduledAt",
+                          "value": "scheduled",
                           "label": "Scheduled"
                         },
                         {
-                          "key": "overallScore",
-                          "label": "Overall score",
-                          "align": "end"
+                          "value": "done",
+                          "label": "Done"
+                        },
+                        {
+                          "value": "cancelled",
+                          "label": "Cancelled"
                         }
                       ],
-                      "emptyText": "No draft appraisals",
-                      "clickable": true
+                      "card": {
+                        "title": "employee",
+                        "code": "code",
+                        "meta": [
+                          "period",
+                          "manager",
+                          "scheduledAt"
+                        ]
+                      },
+                      "emptyText": "Nothing here",
+                      "lockedWhen": "[\"done\"].includes(row.status)"
                     },
                     "on": {
-                      "row-click": [
+                      "open": [
                         {
                           "open-file": {
+                            "path": "{{ event.row.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ],
+                      "move": [
+                        {
+                          "confirm": {
+                            "if": "event.to === 'done'",
+                            "title": "Move to Done?",
+                            "message": "{{ event.row.code }} moves to Done. The overall score is computed and the appraisal is locked.",
+                            "confirm-label": "Move to Done"
+                          }
+                        },
+                        {
+                          "run-script": {
+                            "if": "event.to === 'scheduled'",
+                            "file": "/applications/appraisals/scripts/post",
+                            "timeout": 120,
+                            "parameters": {
+                              "operation": "schedule",
+                              "path": "{{ event.path }}"
+                            },
+                            "assign": "lastmove"
+                          }
+                        },
+                        {
+                          "run-script": {
+                            "if": "event.to === 'done'",
+                            "file": "/applications/appraisals/scripts/post",
+                            "timeout": 120,
+                            "parameters": {
+                              "operation": "complete",
+                              "path": "{{ event.path }}"
+                            },
+                            "assign": "lastmove"
+                          }
+                        },
+                        {
+                          "patch-record": {
+                            "if": "![\"scheduled\",\"done\"].includes(event.to)",
                             "path": "{{ event.path }}",
-                            "mode": "edit"
+                            "values": {
+                              "status": "{{ event.to }}",
+                              "updatedAt": "{{ Date() }}"
+                            }
+                          }
+                        },
+                        {
+                          "refresh-source": {
+                            "source": "appraisals"
+                          }
+                        },
+                        {
+                          "toast": {
+                            "message": "{{ [\"scheduled\",\"done\"].includes(event.to) ? ((state.lastmove && state.lastmove.message) || 'Done') : 'Moved to ' + ({\"draft\":\"Draft\",\"scheduled\":\"Scheduled\",\"done\":\"Done\",\"cancelled\":\"Cancelled\"}[event.to] || event.to) }}",
+                            "variant": "success"
                           }
                         }
                       ]
                     }
                   }
                 ],
-                "slot": "draft"
+                "slot": "board"
               },
               {
                 "type": "canvas.stack",
@@ -249,7 +290,7 @@
                   {
                     "type": "canvas.table",
                     "props": {
-                      "rows": "{{ (data.rows || []).filter(r => r.status === 'scheduled') }}",
+                      "rows": "{{ (data.rows || []) }}",
                       "columns": [
                         {
                           "key": "code",
@@ -275,136 +316,67 @@
                           "key": "overallScore",
                           "label": "Overall score",
                           "align": "end"
+                        },
+                        {
+                          "key": "status",
+                          "label": "Stage",
+                          "format": "badge",
+                          "labels": {
+                            "draft": "Draft",
+                            "scheduled": "Scheduled",
+                            "done": "Done",
+                            "cancelled": "Cancelled"
+                          }
                         }
                       ],
-                      "emptyText": "No scheduled appraisals",
-                      "clickable": true
+                      "views": [
+                        {
+                          "value": "all",
+                          "label": "All"
+                        },
+                        {
+                          "value": "draft",
+                          "label": "Draft",
+                          "where": "row.status === 'draft'"
+                        },
+                        {
+                          "value": "scheduled",
+                          "label": "Scheduled",
+                          "where": "row.status === 'scheduled'"
+                        },
+                        {
+                          "value": "done",
+                          "label": "Done",
+                          "where": "row.status === 'done'"
+                        },
+                        {
+                          "value": "cancelled",
+                          "label": "Cancelled",
+                          "where": "row.status === 'cancelled'"
+                        }
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
+                      "emptyText": "Nothing here"
                     },
                     "on": {
                       "row-click": [
                         {
                           "open-file": {
                             "path": "{{ event.path }}",
-                            "mode": "edit"
+                            "mode": "edit",
+                            "open": "side"
                           }
                         }
                       ]
                     }
                   }
                 ],
-                "slot": "scheduled"
-              },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 4
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.table",
-                    "props": {
-                      "rows": "{{ (data.rows || []).filter(r => r.status === 'done') }}",
-                      "columns": [
-                        {
-                          "key": "code",
-                          "label": "Appraisal"
-                        },
-                        {
-                          "key": "employee",
-                          "label": "Employee"
-                        },
-                        {
-                          "key": "period",
-                          "label": "Period"
-                        },
-                        {
-                          "key": "manager",
-                          "label": "Manager"
-                        },
-                        {
-                          "key": "scheduledAt",
-                          "label": "Scheduled"
-                        },
-                        {
-                          "key": "overallScore",
-                          "label": "Overall score",
-                          "align": "end"
-                        }
-                      ],
-                      "emptyText": "No done appraisals",
-                      "clickable": true
-                    },
-                    "on": {
-                      "row-click": [
-                        {
-                          "open-file": {
-                            "path": "{{ event.path }}",
-                            "mode": "edit"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ],
-                "slot": "done"
-              },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 4
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.table",
-                    "props": {
-                      "rows": "{{ (data.rows || []).filter(r => r.status === 'cancelled') }}",
-                      "columns": [
-                        {
-                          "key": "code",
-                          "label": "Appraisal"
-                        },
-                        {
-                          "key": "employee",
-                          "label": "Employee"
-                        },
-                        {
-                          "key": "period",
-                          "label": "Period"
-                        },
-                        {
-                          "key": "manager",
-                          "label": "Manager"
-                        },
-                        {
-                          "key": "scheduledAt",
-                          "label": "Scheduled"
-                        },
-                        {
-                          "key": "overallScore",
-                          "label": "Overall score",
-                          "align": "end"
-                        }
-                      ],
-                      "emptyText": "No cancelled appraisals",
-                      "clickable": true
-                    },
-                    "on": {
-                      "row-click": [
-                        {
-                          "open-file": {
-                            "path": "{{ event.path }}",
-                            "mode": "edit"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ],
-                "slot": "cancelled"
+                "slot": "list"
               }
             ]
           }

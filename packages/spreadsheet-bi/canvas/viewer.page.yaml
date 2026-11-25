@@ -76,7 +76,7 @@
       },
       "tilerows": {
         "kind": "computed",
-        "expr": "(((((data.dashboards || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && e.path === state.dashboard)[0] || {}).data || null) || {}).tiles || []).slice().sort((a, b) => Number(a.sequence || 0) - Number(b.sequence || 0)).map(t => ({ t: t, entries: ({ '/customers': data.customers, '/invoices': data.invoices, '/tickets': data.tickets, '/journals': data.journals, '/expenses': data.expenses })[t.source] })).map(c => ({ t: c.t, note: ([\"/customers\",\"/invoices\",\"/tickets\",\"/journals\",\"/expenses\"].indexOf(c.t.source) < 0 ? 'Source ' + (c.t.source || '(none)') + ' is not readable from this viewer; tile skipped.' : (!Array.isArray(c.entries) ? 'Container ' + c.t.source + ' is unavailable; tile skipped. Is its app installed?' : '')), items: (Array.isArray(c.entries) ? c.entries : []).filter(x => x.kind === 'file' && x.data && x.data.state !== 'archived').filter(x => (!c.t.filter || !c.t.filter.field || String(String(c.t.filter.field || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data)) === String(c.t.filter.equals === undefined || c.t.filter.equals === null ? '' : c.t.filter.equals))).map(x => ({ key: (String(c.t.groupByField || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data) === undefined || String(c.t.groupByField || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data) === null || String(c.t.groupByField || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data) === '' ? '(none)' : String(String(c.t.groupByField || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data))), raw: String(c.t.valueField || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data) })) })).map(c => ({ c: c, numeric: c.items.filter(i => (typeof i.raw === 'number' || typeof i.raw === 'string') && i.raw !== '' && isFinite(Number(i.raw))), keys: c.items.map(i => i.key).filter((v, idx, a) => a.indexOf(v) === idx).sort() })).reduce((all, s) => all.concat(s.c.note ? [({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: '', value: '', note: s.c.note })] : s.c.t.kind === 'count' ? [({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: '', value: String(s.c.items.length), note: '' })] : s.c.t.kind === 'sum' ? [({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: '', value: (s.numeric.reduce((m, i) => m + Math.round(Number(i.raw) * 10000), 0) / 10000).toFixed(2), note: (s.c.items.length > s.numeric.length ? (s.c.items.length - s.numeric.length) + ' non-numeric value(s) skipped' : '') })] : s.c.t.kind === 'group-count' ? (s.keys.length ? s.keys.map(k => ({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: k, value: String(s.c.items.filter(i => i.key === k).length), note: '' })) : [({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: '', value: '0', note: 'No matching records.' })]) : s.c.t.kind === 'group-sum' ? (s.keys.length ? s.keys.map(k => ({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: k, value: (s.numeric.filter(i => i.key === k).reduce((m, i) => m + Math.round(Number(i.raw) * 10000), 0) / 10000).toFixed(2), note: (s.c.items.length > s.numeric.length ? (s.c.items.length - s.numeric.length) + ' non-numeric value(s) skipped' : '') })) : [({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: '', value: '0', note: 'No matching records.' })]) : [({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: '', value: '', note: 'Unknown tile kind ' + JSON.stringify(s.c.t.kind || '') + '; tile skipped.' })]), [])"
+        "expr": "(((((data.dashboards || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && e.path === state.dashboard)[0] || {}).data || null) || {}).tiles || []).slice().sort((a, b) => Number(a.sequence || 0) - Number(b.sequence || 0)).map(t => ({ t: t, entries: ({ '/customers': data.customers, '/invoices': data.invoices, '/tickets': data.tickets, '/journals': data.journals, '/expenses': data.expenses })[t.source] })).map(c => ({ t: c.t, note: ([\"/customers\",\"/invoices\",\"/tickets\",\"/journals\",\"/expenses\"].indexOf(c.t.source) < 0 ? 'Source ' + (c.t.source || '(none)') + ' is not readable from this viewer; tile skipped.' : (!Array.isArray(c.entries) ? 'Container ' + c.t.source + ' is unavailable; tile skipped. Is its app installed?' : '')), items: (Array.isArray(c.entries) ? c.entries : []).filter(x => x.kind === 'file' && x.data && x.data.state !== 'archived').filter(x => (!c.t.filter || !c.t.filter.field || String(String(c.t.filter.field || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data)) === String(c.t.filter.equals === undefined || c.t.filter.equals === null ? '' : c.t.filter.equals))).map(x => ({ key: (String(c.t.groupByField || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data) === undefined || String(c.t.groupByField || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data) === null || String(c.t.groupByField || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data) === '' ? '(none)' : String(String(c.t.groupByField || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data))), raw: String(c.t.valueField || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data) })) })).map(c => ({ c: c, numeric: c.items.filter(i => (typeof i.raw === 'number' || typeof i.raw === 'string') && i.raw !== '' && Number.isFinite(Number(i.raw))), keys: c.items.map(i => i.key).filter((v, idx, a) => a.indexOf(v) === idx).sort() })).reduce((all, s) => all.concat(s.c.note ? [({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: '', value: '', note: s.c.note })] : s.c.t.kind === 'count' ? [({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: '', value: String(s.c.items.length), note: '' })] : s.c.t.kind === 'sum' ? [({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: '', value: (s.numeric.reduce((m, i) => m + Math.round(Number(i.raw) * 10000), 0) / 10000).toFixed(2), note: (s.c.items.length > s.numeric.length ? (s.c.items.length - s.numeric.length) + ' non-numeric value(s) skipped' : '') })] : s.c.t.kind === 'group-count' ? (s.keys.length ? s.keys.map(k => ({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: k, value: String(s.c.items.filter(i => i.key === k).length), note: '' })) : [({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: '', value: '0', note: 'No matching records.' })]) : s.c.t.kind === 'group-sum' ? (s.keys.length ? s.keys.map(k => ({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: k, value: (s.numeric.filter(i => i.key === k).reduce((m, i) => m + Math.round(Number(i.raw) * 10000), 0) / 10000).toFixed(2), note: (s.c.items.length > s.numeric.length ? (s.c.items.length - s.numeric.length) + ' non-numeric value(s) skipped' : '') })) : [({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: '', value: '0', note: 'No matching records.' })]) : [({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: '', value: '', note: 'Unknown tile kind ' + JSON.stringify(s.c.t.kind || '') + '; tile skipped.' })]), [])"
       }
     },
     "state": {
@@ -84,122 +84,118 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Spreadsheet BI",
+          "icon": "layout-dashboard",
+          "active": "viewer.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "viewer.page.yaml",
+              "label": "Dashboard",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "snapshots.page.yaml",
+              "label": "Snapshots",
+              "icon": "camera"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/spreadsheet-bi/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/spreadsheet-bi.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Dashboard viewer",
+              "note": "Tile values are computed live from the source containers each time this page loads. Take a snapshot to freeze them."
+            },
+            "children": []
+          },
+          {
+            "type": "canvas.repeat",
+            "props": {
+              "items": "{{ (data.tilerows || []).filter(t => !t.detail && t.value !== '') }}",
+              "layout": "grid",
+              "columns": 4,
+              "emptyText": "This dashboard has no single-number tiles"
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Dashboard viewer"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Tile values are computed live from the source containers each time this page loads. Take a snapshot to freeze them.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "direction": "row",
-                    "wrap": true,
-                    "gap": 2,
-                    "align": "center"
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Dashboards",
-                      "variant": "ghost",
-                      "icon": "layout-dashboard",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/spreadsheet-bi/canvas/home.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Snapshots",
-                      "variant": "outline",
-                      "icon": "camera",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/spreadsheet-bi/canvas/snapshots.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ]
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "{{ item.title }}",
+                  "value": "{{ item.value }}",
+                  "hint": "{{ item.note }}"
+                }
               }
             ]
           },
           {
-            "type": "canvas.text",
-            "props": {
-              "text": "The /bi-dashboards folder could not be read. Reinstall Spreadsheet BI to recreate it."
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "gap": 2
+              }
             },
-            "rules": {
-              "visible": "data.$dashboards.status === 'error'"
-            }
+            "children": [
+              {
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Grouped tiles"
+                }
+              },
+              {
+                "type": "canvas.chart",
+                "props": {
+                  "rows": "{{ (data.tilerows || []).filter(t => !!t.detail).map(t => ({ label: t.title + ' · ' + t.detail, value: Number(t.value) || 0 })) }}",
+                  "showLegend": true,
+                  "emptyText": "No grouped tiles",
+                  "kind": "hbar",
+                  "x": "label",
+                  "y": "value",
+                  "format": "number",
+                  "limit": 20
+                }
+              }
+            ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "Loading…",
-              "tone": "muted"
-            },
-            "rules": {
-              "visible": "data.$dashboards.status === 'loading'"
+              "for": "dashboards",
+              "compact": true,
+              "description": "The /bi-dashboards folder could not be read. Reinstall Spreadsheet BI to recreate it."
             }
           },
           {
@@ -271,7 +267,11 @@
                   "label": "Note"
                 }
               ],
-              "emptyText": "This dashboard has no tiles yet. Add tiles in its form."
+              "emptyText": "This dashboard has no tiles yet. Add tiles in its form.",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list"
             },
             "rules": {
               "visible": "!!state.dashboard"

@@ -1,10 +1,11 @@
 // Generates the Timesheets Canvas documents: the bound entry form, the settings form, the launch page and the
 // weekly hours-by-project page. Validating (hours check, immutability) is done by the validation script the form
 // runs; the form only locks what the script has validated.
+import { views } from './views.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   humanize, iconName, openFile, options, page, panel, projectRegistration, recordButtons, row, scriptAction,
-  sectionCards, stat, stats, status, table, tabs, text, toneExpression,
+  sectionCards, stat, stats, status, table, tabs, text, toneExpression, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { containers, installRoot, mimeTypes, project, recordKinds, schemaId, settingsPath } from './contracts.mjs'
 import { entities, postScriptPath, settingsSections } from './app.mjs'
@@ -41,7 +42,7 @@ function recordForm(kind) {
         badge(humanize(entity.status), toneExpression(entity.status, statusTones), { visible: `!!form.values.${entity.status}` }),
         badge('Archived', 'warning', { visible: archived }, 'archive'),
       ]),
-      text(`${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`, 'muted'),
+      text(`${entity.singular} {{ form.values.code || '' }}`, 'muted'),
     ]),
     row([
       button('Validate', 'validate', { visible: `${draft} && !(${archived})`, disabled: `${idle} || form.invalid` }, undefined, 'check'),
@@ -62,8 +63,8 @@ function recordForm(kind) {
       data: projectSources,
       tree: [
         header,
-        ...status('record'),
-        badge(`This ${entity.singular.toLowerCase()} is archived. Restore it to edit.`, 'warning', { visible: archived }, 'archive'),
+        ...status('record'), ...lifecycle(entity),
+        archivedAlert(entity.singular),
         badge('Validated entries are locked. Hours were checked when it was validated.', 'success', { visible: locked }, 'check'),
         grid(sectionCards(entity.sections, readOnly)),
       ],
@@ -86,13 +87,13 @@ function settingsForm() {
       access: [schemaAccess],
       data: {},
       tree: [
-        row([
-          column([heading('Timesheets settings'), text('Defaults new entries start with. Code prefixes are app settings, managed with the installed app.', 'muted')]),
+        pageHeader(
+          [heading('Timesheets settings'), text('Defaults new entries start with. Code prefixes are app settings, managed with the installed app.', 'muted')], [
           row([
             button('Reset', [{ 'reset-form': {} }], { disabled: 'form.saving || !form.dirty' }, 'ghost'),
             button('Save', [{ save: {} }, { toast: { message: 'Saved', variant: 'success' } }], { disabled: 'form.saving || !form.dirty || form.invalid' }, undefined, 'save'),
           ]),
-        ], 'between'),
+        ]),
         ...status('record'),
         grid(settingsSections.map(section => card(section.title, [grid(section.fields.map(field => formControl(field, null)))], section.description)), 1),
       ],
@@ -136,13 +137,13 @@ function homePage() {
         ],
         data: { ...entrySources, projects: projectSources.projects },
         tree: page([
-          row([
-            column([heading('Timesheets'), text('Timesheet entries are files in your workspace. Draft them in /timesheets, then validate them from their forms.', 'muted')]),
+          pageHeader(
+            [heading('Timesheets'), text('Timesheet entries are files in your workspace. Draft them in /timesheets, then validate them from their forms.', 'muted')], [
             row([
               button('This week', [openFile(`${installRoot}/canvas/week.page.yaml`)], undefined, 'outline', 'calendar-days'),
               button('Settings', [openFile(settingsPath, 'edit')], undefined, 'ghost', 'settings'),
             ]),
-          ], 'between'),
+          ]),
           stats([
             stat('Draft entries', count('entries', "e.data.status === 'draft'"), 'file-pen', loading('entries')),
             stat('Validated entries', count('entries', "e.data.status === 'validated'"), 'check', loading('entries')),
@@ -175,10 +176,10 @@ function weekPage() {
         ],
         data: weeklySources,
         tree: page([
-          row([
-            column([heading('This week'), text(`Hours by project over the last seven days, today inclusive (since {{ ${weekStart} }}).`, 'muted')]),
+          pageHeader(
+            [heading('This week'), text(`Hours by project over the last seven days, today inclusive (since {{ ${weekStart} }}).`, 'muted')], [
             button('Timesheets', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'clock'),
-          ], 'between'),
+          ]),
           ...status('entries'),
           stats([
             stat('Hours this week', `{{ ${display('(data.weekly || []).reduce((s, g) => s + g.draft + g.validated, 0)')} }}`, 'clock', loading('entries')),
@@ -195,5 +196,5 @@ function weekPage() {
 
 export function buildPages() {
   const documents = [homePage(), weekPage(), ...recordKinds.map(recordForm), settingsForm()]
-  return Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)]))
+  return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

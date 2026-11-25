@@ -2,10 +2,11 @@
 // the contracts page with the expiring-soon report and the cost summary per vehicle. Fleet rules (existing
 // vehicles, monotonic odometer readings, the active-to-retired transition) are enforced by the posting script
 // the forms run; the forms only lock what the script has done.
+import { views } from './views.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   iconName, jsonFile, options, page, panel, projectRegistration, recordButtons, row, scriptAction, sectionCards,
-  stat, stats, status, table, tabs, text, toneExpression, humanize,
+  stat, stats, status, table, tabs, text, toneExpression, humanize, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { containers, installRoot, mimeTypes, recordKinds, schemaId, settingsPath } from './contracts.mjs'
 import { entities, postScriptPath, settingsFields } from './app.mjs'
@@ -81,22 +82,20 @@ function recordForm(kind) {
   const extras = recordExtras(kind)
   const locked = extras.locked ?? 'false'
   const readOnly = `${archived} || (${locked})`
-  const header = row([
-    column([
-      row([
-        heading(entity.title),
+  const header = recordHeader(
+    entity.title,
+    [
         ...(entity.status ? [badge(humanize(entity.status), toneExpression(entity.status, statusTones), { visible: `!!form.values.${entity.status}` })] : []),
         badge('Archived', 'warning', { visible: archived }, 'archive'),
-      ]),
-      text(`${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`, 'muted'),
-    ]),
-    row([...(extras.buttons ?? []), recordButtons(locked)]),
-  ], 'between')
+    ],
+    `${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`,
+    [...(extras.buttons ?? []), recordButtons(locked)],
+  )
   const overview = [grid(sectionCards(entity.sections, readOnly))]
   const tree = [
     header,
-    ...status('record'),
-    badge(`This ${entity.singular.toLowerCase()} is archived. Restore it to edit.`, 'warning', { visible: archived }, 'archive'),
+    ...status('record'), ...lifecycle(entity),
+    archivedAlert(entity.singular),
     ...(extras.tabs
       ? [tabs([{ value: 'overview', label: 'Overview', icon: iconName(entity.icon) }, ...extras.tabs], [panel('overview', overview), ...extras.panels])]
       : overview),
@@ -122,13 +121,13 @@ function settingsForm() {
       mime: mimeTypes.settings, schemaId: schemaId('settings'), schemaSource: `${installRoot}/schemas/settings.schema.json`,
       access: [schemaAccess],
       tree: [
-        row([
-          column([heading('Fleet settings'), text('How soon an ending contract counts as expiring. Code prefixes are app settings, managed with the installed app.', 'muted')]),
+        pageHeader(
+          [heading('Fleet settings'), text('How soon an ending contract counts as expiring. Code prefixes are app settings, managed with the installed app.', 'muted')], [
           row([
             button('Reset', [{ 'reset-form': {} }], { disabled: 'form.saving || !form.dirty' }, 'ghost'),
             button('Save', [{ save: {} }, { toast: { message: 'Saved', variant: 'success' } }], { disabled: 'form.saving || !form.dirty || form.invalid' }, undefined, 'save'),
           ]),
-        ], 'between'),
+        ]),
         ...status('record'),
         card('Settings', [grid(settingsFields.map(field => formControl(field, null)))]),
       ],
@@ -163,14 +162,14 @@ function homePage() {
           services: folder(containers.services.path, mimeTypes.service),
         },
         tree: page([
-          row([
-            column([heading('Fleet'), text('Vehicles, fleet contracts and service logs as files in your workspace. Draft service logs in their folder, then log them from their forms; retire vehicles from theirs.', 'muted')]),
+          pageHeader(
+            [heading('Fleet'), text('Vehicles, fleet contracts and service logs as files in your workspace. Draft service logs in their folder, then log them from their forms; retire vehicles from theirs.', 'muted')], [
             row([
               button('Contracts', [{ 'open-file': { path: `${installRoot}/canvas/contracts.page.yaml` } }], undefined, 'outline', 'file-signature'),
               button('Costs', [{ 'open-file': { path: `${installRoot}/canvas/costs.page.yaml` } }], undefined, 'outline', 'chart-column'),
               button('Settings', [{ 'open-file': { path: settingsPath, mode: 'edit' } }], undefined, 'ghost', 'settings'),
             ]),
-          ], 'between'),
+          ]),
           stats([
             stat('Vehicles in service', count('vehicles', "e.data.status !== 'retired'"), 'car', loading('vehicles')),
             stat('In maintenance', count('vehicles', "e.data.status === 'in-maintenance'"), 'wrench', loading('vehicles')),
@@ -222,10 +221,10 @@ function contractsPage() {
           expiring: { kind: 'computed', expr: expiringExpr },
         },
         tree: page([
-          row([
-            column([heading('Contracts'), text('Lease, insurance and service contracts per vehicle. Active contracts ending within the expiring-soon window are flagged below.', 'muted')]),
+          pageHeader(
+            [heading('Contracts'), text('Lease, insurance and service contracts per vehicle. Active contracts ending within the expiring-soon window are flagged below.', 'muted')], [
             button('Fleet', [{ 'open-file': { path: `${installRoot}/canvas/home.page.yaml` } }], undefined, 'ghost', 'car'),
-          ], 'between'),
+          ]),
           ...status('contracts'),
           stats([
             stat('Active contracts', '{{ (data.rows || []).filter(c => c.status === \'active\').length }}', 'file-signature', loading('contracts')),
@@ -267,10 +266,10 @@ function costsPage() {
           costs: { kind: 'computed', expr: costsExpr },
         },
         tree: page([
-          row([
-            column([heading('Costs'), text('Per vehicle: the monthly cost of its active contracts and the total cost of its done service logs. Draft service logs and inactive contracts are ignored.', 'muted')]),
+          pageHeader(
+            [heading('Costs'), text('Per vehicle: the monthly cost of its active contracts and the total cost of its done service logs. Draft service logs and inactive contracts are ignored.', 'muted')], [
             button('Fleet', [{ 'open-file': { path: `${installRoot}/canvas/home.page.yaml` } }], undefined, 'ghost', 'car'),
-          ], 'between'),
+          ]),
           ...status('vehicles'), ...status('contracts'), ...status('services'),
           stats([
             stat('Vehicles', '{{ (data.costs || []).length }}', 'car', loading('vehicles')),
@@ -287,5 +286,5 @@ function costsPage() {
 
 export function buildPages() {
   const documents = [homePage(), contractsPage(), costsPage(), ...recordKinds.map(recordForm), settingsForm()]
-  return Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)]))
+  return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

@@ -290,6 +290,25 @@
         "path"
       ],
       "additionalProperties": false
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "app": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "path": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "code": {
+          "type": "string",
+          "maxLength": 100
+        }
+      },
+      "required": [],
+      "additionalProperties": false
     }
   },
   "required": [

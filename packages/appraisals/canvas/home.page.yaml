@@ -24,127 +24,73 @@
       "rows": {
         "kind": "computed",
         "expr": "(data.appraisals || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, employee: e.data.employeeName || '', period: e.data.period || '', manager: e.data.manager || '', status: e.data.status || '', scheduledAt: e.data.scheduledAt || '', ratings: (e.data.ratings || []).length, overallScore: e.data.overallScore || '' }))"
+      },
+      "listappraisals": {
+        "kind": "folder",
+        "path": "/appraisals",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.appraisals.appraisal+json"
       }
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Appraisals",
+          "icon": "clipboard-check",
+          "active": "home.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Current cycle",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "appraisals.page.yaml",
+              "label": "Cycle board",
+              "icon": "kanban",
+              "count": "{{ (data.rows || []).filter(r => r.status === 'scheduled').length }}"
+            },
+            {
+              "id": "scores.page.yaml",
+              "label": "Scores",
+              "icon": "star"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/appraisals/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/appraisals.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Appraisals",
+              "note": "Employee appraisals are files in your workspace. Draft them in /appraisals, schedule them, rate the criteria, then complete them from their forms."
             },
-            "children": [
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Appraisals"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Employee appraisals are files in your workspace. Draft them in /appraisals, schedule them, rate the criteria, then complete them from their forms.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "direction": "row",
-                    "wrap": true,
-                    "gap": 2,
-                    "align": "center"
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "By status",
-                      "variant": "outline",
-                      "icon": "list",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/appraisals/canvas/appraisals.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Scores",
-                      "variant": "outline",
-                      "icon": "star",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/appraisals/canvas/scores.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Settings",
-                      "variant": "ghost",
-                      "icon": "settings",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/settings/appraisals.json",
-                            "mode": "edit"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ]
-              }
-            ]
+            "children": []
           },
           {
             "type": "canvas.grid",
@@ -197,12 +143,11 @@
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /appraisals folder could not be read. Reinstall Appraisals to recreate it."
-            },
-            "rules": {
-              "visible": "data.$appraisals.status === 'error'"
+              "for": "appraisals",
+              "compact": true,
+              "description": "The /appraisals folder could not be read. Reinstall Appraisals to recreate it."
             }
           },
           {
@@ -237,17 +182,19 @@
             ]
           },
           {
-            "type": "canvas.files",
+            "type": "canvas.empty-state",
             "props": {
-              "path": "/appraisals/",
-              "mimeTypes": [
-                "application/vnd.verentis.appraisals.appraisal+json"
-              ],
-              "showFolders": false,
-              "navigable": false,
+              "for": "listappraisals",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.listappraisals || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
               "columns": [
                 {
-                  "key": "name",
+                  "key": "data.code",
                   "label": "Appraisal"
                 },
                 {
@@ -260,18 +207,43 @@
                 },
                 {
                   "key": "data.status",
-                  "label": "Status"
+                  "label": "Status",
+                  "format": "badge"
                 },
                 {
                   "key": "data.scheduledAt",
-                  "label": "Scheduled"
+                  "label": "Scheduled",
+                  "format": "date"
                 },
                 {
                   "key": "data.overallScore",
                   "label": "Overall score"
                 }
               ],
+              "facets": [
+                "data.status"
+              ],
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
+              "clickable": true,
+              "rowKey": "path",
               "emptyText": "No appraisals yet. Use New in /appraisals."
+            },
+            "rules": {
+              "visible": "data.$listappraisals.status === 'ready'"
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ]
             }
           }
         ]

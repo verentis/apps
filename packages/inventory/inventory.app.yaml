@@ -11,9 +11,23 @@
   },
   "marketplace": {
     "logo": "./icons/app.svg",
-      "hero": {"source": "./marketplace/hero.svg", "alt": "Inventory cover"},
-      "images": [{"source": "./marketplace/overview.png", "alt": "Inventory overview in Canvas", "caption": "Inventory overview"}, {"source": "./marketplace/detail.png", "alt": "Stock levels in Canvas", "caption": "Stock levels"}],
-      "readme": "./marketplace/README.md",
+    "hero": {
+      "source": "./marketplace/hero.svg",
+      "alt": "Inventory cover"
+    },
+    "images": [
+      {
+        "source": "./marketplace/overview.png",
+        "alt": "Inventory overview in Canvas",
+        "caption": "Inventory overview"
+      },
+      {
+        "source": "./marketplace/detail.png",
+        "alt": "Stock levels in Canvas",
+        "caption": "Stock levels"
+      }
+    ],
+    "readme": "./marketplace/README.md",
     "keywords": [
       "inventory",
       "stock",
@@ -74,13 +88,6 @@
     ],
     "settings": [
       {
-        "key": "product-code-prefix",
-        "display-name": "Product code prefix",
-        "type": "string",
-        "default": "PRD-",
-        "description": "Prefix of generated product codes, e.g. PRD-0001."
-      },
-      {
         "key": "warehouse-code-prefix",
         "display-name": "Warehouse code prefix",
         "type": "string",
@@ -117,12 +124,17 @@
       {
         "package": "verentis/nodejs",
         "version": "latest"
+      },
+      {
+        "package": "verentis/products",
+        "version": "latest"
       }
     ],
     "engine": "verentis/nodejs",
     "scripts": [
       "scripts/create",
-      "scripts/post"
+      "scripts/post",
+      "scripts/api"
     ],
     "install": [
       {
@@ -150,12 +162,6 @@
         "mime": "application/json"
       },
       {
-        "from": "seed/products",
-        "to": "/products",
-        "mode": "seed",
-        "mime": "application/vnd.verentis.inventory.products"
-      },
-      {
         "from": "seed/warehouses",
         "to": "/warehouses",
         "mode": "seed",
@@ -178,24 +184,6 @@
         "to": "/warehouses/WH-0001",
         "mode": "seed",
         "mime": "application/vnd.verentis.inventory.warehouse+json"
-      },
-      {
-        "from": "seed/starter/PRD-0001.json",
-        "to": "/products/PRD-0001",
-        "mode": "seed",
-        "mime": "application/vnd.verentis.inventory.product+json"
-      },
-      {
-        "from": "seed/starter/PRD-0002.json",
-        "to": "/products/PRD-0002",
-        "mode": "seed",
-        "mime": "application/vnd.verentis.inventory.product+json"
-      },
-      {
-        "from": "seed/starter/PRD-0003.json",
-        "to": "/products/PRD-0003",
-        "mode": "seed",
-        "mime": "application/vnd.verentis.inventory.product+json"
       },
       {
         "from": "seed/starter/MOV-0001.json",
@@ -223,23 +211,6 @@
       }
     ],
     "creatables": [
-      {
-        "id": "product",
-        "display-name": "Product",
-        "description": "A new product",
-        "icon": "lucide:package",
-        "mime": "application/vnd.verentis.inventory.product+json",
-        "parents": [
-          "application/vnd.verentis.inventory.products"
-        ],
-        "folder-names": [
-          "products",
-          "catalog",
-          "inventory"
-        ],
-        "script": "./scripts/create",
-        "template": "./templates/product.json"
-      },
       {
         "id": "warehouse",
         "display-name": "Warehouse",
@@ -380,24 +351,6 @@
         }
       },
       {
-        "path": "/stock-moves",
-        "mode": "read",
-        "reason": "Show the stock moves of this product",
-        "origin": {
-          "kind": "document",
-          "id": "inventory-product"
-        }
-      },
-      {
-        "path": "/applications/inventory/",
-        "mode": "read",
-        "reason": "Read the Inventory schemas and run the posting script",
-        "origin": {
-          "kind": "document",
-          "id": "inventory-product"
-        }
-      },
-      {
         "path": "/applications/inventory/",
         "mode": "read",
         "reason": "Read the Inventory schemas and run the posting script",
@@ -419,6 +372,15 @@
         "path": "/warehouses",
         "mode": "read",
         "reason": "Choose the from and to warehouses",
+        "origin": {
+          "kind": "document",
+          "id": "inventory-move"
+        }
+      },
+      {
+        "path": "/stock-moves",
+        "mode": "read",
+        "reason": "Show the stock on hand at both ends of the move",
         "origin": {
           "kind": "document",
           "id": "inventory-move"
@@ -452,6 +414,15 @@
         }
       },
       {
+        "path": "/stock-moves",
+        "mode": "read",
+        "reason": "Show the expected quantity for the count",
+        "origin": {
+          "kind": "document",
+          "id": "inventory-adjustment"
+        }
+      },
+      {
         "path": "/applications/inventory/",
         "mode": "read",
         "reason": "Read the Inventory schemas and run the posting script",
@@ -476,15 +447,6 @@
         "origin": {
           "kind": "document",
           "id": "inventory-settings"
-        }
-      },
-      {
-        "path": "/products",
-        "mode": "write",
-        "reason": "Create products with the next code",
-        "origin": {
-          "kind": "script",
-          "id": "inventory-create"
         }
       },
       {
@@ -526,7 +488,7 @@
       {
         "path": "/products",
         "mode": "read",
-        "reason": "Check that the moved or counted product exists and is active",
+        "reason": "Check that the moved or counted product exists and is active (Products)",
         "origin": {
           "kind": "script",
           "id": "inventory-post"
@@ -558,8 +520,139 @@
           "kind": "script",
           "id": "inventory-post"
         }
+      },
+      {
+        "path": "/stock-moves",
+        "mode": "write",
+        "reason": "Record production other apps report as done stock moves",
+        "origin": {
+          "kind": "script",
+          "id": "inventory-api"
+        }
+      },
+      {
+        "path": "/settings/inventory.json",
+        "mode": "read",
+        "reason": "Move production through the default warehouse",
+        "origin": {
+          "kind": "script",
+          "id": "inventory-api"
+        }
       }
-    ]
+    ],
+    "api": {
+      "operations": [
+        {
+          "key": "record-production",
+          "title": "Record a production run",
+          "description": "Records produced output and the components it consumed as done stock moves through the default warehouse. Recording the same run again returns the same moves instead of moving stock twice.",
+          "effect": "write",
+          "timeout-seconds": 60,
+          "input-schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "source",
+              "consumed",
+              "produced"
+            ],
+            "properties": {
+              "source": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "path"
+                ],
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1000
+                  },
+                  "code": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9-]{0,63}$"
+                  }
+                }
+              },
+              "date": {
+                "type": "string",
+                "pattern": "^([0-9]{4}-[0-9]{2}-[0-9]{2})?$"
+              },
+              "consumed": {
+                "type": "array",
+                "maxItems": 200,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "product",
+                    "quantity"
+                  ],
+                  "properties": {
+                    "product": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 1000
+                    },
+                    "quantity": {
+                      "type": "string",
+                      "pattern": "^(0|[1-9][0-9]{0,11})(\\.[0-9]{1,4})?$"
+                    }
+                  }
+                }
+              },
+              "produced": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "product",
+                  "quantity"
+                ],
+                "properties": {
+                  "product": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1000
+                  },
+                  "quantity": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,11})(\\.[0-9]{1,4})?$"
+                  }
+                }
+              }
+            }
+          },
+          "output-schema": {
+            "type": "object",
+            "properties": {
+              "moves": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "implementation": {
+            "type": "script",
+            "script": "scripts/api"
+          }
+        }
+      ],
+      "uses": [
+        {
+          "app": "purchase",
+          "operation": "create-draft-order",
+          "reason": "Draft a purchase order for products at or below their reorder point"
+        },
+        {
+          "app": "products",
+          "operation": "update-product",
+          "reason": "Set a product's reorder point from the stock levels"
+        }
+      ]
+    }
   },
   "packaging": {
     "publisher": "verentis",

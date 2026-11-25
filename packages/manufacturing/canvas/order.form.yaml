@@ -57,6 +57,16 @@
         "reason": "Choose the bill of materials to build"
       },
       {
+        "path": "/stock-moves",
+        "mode": "read",
+        "reason": "Show what is in stock for the components (when Inventory is installed)"
+      },
+      {
+        "path": "/products",
+        "mode": "read",
+        "reason": "Name the components (when Products is installed)"
+      },
+      {
         "path": "/applications/manufacturing/",
         "mode": "read",
         "reason": "Read the Manufacturing schemas and run the production script"
@@ -66,6 +76,14 @@
       {
         "path": "/bills-of-materials",
         "reason": "Choose the bill of materials to build"
+      },
+      {
+        "path": "/stock-moves",
+        "reason": "Show what is in stock for the components (when Inventory is installed)"
+      },
+      {
+        "path": "/products",
+        "reason": "Name the components (when Products is installed)"
       },
       {
         "path": "/applications/manufacturing/",
@@ -86,6 +104,25 @@
       "bomoptions": {
         "kind": "computed",
         "expr": "(data.boms || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + (e.data.productName || ''), value: e.path }))"
+      },
+      "appops": {
+        "kind": "app-operations"
+      },
+      "stockmoves": {
+        "kind": "folder",
+        "path": "/stock-moves",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.inventory.move+json"
+      },
+      "products": {
+        "kind": "folder",
+        "path": "/products",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.products.product+json"
+      },
+      "preview": {
+        "kind": "computed",
+        "expr": "((((data.boms || []).find(b => b.path === form.values.bom) || {}).data || {}).components || []).filter(c => !!c.product).map(c => ({ product: c.product, name: c.name || ((((data.products || []).find(p => p.path === c.product) || {}).data || {}).name || c.product), needed: Number(c.quantity || 0) * Number(form.values.quantity || 0), onhand: (data.stockmoves || []).filter(m => m.kind === 'file' && m.data && m.data.status === 'done').reduce((s, m) => s + (m.data.product === c.product ? (m.data.toWarehouse ? Number(m.data.quantity || 0) : 0) - (m.data.fromWarehouse ? Number(m.data.quantity || 0) : 0) : 0), 0) })).map(r => ({ product: r.product, name: r.name, needed: r.needed, onhand: r.onhand, short: r.needed - r.onhand }))"
       }
     },
     "tree": [
@@ -103,74 +140,133 @@
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.validation-summary",
+            "props": {
+              "title": "Fix these before saving"
+            }
+          },
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "{{ form.values.productName || 'New manufacturing order' }}",
+              "note": "Manufacturing order {{ form.values.code || '' }}"
             },
             "children": [
               {
                 "type": "canvas.stack",
                 "layout": {
                   "base": {
-                    "gap": 1
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
                   }
                 },
                 "children": [
                   {
-                    "type": "canvas.stack",
-                    "layout": {
-                      "base": {
-                        "direction": "row",
-                        "wrap": true,
-                        "gap": 2,
-                        "align": "center"
-                      }
+                    "type": "canvas.dashboard.badge",
+                    "props": {
+                      "text": "{{ String(form.values.status || '').split('-').join(' ') }}",
+                      "tone": "{{ [\"done\"].includes(form.values.status) ? 'success' : [\"draft\",\"confirmed\",\"in-progress\"].includes(form.values.status) ? 'warning' : [\"cancelled\"].includes(form.values.status) ? 'danger' : 'neutral' }}"
                     },
-                    "children": [
-                      {
-                        "type": "canvas.heading",
-                        "props": {
-                          "level": 2,
-                          "text": "{{ form.values.productName || 'New manufacturing order' }}"
-                        }
-                      },
-                      {
-                        "type": "canvas.dashboard.badge",
-                        "props": {
-                          "text": "{{ String(form.values.status || '').split('-').join(' ') }}",
-                          "tone": "{{ [\"done\"].includes(form.values.status) ? 'success' : [\"draft\",\"confirmed\",\"in-progress\"].includes(form.values.status) ? 'warning' : [\"cancelled\"].includes(form.values.status) ? 'danger' : 'neutral' }}"
-                        },
-                        "rules": {
-                          "visible": "!!form.values.status"
-                        }
-                      },
-                      {
-                        "type": "canvas.dashboard.badge",
-                        "props": {
-                          "text": "Archived",
-                          "tone": "warning",
-                          "icon": "archive"
-                        },
-                        "rules": {
-                          "visible": "form.values.state === 'archived'"
-                        }
-                      }
-                    ]
+                    "rules": {
+                      "visible": "!!form.values.status"
+                    }
                   },
                   {
-                    "type": "canvas.text",
+                    "type": "canvas.dashboard.badge",
                     "props": {
-                      "text": "Manufacturing order {{ form.values.code || '' }} · {{ ctx.file.path }}",
-                      "tone": "muted"
+                      "text": "Archived",
+                      "tone": "warning",
+                      "icon": "archive"
+                    },
+                    "rules": {
+                      "visible": "form.values.state === 'archived'"
                     }
                   }
                 ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Confirm",
+                  "icon": "check",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "confirm"
+                },
+                "rules": {
+                  "visible": "(!form.values.status || form.values.status === 'draft') && !(form.values.state === 'archived')",
+                  "disabled": "form.saving || form.dirty || form.invalid"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Start",
+                  "icon": "play",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "start"
+                },
+                "rules": {
+                  "visible": "form.values.status === 'confirmed'",
+                  "disabled": "form.saving || form.dirty"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Complete",
+                  "icon": "check-check",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "complete"
+                },
+                "rules": {
+                  "visible": "form.values.status === 'in-progress'",
+                  "disabled": "form.saving || form.dirty"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Cancel order",
+                  "variant": "ghost",
+                  "icon": "x",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "cancel"
+                },
+                "rules": {
+                  "visible": "((!form.values.status || form.values.status === 'draft') || form.values.status === 'confirmed') && !(form.values.state === 'archived')",
+                  "disabled": "form.saving || form.dirty"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Record stock moves",
+                  "variant": "outline",
+                  "icon": "arrow-left-right",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "record-production"
+                },
+                "rules": {
+                  "visible": "form.values.status === 'done' && !(form.values.moves && form.values.moves.length) && (data.appops || []).some(o => o.app === 'inventory' && o.operation === 'record-production' && o.available)",
+                  "disabled": "form.saving || form.dirty"
+                },
+                "slot": "actions"
               },
               {
                 "type": "canvas.stack",
@@ -186,169 +282,92 @@
                   {
                     "type": "canvas.button",
                     "props": {
-                      "label": "Confirm",
-                      "icon": "check",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": "confirm"
-                    },
-                    "rules": {
-                      "visible": "(!form.values.status || form.values.status === 'draft') && !(form.values.state === 'archived')",
-                      "disabled": "form.saving || form.dirty || form.invalid"
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Start",
-                      "icon": "play",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": "start"
-                    },
-                    "rules": {
-                      "visible": "form.values.status === 'confirmed'",
-                      "disabled": "form.saving || form.dirty"
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Complete",
-                      "icon": "check-check",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": "complete"
-                    },
-                    "rules": {
-                      "visible": "form.values.status === 'in-progress'",
-                      "disabled": "form.saving || form.dirty"
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Cancel order",
+                      "label": "Archive",
                       "variant": "ghost",
-                      "icon": "x",
+                      "icon": "archive",
                       "size": "sm"
                     },
                     "on": {
-                      "click": "cancel"
+                      "click": "archive"
                     },
                     "rules": {
-                      "visible": "((!form.values.status || form.values.status === 'draft') || form.values.status === 'confirmed') && !(form.values.state === 'archived')",
+                      "visible": "!(form.values.state === 'archived') && !(!(!form.values.status || form.values.status === 'draft'))",
                       "disabled": "form.saving || form.dirty"
                     }
                   },
                   {
-                    "type": "canvas.stack",
-                    "layout": {
-                      "base": {
-                        "direction": "row",
-                        "wrap": true,
-                        "gap": 2,
-                        "align": "center"
-                      }
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Restore",
+                      "variant": "outline",
+                      "icon": "archive-restore",
+                      "size": "sm"
                     },
-                    "children": [
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Archive",
-                          "variant": "ghost",
-                          "icon": "archive",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "archive"
-                        },
-                        "rules": {
-                          "visible": "!(form.values.state === 'archived') && !(!(!form.values.status || form.values.status === 'draft'))",
-                          "disabled": "form.saving || form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Restore",
-                          "variant": "outline",
-                          "icon": "archive-restore",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "restore"
-                        },
-                        "rules": {
-                          "visible": "form.values.state === 'archived'",
-                          "disabled": "form.saving || form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Reset",
-                          "variant": "ghost",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "reset"
-                        },
-                        "rules": {
-                          "disabled": "form.saving || !form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Save",
-                          "icon": "save",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "save"
-                        },
-                        "rules": {
-                          "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft'))"
-                        }
-                      }
-                    ]
+                    "on": {
+                      "click": "restore"
+                    },
+                    "rules": {
+                      "visible": "form.values.state === 'archived'",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Reset",
+                      "variant": "ghost",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "reset"
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Save",
+                      "icon": "save",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "save"
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft'))"
+                    }
                   }
-                ]
+                ],
+                "slot": "actions"
               }
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "{{ data.$record.error }}"
-            },
-            "rules": {
-              "visible": "data.$record.status === 'error'"
+              "for": "record",
+              "compact": true
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.alert",
             "props": {
-              "text": "Loading…",
-              "tone": "muted"
-            },
-            "rules": {
-              "visible": "data.$record.status === 'loading'"
-            }
-          },
-          {
-            "type": "canvas.dashboard.badge",
-            "props": {
-              "text": "This manufacturing order is archived. Restore it to edit.",
               "tone": "warning",
-              "icon": "archive"
+              "title": "This manufacturing order is archived",
+              "text": "Restore it to edit.",
+              "icon": "archive",
+              "action": {
+                "label": "Restore",
+                "id": "restore"
+              }
             },
             "rules": {
               "visible": "form.values.state === 'archived'"
+            },
+            "on": {
+              "action": "restore"
             }
           },
           {
@@ -461,7 +480,8 @@
                           "value": "{{ form.values.bom }}",
                           "required": true,
                           "description": "Confirming snapshots the BoM product and computes the component demand.",
-                          "options": "{{ data.bomoptions }}"
+                          "options": "{{ data.bomoptions }}",
+                          "searchable": true
                         },
                         "layout": {
                           "tablet": {
@@ -498,6 +518,68 @@
                     ]
                   }
                 ]
+              },
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Shop floor",
+                  "description": "The operations of the bill of materials, in order. Time each one while it runs."
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.checklist",
+                        "props": {
+                          "label": "Operations",
+                          "value": "{{ form.values.operations || [] }}",
+                          "items": "{{ ((((data.boms || []).find(e => e.path === form.values.bom) || {}).data || {}).routing || []).map((step, index) => ({ id: 'op-' + (index + 1), label: [step.operation, step.workcenter].filter(part => part).join(' · '), note: step.minutes ? step.minutes + ' min expected' : '' })) }}",
+                          "timers": true,
+                          "size": "touch"
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "visible": "['confirmed', 'in-progress', 'done'].includes(form.values.status)",
+                          "disabled": "!(form.values.status === 'in-progress')"
+                        },
+                        "on": {
+                          "update": [
+                            {
+                              "patch-record": {
+                                "path": "{{ ctx.file.path }}",
+                                "values": {
+                                  "operations": {
+                                    "$expr": "event"
+                                  },
+                                  "updatedAt": "{{ Date() }}"
+                                }
+                              }
+                            },
+                            {
+                              "refresh-source": {
+                                "source": "record"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
               }
             ]
           },
@@ -513,6 +595,67 @@
               }
             },
             "children": [
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Will it build?"
+                },
+                "children": [
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "The BoM components × the quantity to make, against what Inventory has on hand. Confirming computes the demand for real.",
+                      "tone": "muted"
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.preview || []).map(r => ({ path: r.product, product: r.name, needed: r.needed.toFixed(2), onhand: r.onhand.toFixed(2), short: r.short > 0 ? r.short.toFixed(2) : '' })) }}",
+                      "columns": [
+                        {
+                          "key": "product",
+                          "label": "Component"
+                        },
+                        {
+                          "key": "needed",
+                          "label": "Needed",
+                          "align": "end"
+                        },
+                        {
+                          "key": "onhand",
+                          "label": "On hand",
+                          "align": "end"
+                        },
+                        {
+                          "key": "short",
+                          "label": "Short",
+                          "align": "end"
+                        }
+                      ],
+                      "emptyText": "Choose a bill of materials and a quantity",
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list"
+                    }
+                  },
+                  {
+                    "type": "canvas.alert",
+                    "props": {
+                      "tone": "warning",
+                      "title": "Not enough stock",
+                      "text": "{{ (data.preview || []).filter(r => r.short > 0).length + ' component(s) short. The order can still be confirmed; production waits for stock.' }}"
+                    },
+                    "rules": {
+                      "visible": "(data.preview || []).some(r => r.short > 0)"
+                    }
+                  }
+                ],
+                "rules": {
+                  "visible": "(!form.values.status || form.values.status === 'draft')"
+                }
+              },
               {
                 "type": "canvas.card",
                 "props": {
@@ -545,7 +688,11 @@
                           "align": "end"
                         }
                       ],
-                      "emptyText": "Not confirmed yet"
+                      "emptyText": "Not confirmed yet",
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list"
                     }
                   }
                 ]
@@ -559,7 +706,7 @@
                   {
                     "type": "canvas.text",
                     "props": {
-                      "text": "Consumption and production moves emitted into /stock-moves on completion, when Inventory is installed.",
+                      "text": "Inventory records the consumption and production moves when the order completes, when Inventory is installed.",
                       "tone": "muted"
                     }
                   },
@@ -578,6 +725,10 @@
                         }
                       ],
                       "emptyText": "No stock moves emitted",
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
                       "clickable": true
                     },
                     "on": {
@@ -585,7 +736,8 @@
                         {
                           "open-file": {
                             "path": "{{ event.path }}",
-                            "mode": "edit"
+                            "mode": "edit",
+                            "open": "side"
                           }
                         }
                       ]
@@ -754,9 +906,27 @@
         ],
         "steps": [
           {
+            "set-state": {
+              "key": "lastresult",
+              "value": null
+            }
+          },
+          {
+            "set-state": {
+              "key": "appcall",
+              "value": null
+            }
+          },
+          {
+            "set-state": {
+              "key": "recorded",
+              "value": null
+            }
+          },
+          {
             "confirm": {
               "title": "Complete order",
-              "message": "Complete this manufacturing order? When Inventory is installed, consumption and production stock moves are written to /stock-moves. Done orders cannot be edited."
+              "message": "Complete this manufacturing order? When Inventory is installed, it records the consumption and production stock moves. Done orders cannot be edited."
             }
           },
           {
@@ -771,13 +941,111 @@
             }
           },
           {
+            "call-app": {
+              "if": "(data.appops || []).some(o => o.app === 'inventory' && o.operation === 'record-production' && o.available) && !!state.lastresult && !!state.lastresult.productionRequest",
+              "app": "inventory",
+              "operation": "record-production",
+              "input": {
+                "$expr": "state.lastresult.productionRequest"
+              },
+              "idempotency-key": "{{ ('production-' + form.values.code) + '-' + Date.now() }}",
+              "assign": "appcall"
+            }
+          },
+          {
+            "run-script": {
+              "if": "(data.appops || []).some(o => o.app === 'inventory' && o.operation === 'record-production' && o.available) && !!state.lastresult && !!state.lastresult.productionRequest && !!state.appcall && !!state.appcall.moves",
+              "file": "/applications/manufacturing/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "record-moves",
+                "path": "{{ ctx.file.path }}",
+                "moves": "{{ state.appcall.moves }}"
+              },
+              "assign": "recorded"
+            }
+          },
+          {
             "refresh-source": {
               "source": "record"
             }
           },
           {
             "toast": {
-              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "message": "{{ (state.recorded && state.recorded.message) || (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "record-production": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "set-state": {
+              "key": "lastresult",
+              "value": null
+            }
+          },
+          {
+            "set-state": {
+              "key": "appcall",
+              "value": null
+            }
+          },
+          {
+            "set-state": {
+              "key": "recorded",
+              "value": null
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/manufacturing/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "complete-mo",
+                "path": "{{ ctx.file.path }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "call-app": {
+              "if": "(data.appops || []).some(o => o.app === 'inventory' && o.operation === 'record-production' && o.available) && !!state.lastresult && !!state.lastresult.productionRequest",
+              "app": "inventory",
+              "operation": "record-production",
+              "input": {
+                "$expr": "state.lastresult.productionRequest"
+              },
+              "idempotency-key": "{{ ('production-' + form.values.code) + '-' + Date.now() }}",
+              "assign": "appcall"
+            }
+          },
+          {
+            "run-script": {
+              "if": "(data.appops || []).some(o => o.app === 'inventory' && o.operation === 'record-production' && o.available) && !!state.lastresult && !!state.lastresult.productionRequest && !!state.appcall && !!state.appcall.moves",
+              "file": "/applications/manufacturing/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "record-moves",
+                "path": "{{ ctx.file.path }}",
+                "moves": "{{ state.appcall.moves }}"
+              },
+              "assign": "recorded"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.recorded && state.recorded.message) || (state.lastresult && state.lastresult.message) || 'Done' }}",
               "variant": "success"
             }
           }

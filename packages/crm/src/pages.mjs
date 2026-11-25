@@ -1,6 +1,8 @@
+import { views } from './views.mjs'
 import { activityKinds, childFolders, childKinds, containers, documentsFolder, installRoot, mimeTypes, recordKinds, schemaId, settingsPath, templates } from './contracts.mjs'
 import { entities, followUpsWidgetFile, followUpWindowDays, settingsFields } from './app.mjs'
 
+import { appNavigation, lifecycle } from '../../../tools/file-apps/canvas.mjs'
 const apiVersion = 'canvas.verentis.io/v1'
 export const canvasOriginVariable = '${var:canvas-origin}'
 
@@ -48,11 +50,10 @@ const statusTones = {
 const toneExpression = key => `{{ ${Object.entries(statusTones).map(([tone, values]) => `${JSON.stringify(values)}.includes(form.values.${key}) ? '${tone}' : `).join('')}'neutral' }}`
 const humanize = key => `{{ String(form.values.${key} || '').split('-').join(' ') }}`
 
+// The state of a data source, declared once: a skeleton while it loads, and a first-run, no-access or error
+// state when it cannot be read.
 function status(source, missing) {
-  return [
-    { ...text(missing ?? `{{ data.$${source}.error }}`), rules: { visible: `data.$${source}.status === 'error'` } },
-    { ...text('Loading…', 'muted'), rules: { visible: `data.$${source}.status === 'loading'` } },
-  ]
+  return [{ type: 'canvas.empty-state', props: { for: source, compact: true, ...(missing ? { description: missing } : {}) } }]
 }
 
 function folder(path, kind) {
@@ -70,9 +71,10 @@ function referencingTable(source, refKey, pathExpression, columns, mapping, empt
     props: {
       rows: `{{ (data.${source} || []).filter(e => e.kind === 'file' && e.data && ${live} && e.data.${refKey} && e.data.${refKey}.path === ${pathExpression}).map(e => ({ path: e.path, code: e.data.code || e.name, ${mapping} })) }}`,
       columns: [{ key: 'code', label: 'Code' }, ...columns.map(([key, label]) => ({ key, label }))],
-      emptyText, clickable: true,
+      emptyText, clickable: true, search: true, sortable: true, pageSize: 25, narrow: 'list',
     },
-    on: { 'row-click': [openFile('{{ event.path }}', 'edit')] },
+    // A related record opens as a tab beside this one.
+    on: { 'row-click': [{ 'open-file': { path: '{{ event.path }}', mode: 'edit', open: 'side' } }] },
   }
 }
 
@@ -208,11 +210,17 @@ function childTabs() {
     ...activityKinds.map(kind => [kind, entities[kind].plural, [kind]]),
   ]
   const items = [
+    { value: 'timeline', label: 'Timeline', icon: 'history' },
     { value: 'activities', label: 'Activities', icon: 'calendar-check' },
     { value: 'notes', label: 'Notes', icon: 'sticky-note' },
     { value: 'documents', label: 'Documents', icon: 'paperclip' },
   ]
   const panels = [
+    panel('timeline', [{
+      type: 'canvas.timeline',
+      props: { sources: timelineSources, facets: true, limit: 50, emptyText: 'No activity yet', emptyDescription: 'Emails, calls, meetings, tasks and notes on this record appear here by date.' },
+      on: { open: [openFile('{{ event.path }}')] },
+    }]),
     panel('activities', [
       row([text('New', 'muted'), newButtons]),
       tabs(activityViews.map(([value, label]) => ({ value, label })), activityViews.map(([value, , kinds]) =>
@@ -224,12 +232,34 @@ function childTabs() {
     ]),
     panel('documents', [
       text(`Files of any type in {{ ctx.file.path }}/${documentsFolder}. Upload or create them from Files.`, 'muted'),
-      row([button('Open in Files', [openFile(`{{ ctx.file.path }}/${documentsFolder}`)], undefined, 'outline', 'folder-open')]),
+      row([
+        // Picked files are written into the record's documents folder as they are.
+        { type: 'canvas.form.file-upload', props: { label: 'Add files', multiple: true }, rules: { disabled: archived },
+          on: { files: [
+            { 'for-each': { items: '{{ event }}', as: 'picked', steps: [{ 'write-file': { path: `{{ ctx.file.path }}/${documentsFolder}/{{ picked.name }}`, content: '{{ picked }}' } }] } },
+            { toast: { message: 'Added to Documents', variant: 'success' } },
+          ] } },
+        button('Open in Files', [openFile(`{{ ctx.file.path }}/${documentsFolder}`)], undefined, 'outline', 'folder-open'),
+      ]),
       { type: 'canvas.files', props: { path: `./${documentsFolder}/`, columns: ['name', 'type', 'size', 'modified'], emptyText: 'No documents yet' } },
     ]),
   ]
-  return { items, panels, actions }
+  const data = {
+    activityfiles: { kind: 'folder', path: `{{ ctx.file.path }}/${childFolders.email}`, contents: true },
+    notefiles: folder(`{{ ctx.file.path }}/${childFolders.note}`, 'note'),
+  }
+  return { items, panels, actions, data }
 }
+
+// The record's activities and notes as one dated feed, newest first.
+const ofKind = (source, kind) => `(data.${source} || []).filter(e => e.kind === 'file' && e.data && e.mimeType === '${mimeTypes[kind]}' && e.data.state !== 'archived')`
+const timelineSources = [
+  { type: 'email', label: 'Emails', icon: 'mail', rows: `{{ ${ofKind('activityfiles', 'email')}.map(e => ({ path: e.path, title: e.data.subject, at: e.data.sentAt || e.data.createdAt || e.modified, subtitle: e.data.direction === 'inbound' ? 'From ' + (e.data.from || '') : 'Sent', status: e.data.status })) }}`, date: 'at', title: 'title', subtitle: 'subtitle', badge: 'status' },
+  { type: 'call', label: 'Calls', icon: 'phone', rows: `{{ ${ofKind('activityfiles', 'call')}.map(e => ({ path: e.path, title: e.data.subject, at: e.data.startsAt || e.data.createdAt || e.modified, subtitle: e.data.result || '', status: e.data.status })) }}`, date: 'at', title: 'title', subtitle: 'subtitle', badge: 'status' },
+  { type: 'meeting', label: 'Meetings', icon: 'calendar-days', rows: `{{ ${ofKind('activityfiles', 'meeting')}.map(e => ({ path: e.path, title: e.data.subject, at: e.data.startsAt || e.data.createdAt || e.modified, subtitle: e.data.location || '', status: e.data.status })) }}`, date: 'at', title: 'title', subtitle: 'subtitle', badge: 'status' },
+  { type: 'task', label: 'Tasks', icon: 'square-check', rows: `{{ ${ofKind('activityfiles', 'task')}.map(e => ({ path: e.path, title: e.data.subject, at: e.data.dueDate || e.data.createdAt || e.modified, subtitle: e.data.priority || '', status: e.data.status })) }}`, date: 'at', title: 'title', subtitle: 'subtitle', badge: 'status' },
+  { type: 'note', label: 'Notes', icon: 'sticky-note', rows: `{{ ${ofKind('notefiles', 'note')}.map(e => ({ path: e.path, title: e.data.title, at: e.data.updatedAt || e.data.createdAt || e.modified })) }}`, date: 'at', title: 'title' },
+]
 
 const customerSources = {
   companies: folder(containers.customers.path, 'company'),
@@ -331,17 +361,21 @@ function recordForm(kind) {
   const isRecord = recordKinds.includes(kind)
   const children = isRecord ? childTabs() : null
   const title = entity.title ?? `form.values.${entity.titleKey}`
-  const header = row([
-    column([
+  // The standard record header; badges and buttons are ordinary nodes, so their rules and actions keep working.
+  const header = {
+    type: 'canvas.record-header',
+    props: {
+      title: `{{ ${title} || 'New ${entity.singular.toLowerCase()}' }}`,
+      note: isRecord ? `${entity.singular} {{ form.values.code || '' }}` : entity.singular,
+    },
+    children: [
       row([
-        heading(`{{ ${title} || 'New ${entity.singular.toLowerCase()}' }}`),
         ...(entity.status ? [{ type: 'canvas.dashboard.badge', props: { text: humanize(entity.status), tone: toneExpression(entity.status) }, rules: { visible: `!!form.values.${entity.status}` } }] : []),
         { type: 'canvas.dashboard.badge', props: { text: 'Archived', tone: 'warning', icon: 'archive' }, rules: { visible: archived } },
       ]),
-      text(isRecord ? `${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}` : `${entity.singular} · {{ ctx.file.path }}`, 'muted'),
-    ]),
-    recordButtons,
-  ], 'between')
+      { ...recordButtons, slot: 'actions' },
+    ],
+  }
   const overview = [
     ...(extras.links?.length ? [row(extras.links)] : []),
     ...(extras.notices ?? []),
@@ -349,8 +383,13 @@ function recordForm(kind) {
   ]
   const tree = [
     header,
-    ...status('record'),
-    { type: 'canvas.dashboard.badge', props: { text: `This ${entity.singular.toLowerCase()} is archived. Restore it to edit.`, tone: 'warning', icon: 'archive' }, rules: { visible: archived } },
+    ...status('record'), ...lifecycle(entity),
+    {
+      type: 'canvas.alert',
+      props: { tone: 'warning', title: `This ${entity.singular.toLowerCase()} is archived`, text: 'Restore it to edit.', icon: 'archive', action: { label: 'Restore', id: 'restore' } },
+      rules: { visible: archived },
+      on: { action: 'restore' },
+    },
     ...(isRecord
       ? [tabs(
           [{ value: 'overview', label: 'Overview', icon: iconName(entity.icon) }, ...children.items.slice(0, 1), ...(extras.relatedTabs ?? []), ...children.items.slice(1)],
@@ -369,9 +408,9 @@ function recordForm(kind) {
           'json-schema': { id: schemaId(kind), source: `${installRoot}/schemas/${kind}.schema.json`, title: `CRM ${entity.singular.toLowerCase()}`, version: '1' },
         }],
         ...(extras.access ? { access: [...extras.access, { path: `${installRoot}/`, reason: 'Read the CRM schemas' }] } : {}),
-        data: { record: { kind: 'document', consistency: 'conditional' }, ...extras.data },
+        data: { record: { kind: 'document', consistency: 'conditional' }, ...extras.data, ...children?.data },
         state: { showarchived: false },
-        tree: page(tree),
+        tree: page([{ type: 'canvas.validation-summary', props: { title: 'Fix these before saving' } }, ...tree]),
         actions: { ...baseActions, ...extras.actions, ...children?.actions },
       },
     },
@@ -580,7 +619,7 @@ export function buildPages() {
     ...[...recordKinds, ...childKinds].map(recordForm),
     settingsForm(),
   ]
-  return Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)]))
+  return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }
 
 /**

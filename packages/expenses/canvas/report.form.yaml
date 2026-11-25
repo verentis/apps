@@ -86,6 +86,9 @@
       "categoryoptions": {
         "kind": "computed",
         "expr": "(data.categories || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + (e.data.name || ''), value: e.path }))"
+      },
+      "appops": {
+        "kind": "app-operations"
       }
     },
     "state": {
@@ -107,74 +110,116 @@
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.validation-summary",
+            "props": {
+              "title": "Fix these before saving"
+            }
+          },
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "{{ form.values.employeeName || 'New expense report' }}",
+              "note": "Expense report {{ form.values.code || '' }}"
             },
             "children": [
               {
                 "type": "canvas.stack",
                 "layout": {
                   "base": {
-                    "gap": 1
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
                   }
                 },
                 "children": [
                   {
-                    "type": "canvas.stack",
-                    "layout": {
-                      "base": {
-                        "direction": "row",
-                        "wrap": true,
-                        "gap": 2,
-                        "align": "center"
-                      }
+                    "type": "canvas.dashboard.badge",
+                    "props": {
+                      "text": "{{ String(form.values.status || '').split('-').join(' ') }}",
+                      "tone": "{{ [\"approved\",\"posted\"].includes(form.values.status) ? 'success' : [\"draft\"].includes(form.values.status) ? 'warning' : [\"refused\"].includes(form.values.status) ? 'danger' : 'neutral' }}"
                     },
-                    "children": [
-                      {
-                        "type": "canvas.heading",
-                        "props": {
-                          "level": 2,
-                          "text": "{{ form.values.employeeName || 'New expense report' }}"
-                        }
-                      },
-                      {
-                        "type": "canvas.dashboard.badge",
-                        "props": {
-                          "text": "{{ String(form.values.status || '').split('-').join(' ') }}",
-                          "tone": "{{ [\"approved\",\"posted\"].includes(form.values.status) ? 'success' : [\"draft\"].includes(form.values.status) ? 'warning' : [\"refused\"].includes(form.values.status) ? 'danger' : 'neutral' }}"
-                        },
-                        "rules": {
-                          "visible": "!!form.values.status"
-                        }
-                      },
-                      {
-                        "type": "canvas.dashboard.badge",
-                        "props": {
-                          "text": "Archived",
-                          "tone": "warning",
-                          "icon": "archive"
-                        },
-                        "rules": {
-                          "visible": "form.values.state === 'archived'"
-                        }
-                      }
-                    ]
+                    "rules": {
+                      "visible": "!!form.values.status"
+                    }
                   },
                   {
-                    "type": "canvas.text",
+                    "type": "canvas.dashboard.badge",
                     "props": {
-                      "text": "Expense report {{ form.values.code || '' }} · {{ ctx.file.path }}",
-                      "tone": "muted"
+                      "text": "Archived",
+                      "tone": "warning",
+                      "icon": "archive"
+                    },
+                    "rules": {
+                      "visible": "form.values.state === 'archived'"
                     }
                   }
                 ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Submit",
+                  "icon": "send",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "submit"
+                },
+                "rules": {
+                  "visible": "(!form.values.status || form.values.status === 'draft') && !(form.values.state === 'archived')",
+                  "disabled": "form.saving || form.dirty || form.invalid"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Approve",
+                  "icon": "check",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "approve"
+                },
+                "rules": {
+                  "visible": "form.values.status === 'submitted'",
+                  "disabled": "form.saving || form.dirty"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Refuse",
+                  "variant": "outline",
+                  "icon": "x",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "refuse"
+                },
+                "rules": {
+                  "visible": "form.values.status === 'submitted'",
+                  "disabled": "form.saving || form.dirty"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Post",
+                  "icon": "notebook-pen",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "post"
+                },
+                "rules": {
+                  "visible": "form.values.status === 'approved'",
+                  "disabled": "form.saving || form.dirty"
+                },
+                "slot": "actions"
               },
               {
                 "type": "canvas.stack",
@@ -190,169 +235,92 @@
                   {
                     "type": "canvas.button",
                     "props": {
-                      "label": "Submit",
-                      "icon": "send",
+                      "label": "Archive",
+                      "variant": "ghost",
+                      "icon": "archive",
                       "size": "sm"
                     },
                     "on": {
-                      "click": "submit"
+                      "click": "archive"
                     },
                     "rules": {
-                      "visible": "(!form.values.status || form.values.status === 'draft') && !(form.values.state === 'archived')",
-                      "disabled": "form.saving || form.dirty || form.invalid"
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Approve",
-                      "icon": "check",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": "approve"
-                    },
-                    "rules": {
-                      "visible": "form.values.status === 'submitted'",
+                      "visible": "!(form.values.state === 'archived') && !(!(!form.values.status || form.values.status === 'draft'))",
                       "disabled": "form.saving || form.dirty"
                     }
                   },
                   {
                     "type": "canvas.button",
                     "props": {
-                      "label": "Refuse",
+                      "label": "Restore",
                       "variant": "outline",
-                      "icon": "x",
+                      "icon": "archive-restore",
                       "size": "sm"
                     },
                     "on": {
-                      "click": "refuse"
+                      "click": "restore"
                     },
                     "rules": {
-                      "visible": "form.values.status === 'submitted'",
+                      "visible": "form.values.state === 'archived'",
                       "disabled": "form.saving || form.dirty"
                     }
                   },
                   {
                     "type": "canvas.button",
                     "props": {
-                      "label": "Post",
-                      "icon": "notebook-pen",
+                      "label": "Reset",
+                      "variant": "ghost",
                       "size": "sm"
                     },
                     "on": {
-                      "click": "post"
+                      "click": "reset"
                     },
                     "rules": {
-                      "visible": "form.values.status === 'approved'",
-                      "disabled": "form.saving || form.dirty"
+                      "disabled": "form.saving || !form.dirty"
                     }
                   },
                   {
-                    "type": "canvas.stack",
-                    "layout": {
-                      "base": {
-                        "direction": "row",
-                        "wrap": true,
-                        "gap": 2,
-                        "align": "center"
-                      }
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Save",
+                      "icon": "save",
+                      "size": "sm"
                     },
-                    "children": [
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Archive",
-                          "variant": "ghost",
-                          "icon": "archive",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "archive"
-                        },
-                        "rules": {
-                          "visible": "!(form.values.state === 'archived') && !(!(!form.values.status || form.values.status === 'draft'))",
-                          "disabled": "form.saving || form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Restore",
-                          "variant": "outline",
-                          "icon": "archive-restore",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "restore"
-                        },
-                        "rules": {
-                          "visible": "form.values.state === 'archived'",
-                          "disabled": "form.saving || form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Reset",
-                          "variant": "ghost",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "reset"
-                        },
-                        "rules": {
-                          "disabled": "form.saving || !form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Save",
-                          "icon": "save",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "save"
-                        },
-                        "rules": {
-                          "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft'))"
-                        }
-                      }
-                    ]
+                    "on": {
+                      "click": "save"
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft'))"
+                    }
                   }
-                ]
+                ],
+                "slot": "actions"
               }
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "{{ data.$record.error }}"
-            },
-            "rules": {
-              "visible": "data.$record.status === 'error'"
+              "for": "record",
+              "compact": true
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.alert",
             "props": {
-              "text": "Loading…",
-              "tone": "muted"
-            },
-            "rules": {
-              "visible": "data.$record.status === 'loading'"
-            }
-          },
-          {
-            "type": "canvas.dashboard.badge",
-            "props": {
-              "text": "This expense report is archived. Restore it to edit.",
               "tone": "warning",
-              "icon": "archive"
+              "title": "This expense report is archived",
+              "text": "Restore it to edit.",
+              "icon": "archive",
+              "action": {
+                "label": "Restore",
+                "id": "restore"
+              }
             },
             "rules": {
               "visible": "form.values.state === 'archived'"
+            },
+            "on": {
+              "action": "restore"
             }
           },
           {
@@ -523,6 +491,47 @@
               {
                 "type": "canvas.card",
                 "props": {
+                  "title": "Receipts",
+                  "description": "A photo of each receipt. On a phone, Add photo opens the camera."
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.capture",
+                        "props": {
+                          "label": "Receipts",
+                          "value": "{{ form.values.receipts }}",
+                          "max": 10,
+                          "size": 1024,
+                          "quality": 0.75
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft')))"
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "canvas.card",
+                "props": {
                   "title": "Expenses",
                   "description": "Exact decimal amounts. Submitting checks every line has a category, a description and a positive amount."
                 },
@@ -540,31 +549,32 @@
                     },
                     "children": [
                       {
-                        "type": "canvas.form.array",
+                        "type": "canvas.form.line-items",
                         "props": {
                           "label": "Lines",
                           "value": "{{ form.values.lines }}",
-                          "fields": [
+                          "columns": [
                             {
                               "key": "category",
                               "label": "Category",
                               "type": "select",
-                              "required": true,
                               "options": "{{ data.categoryoptions }}"
                             },
                             {
                               "key": "description",
                               "label": "Description",
-                              "required": true
+                              "type": "text"
                             },
                             {
                               "key": "amount",
                               "label": "Amount",
-                              "required": true
+                              "type": "text",
+                              "align": "right"
                             },
                             {
                               "key": "date",
-                              "label": "Date"
+                              "label": "Date",
+                              "type": "text"
                             }
                           ],
                           "defaultRow": {
@@ -573,11 +583,10 @@
                             "amount": "",
                             "date": ""
                           },
-                          "rowIds": false,
+                          "storeComputed": false,
                           "minimum": 1,
                           "maximum": 200,
-                          "addLabel": "Add expense",
-                          "removeLabel": "Remove row"
+                          "addLabel": "Add expense"
                         },
                         "layout": {
                           "tablet": {
@@ -791,9 +800,35 @@
         ],
         "steps": [
           {
+            "set-state": {
+              "key": "lastresult",
+              "value": null
+            }
+          },
+          {
+            "set-state": {
+              "key": "appcall",
+              "value": null
+            }
+          },
+          {
+            "set-state": {
+              "key": "recorded",
+              "value": null
+            }
+          },
+          {
+            "toast": {
+              "if": "!((data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available))",
+              "variant": "error",
+              "message": "Accounting is not available right now, so nothing was done. Check that Accounting is installed and approved, then try again."
+            }
+          },
+          {
             "confirm": {
               "title": "Post report",
-              "message": "Post this approved report to the Accounting ledger? Posted reports cannot be edited."
+              "message": "Post this approved report to the Accounting ledger? Posted reports cannot be edited.",
+              "if": "(data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available)"
             }
           },
           {
@@ -804,18 +839,53 @@
                 "operation": "post-report",
                 "path": "{{ ctx.file.path }}"
               },
-              "assign": "lastresult"
+              "assign": "lastresult",
+              "if": "(data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available)"
+            }
+          },
+          {
+            "call-app": {
+              "if": "((data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available)) && ((data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available) && !!state.lastresult && !!state.lastresult.journalRequest)",
+              "app": "accounting",
+              "operation": "post-journal",
+              "input": {
+                "$expr": "state.lastresult.journalRequest"
+              },
+              "idempotency-key": "{{ ('journal-' + form.values.code) + '-' + Date.now() }}",
+              "assign": "appcall"
+            }
+          },
+          {
+            "run-script": {
+              "if": "((data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available)) && ((data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available) && !!state.lastresult && !!state.lastresult.journalRequest && !!state.appcall && !!state.appcall.path)",
+              "file": "/applications/expenses/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "complete-report",
+                "path": "{{ ctx.file.path }}",
+                "journal": "{{ state.appcall.path }}"
+              },
+              "assign": "recorded"
             }
           },
           {
             "refresh-source": {
-              "source": "record"
+              "source": "record",
+              "if": "(data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available)"
             }
           },
           {
             "toast": {
-              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
-              "variant": "success"
+              "message": "{{ (state.recorded && state.recorded.message) || (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success",
+              "if": "((data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available)) && (!(!!state.lastresult && !!state.lastresult.journalRequest) || !!state.recorded)"
+            }
+          },
+          {
+            "toast": {
+              "if": "((data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available)) && !!state.lastresult && !!state.lastresult.journalRequest && !state.recorded",
+              "variant": "error",
+              "message": "Accounting did not confirm this. Nothing was marked as done; try again."
             }
           }
         ]

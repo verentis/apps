@@ -1,0 +1,10 @@
+# Rental's API contract: Rental offers no operations yet; it asks Invoicing to draft a returned booking's invoice.
+api-version: verentis.io/v1
+kind: Api
+metadata:
+  id: rental
+spec:
+  uses:
+    - app: invoicing
+      operation: create-draft-invoice
+      reason: Draft the invoice of a returned booking

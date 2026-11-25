@@ -172,8 +172,8 @@
       },
       {
         "path": "/timesheets",
-        "mode": "read",
-        "reason": "Sum this week's hours by project",
+        "mode": "write",
+        "reason": "Sum this week's hours by project; change records from this page",
         "origin": {
           "kind": "document",
           "id": "canvas/week.page.yaml"
@@ -183,6 +183,15 @@
         "path": "/projects",
         "mode": "read",
         "reason": "Show project names (when Project is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/week.page.yaml"
+        }
+      },
+      {
+        "path": "/settings/timesheets.json",
+        "mode": "read",
+        "reason": "Show the default employee's week",
         "origin": {
           "kind": "document",
           "id": "canvas/week.page.yaml"

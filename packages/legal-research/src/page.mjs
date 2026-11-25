@@ -33,11 +33,17 @@ export function researchPage(id, name, country = '') {
     tree: page([
       heading(name), text('Find a statute or provision and check the source before relying on it. Search stays in your workspace.', 'muted'),
       grid([field('input', 'Find a citation, instrument or topic', 'query', { placeholder: 'e.g. POPIA, trust accounts or s 49' }),
-        field('select', 'Jurisdiction', 'country', { options: "{{ [{label:'All jurisdictions',value:''}].concat(data.countries || []) }}" })]),
+        field('select', 'Jurisdiction', 'country', { display: 'segmented', options: "{{ [{label:'All jurisdictions',value:''}].concat(data.countries || []) }}" })]),
       ...status('packs'),
       { ...text('Install a country pack such as South Africa Law or Namibia Law to search its citations.'), rules: { visible: 'data.packs && data.packs.length === 0' } },
-      text("{{ (data.results || []).length }} matches. Showing up to 12; narrow the search for a particular instrument.", 'muted'),
-      { ...table('{{ (data.results || []).slice(0,12) }}', [['jurisdiction', 'Jurisdiction'], ['citation', 'Citation'], ['topic', 'Topic'], ['coverage', 'Coverage']], 'No matching authority.', true),
+      text("{{ (data.results || []).length }} {{ (data.results || []).length === 1 ? 'match' : 'matches' }}", 'muted'),
+      // The box above is the search; the table pages through every match and marks the one whose detail is open.
+      { type: 'canvas.table',
+        props: {
+          rows: '{{ data.results || [] }}', rowKey: 'id', selected: '{{ state.selected }}', clickable: true, sortable: true, pageSize: 12, narrow: 'list',
+          columns: [{ key: 'jurisdiction', label: 'Jurisdiction', format: 'badge' }, { key: 'citation', label: 'Citation' }, { key: 'topic', label: 'Topic' }, { key: 'coverage', label: 'Coverage' }],
+          emptyText: 'No matching authority.',
+        },
         on: { 'row-click': [{ 'set-state': { key: 'selected', value: '{{ event.id }}' } }] } },
       { ...card('{{ data.selected.citation }}', [
         text('{{ data.selected.instrument }} · {{ data.selected.topic }}'),

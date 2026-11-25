@@ -11,7 +11,8 @@
     "access": [
       {
         "path": "/events",
-        "reason": "List events by status with their seats taken"
+        "reason": "List events by status with their seats taken; move records between columns",
+        "mode": "write"
       },
       {
         "path": "/event-registrations",
@@ -42,90 +43,78 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Events",
+          "icon": "calendar",
+          "active": "events.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "events.page.yaml",
+              "label": "Events",
+              "icon": "kanban",
+              "count": "{{ (data.rows || []).filter(r => ['published', 'ongoing'].includes(r.status)).length }}"
+            },
+            {
+              "id": "registrations.page.yaml",
+              "label": "Registrations",
+              "icon": "ticket"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/events/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/events.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Events by status",
+              "note": "Every active event, grouped by its status. Click a row to open the event."
             },
-            "children": [
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Events by status"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Every active event, grouped by its status. Click a row to open the event.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.button",
-                "props": {
-                  "label": "Events",
-                  "variant": "ghost",
-                  "icon": "calendar",
-                  "size": "sm"
-                },
-                "on": {
-                  "click": [
-                    {
-                      "open-file": {
-                        "path": "/applications/events/canvas/home.page.yaml"
-                      }
-                    }
-                  ]
-                }
-              }
-            ]
+            "children": []
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /events folder could not be read. Reinstall Events to recreate it."
-            },
-            "rules": {
-              "visible": "data.$events.status === 'error'"
+              "for": "events",
+              "compact": true,
+              "description": "The /events folder could not be read. Reinstall Events to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /event-registrations folder could not be read. Reinstall Events to recreate it."
-            },
-            "rules": {
-              "visible": "data.$registrations.status === 'error'"
+              "for": "registrations",
+              "compact": true,
+              "description": "The /event-registrations folder could not be read. Reinstall Events to recreate it."
             }
           },
           {
@@ -190,31 +179,18 @@
           {
             "type": "canvas.tabs",
             "props": {
+              "variant": "pill",
+              "persist": true,
               "items": [
                 {
-                  "value": "draft",
-                  "label": "Draft",
-                  "icon": "calendar"
+                  "value": "board",
+                  "label": "Board",
+                  "icon": "kanban"
                 },
                 {
-                  "value": "published",
-                  "label": "Published",
-                  "icon": "calendar"
-                },
-                {
-                  "value": "ongoing",
-                  "label": "Ongoing",
-                  "icon": "calendar"
-                },
-                {
-                  "value": "done",
-                  "label": "Done",
-                  "icon": "calendar"
-                },
-                {
-                  "value": "cancelled",
-                  "label": "Cancelled",
-                  "icon": "calendar"
+                  "value": "list",
+                  "label": "List",
+                  "icon": "list"
                 }
               ]
             },
@@ -228,58 +204,140 @@
                 },
                 "children": [
                   {
-                    "type": "canvas.table",
+                    "type": "canvas.board",
                     "props": {
-                      "rows": "{{ (data.rows || []).filter(r => r.status === 'draft') }}",
+                      "rows": "{{ (data.rows || []) }}",
+                      "groupBy": "status",
+                      "readOnly": false,
+                      "rowKey": "path",
                       "columns": [
                         {
-                          "key": "code",
-                          "label": "Event"
+                          "value": "draft",
+                          "label": "Draft"
                         },
                         {
-                          "key": "name",
-                          "label": "Name"
+                          "value": "published",
+                          "label": "Published"
                         },
                         {
-                          "key": "venue",
-                          "label": "Venue"
+                          "value": "ongoing",
+                          "label": "Ongoing"
                         },
                         {
-                          "key": "startsAt",
-                          "label": "Starts at"
+                          "value": "done",
+                          "label": "Done"
                         },
                         {
-                          "key": "taken",
-                          "label": "Seats taken",
-                          "align": "end"
-                        },
-                        {
-                          "key": "capacity",
-                          "label": "Capacity",
-                          "align": "end"
-                        },
-                        {
-                          "key": "remaining",
-                          "label": "Remaining",
-                          "align": "end"
+                          "value": "cancelled",
+                          "label": "Cancelled"
                         }
                       ],
-                      "emptyText": "No draft events",
-                      "clickable": true
+                      "card": {
+                        "title": "name",
+                        "code": "code",
+                        "meta": [
+                          "venue",
+                          "startsAt",
+                          "taken"
+                        ]
+                      },
+                      "emptyText": "Nothing here",
+                      "lockedWhen": "[\"done\",\"cancelled\"].includes(row.status)"
                     },
                     "on": {
-                      "row-click": [
+                      "open": [
                         {
                           "open-file": {
+                            "path": "{{ event.row.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ],
+                      "move": [
+                        {
+                          "confirm": {
+                            "if": "event.to === 'done'",
+                            "title": "Move to Done?",
+                            "message": "{{ event.row.code }} moves to Done. It cannot be moved back from the board.",
+                            "confirm-label": "Move to Done"
+                          }
+                        },
+                        {
+                          "confirm": {
+                            "if": "event.to === 'cancelled'",
+                            "title": "Move to Cancelled?",
+                            "message": "{{ event.row.code }} moves to Cancelled. It cannot be moved back from the board.",
+                            "confirm-label": "Move to Cancelled"
+                          }
+                        },
+                        {
+                          "run-script": {
+                            "if": "event.to === 'published'",
+                            "file": "/applications/events/scripts/post",
+                            "timeout": 120,
+                            "parameters": {
+                              "operation": "publish",
+                              "path": "{{ event.path }}"
+                            },
+                            "assign": "lastmove"
+                          }
+                        },
+                        {
+                          "run-script": {
+                            "if": "event.to === 'done'",
+                            "file": "/applications/events/scripts/post",
+                            "timeout": 120,
+                            "parameters": {
+                              "operation": "complete",
+                              "path": "{{ event.path }}"
+                            },
+                            "assign": "lastmove"
+                          }
+                        },
+                        {
+                          "run-script": {
+                            "if": "event.to === 'cancelled'",
+                            "file": "/applications/events/scripts/post",
+                            "timeout": 120,
+                            "parameters": {
+                              "operation": "cancel",
+                              "path": "{{ event.path }}"
+                            },
+                            "assign": "lastmove"
+                          }
+                        },
+                        {
+                          "patch-record": {
+                            "if": "![\"published\",\"done\",\"cancelled\"].includes(event.to)",
                             "path": "{{ event.path }}",
-                            "mode": "edit"
+                            "values": {
+                              "status": "{{ event.to }}",
+                              "updatedAt": "{{ Date() }}"
+                            }
+                          }
+                        },
+                        {
+                          "refresh-source": {
+                            "source": "events"
+                          }
+                        },
+                        {
+                          "refresh-source": {
+                            "source": "registrations"
+                          }
+                        },
+                        {
+                          "toast": {
+                            "message": "{{ [\"published\",\"done\",\"cancelled\"].includes(event.to) ? ((state.lastmove && state.lastmove.message) || 'Done') : 'Moved to ' + ({\"draft\":\"Draft\",\"published\":\"Published\",\"ongoing\":\"Ongoing\",\"done\":\"Done\",\"cancelled\":\"Cancelled\"}[event.to] || event.to) }}",
+                            "variant": "success"
                           }
                         }
                       ]
                     }
                   }
                 ],
-                "slot": "draft"
+                "slot": "board"
               },
               {
                 "type": "canvas.stack",
@@ -292,7 +350,7 @@
                   {
                     "type": "canvas.table",
                     "props": {
-                      "rows": "{{ (data.rows || []).filter(r => r.status === 'published') }}",
+                      "rows": "{{ (data.rows || []) }}",
                       "columns": [
                         {
                           "key": "code",
@@ -324,210 +382,73 @@
                           "key": "remaining",
                           "label": "Remaining",
                           "align": "end"
+                        },
+                        {
+                          "key": "status",
+                          "label": "Stage",
+                          "format": "badge",
+                          "labels": {
+                            "draft": "Draft",
+                            "published": "Published",
+                            "ongoing": "Ongoing",
+                            "done": "Done",
+                            "cancelled": "Cancelled"
+                          }
                         }
                       ],
-                      "emptyText": "No published events",
-                      "clickable": true
+                      "views": [
+                        {
+                          "value": "all",
+                          "label": "All"
+                        },
+                        {
+                          "value": "draft",
+                          "label": "Draft",
+                          "where": "row.status === 'draft'"
+                        },
+                        {
+                          "value": "published",
+                          "label": "Published",
+                          "where": "row.status === 'published'"
+                        },
+                        {
+                          "value": "ongoing",
+                          "label": "Ongoing",
+                          "where": "row.status === 'ongoing'"
+                        },
+                        {
+                          "value": "done",
+                          "label": "Done",
+                          "where": "row.status === 'done'"
+                        },
+                        {
+                          "value": "cancelled",
+                          "label": "Cancelled",
+                          "where": "row.status === 'cancelled'"
+                        }
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
+                      "emptyText": "Nothing here"
                     },
                     "on": {
                       "row-click": [
                         {
                           "open-file": {
                             "path": "{{ event.path }}",
-                            "mode": "edit"
+                            "mode": "edit",
+                            "open": "side"
                           }
                         }
                       ]
                     }
                   }
                 ],
-                "slot": "published"
-              },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 4
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.table",
-                    "props": {
-                      "rows": "{{ (data.rows || []).filter(r => r.status === 'ongoing') }}",
-                      "columns": [
-                        {
-                          "key": "code",
-                          "label": "Event"
-                        },
-                        {
-                          "key": "name",
-                          "label": "Name"
-                        },
-                        {
-                          "key": "venue",
-                          "label": "Venue"
-                        },
-                        {
-                          "key": "startsAt",
-                          "label": "Starts at"
-                        },
-                        {
-                          "key": "taken",
-                          "label": "Seats taken",
-                          "align": "end"
-                        },
-                        {
-                          "key": "capacity",
-                          "label": "Capacity",
-                          "align": "end"
-                        },
-                        {
-                          "key": "remaining",
-                          "label": "Remaining",
-                          "align": "end"
-                        }
-                      ],
-                      "emptyText": "No ongoing events",
-                      "clickable": true
-                    },
-                    "on": {
-                      "row-click": [
-                        {
-                          "open-file": {
-                            "path": "{{ event.path }}",
-                            "mode": "edit"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ],
-                "slot": "ongoing"
-              },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 4
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.table",
-                    "props": {
-                      "rows": "{{ (data.rows || []).filter(r => r.status === 'done') }}",
-                      "columns": [
-                        {
-                          "key": "code",
-                          "label": "Event"
-                        },
-                        {
-                          "key": "name",
-                          "label": "Name"
-                        },
-                        {
-                          "key": "venue",
-                          "label": "Venue"
-                        },
-                        {
-                          "key": "startsAt",
-                          "label": "Starts at"
-                        },
-                        {
-                          "key": "taken",
-                          "label": "Seats taken",
-                          "align": "end"
-                        },
-                        {
-                          "key": "capacity",
-                          "label": "Capacity",
-                          "align": "end"
-                        },
-                        {
-                          "key": "remaining",
-                          "label": "Remaining",
-                          "align": "end"
-                        }
-                      ],
-                      "emptyText": "No done events",
-                      "clickable": true
-                    },
-                    "on": {
-                      "row-click": [
-                        {
-                          "open-file": {
-                            "path": "{{ event.path }}",
-                            "mode": "edit"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ],
-                "slot": "done"
-              },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 4
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.table",
-                    "props": {
-                      "rows": "{{ (data.rows || []).filter(r => r.status === 'cancelled') }}",
-                      "columns": [
-                        {
-                          "key": "code",
-                          "label": "Event"
-                        },
-                        {
-                          "key": "name",
-                          "label": "Name"
-                        },
-                        {
-                          "key": "venue",
-                          "label": "Venue"
-                        },
-                        {
-                          "key": "startsAt",
-                          "label": "Starts at"
-                        },
-                        {
-                          "key": "taken",
-                          "label": "Seats taken",
-                          "align": "end"
-                        },
-                        {
-                          "key": "capacity",
-                          "label": "Capacity",
-                          "align": "end"
-                        },
-                        {
-                          "key": "remaining",
-                          "label": "Remaining",
-                          "align": "end"
-                        }
-                      ],
-                      "emptyText": "No cancelled events",
-                      "clickable": true
-                    },
-                    "on": {
-                      "row-click": [
-                        {
-                          "open-file": {
-                            "path": "{{ event.path }}",
-                            "mode": "edit"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ],
-                "slot": "cancelled"
+                "slot": "list"
               }
             ]
           }

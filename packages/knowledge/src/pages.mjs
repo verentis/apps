@@ -2,10 +2,11 @@
 // the space browser (articles grouped by space, hierarchy via the parent reference), the recently-updated list
 // and the tag summary. Publishing, archiving and restoring (status transitions, locking) are done by the action
 // script the article form runs.
+import { views } from './views.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   humanize, iconName, options, openFile, page, panel, projectRegistration, recordButtons, row, scriptAction,
-  sectionCards, stat, stats, status, table, tabs, text, toneExpression,
+  sectionCards, stat, stats, status, table, tabs, text, toneExpression, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { containers, installRoot, mimeTypes, recordKinds, schemaId, settingsPath } from './contracts.mjs'
 import { entities, postScriptPath, settingsFields } from './app.mjs'
@@ -70,21 +71,19 @@ function recordForm(kind) {
   const entity = entities[kind]
   const extras = recordExtras(kind)
   const readOnly = `${archived} || (${extras.locked})`
-  const header = row([
-    column([
-      row([
-        heading(`{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`),
+  const header = recordHeader(
+    `{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`,
+    [
         ...(entity.status ? [badge(humanize(entity.status), toneExpression(entity.status, statusTones), { visible: `!!form.values.${entity.status}` })] : []),
         badge('Archived', 'warning', { visible: archived }, 'archive'),
-      ]),
-      text(`${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`, 'muted'),
-    ]),
-    row([...extras.buttons, recordButtons(extras.locked)]),
-  ], 'between')
+    ],
+    `${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`,
+    [...extras.buttons, recordButtons(extras.locked)],
+  )
   const tree = [
     header,
-    ...status('record'),
-    badge(`This ${entity.singular.toLowerCase()} is archived. Restore it to edit.`, 'warning', { visible: archived }, 'archive'),
+    ...status('record'), ...lifecycle(entity),
+    archivedAlert(entity.singular),
     ...extras.notices,
     grid(sectionCards(entity.sections, readOnly)),
   ]
@@ -109,13 +108,13 @@ function settingsForm() {
       access: [spacesAccess('Choose the default space for new articles'), schemaAccess],
       data: spaceSources,
       tree: [
-        row([
-          column([heading('Knowledge settings'), text('The default space for new articles. Code prefixes are app settings, managed with the installed app.', 'muted')]),
+        pageHeader(
+          [heading('Knowledge settings'), text('The default space for new articles. Code prefixes are app settings, managed with the installed app.', 'muted')], [
           row([
             button('Reset', [{ 'reset-form': {} }], { disabled: 'form.saving || !form.dirty' }, 'ghost'),
             button('Save', [{ save: {} }, { toast: { message: 'Saved', variant: 'success' } }], { disabled: 'form.saving || !form.dirty || form.invalid' }, undefined, 'save'),
           ]),
-        ], 'between'),
+        ]),
         ...status('record'),
         ...status('spaces', `The ${containers.spaces.path} folder could not be read. Reinstall Knowledge to recreate it.`),
         grid([card('Defaults', [grid(settingsFields.map(field => formControl(field, null)))])], 1),
@@ -154,15 +153,15 @@ function homePage() {
         access: pageAccess('Count articles and show the spaces and articles'),
         data: articleSources,
         tree: page([
-          row([
-            column([heading('Knowledge'), text('Spaces and Markdown articles are files in your workspace. Draft articles in /articles, nest them beneath a parent, then publish, archive and restore them from their forms.', 'muted')]),
+          pageHeader(
+            [heading('Knowledge'), text('Spaces and Markdown articles are files in your workspace. Draft articles in /articles, nest them beneath a parent, then publish, archive and restore them from their forms.', 'muted')], [
             row([
               button('Spaces', [openFile(`${installRoot}/canvas/spaces.page.yaml`)], undefined, 'outline', 'library'),
               button('Recently updated', [openFile(`${installRoot}/canvas/recent.page.yaml`)], undefined, 'outline', 'clock'),
               button('Tags', [openFile(`${installRoot}/canvas/tags.page.yaml`)], undefined, 'outline', 'tags'),
               button('Settings', [openFile(settingsPath, 'edit')], undefined, 'ghost', 'settings'),
             ]),
-          ], 'between'),
+          ]),
           stats([
             stat('Articles', countOf('true'), 'file-text', loading('articles')),
             stat('Published', countOf("r.status === 'published'"), 'send', loading('articles')),
@@ -201,10 +200,10 @@ function spacesPage() {
         access: pageAccess('Group articles by space with their parent hierarchy'),
         data: articleSources,
         tree: page([
-          row([
-            column([heading('Spaces'), text('Every active article grouped by its space. Nested articles are indented beneath their parent. Click a row to open it.', 'muted')]),
+          pageHeader(
+            [heading('Spaces'), text('Every active article grouped by its space. Nested articles are indented beneath their parent. Click a row to open it.', 'muted')], [
             backButton(),
-          ], 'between'),
+          ]),
           ...containerNotices(),
           card('Spaces', [table(spaceRows, [['space', 'Space'], ['icon', 'Icon'], ['description', 'Description'],
             ['articles', 'Articles', 'end'], ['published', 'Published', 'end'], ['drafts', 'Drafts', 'end']], 'No spaces yet', true)]),
@@ -227,10 +226,10 @@ function recentPage() {
         access: pageAccess('List articles by their last update'),
         data: articleSources,
         tree: page([
-          row([
-            column([heading('Recently updated'), text('The 50 most recently updated active articles. Click a row to open the article.', 'muted')]),
+          pageHeader(
+            [heading('Recently updated'), text('The 50 most recently updated active articles. Click a row to open the article.', 'muted')], [
             backButton(),
-          ], 'between'),
+          ]),
           ...containerNotices(),
           table(recentRows, [['code', 'Article'], ['title', 'Title'], ['space', 'Space'], ['status', 'Status'],
             ['owner', 'Owner'], ['updatedAt', 'Updated']], 'No articles yet', true),
@@ -252,10 +251,10 @@ function tagsPage() {
         access: pageAccess('Sum articles per tag'),
         data: articleSources,
         tree: page([
-          row([
-            column([heading('Tags'), text('Every tag across the active articles, with how many articles carry it by status.', 'muted')]),
+          pageHeader(
+            [heading('Tags'), text('Every tag across the active articles, with how many articles carry it by status.', 'muted')], [
             backButton(),
-          ], 'between'),
+          ]),
           ...containerNotices(),
           stats([
             stat('Tags', `{{ (data.rows || []).reduce((a, r) => a.concat(r.tags), []).filter((v, i, arr) => arr.indexOf(v) === i).length }}`, 'tags', loading('articles')),
@@ -273,5 +272,5 @@ function tagsPage() {
 
 export function buildPages() {
   const documents = [homePage(), spacesPage(), recentPage(), tagsPage(), ...recordKinds.map(recordForm), settingsForm()]
-  return Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)]))
+  return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

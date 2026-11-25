@@ -11,9 +11,23 @@
   },
   "marketplace": {
     "logo": "./icons/app.svg",
-      "hero": {"source": "./marketplace/hero.svg", "alt": "Rental cover"},
-      "images": [{"source": "./marketplace/overview.png", "alt": "Rental overview in Canvas", "caption": "Rental overview"}, {"source": "./marketplace/detail.png", "alt": "Bookings in Canvas", "caption": "Bookings"}],
-      "readme": "./marketplace/README.md",
+    "hero": {
+      "source": "./marketplace/hero.svg",
+      "alt": "Rental cover"
+    },
+    "images": [
+      {
+        "source": "./marketplace/overview.png",
+        "alt": "Rental overview in Canvas",
+        "caption": "Rental overview"
+      },
+      {
+        "source": "./marketplace/detail.png",
+        "alt": "Bookings in Canvas",
+        "caption": "Bookings"
+      }
+    ],
+    "readme": "./marketplace/README.md",
     "keywords": [
       "rental",
       "rentals",
@@ -238,8 +252,8 @@
       },
       {
         "path": "/rental-bookings",
-        "mode": "read",
-        "reason": "Subtract overlapping confirmed and picked-up bookings",
+        "mode": "write",
+        "reason": "Subtract overlapping confirmed and picked-up bookings; change records from this page",
         "origin": {
           "kind": "document",
           "id": "canvas/availability.page.yaml"
@@ -352,17 +366,17 @@
           "kind": "script",
           "id": "rental-post"
         }
-      },
-      {
-        "path": "/invoices",
-        "mode": "write",
-        "reason": "Draft an invoice for a returned booking when Invoicing is installed",
-        "origin": {
-          "kind": "script",
-          "id": "rental-post"
-        }
       }
-    ]
+    ],
+    "api": {
+      "uses": [
+        {
+          "app": "invoicing",
+          "operation": "create-draft-invoice",
+          "reason": "Draft the invoice of a returned booking"
+        }
+      ]
+    }
   },
   "packaging": {
     "publisher": "verentis",

@@ -1,10 +1,11 @@
 // Generates the Recruitment Canvas documents: a bound form per record kind, the settings form, the launch page,
 // the candidate pipeline by stage and the positions list. Advancing, refusing and hiring (stage transitions,
 // required refusal reason, locking) are done by the action script the candidate form runs.
+import { views } from './views.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   humanize, iconName, options, openFile, page, panel, projectRegistration, recordButtons, row, scriptAction,
-  sectionCards, stat, stats, status, table, tabs, text, toneExpression,
+  sectionCards, stat, stats, status, table, tabs, text, toneExpression, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { containers, installRoot, mimeTypes, openStages, recordKinds, schemaId, settingsPath, stages } from './contracts.mjs'
 import { entities, postScriptPath, settingsFields } from './app.mjs'
@@ -64,21 +65,19 @@ function recordForm(kind) {
   const entity = entities[kind]
   const extras = recordExtras(kind)
   const readOnly = `${archived} || (${extras.locked})`
-  const header = row([
-    column([
-      row([
-        heading(`{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`),
+  const header = recordHeader(
+    `{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`,
+    [
         ...(entity.status ? [badge(humanize(entity.status), toneExpression(entity.status, extras.tones), { visible: `!!form.values.${entity.status}` })] : []),
         badge('Archived', 'warning', { visible: archived }, 'archive'),
-      ]),
-      text(`${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`, 'muted'),
-    ]),
-    row([...extras.buttons, recordButtons(extras.locked)]),
-  ], 'between')
+    ],
+    `${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`,
+    [...extras.buttons, recordButtons(extras.locked)],
+  )
   const tree = [
     header,
-    ...status('record'),
-    badge(`This ${entity.singular.toLowerCase()} is archived. Restore it to edit.`, 'warning', { visible: archived }, 'archive'),
+    ...status('record'), ...lifecycle(entity),
+    archivedAlert(entity.singular),
     ...extras.notices,
     grid(sectionCards(entity.sections, readOnly)),
   ]
@@ -103,13 +102,13 @@ function settingsForm() {
       access: [jobsAccess('Choose the default job position for new candidates'), schemaAccess],
       data: jobSources,
       tree: [
-        row([
-          column([heading('Recruitment settings'), text('The default job position for new candidates. Code prefixes are app settings, managed with the installed app.', 'muted')]),
+        pageHeader(
+          [heading('Recruitment settings'), text('The default job position for new candidates. Code prefixes are app settings, managed with the installed app.', 'muted')], [
           row([
             button('Reset', [{ 'reset-form': {} }], { disabled: 'form.saving || !form.dirty' }, 'ghost'),
             button('Save', [{ save: {} }, { toast: { message: 'Saved', variant: 'success' } }], { disabled: 'form.saving || !form.dirty || form.invalid' }, undefined, 'save'),
           ]),
-        ], 'between'),
+        ]),
         ...status('record'),
         ...status('jobs', `The ${containers.jobs.path} folder could not be read. Reinstall Recruitment to recreate it.`),
         grid([card('Defaults', [grid(settingsFields.map(field => formControl(field, null)))])], 1),
@@ -149,14 +148,14 @@ function homePage() {
         access: pageAccess('Count candidates and show the job positions and candidates'),
         data: candidateSources,
         tree: page([
-          row([
-            column([heading('Recruitment'), text('Job positions and candidates are files in your workspace. Draft applications in /candidates, move them through the pipeline, then hire or refuse them from their forms.', 'muted')]),
+          pageHeader(
+            [heading('Recruitment'), text('Job positions and candidates are files in your workspace. Draft applications in /candidates, move them through the pipeline, then hire or refuse them from their forms.', 'muted')], [
             row([
               button('Pipeline', [openFile(`${installRoot}/canvas/pipeline.page.yaml`)], undefined, 'outline', 'kanban'),
               button('Positions', [openFile(`${installRoot}/canvas/positions.page.yaml`)], undefined, 'outline', 'briefcase'),
               button('Settings', [openFile(settingsPath, 'edit')], undefined, 'ghost', 'settings'),
             ]),
-          ], 'between'),
+          ]),
           stats([
             stat('In pipeline', countOf(openStage('r.stage')), 'users', loading('candidates')),
             stat('In interview', countOf("r.stage === 'interview'"), 'messages-square', loading('candidates')),
@@ -195,10 +194,10 @@ function pipelinePage() {
         access: pageAccess('List candidates by stage with their job position titles'),
         data: candidateSources,
         tree: page([
-          row([
-            column([heading('Hiring pipeline'), text('Every active candidate, grouped by stage. Click a row to open the application.', 'muted')]),
+          pageHeader(
+            [heading('Hiring pipeline'), text('Every active candidate, grouped by stage. Click a row to open the application.', 'muted')], [
             button('Recruitment', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'briefcase'),
-          ], 'between'),
+          ]),
           ...containerNotices(),
           stats(stages.map(stage => stat(stageLabel(stage), countOf(`r.stage === '${stage}'`), 'user-round', loading('candidates'))), 6),
           tabs(stages.map(stage => ({ value: stage, label: stageLabel(stage), icon: 'user-round' })),
@@ -220,10 +219,10 @@ function positionsPage() {
         access: pageAccess('List job positions with candidate and hire counts'),
         data: candidateSources,
         tree: page([
-          row([
-            column([heading('Job positions'), text('Every active position with its pipeline and hire counts. Click a row to open the position.', 'muted')]),
+          pageHeader(
+            [heading('Job positions'), text('Every active position with its pipeline and hire counts. Click a row to open the position.', 'muted')], [
             button('Recruitment', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'briefcase'),
-          ], 'between'),
+          ]),
           ...containerNotices(),
           stats([
             stat('Open positions', `{{ (data.jobs || []).filter(j => ${active.replaceAll('e.', 'j.')} && j.data.status === 'open').length }}`, 'briefcase', loading('jobs')),
@@ -241,5 +240,5 @@ function positionsPage() {
 
 export function buildPages() {
   const documents = [homePage(), pipelinePage(), positionsPage(), ...recordKinds.map(recordForm), settingsForm()]
-  return Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)]))
+  return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

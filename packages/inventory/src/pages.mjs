@@ -2,12 +2,13 @@
 // the stock-level report and the low-stock widget. Stock rules (existing products and warehouses, positive
 // quantities, immutability once done) are enforced by the posting script the forms run; the forms only lock what
 // the script has done or applied.
+import { views } from './views.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading, iconName,
   linkButton, openFile, options, page, panel, projectRegistration, recordButtons, row, scriptAction, sectionCards,
-  stat, stats, status, table, tabs, text, toneExpression, humanize,
+  stat, stats, status, table, tabs, text, toneExpression, humanize, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
-import { containers, installRoot, mimeTypes, recordKinds, schemaId, settingsPath } from './contracts.mjs'
+import { containers, installRoot, mimeTypes, products, recordKinds, schemaId, settingsPath } from './contracts.mjs'
 import { entities, lowStockWidgetFile, postScriptPath, settingsFields } from './app.mjs'
 
 export { collectSteps, documentFileAccess, projectRegistration } from '../../../tools/file-apps/canvas.mjs'
@@ -17,13 +18,13 @@ const statusTones = {
   warning: ['draft'],
 }
 const schemaAccess = { path: `${installRoot}/`, reason: 'Read the Inventory schemas and run the posting script' }
-const productsAccess = reason => ({ path: containers.products.path, reason })
+const productsAccess = reason => ({ path: products.path, reason })
 const warehousesAccess = reason => ({ path: containers.warehouses.path, reason })
 const movesAccess = reason => ({ path: containers.moves.path, reason })
 const productLabel = "(e.data.name || '') + (e.data.sku ? ' (' + e.data.sku + ')' : '')"
 const warehouseLabel = "(e.data.name || '')"
 const pickSources = {
-  products: folder(containers.products.path, mimeTypes.product),
+  products: folder(products.path, products.mime),
   warehouses: folder(containers.warehouses.path, mimeTypes.warehouse),
   productoptions: { kind: 'computed', expr: options('products', productLabel) },
   warehouseoptions: { kind: 'computed', expr: options('warehouses', warehouseLabel) },
@@ -43,29 +44,31 @@ const lowExpr = source => `(${source}).filter(t => t.hasReorder && t.units <= t.
 
 const idle = 'form.saving || form.dirty'
 
+/** Done stock of the form's product in one warehouse (and location, when given), in integer ten-thousandths. */
+const unitsAt = (warehouse, location) => netUnits('form.values.product',
+  `(m.data.toWarehouse === ${warehouse} && (!${location} || (m.data.toLocation || '') === ${location}))`,
+  `(m.data.fromWarehouse === ${warehouse} && (!${location} || (m.data.fromLocation || '') === ${location}))`)
+const placeName = (warehouse, location) => `(((((data.warehouses || []).find(w => w.path === ${warehouse}) || {}).data || {}).name || 'the warehouse') + (${location} ? ' · ' + ${location} : ''))`
+
 /** Kind-specific data, access, actions, header buttons and tabs of a record form. */
 function recordExtras(kind) {
-  if (kind === 'product') {
-    const history = `(data.moves || []).filter(m => m.kind === 'file' && m.data && m.data.kind === 'move' && m.data.product === ctx.file.path).map(m => ({ path: m.path, date: m.data.date, move: m.data.code || m.name, reference: m.data.reference || '', from: (m.data.fromWarehouse || '').split('/').pop() + (m.data.fromLocation ? ' · ' + m.data.fromLocation : ''), to: (m.data.toWarehouse || '').split('/').pop() + (m.data.toLocation ? ' · ' + m.data.toLocation : ''), quantity: m.data.quantity, status: m.data.status })).sort((a, b) => (a.date < b.date ? -1 : (a.date > b.date ? 1 : 0)))`
-    return {
-      access: [movesAccess('Show the stock moves of this product')],
-      data: { moves: folder(containers.moves.path, mimeTypes.move) },
-      tabs: [{ value: 'moves', label: 'Moves', icon: 'arrow-left-right' }],
-      panels: [panel('moves', [
-        ...status('moves'),
-        stats([stat('On hand (done moves)', `{{ ${display(netUnits('ctx.file.path', 'm.data.toWarehouse', 'm.data.fromWarehouse'))} }}`, 'package', "{{ data.$moves.status === 'loading' }}")], 3),
-        table(`{{ ${history} }}`, [['date', 'Date'], ['move', 'Move'], ['reference', 'Reference'], ['from', 'From'], ['to', 'To'], ['quantity', 'Quantity', 'end'], ['status', 'Status']],
-          'No stock moves use this product yet', true),
-      ])],
-    }
-  }
   if (kind === 'warehouse') return {}
   if (kind === 'move') {
     const draft = "(!form.values.status || form.values.status === 'draft')"
     return {
       locked: `!${draft}`,
-      access: [productsAccess('Choose the product being moved'), warehousesAccess('Choose the from and to warehouses')],
-      data: pickSources,
+      access: [productsAccess('Choose the product being moved'), warehousesAccess('Choose the from and to warehouses'), movesAccess('Show the stock on hand at both ends of the move')],
+      data: {
+        ...pickSources, moves: folder(containers.moves.path, mimeTypes.move),
+        fromunits: { kind: 'computed', expr: unitsAt('form.values.fromWarehouse', 'form.values.fromLocation') },
+        tounits: { kind: 'computed', expr: unitsAt('form.values.toWarehouse', 'form.values.toLocation') },
+      },
+      notices: [
+        { ...text(`{{ 'From ' + ${placeName('form.values.fromWarehouse', 'form.values.fromLocation')} + ': ' + ${display('data.fromunits')} + ' on hand → to ' + ${placeName('form.values.toWarehouse', 'form.values.toLocation')} + ': ' + ${display('data.tounits')} + ' on hand' }}`, 'muted'),
+          rules: { visible: `!!form.values.product && !!form.values.fromWarehouse && !!form.values.toWarehouse && ${draft}` } },
+        { type: 'canvas.alert', props: { tone: 'warning', title: 'More than is on hand', text: `{{ 'Only ' + ${display('data.fromunits')} + ' on hand at the source; posting takes it below zero.' }}` },
+          rules: { visible: `!!form.values.product && !!form.values.fromWarehouse && ${draft} && ${units('form.values.quantity')} > data.fromunits` } },
+      ],
       buttons: [
         button('Post', 'post', { visible: `${draft} && !(${archived})`, disabled: `${idle} || form.invalid` }, undefined, 'check'),
       ],
@@ -78,8 +81,15 @@ function recordExtras(kind) {
   const draft = "(!form.values.status || form.values.status === 'draft')"
   return {
     locked: `!${draft}`,
-    access: [productsAccess('Choose the product being counted'), warehousesAccess('Choose the warehouse being counted')],
-    data: pickSources,
+    access: [productsAccess('Choose the product being counted'), warehousesAccess('Choose the warehouse being counted'), movesAccess('Show the expected quantity for the count')],
+    data: {
+      ...pickSources, moves: folder(containers.moves.path, mimeTypes.move),
+      expected: { kind: 'computed', expr: unitsAt('form.values.warehouse', 'form.values.location') },
+    },
+    notices: [
+      { ...text(`{{ 'Expected ' + ${display('data.expected')} + ' at ' + ${placeName('form.values.warehouse', 'form.values.location')} + (form.values.countedQty !== '' && form.values.countedQty != null ? '; applying this count moves ' + ((${units('form.values.countedQty')} - data.expected) / 10000) : '') }}`, 'muted'),
+        rules: { visible: "!!form.values.product && !!form.values.warehouse && (!form.values.status || form.values.status === 'draft')" } },
+    ],
     buttons: [
       button('Apply', 'apply', { visible: `${draft} && !(${archived})`, disabled: `${idle} || form.invalid` }, undefined, 'check'),
     ],
@@ -95,25 +105,24 @@ function recordForm(kind) {
   const extras = recordExtras(kind)
   const locked = extras.locked ?? 'false'
   const readOnly = `${archived} || (${locked})`
-  const header = row([
-    column([
-      row([
-        heading(`{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`),
+  const header = recordHeader(
+    `{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`,
+    [
         ...(entity.status ? [badge(humanize(entity.status), toneExpression(entity.status, statusTones), { visible: `!!form.values.${entity.status}` })] : []),
         badge('Archived', 'warning', { visible: archived }, 'archive'),
-      ]),
-      text(`${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`, 'muted'),
-    ]),
-    row([...(extras.buttons ?? []), recordButtons(locked)]),
-  ], 'between')
+    ],
+    `${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`,
+    [...(extras.buttons ?? []), recordButtons(locked)],
+  )
   const overview = [
+    ...(extras.notices ?? []),
     ...(extras.links?.length ? [row(extras.links)] : []),
     grid(sectionCards(entity.sections, readOnly)),
   ]
   const tree = [
     header,
-    ...status('record'),
-    badge(`This ${entity.singular.toLowerCase()} is archived. Restore it to edit.`, 'warning', { visible: archived }, 'archive'),
+    ...status('record'), ...lifecycle(entity),
+    archivedAlert(entity.singular),
     ...(extras.tabs
       ? [tabs([{ value: 'overview', label: 'Overview', icon: iconName(entity.icon) }, ...extras.tabs], [panel('overview', overview), ...extras.panels])]
       : overview),
@@ -143,13 +152,13 @@ function settingsForm() {
         warehouseoptions: { kind: 'computed', expr: options('warehouses', warehouseLabel) },
       },
       tree: [
-        row([
-          column([heading('Inventory settings'), text('The warehouse new adjustments count by default. Code prefixes are app settings, managed with the installed app.', 'muted')]),
+        pageHeader(
+          [heading('Inventory settings'), text('The warehouse new adjustments count by default. Code prefixes are app settings, managed with the installed app.', 'muted')], [
           row([
             button('Reset', [{ 'reset-form': {} }], { disabled: 'form.saving || !form.dirty' }, 'ghost'),
             button('Save', [{ save: {} }, { toast: { message: 'Saved', variant: 'success' } }], { disabled: 'form.saving || !form.dirty || form.invalid' }, undefined, 'save'),
           ]),
-        ], 'between'),
+        ]),
         ...status('record'),
         card('Settings', [grid(settingsFields.map(field => formControl(field, null)))]),
       ],
@@ -180,19 +189,19 @@ function homePage() {
           { path: containers.adjustments.path, reason: 'List inventory adjustments' },
         ],
         data: {
-          products: folder(containers.products.path, mimeTypes.product),
+          products: folder(products.path, products.mime),
           warehouses: folder(containers.warehouses.path, mimeTypes.warehouse),
           moves: folder(containers.moves.path, mimeTypes.move),
           adjustments: folder(containers.adjustments.path, mimeTypes.adjustment),
         },
         tree: page([
-          row([
-            column([heading('Inventory'), text('Products, warehouses, stock moves and inventory adjustments as files in your workspace. Draft moves and counts in their folders, then post or apply them from their forms.', 'muted')]),
+          pageHeader(
+            [heading('Inventory'), text('Warehouses, stock moves and inventory adjustments as files in your workspace, for the products in Products. Draft moves and counts in their folders, then post or apply them from their forms.', 'muted')], [
             row([
               button('Stock levels', [openFile(`${installRoot}/canvas/stock.page.yaml`)], undefined, 'outline', 'chart-column'),
               button('Settings', [openFile(settingsPath, 'edit')], undefined, 'ghost', 'settings'),
             ]),
-          ], 'between'),
+          ]),
           stats([
             stat('Products', count('products'), 'package', loading('products')),
             stat('Warehouses', count('warehouses'), 'warehouse', loading('warehouses')),
@@ -211,8 +220,12 @@ function homePage() {
               browse('moves', 'move', [{ key: 'data.date', label: 'Date' }, { key: 'data.reference', label: 'Reference' }, { key: 'data.quantity', label: 'Quantity', align: 'end' }, { key: 'data.status', label: 'Status' }])]),
             panel('adjustments', [row([button('Open /inventory-adjustments', [openFile(containers.adjustments.path)], undefined, 'outline', 'folder-open')]),
               browse('adjustments', 'adjustment', [{ key: 'data.date', label: 'Date' }, { key: 'data.countedQty', label: 'Counted', align: 'end' }, { key: 'data.status', label: 'Status' }])]),
-            panel('products', [row([button('Open /products', [openFile(containers.products.path)], undefined, 'outline', 'folder-open')]),
-              browse('products', 'product', [{ key: 'data.name', label: 'Name' }, { key: 'data.sku', label: 'SKU' }, { key: 'data.unit', label: 'Unit' }, { key: 'data.category', label: 'Category' }])]),
+            panel('products', [
+              text('Products keeps the catalogue; open a product there to see its stock moves.', 'muted'),
+              row([button('Open /products', [openFile(products.path)], undefined, 'outline', 'folder-open')]),
+              browser(products.path, products.mime, [code, { key: 'data.name', label: 'Name' }, { key: 'data.sku', label: 'SKU' }, { key: 'data.unit', label: 'Unit' }, { key: 'data.category', label: 'Category' }],
+                'No products yet. Add them in Products.'),
+            ]),
             panel('warehouses', [row([button('Open /warehouses', [openFile(containers.warehouses.path)], undefined, 'outline', 'folder-open')]),
               browse('warehouses', 'warehouse', [{ key: 'data.name', label: 'Name' }])]),
           ]),
@@ -239,17 +252,17 @@ function stockPage() {
           movesAccess('Sum the done stock moves'),
         ],
         data: {
-          products: folder(containers.products.path, mimeTypes.product),
+          products: folder(products.path, products.mime),
           warehouses: folder(containers.warehouses.path, mimeTypes.warehouse),
           moves: folder(containers.moves.path, mimeTypes.move),
           totals: { kind: 'computed', expr: totalsExpr },
           levels: { kind: 'computed', expr: levelsExpr },
         },
         tree: page([
-          row([
-            column([heading('Stock levels'), text('Computed from done stock moves; applied inventory adjustments count through their corrective moves. Draft moves are ignored.', 'muted')]),
+          pageHeader(
+            [heading('Stock levels'), text('Computed from done stock moves; applied inventory adjustments count through their corrective moves. Draft moves are ignored.', 'muted')], [
             button('Inventory', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'package'),
-          ], 'between'),
+          ]),
           ...status('products'), ...status('warehouses'), ...status('moves'),
           stats([
             stat('Products tracked', '{{ (data.totals || []).length }}', 'package', loading('products')),
@@ -288,15 +301,15 @@ function lowStockWidget() {
       spec: {
         access: [productsAccess('Show the products and their reorder points'), movesAccess('Sum the done stock moves')],
         data: {
-          products: folder(containers.products.path, mimeTypes.product),
+          products: folder(products.path, products.mime),
           moves: folder(containers.moves.path, mimeTypes.move),
           low: { kind: 'computed', expr: lowExpr(totalsExpr) },
         },
         tree: [column([
-          row([
-            column([heading('Low stock', 3), text('{{ (data.low || []).length }} product(s) at or below their reorder point', 'muted')]),
+          pageHeader(
+            [heading('Low stock', 3), text('{{ (data.low || []).length }} product(s) at or below their reorder point', 'muted')], [
             button('Stock levels', [openFile(`${installRoot}/canvas/stock.page.yaml`)], undefined, 'ghost', 'chart-column'),
-          ], 'between'),
+          ]),
           status('products')[0], status('moves')[0],
           { ...text('Loading…', 'muted'), rules: { visible: "data.$products.status === 'loading' || data.$moves.status === 'loading'" } },
           table(`{{ (data.low || []).map(t => ({ path: t.path, product: t.product, sku: t.sku, onHand: ${display('t.units')}, reorderPoint: t.reorderPoint })) }}`,
@@ -309,5 +322,5 @@ function lowStockWidget() {
 
 export function buildPages() {
   const documents = [homePage(), stockPage(), lowStockWidget(), ...recordKinds.map(recordForm), settingsForm()]
-  return Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)]))
+  return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

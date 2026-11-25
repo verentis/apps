@@ -31,122 +31,185 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Purchase",
+          "icon": "shopping-cart",
+          "active": "orders.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "vendors.page.yaml",
+              "label": "Vendors",
+              "icon": "store"
+            },
+            {
+              "id": "orders.page.yaml",
+              "label": "Orders",
+              "icon": "kanban",
+              "count": "{{ (data.orderrows || []).filter(o => o.status === 'confirmed').length }}"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/purchase/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/purchase.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Purchase orders",
+              "note": "RFQs and purchase orders. Confirmed orders are locked until they are received."
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
+                "type": "canvas.button",
+                "props": {
+                  "label": "Open /purchase-orders",
+                  "variant": "outline",
+                  "icon": "folder-open",
+                  "size": "sm"
                 },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Purchase orders"
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/purchase-orders"
+                      }
                     }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "RFQs and purchase orders. Confirmed orders are locked until they are received.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "direction": "row",
-                    "wrap": true,
-                    "gap": 2,
-                    "align": "center"
-                  }
+                  ]
                 },
-                "children": [
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Open /purchase-orders",
-                      "variant": "outline",
-                      "icon": "folder-open",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/purchase-orders"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Purchase",
-                      "variant": "ghost",
-                      "icon": "shopping-cart",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/purchase/canvas/home.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ]
+                "slot": "actions"
               }
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.board",
             "props": {
-              "text": "{{ data.$orders.error }}"
+              "rows": "{{ (data.orderrows || []).filter(o => o.status !== 'cancelled') }}",
+              "groupBy": "status",
+              "columns": [
+                {
+                  "value": "draft",
+                  "label": "Draft",
+                  "locked": true
+                },
+                {
+                  "value": "sent",
+                  "label": "Sent",
+                  "locked": true
+                },
+                {
+                  "value": "confirmed",
+                  "label": "Confirmed"
+                },
+                {
+                  "value": "received",
+                  "label": "Received"
+                }
+              ],
+              "card": {
+                "title": "vendorName",
+                "code": "code",
+                "meta": [
+                  "reference",
+                  "expectedDate"
+                ],
+                "trailing": "total"
+              },
+              "readOnly": false,
+              "rowKey": "path",
+              "emptyText": "Nothing here",
+              "lockedWhen": "[\"received\"].includes(row.status)"
             },
-            "rules": {
-              "visible": "data.$orders.status === 'error'"
+            "on": {
+              "open": [
+                {
+                  "open-file": {
+                    "path": "{{ event.row.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ],
+              "move": [
+                {
+                  "confirm": {
+                    "if": "event.to === 'received'",
+                    "title": "Move to Received?",
+                    "message": "{{ event.row.code }} moves to Received. Every line is received in full.",
+                    "confirm-label": "Move to Received"
+                  }
+                },
+                {
+                  "run-script": {
+                    "if": "event.to === 'confirmed'",
+                    "file": "/applications/purchase/scripts/post",
+                    "timeout": 120,
+                    "parameters": {
+                      "operation": "confirm-order",
+                      "path": "{{ event.path }}"
+                    },
+                    "assign": "lastmove"
+                  }
+                },
+                {
+                  "run-script": {
+                    "if": "event.to === 'received'",
+                    "file": "/applications/purchase/scripts/post",
+                    "timeout": 120,
+                    "parameters": {
+                      "operation": "receive-order",
+                      "path": "{{ event.path }}"
+                    },
+                    "assign": "lastmove"
+                  }
+                },
+                {
+                  "refresh-source": {
+                    "source": "orders"
+                  }
+                },
+                {
+                  "toast": {
+                    "message": "{{ [\"confirmed\",\"received\"].includes(event.to) ? ((state.lastmove && state.lastmove.message) || 'Done') : 'Moved to ' + ({\"draft\":\"Draft\",\"sent\":\"Sent\",\"confirmed\":\"Confirmed\",\"received\":\"Received\"}[event.to] || event.to) }}",
+                    "variant": "success"
+                  }
+                }
+              ]
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "Loading…",
-              "tone": "muted"
-            },
-            "rules": {
-              "visible": "data.$orders.status === 'loading'"
+              "for": "orders",
+              "compact": true
             }
           },
           {
@@ -242,6 +305,10 @@
                 }
               ],
               "emptyText": "No open purchase orders",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
               "clickable": true
             },
             "on": {
@@ -249,7 +316,8 @@
                 {
                   "open-file": {
                     "path": "{{ event.path }}",
-                    "mode": "edit"
+                    "mode": "edit",
+                    "open": "side"
                   }
                 }
               ]

@@ -312,6 +312,51 @@
         }
       },
       {
+        "path": "/customers",
+        "mode": "read",
+        "reason": "Offer the fields of /customers and preview tiles (when the owning app is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "spreadsheet-bi-dashboard"
+        }
+      },
+      {
+        "path": "/invoices",
+        "mode": "read",
+        "reason": "Offer the fields of /invoices and preview tiles (when the owning app is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "spreadsheet-bi-dashboard"
+        }
+      },
+      {
+        "path": "/tickets",
+        "mode": "read",
+        "reason": "Offer the fields of /tickets and preview tiles (when the owning app is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "spreadsheet-bi-dashboard"
+        }
+      },
+      {
+        "path": "/journals",
+        "mode": "read",
+        "reason": "Offer the fields of /journals and preview tiles (when the owning app is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "spreadsheet-bi-dashboard"
+        }
+      },
+      {
+        "path": "/expenses",
+        "mode": "read",
+        "reason": "Offer the fields of /expenses and preview tiles (when the owning app is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "spreadsheet-bi-dashboard"
+        }
+      },
+      {
         "path": "/bi-dashboards",
         "mode": "read",
         "reason": "Choose the dashboard a snapshot computes",

@@ -11,8 +11,6 @@ Any node can have content and children. Sales names records by a generated code,
 extension:
 
 ```text
-/products                                 application/vnd.verentis.sales.products (seeded)
-  PROD-0001                               application/vnd.verentis.sales.product+json
 /quotations                               application/vnd.verentis.sales.quotations (seeded)
   QUO-0001                                application/vnd.verentis.sales.quotation+json
 /sales-orders                             application/vnd.verentis.sales.orders (seeded)
@@ -26,11 +24,16 @@ The record's content is JSON. The MIME type, not an extension, says what the nod
 are content-less typed nodes. Install seeds them once (`mode: seed`) and uninstall keeps them. No
 Canvas document is bound to the container types, so they open in the file browser.
 
+## Products
+
+Products owns the catalogue (`/products`, `application/vnd.verentis.products.product+json`); installing Sales
+installs it. Quotation lines pick its products; the confirm script checks each quoted product exists and is active.
+Sales adds products only through Products' API (`create-product`, from the home page).
+
 ## Records
 
 | Kind | Code setting (default) | Notes |
 | --- | --- | --- |
-| `product` | `product-code-prefix` (`PROD-`) | Name, unit, decimal string `listPrice`, description |
 | `quotation` | `quotation-code-prefix` (`QUO-`) | Customer snapshot plus optional CRM `customerRef`; lines (product, quantity, unit price, discount %); `status: draft → sent → confirmed` or `cancelled`; totals, `order` and `invoice` references once confirmed |
 | `order` (Sales order) | `order-code-prefix` (`SO-`) | Created by confirming a quotation (named after it) or by hand; `deliveryStatus: pending / partial / delivered` |
 

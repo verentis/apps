@@ -1,289 +1,385 @@
-api-version: canvas.verentis.io/v1
-kind: Form
-metadata:
-  id: invoicing-settings
-  name: Invoicing settings
-  description: Edit the Invoicing settings file.
-  icon: settings
-spec:
-  binds:
-  - pattern: application/vnd.verentis.invoicing.settings+json
-    mode: edit
-    priority: 200
-    scope: global
-    json-schema:
-      id: https://schemas.verentis.io/invoicing/v1/settings.schema.json
-      source: /applications/invoicing/schemas/settings.schema.json
-      title: Invoicing settings
-      version: '1'
-  entry: ${var:canvas-origin}/render?document=%2Fapplications%2Finvoicing%2Fcanvas%2Fsettings.form.yaml
-  scope: global
-  mime-types:
-  - pattern: application/vnd.verentis.invoicing.settings+json
-    mode: edit
-    priority: 200
-    json-schema:
-      id: https://schemas.verentis.io/invoicing/v1/settings.schema.json
-      source: /applications/invoicing/schemas/settings.schema.json
-      title: Invoicing settings
-      version: '1'
-  permissions:
-  - file.read
-  - file.write
-  capabilities: []
-  sandbox:
-    allow-scripts: true
-    allow-same-origin: true
-    allow-popups: false
-    allow-forms: true
-  file-access:
-  - path: /chart-of-accounts
-    mode: read
-    reason: Choose the accounts invoices, credit notes and payments post to
-  - path: /applications/invoicing/
-    mode: read
-    reason: Read the Invoicing schemas and run the posting script
-  access:
-  - path: /chart-of-accounts
-    reason: Choose the accounts invoices, credit notes and payments post to
-  - path: /applications/invoicing/
-    reason: Read the Invoicing schemas and run the posting script
-  data:
-    record:
-      kind: document
-      consistency: conditional
-    accounts:
-      kind: folder
-      path: /chart-of-accounts
-      contents: true
-      mime-pattern: application/vnd.verentis.accounting.account+json
-    accountoptions:
-      kind: computed
-      expr: '(data.accounts || []).filter(e => e.kind === ''file'' && e.data && e.data.state !== ''archived''
-        && (true)).map(e => ({ label: (e.data.code || e.name) + '' · '' + ((e.data.number ? e.data.number
-        + '' '' : '''') + (e.data.name || '''')), value: e.path }))'
-  tree:
-  - type: canvas.stack
-    layout:
-      base:
-        padding: 6
-        gap: 4
-        maxWidth: 72rem
-        margin:
-          x: auto
-    children:
-    - type: canvas.stack
-      layout:
-        base:
-          direction: row
-          wrap: true
-          gap: 2
-          align: center
-          justify: between
-      children:
-      - type: canvas.stack
-        layout:
-          base:
-            gap: 1
-        children:
-        - type: canvas.heading
-          props:
-            level: 2
-            text: Invoicing settings
-        - type: canvas.text
-          props:
-            text: Seller details, payment terms, tax and posting accounts. The currency is the Accounting
-              base currency; number prefixes are app settings, managed with the installed app.
-            tone: muted
-      - type: canvas.stack
-        layout:
-          base:
-            direction: row
-            wrap: true
-            gap: 2
-            align: center
-        children:
-        - type: canvas.button
-          props:
-            label: Reset
-            variant: ghost
-            size: sm
-          'on':
-            click:
-            - reset-form: {}
-          rules:
-            disabled: form.saving || !form.dirty
-        - type: canvas.button
-          props:
-            label: Save
-            icon: save
-            size: sm
-          'on':
-            click:
-            - save: {}
-            - toast:
-                message: Saved
-                variant: success
-          rules:
-            disabled: form.saving || !form.dirty || form.invalid
-    - type: canvas.text
-      props:
-        text: '{{ data.$record.error }}'
-      rules:
-        visible: data.$record.status === 'error'
-    - type: canvas.text
-      props:
-        text: Loading…
-        tone: muted
-      rules:
-        visible: data.$record.status === 'loading'
-    - type: canvas.text
-      props:
-        text: The Accounting chart of accounts (/chart-of-accounts) could not be read. Install Accounting
-          to post invoices.
-      rules:
-        visible: data.$accounts.status === 'error'
-    - type: canvas.text
-      props:
-        text: Loading…
-        tone: muted
-      rules:
-        visible: data.$accounts.status === 'loading'
-    - type: canvas.grid
-      layout:
-        base:
-          columns: 1
-          gap: 4
-        tablet:
-          columns: 1
-      children:
-      - type: canvas.card
-        props:
-          title: Seller
-          description: Your details as printed on invoices. Each invoice keeps a copy as it was when issued.
-        children:
-        - type: canvas.grid
-          layout:
-            base:
-              columns: 1
-              gap: 4
-            tablet:
-              columns: 2
-          children:
-          - type: canvas.form.input
-            props:
-              label: Name
-              value: '{{ form.values.seller.name }}'
-          - type: canvas.form.input
-            props:
-              label: Legal name
-              value: '{{ form.values.seller.legalName }}'
-          - type: canvas.form.input
-            props:
-              label: Email
-              value: '{{ form.values.seller.email }}'
-              inputType: email
-          - type: canvas.form.input
-            props:
-              label: Phone
-              value: '{{ form.values.seller.phone }}'
-          - type: canvas.form.input
-            props:
-              label: Tax number
-              value: '{{ form.values.seller.taxIdentifier }}'
-          - type: canvas.form.text-list
-            props:
-              label: Street
-              value: '{{ form.values.seller.address.lines }}'
-            layout:
-              tablet:
-                colSpan: 2
-          - type: canvas.form.input
-            props:
-              label: City
-              value: '{{ form.values.seller.address.city }}'
-          - type: canvas.form.input
-            props:
-              label: Region
-              value: '{{ form.values.seller.address.region }}'
-          - type: canvas.form.input
-            props:
-              label: Postal code
-              value: '{{ form.values.seller.address.postalCode }}'
-          - type: canvas.form.input
-            props:
-              label: Country code
-              value: '{{ form.values.seller.address.country }}'
-              placeholder: ZA
-      - type: canvas.card
-        props:
-          title: Defaults
-        children:
-        - type: canvas.grid
-          layout:
-            base:
-              columns: 1
-              gap: 4
-            tablet:
-              columns: 2
-          children:
-          - type: canvas.form.number
-            props:
-              label: Payment terms (days)
-              value: '{{ form.values.defaultDueDays }}'
-              required: true
-              min: 0
-              max: 365
-              step: 1
-          - type: canvas.form.input
-            props:
-              label: Default tax rate (%)
-              value: '{{ form.values.defaultTaxRate }}'
-              required: true
-          - type: canvas.form.textarea
-            props:
-              label: Invoice notes
-              value: '{{ form.values.notes }}'
-              rows: 4
-            layout:
-              tablet:
-                colSpan: 2
-      - type: canvas.card
-        props:
-          title: Posting accounts
-          description: Accounts in the Accounting chart of accounts that invoices, credit notes and payments
-            post to.
-        children:
-        - type: canvas.grid
-          layout:
-            base:
-              columns: 1
-              gap: 4
-            tablet:
-              columns: 2
-          children:
-          - type: canvas.form.select
-            props:
-              label: Accounts receivable
-              value: '{{ form.values.receivableAccount }}'
-              required: true
-              options: '{{ data.accountoptions }}'
-          - type: canvas.form.select
-            props:
-              label: Sales income
-              value: '{{ form.values.incomeAccount }}'
-              required: true
-              options: '{{ data.accountoptions }}'
-          - type: canvas.form.select
-            props:
-              label: Sales tax
-              value: '{{ form.values.taxAccount }}'
-              required: true
-              options: '{{ data.accountoptions }}'
-          - type: canvas.form.select
-            props:
-              label: Default bank account
-              value: '{{ form.values.bankAccount }}'
-              required: true
-              options: '{{ data.accountoptions }}'
-  actions: {}
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Form",
+  "metadata": {
+    "id": "invoicing-settings",
+    "name": "Invoicing settings",
+    "description": "Edit the Invoicing settings file.",
+    "icon": "settings"
+  },
+  "spec": {
+    "binds": [
+      {
+        "pattern": "application/vnd.verentis.invoicing.settings+json",
+        "mode": "edit",
+        "priority": 200,
+        "scope": "global",
+        "json-schema": {
+          "id": "https://schemas.verentis.io/invoicing/v1/settings.schema.json",
+          "source": "/applications/invoicing/schemas/settings.schema.json",
+          "title": "Invoicing settings",
+          "version": "1"
+        }
+      }
+    ],
+    "entry": "${var:canvas-origin}/render?document=%2Fapplications%2Finvoicing%2Fcanvas%2Fsettings.form.yaml",
+    "scope": "global",
+    "mime-types": [
+      {
+        "pattern": "application/vnd.verentis.invoicing.settings+json",
+        "mode": "edit",
+        "priority": 200,
+        "json-schema": {
+          "id": "https://schemas.verentis.io/invoicing/v1/settings.schema.json",
+          "source": "/applications/invoicing/schemas/settings.schema.json",
+          "title": "Invoicing settings",
+          "version": "1"
+        }
+      }
+    ],
+    "permissions": [
+      "file.read",
+      "file.write"
+    ],
+    "capabilities": [],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-popups": false,
+      "allow-forms": true
+    },
+    "file-access": [
+      {
+        "path": "/chart-of-accounts",
+        "mode": "read",
+        "reason": "Choose the accounts invoices, credit notes and payments post to"
+      },
+      {
+        "path": "/applications/invoicing/",
+        "mode": "read",
+        "reason": "Read the Invoicing schemas and run the posting script"
+      }
+    ],
+    "access": [
+      {
+        "path": "/chart-of-accounts",
+        "reason": "Choose the accounts invoices, credit notes and payments post to"
+      },
+      {
+        "path": "/applications/invoicing/",
+        "reason": "Read the Invoicing schemas and run the posting script"
+      }
+    ],
+    "data": {
+      "record": {
+        "kind": "document",
+        "consistency": "conditional"
+      },
+      "accounts": {
+        "kind": "folder",
+        "path": "/chart-of-accounts",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.accounting.account+json"
+      },
+      "accountoptions": {
+        "kind": "computed",
+        "expr": "(data.accounts || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + ((e.data.number ? e.data.number + ' ' : '') + (e.data.name || '')), value: e.path }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.validation-summary",
+            "props": {
+              "title": "Fix these before saving"
+            }
+          },
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Invoicing settings",
+              "note": "Seller details, payment terms, tax and posting accounts. The currency is the Accounting base currency; number prefixes are app settings, managed with the installed app."
+            },
+            "children": [
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Reset",
+                  "variant": "ghost",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "reset-form": {}
+                    }
+                  ]
+                },
+                "rules": {
+                  "disabled": "form.saving || !form.dirty"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Save",
+                  "icon": "save",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "save": {}
+                    },
+                    {
+                      "toast": {
+                        "message": "Saved",
+                        "variant": "success"
+                      }
+                    }
+                  ]
+                },
+                "rules": {
+                  "disabled": "form.saving || !form.dirty || form.invalid"
+                },
+                "slot": "actions"
+              }
+            ]
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "record",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "accounts",
+              "compact": true,
+              "description": "The Accounting chart of accounts (/chart-of-accounts) could not be read. Install Accounting to post invoices."
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 1,
+                "gap": 4
+              },
+              "tablet": {
+                "columns": 1
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Seller",
+                  "description": "Your details as printed on invoices. Each invoice keeps a copy as it was when issued."
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Name",
+                          "value": "{{ form.values.seller.name }}"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Legal name",
+                          "value": "{{ form.values.seller.legalName }}"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Email",
+                          "value": "{{ form.values.seller.email }}",
+                          "inputType": "email"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.phone",
+                        "props": {
+                          "label": "Phone",
+                          "value": "{{ form.values.seller.phone }}",
+                          "defaultCode": "{{ ({ ZA: '+27', NA: '+264', BW: '+267', ZW: '+263', MZ: '+258', LS: '+266', SZ: '+268', KE: '+254', NG: '+234', GB: '+44', IE: '+353', NL: '+31', DE: '+49', FR: '+33', US: '+1', CA: '+1', AU: '+61', NZ: '+64' })[form.values.seller && form.values.seller.address && form.values.seller.address.country] || '' }}"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Tax number",
+                          "value": "{{ form.values.seller.taxIdentifier }}"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.address",
+                        "props": {
+                          "label": "Address",
+                          "value": "{{ form.values.seller.address }}"
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Defaults"
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.number",
+                        "props": {
+                          "label": "Payment terms (days)",
+                          "value": "{{ form.values.defaultDueDays }}",
+                          "required": true,
+                          "min": 0,
+                          "max": 365,
+                          "step": 1
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Default tax rate (%)",
+                          "value": "{{ form.values.defaultTaxRate }}",
+                          "required": true
+                        }
+                      },
+                      {
+                        "type": "canvas.form.textarea",
+                        "props": {
+                          "label": "Invoice notes",
+                          "value": "{{ form.values.notes }}",
+                          "rows": 4
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Posting accounts",
+                  "description": "Accounts in the Accounting chart of accounts that invoices, credit notes and payments post to."
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Accounts receivable",
+                          "value": "{{ form.values.receivableAccount }}",
+                          "required": true,
+                          "options": "{{ data.accountoptions }}",
+                          "searchable": true
+                        }
+                      },
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Sales income",
+                          "value": "{{ form.values.incomeAccount }}",
+                          "required": true,
+                          "options": "{{ data.accountoptions }}",
+                          "searchable": true
+                        }
+                      },
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Sales tax",
+                          "value": "{{ form.values.taxAccount }}",
+                          "required": true,
+                          "options": "{{ data.accountoptions }}",
+                          "searchable": true
+                        }
+                      },
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Default bank account",
+                          "value": "{{ form.values.bankAccount }}",
+                          "required": true,
+                          "options": "{{ data.accountoptions }}",
+                          "searchable": true
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "actions": {}
+  }
+}

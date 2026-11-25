@@ -67,13 +67,17 @@ async function book(files) {
 async function persist(files, r) {
   await files.write(register, JSON.stringify(r.record), { contentType: 'application/json', ifMatch: r.etag })
 }
-function invoice(batch) {
+/**
+ * What Invoicing needs to draft the approved batch (its `create-draft-invoice` operation). The batch id keys the
+ * source, so asking again for the same batch returns the same draft. Legal Matters never writes Invoicing's files.
+ */
+export function invoiceRequest(batch, matterPath) {
   const { id, at, quote: q } = batch
   const due = new Date(at)
   due.setUTCDate(due.getUTCDate() + q.dueDays)
-  return { $schema: 'https://schemas.verentis.io/invoicing/v1/invoice.schema.json', schemaVersion: 1, kind: 'invoice',
-    id, code: `LM-${id}`, state: 'active', createdAt: at, updatedAt: at, issueDate: at.slice(0,10), dueDate: due.toISOString().slice(0,10),
-    currency: q.currency, customerRef: q.clientRef, customer: q.client, lines: q.rows.map(r => r.line), notes: '', reference: '', status: 'draft' }
+  return { source: { path: `${matterPath}#prebill-${id}`, code: `LM-${id}` }, currency: q.currency,
+    ...(q.clientRef ? { customerRef: q.clientRef } : {}), customer: q.client, lines: q.rows.map(r => r.line),
+    issueDate: at.slice(0, 10), dueDate: due.toISOString().slice(0, 10) }
 }
 async function dispatch(files, current, now) {
   const m = current.record, p = m.prebill
@@ -87,33 +91,32 @@ async function dispatch(files, current, now) {
       await save(files, current, now, 'Pre-bill rejected · source already reserved')
       throw new Error('A source is already reserved. No draft was created for this pre-bill; remove billed sources.')
     }
-    // Reserve the entire batch in ONE conditional workspace write before touching Invoicing.
+    // Reserve the entire batch in ONE conditional workspace write before asking Invoicing.
     batch = { id: p.id, matter: m.id, at: p.approvedAt, quote: p.quote, delivered: false }
     reg.record.batches.push(batch)
     await persist(files, reg)
   }
   check(batch.matter === m.id && digest(batch.quote) === digest(p.quote), 'Reservation mismatch; reconcile manually.')
-  const draft = invoice(batch), path = `/invoices/${draft.code}`
-  if (!batch.delivered) {
-    try {
-      await files.write(path, JSON.stringify(draft), { contentType: 'application/vnd.verentis.invoicing.invoice+json', ifNoneMatch: '*' })
-    } catch (e) {
-      if (statusOf(e) !== 412) throw e
-      const existing = await files.readJson(path)
-      check(existing.id === draft.id && existing.kind === 'invoice' && existing.createdAt === draft.createdAt, 'Invoice path collision. Do not overwrite; reconcile manually.')
-    }
-    const latest = await book(files)
-    const reserved = latest.record.batches.find(b => b.id === batch.id)
-    check(reserved && digest(reserved.quote) === digest(batch.quote), 'Register changed unexpectedly; reconcile manually.')
-    if (!reserved.delivered) { reserved.delivered = true; await persist(files, latest) }
-  }
-  if (!m.invoices.includes(path)) m.invoices.push(path)
+  // The form asks Invoicing to draft it (through the platform), then `record-invoice` marks the batch delivered.
+  // `revision` lets the form record the invoice against the matter as it now stands.
+  return { message: 'Pre-bill approved; Invoicing drafts the invoice.', invoiceRequest: invoiceRequest(batch, current.path), revision: m.revision }
+}
+/** Records the invoice Invoicing drafted for the approved batch: the batch is delivered and the pre-bill closes. */
+async function deliver(files, current, invoicePath, now) {
+  const m = current.record, p = m.prebill
+  check(p?.stage === 'pending', 'No approved pre-bill is waiting for its invoice.')
+  check(typeof invoicePath === 'string' && invoicePath.startsWith('/invoices/'), 'Invoicing returned no invoice.')
+  const latest = await book(files)
+  const reserved = latest.record.batches.find(b => b.id === p.id)
+  check(reserved && reserved.matter === m.id && digest(reserved.quote) === digest(p.quote), 'Register changed unexpectedly; reconcile manually.')
+  if (!reserved.delivered) { Object.assign(reserved, { delivered: true, invoice: invoicePath }); await persist(files, latest) }
+  if (!m.invoices.includes(invoicePath)) m.invoices.push(invoicePath)
   delete m.prebill
   m.charges = []
-  await save(files, current, now, `Approved draft · ${path} · ${batch.quote.reviewer}`)
-  return { message: `Draft ready in Invoicing: ${path}`, path }
+  await save(files, current, now, `Approved draft · ${invoicePath} · ${reserved.quote.reviewer}`)
+  return { message: `Draft ready in Invoicing: ${invoicePath}`, path: invoicePath }
 }
-export async function billing(files, current, operation, now) {
+export async function billing(files, current, operation, now, invoicePath) {
   const m = current.record
   eligible(m)
   if (operation === 'prepare') {
@@ -128,6 +131,7 @@ export async function billing(files, current, operation, now) {
     await save(files, current, now, 'Pre-bill discarded')
     return { message: 'Pre-bill discarded.' }
   }
+  if (operation === 'record-invoice') return deliver(files, current, invoicePath, now)
   check(operation === 'approve' && ['review','pending'].includes(m.prebill?.stage), 'Prepare a pre-bill first.')
   if (m.prebill.stage === 'review') {
     check(digest(await quote(files, current)) === digest(m.prebill.quote), 'Source, terms or invoice settings changed. Discard and prepare a fresh pre-bill.')

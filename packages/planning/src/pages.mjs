@@ -1,10 +1,11 @@
 // Generates the Planning Canvas documents: bound forms for roles and shifts, the settings form, the launch page,
 // the week schedule summary and the shift list by status. Publishing (overlap check) and confirming (locking)
 // are done by the action script the shift form runs.
+import { views } from './views.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   humanize, iconName, options, openFile, page, panel, projectRegistration, recordButtons, row, scriptAction,
-  sectionCards, stat, stats, status, table, tabs, text, toneExpression,
+  sectionCards, stat, stats, status, table, tabs, text, toneExpression, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { containers, employees, installRoot, mimeTypes, recordKinds, schemaId, settingsPath, statuses } from './contracts.mjs'
 import { entities, postScriptPath, settingsSections } from './app.mjs'
@@ -66,21 +67,19 @@ function recordForm(kind) {
   const entity = entities[kind]
   const extras = recordExtras(kind)
   const readOnly = `${archived} || (${extras.locked})`
-  const header = row([
-    column([
-      row([
-        heading(`{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`),
+  const header = recordHeader(
+    `{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`,
+    [
         ...(entity.status ? [badge(humanize(entity.status), toneExpression(entity.status, statusTones), { visible: `!!form.values.${entity.status}` })] : []),
         badge('Archived', 'warning', { visible: archived }, 'archive'),
-      ]),
-      text(`${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`, 'muted'),
-    ]),
-    row([...extras.buttons, recordButtons(extras.locked)]),
-  ], 'between')
+    ],
+    `${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`,
+    [...extras.buttons, recordButtons(extras.locked)],
+  )
   const tree = [
     header,
-    ...status('record'),
-    badge(`This ${entity.singular.toLowerCase()} is archived. Restore it to edit.`, 'warning', { visible: archived }, 'archive'),
+    ...status('record'), ...lifecycle(entity),
+    archivedAlert(entity.singular),
     ...extras.notices,
     grid(sectionCards(entity.sections, readOnly)),
   ]
@@ -105,13 +104,13 @@ function settingsForm() {
       access: [rolesAccess('Choose the default role for new shifts'), schemaAccess],
       data: roleSources,
       tree: [
-        row([
-          column([heading('Planning settings'), text('The default role for new shifts. Code prefixes are app settings, managed with the installed app.', 'muted')]),
+        pageHeader(
+          [heading('Planning settings'), text('The default role for new shifts. Code prefixes are app settings, managed with the installed app.', 'muted')], [
           row([
             button('Reset', [{ 'reset-form': {} }], { disabled: 'form.saving || !form.dirty' }, 'ghost'),
             button('Save', [{ save: {} }, { toast: { message: 'Saved', variant: 'success' } }], { disabled: 'form.saving || !form.dirty || form.invalid' }, undefined, 'save'),
           ]),
-        ], 'between'),
+        ]),
         ...status('record'),
         ...status('roles', `The ${containers.roles.path} folder could not be read. Reinstall Planning to recreate it.`),
         grid(settingsSections.map(section => card(section.title, [grid(section.fields.map(field => formControl(field, null)))], section.description)), 1),
@@ -152,14 +151,14 @@ function homePage() {
         access: pageAccess('Count shifts and show the roles and shifts'),
         data: shiftSources,
         tree: page([
-          row([
-            column([heading('Planning'), text('Shift roles and shifts are files in your workspace. Draft shifts in /shifts, publish them overlap-checked, then confirm them from their forms.', 'muted')]),
+          pageHeader(
+            [heading('Planning'), text('Shift roles and shifts are files in your workspace. Draft shifts in /shifts, publish them overlap-checked, then confirm them from their forms.', 'muted')], [
             row([
               button('Week schedule', [openFile(`${installRoot}/canvas/week.page.yaml`)], undefined, 'outline', 'calendar-days'),
               button('Shifts', [openFile(`${installRoot}/canvas/shifts.page.yaml`)], undefined, 'outline', 'list'),
               button('Settings', [openFile(settingsPath, 'edit')], undefined, 'ghost', 'settings'),
             ]),
-          ], 'between'),
+          ]),
           stats([
             stat('Shifts', countOf('true'), 'calendar-days', loading('shifts')),
             stat('Draft', countOf("r.status === 'draft'"), 'pencil', loading('shifts')),
@@ -199,10 +198,10 @@ function weekPage() {
         access: pageAccess('Summarise the coming week\'s shifts by date and employee'),
         data: shiftSources,
         tree: page([
-          row([
-            column([heading('Week schedule'), text('Shifts in the next seven days, grouped by date and employee. Click a shift to open it.', 'muted')]),
+          pageHeader(
+            [heading('Week schedule'), text('Shifts in the next seven days, grouped by date and employee. Click a shift to open it.', 'muted')], [
             button('Planning', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'calendar-days'),
-          ], 'between'),
+          ]),
           ...containerNotices(),
           stats([
             stat('Shifts this week', `{{ ${week}.length }}`, 'calendar-days', loading('shifts')),
@@ -231,10 +230,10 @@ function shiftsPage() {
         access: pageAccess('List shifts by status with their role names'),
         data: shiftSources,
         tree: page([
-          row([
-            column([heading('Shifts by status'), text('Every active shift, grouped by its status. Click a row to open the shift.', 'muted')]),
+          pageHeader(
+            [heading('Shifts by status'), text('Every active shift, grouped by its status. Click a row to open the shift.', 'muted')], [
             button('Planning', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'calendar-days'),
-          ], 'between'),
+          ]),
           ...containerNotices(),
           stats(statuses.map(value => stat(statusLabel(value), countOf(`r.status === '${value}'`), 'calendar-days', loading('shifts'))), 3),
           tabs(statuses.map(value => ({ value, label: statusLabel(value), icon: 'calendar-days' })),
@@ -247,5 +246,5 @@ function shiftsPage() {
 
 export function buildPages() {
   const documents = [homePage(), weekPage(), shiftsPage(), ...recordKinds.map(recordForm), settingsForm()]
-  return Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)]))
+  return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

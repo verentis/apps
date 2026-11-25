@@ -20,5 +20,11 @@
   "hours": "",
   "materials": [],
   "materialsTotal": "",
+  "latitude": "",
+  "longitude": "",
+  "checklist": [],
+  "photos": [],
+  "signature": "",
+  "signedBy": "",
   "invoice": ""
 }

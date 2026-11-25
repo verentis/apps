@@ -1,172 +1,262 @@
-api-version: canvas.verentis.io/v1
-kind: Form
-metadata:
-  id: crm-settings
-  name: CRM settings
-  description: Edit the CRM settings file.
-  icon: settings
-spec:
-  binds:
-  - pattern: application/vnd.verentis.crm.settings+json
-    mode: edit
-    priority: 200
-    scope: global
-    json-schema:
-      id: https://schemas.verentis.io/crm/v1/settings.schema.json
-      source: /applications/crm/schemas/settings.schema.json
-      title: CRM settings
-      version: '1'
-  entry: ${var:canvas-origin}/render?document=%2Fapplications%2Fcrm%2Fcanvas%2Fsettings.form.yaml
-  scope: global
-  mime-types:
-  - pattern: application/vnd.verentis.crm.settings+json
-    mode: edit
-    priority: 200
-    json-schema:
-      id: https://schemas.verentis.io/crm/v1/settings.schema.json
-      source: /applications/crm/schemas/settings.schema.json
-      title: CRM settings
-      version: '1'
-  permissions:
-  - file.read
-  - file.write
-  capabilities:
-  - file:read
-  - file:write
-  sandbox:
-    allow-scripts: true
-    allow-same-origin: true
-    allow-popups: false
-    allow-forms: true
-  data:
-    settings:
-      kind: document
-      consistency: conditional
-  tree:
-  - type: canvas.stack
-    layout:
-      base:
-        padding: 6
-        gap: 4
-        maxWidth: 72rem
-        margin:
-          x: auto
-    children:
-    - type: canvas.stack
-      layout:
-        base:
-          direction: row
-          wrap: true
-          gap: 2
-          align: center
-          justify: between
-      children:
-      - type: canvas.stack
-        layout:
-          base:
-            gap: 1
-        children:
-        - type: canvas.heading
-          props:
-            level: 2
-            text: CRM settings
-        - type: canvas.text
-          props:
-            text: Defaults for new deals and the pipeline stages deal forms offer. Code prefixes are app
-              settings, managed with the installed app.
-            tone: muted
-      - type: canvas.stack
-        layout:
-          base:
-            direction: row
-            wrap: true
-            gap: 2
-            align: center
-        children:
-        - type: canvas.button
-          props:
-            label: Reset
-            variant: ghost
-            size: sm
-          'on':
-            click:
-            - reset-form: {}
-          rules:
-            disabled: form.saving || !form.dirty
-        - type: canvas.button
-          props:
-            label: Save
-            icon: save
-            size: sm
-          'on':
-            click:
-            - save: {}
-            - toast:
-                message: Saved
-                variant: success
-          rules:
-            disabled: form.saving || !form.dirty || form.invalid
-    - type: canvas.text
-      props:
-        text: '{{ data.$settings.error }}'
-      rules:
-        visible: data.$settings.status === 'error'
-    - type: canvas.text
-      props:
-        text: Loading…
-        tone: muted
-      rules:
-        visible: data.$settings.status === 'loading'
-    - type: canvas.card
-      props:
-        title: Settings
-      children:
-      - type: canvas.grid
-        layout:
-          base:
-            columns: 1
-            gap: 4
-          tablet:
-            columns: 2
-        children:
-        - type: canvas.form.input
-          props:
-            label: Default country code
-            value: '{{ form.values.country }}'
-            placeholder: ZA
-        - type: canvas.form.input
-          props:
-            label: Default currency
-            value: '{{ form.values.currency }}'
-            placeholder: ZAR
-        - type: canvas.form.array
-          props:
-            label: Pipeline stages
-            value: '{{ form.values.stages }}'
-            fields:
-            - key: id
-              label: Stable stage ID
-              required: true
-            - key: label
-              label: Label
-              required: true
-            - key: order
-              label: Order
-              type: integer
-              required: true
-            - key: probability
-              label: Probability (%)
-              type: integer
-            defaultRow:
-              id: ''
-              label: ''
-              order: 0
-              probability: 0
-            rowIds: false
-            minimum: 1
-            maximum: 50
-            addLabel: Add row
-            removeLabel: Remove row
-          layout:
-            tablet:
-              colSpan: 2
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Form",
+  "metadata": {
+    "id": "crm-settings",
+    "name": "CRM settings",
+    "description": "Edit the CRM settings file.",
+    "icon": "settings"
+  },
+  "spec": {
+    "binds": [
+      {
+        "pattern": "application/vnd.verentis.crm.settings+json",
+        "mode": "edit",
+        "priority": 200,
+        "scope": "global",
+        "json-schema": {
+          "id": "https://schemas.verentis.io/crm/v1/settings.schema.json",
+          "source": "/applications/crm/schemas/settings.schema.json",
+          "title": "CRM settings",
+          "version": "1"
+        }
+      }
+    ],
+    "entry": "${var:canvas-origin}/render?document=%2Fapplications%2Fcrm%2Fcanvas%2Fsettings.form.yaml",
+    "scope": "global",
+    "mime-types": [
+      {
+        "pattern": "application/vnd.verentis.crm.settings+json",
+        "mode": "edit",
+        "priority": 200,
+        "json-schema": {
+          "id": "https://schemas.verentis.io/crm/v1/settings.schema.json",
+          "source": "/applications/crm/schemas/settings.schema.json",
+          "title": "CRM settings",
+          "version": "1"
+        }
+      }
+    ],
+    "permissions": [
+      "file.read",
+      "file.write"
+    ],
+    "capabilities": [
+      "file:read",
+      "file:write"
+    ],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-popups": false,
+      "allow-forms": true
+    },
+    "data": {
+      "settings": {
+        "kind": "document",
+        "consistency": "conditional"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 2,
+                      "text": "CRM settings"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Defaults for new deals and the pipeline stages deal forms offer. Code prefixes are app settings, managed with the installed app.",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Reset",
+                      "variant": "ghost",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "reset-form": {}
+                        }
+                      ]
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Save",
+                      "icon": "save",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "save": {}
+                        },
+                        {
+                          "toast": {
+                            "message": "Saved",
+                            "variant": "success"
+                          }
+                        }
+                      ]
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty || form.invalid"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "settings",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Settings"
+            },
+            "children": [
+              {
+                "type": "canvas.grid",
+                "layout": {
+                  "base": {
+                    "columns": 1,
+                    "gap": 4
+                  },
+                  "tablet": {
+                    "columns": 2
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.form.input",
+                    "props": {
+                      "label": "Default country code",
+                      "value": "{{ form.values.country }}",
+                      "placeholder": "ZA"
+                    }
+                  },
+                  {
+                    "type": "canvas.form.input",
+                    "props": {
+                      "label": "Default currency",
+                      "value": "{{ form.values.currency }}",
+                      "placeholder": "ZAR"
+                    }
+                  },
+                  {
+                    "type": "canvas.form.array",
+                    "props": {
+                      "label": "Pipeline stages",
+                      "value": "{{ form.values.stages }}",
+                      "fields": [
+                        {
+                          "key": "id",
+                          "label": "Stable stage ID",
+                          "required": true
+                        },
+                        {
+                          "key": "label",
+                          "label": "Label",
+                          "required": true
+                        },
+                        {
+                          "key": "order",
+                          "label": "Order",
+                          "type": "integer",
+                          "required": true
+                        },
+                        {
+                          "key": "probability",
+                          "label": "Probability (%)",
+                          "type": "integer"
+                        }
+                      ],
+                      "defaultRow": {
+                        "id": "",
+                        "label": "",
+                        "order": 0,
+                        "probability": 0
+                      },
+                      "rowIds": false,
+                      "minimum": 1,
+                      "maximum": 50,
+                      "addLabel": "Add row",
+                      "removeLabel": "Remove row"
+                    },
+                    "layout": {
+                      "tablet": {
+                        "colSpan": 2
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

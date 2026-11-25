@@ -62,7 +62,9 @@ describe('Knowledge Canvas documents', () => {
 
   it('edits the Markdown body as a multiline string instead of inventing a rich-text format', () => {
     const body = JSON.stringify(documents['article.form.yaml'].spec.tree)
-    expect(body).toContain('canvas.form.textarea')
+    // The Markdown control edits the same plain string, with a preview beside it; nothing else is stored.
+    expect(body).toContain('canvas.form.markdown')
+    expect(body).not.toContain('rich-text')
     expect(body).toContain('Markdown')
     expect(schemas.article.properties.body.contentMediaType).toBe('text/markdown')
   })
@@ -195,7 +197,7 @@ describe('Knowledge report pages', () => {
   it('lists the most recently updated articles first', () => {
     const tableNode = documents['recent.page.yaml'].spec.tree[0].children.find(node => node.type === 'canvas.table')
     expect(template(tableNode.props.rows, data).map(row => row.code)).toEqual(['KA-0003', 'KA-0002', 'KA-0001', 'KA-0004'])
-    expect(tableNode.on['row-click']).toEqual([{ 'open-file': { path: '{{ event.path }}', mode: 'edit' } }])
+    expect(tableNode.on['row-click']).toEqual([{ 'open-file': { path: '{{ event.path }}', mode: 'edit', open: 'side' } }])
   })
 
   it('sums articles per tag by status', () => {

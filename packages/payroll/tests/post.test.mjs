@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { defaultSettings, seedProfiles, seedStructures, templates } from '../src/contracts.mjs'
 import { defaultSettings as ledgerDefaults, starterAccounts, templates as ledgerTemplates } from '../../accounting/src/contracts.mjs'
 import { computePayslip, periodEnd, run } from '../scripts/post/main.mjs'
+import { postJournal } from '../../accounting/scripts/api/main.mjs'
 import { memoryFiles } from '../../../tools/file-apps/memory-files.mjs'
 
 const now = '2026-11-25T08:00:00Z'
@@ -30,7 +31,14 @@ function workspace(extra = {}) {
   })
 }
 
-const call = (files, operation, path = '/pay-runs/PAYRUN-0001') => run({ operation, path }, files, options)
+// Posting runs as the form runs it: the script returns the journal, Accounting posts it through its API (its real
+// operation, as the platform would run it), then the script completes the record with the posted journal.
+async function call(files, operation, path = '/pay-runs/PAYRUN-0001', extra = {}) {
+  const first = await run({ operation, path, ...extra }, files, options)
+  if (operation !== 'post-run' || !first.journalRequest) return first
+  const posted = await postJournal(first.journalRequest, { files, caller: { app: 'payroll' }, now }, options)
+  return run({ operation: 'complete-run', path, journal: posted.path }, files, options)
+}
 const structure = rules => ({ ...seedStructures[0], rules })
 const drule = (rate, extra = {}) => ({ code: 'DED', name: 'Deduction', kind: 'deduction', computation: 'percent-of-base', amount: '', rate, sequence: '20', ...extra })
 

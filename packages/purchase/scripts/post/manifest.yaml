@@ -16,6 +16,3 @@ file-access:
   - path: "/purchase-orders"
     mode: write
     reason: "Mark purchase orders confirmed or received"
-  - path: "/invoices"
-    mode: write
-    reason: "Draft a vendor bill for a received order when Invoicing is installed"

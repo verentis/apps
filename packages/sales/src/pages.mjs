@@ -2,12 +2,13 @@
 // the quotation and order list pages and the sales summary page. Confirming (totals, the sales order, the
 // optional draft invoice, immutability) is done by the confirm script the quotation form runs; the forms only
 // lock what the script has confirmed.
+import { views } from './views.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   humanize, iconName, linkButton, openFile, options, page, panel, projectRegistration, recordButtons, row,
-  scriptAction, sectionCards, stat, stats, status, table, tabs, text, toneExpression,
+  appOperationsSource, attemptKey, offers, scriptAction, withInvoice, sectionCards, stat, stats, status, table, tabs, text, toneExpression, recordHeader, pageHeader, appNavigation, lifecycle, customerLines, documentPreview, pdfSteps,
 } from '../../../tools/file-apps/canvas.mjs'
-import { containers, crm, installRoot, mimeTypes, recordKinds, schemaId, settingsPath } from './contracts.mjs'
+import { containers, crm, installRoot, mimeTypes, products, recordKinds, schemaId, settingsPath } from './contracts.mjs'
 import { entities, postScriptPath, settingsSections } from './app.mjs'
 
 export { collectSteps, documentFileAccess, projectRegistration } from '../../../tools/file-apps/canvas.mjs'
@@ -15,7 +16,7 @@ export { collectSteps, documentFileAccess, projectRegistration } from '../../../
 const statusTones = { success: ['confirmed', 'delivered'], warning: ['draft', 'pending'], danger: ['cancelled'] }
 const schemaAccess = { path: `${installRoot}/`, reason: 'Read the Sales schemas and run the confirm script' }
 const productSources = {
-  products: folder(containers.products.path, mimeTypes.product),
+  products: folder(products.path, products.mime),
   productoptions: { kind: 'computed', expr: options('products', "e.data.name || ''") },
 }
 const quotationSources = {
@@ -55,27 +56,38 @@ const fromCrm = field => `(e.data.${field} || '')`
 const crmAddress = field => `((e.data.address || {}).${field} || '')`
 const copyCustomer = `(data.companies || []).concat(data.contacts || []).filter(e => e.kind === 'file' && e.data && e.path === form.values.customerRef).map(e => ({ name: e.data.name || [e.data.givenName, e.data.familyName].filter(Boolean).join(' '), legalName: ${fromCrm('legalName')}, email: ${fromCrm('email')}, phone: ${fromCrm('phone')}, taxIdentifier: ${fromCrm('taxIdentifier')}, address: { lines: (e.data.address || {}).lines || [], city: ${crmAddress('city')}, region: ${crmAddress('region')}, postalCode: ${crmAddress('postalCode')}, country: ${crmAddress('country')} } }))[0] || form.values.customer`
 
-/** Kind-specific data, access, actions, header buttons and lock of a record form. */
+/** Invoicing drafts a confirmed quotation's invoice; the quotation's code keys the call. */
+const quotationInvoice = { script: postScriptPath, key: "'quotation-' + form.values.code" }
+
+/** Kind-specific data, access, actions, header buttons and notices of a record form. */
 function recordExtras(kind) {
   if (kind === 'quotation') {
     return {
       locked,
       access: [
         { path: crm.customers, reason: 'Offer CRM customers to quote (when CRM is installed)' },
-        { path: containers.products.path, reason: 'Offer products on quotation lines' },
+        { path: products.path, reason: 'Offer Products\' products on quotation lines' },
       ],
       data: {
         companies: folder(crm.customers, crm.companyMime),
         contacts: folder(crm.customers, crm.contactMime),
         customeroptions: { kind: 'computed', expr: `${options('companies', "e.data.name || ''")}.concat(${options('contacts', "[e.data.givenName, e.data.familyName].filter(Boolean).join(' ')")})` },
         ...productSources,
+        ...appOperationsSource,
       },
-      notices: totalsStats(),
+      notices: [
+        ...totalsStats(),
+        { ...text('Install Invoicing to draft an invoice from a confirmed quotation.', 'muted'),
+          rules: { visible: `form.values.status === 'confirmed' && !(form.values.invoice && form.values.invoice.path) && !(${offers('invoicing', 'create-draft-invoice')})` } },
+      ],
       buttons: [
         button('Copy details', 'copy-customer', { visible: `${draftish} && !!form.values.customerRef`, disabled: `form.saving || ${archived}` }, 'outline', 'copy'),
         button('Mark sent', 'mark-sent', { visible: `form.values.status === 'draft' && !(${archived})`, disabled: 'form.saving || form.invalid' }, 'outline', 'send'),
+        button('Save PDF', 'savepdf', { disabled: idle }, 'outline', 'file-down'),
         button('Confirm', 'confirm', { visible: `${draftish} && !(${archived})`, disabled: `${idle} || form.invalid` }, undefined, 'check'),
         button('Cancel', 'cancel', { visible: `${draftish} && !(${archived})`, disabled: 'form.saving' }, 'ghost', 'x'),
+        // Confirmed but no invoice yet (Invoicing arrived later, or drafting failed): ask Invoicing again.
+        button('Draft invoice', 'draft-invoice', { visible: `form.values.status === 'confirmed' && !(form.values.invoice && form.values.invoice.path) && ${offers('invoicing', 'create-draft-invoice')}`, disabled: idle }, 'outline', 'file-text'),
         button('Reopen', 'reopen', { visible: `form.values.status === 'cancelled' && !(${archived})`, disabled: 'form.saving' }, 'outline', 'rotate-ccw'),
       ],
       links: [
@@ -90,7 +102,14 @@ function recordExtras(kind) {
           { save: {} },
           { toast: { message: 'Marked sent', variant: 'success' } },
         ] },
-        confirm: scriptAction(postScriptPath, 'confirm-quotation', { confirm: { title: 'Confirm quotation', message: 'Confirm this quotation and create its sales order? Confirmed quotations cannot be edited.' } }),
+        // The quotation as the customer receives it; saved again (replaced) each time.
+        savepdf: { steps: pdfSteps(salesTemplate('quotation'), { suffix: '' }) },
+        confirm: withInvoice(scriptAction(postScriptPath, 'confirm-quotation', { confirm: { title: 'Confirm quotation', fields: [
+          { key: 'prices', label: 'Prices and discounts are agreed with the customer', type: 'checkbox', required: true },
+          { key: 'delivery', label: 'The delivery date is agreed', type: 'checkbox', required: true },
+          { key: 'po', label: 'The customer’s order number is on the quotation (when they use one)', type: 'checkbox' },
+        ], message: 'Confirm this quotation and create its sales order? Confirmed quotations cannot be edited. When Invoicing is installed, it drafts the invoice.' } }), quotationInvoice),
+        'draft-invoice': withInvoice(scriptAction(postScriptPath, 'confirm-quotation', {}), quotationInvoice),
         cancel: { steps: [
           { confirm: { title: 'Cancel quotation', message: 'Cancel this quotation? It can be reopened later.' } },
           { 'patch-form': { values: { status: 'cancelled', updatedAt: '{{ Date() }}' } } },
@@ -108,8 +127,12 @@ function recordExtras(kind) {
   if (kind === 'order') {
     return {
       locked: 'false',
-      access: [{ path: containers.quotations.path, reason: 'Link back to the quotation this order came from' }],
-      data: quotationSources,
+      access: [
+        { path: containers.quotations.path, reason: 'Link back to the quotation this order came from' },
+        { path: products.path, reason: 'Name the product on each order line' },
+      ],
+      // The order's lines name a product, so the form needs the product list as well as the quotations.
+      data: { ...quotationSources, ...productSources },
       notices: [{
         ...stats([
           stat('Subtotal', '{{ form.values.totals && form.values.totals.subtotal }}', 'sigma'),
@@ -126,32 +149,53 @@ function recordExtras(kind) {
   return { locked: 'false', access: [], data: {}, notices: [], buttons: [], links: [], actions: {} }
 }
 
+// A quotation or order as the customer receives it. Line amounts are shown as the confirm script will compute them.
+function salesTemplate(kind) {
+  const line = 'Number(l.quantity || 0) * Number(l.unitPrice || 0) * (1 - Number(l.discount || 0) / 100)'
+  const product = "((data.productoptions || []).find(o => o.value === l.product) || {}).label"
+  return ({
+    title: `'${kind === 'quotation' ? 'Quotation' : 'Sales order'} ' + (form.values.code || '')`,
+    subtitle: 'form.values.reference || form.values.quotation || ""',
+    party: customerLines, partyLabel: kind === 'quotation' ? 'Quotation for' : 'Order for',
+    meta: [['Date', "format(form.values.date, 'date')"], ['Currency', 'form.values.currency'], ...(kind === 'order' ? [['Delivery', 'humanize(form.values.deliveryStatus || "pending")']] : [])],
+    lines: `(form.values.lines || []).map(l => ({ item: l.description || ${product} || '', quantity: l.quantity, price: Number(l.unitPrice || 0).toFixed(2), discount: l.discount ? l.discount + '%' : '', amount: (${line}).toFixed(2) }))`,
+    columns: [{ key: 'item', label: 'Item' }, { key: 'quantity', label: 'Qty', align: 'right' }, { key: 'price', label: 'Price', align: 'right' }, { key: 'discount', label: 'Discount', align: 'right' }, { key: 'amount', label: 'Amount', align: 'right' }],
+    // Confirmed records carry the script's totals; drafts show an estimate from the lines.
+    totals: [
+      ['Subtotal', `form.values.totals ? form.values.totals.subtotal : (form.values.lines || []).reduce((s, l) => s + Number(l.quantity || 0) * Number(l.unitPrice || 0), 0).toFixed(2)`],
+      ['Discount', `form.values.totals ? form.values.totals.discount : (form.values.lines || []).reduce((s, l) => s + Number(l.quantity || 0) * Number(l.unitPrice || 0) * Number(l.discount || 0) / 100, 0).toFixed(2)`],
+      ["'Total ' + (form.values.currency || '')", `form.values.totals ? form.values.totals.total : (form.values.lines || []).reduce((s, l) => s + ${line}, 0).toFixed(2)`, true],
+    ],
+    footer: 'form.values.notes',
+    status: kind === 'quotation' ? 'form.values.status' : '"confirmed"',
+  })
+}
+
 function recordForm(kind) {
   const entity = entities[kind]
   const extras = recordExtras(kind)
   const readOnly = `${archived} || (${extras.locked})`
   const lower = entity.singular.toLowerCase()
   const displayName = lower.startsWith('sales') ? entity.singular : `Sales ${lower}`
-  const header = row([
-    column([
-      row([
-        heading(`{{ form.values.${entity.titleKey} || 'New ${lower}' }}`),
+  const header = recordHeader(
+    `{{ form.values.${entity.titleKey} || 'New ${lower}' }}`,
+    [
         ...(entity.status
           ? [badge(humanize(entity.status), toneExpression(entity.status, statusTones), { visible: `!!form.values.${entity.status}` })]
           : []),
         badge('Archived', 'warning', { visible: archived }, 'archive'),
-      ]),
-      text(`${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`, 'muted'),
-    ]),
-    row([...extras.buttons, recordButtons(extras.locked)]),
-  ], 'between')
+    ],
+    `${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`,
+    [...extras.buttons, recordButtons(extras.locked)],
+  )
   const tree = [
     header,
-    ...status('record'),
+    ...status('record'), ...lifecycle(entity),
     badge(`This ${lower} is archived. Restore it to edit.`, 'warning', { visible: archived }, 'archive'),
     ...(extras.links.length ? [row(extras.links)] : []),
     ...extras.notices,
     grid(sectionCards(entity.sections, readOnly)),
+    documentPreview(salesTemplate(kind)),
   ]
   return {
     file: `${kind}.form.yaml`,
@@ -175,13 +219,13 @@ function settingsForm() {
       access: [schemaAccess],
       data: {},
       tree: [
-        row([
-          column([heading('Sales settings'), text('Defaults for new quotations and sales orders. Number prefixes are app settings, managed with the installed app.', 'muted')]),
+        pageHeader(
+          [heading('Sales settings'), text('Defaults for new quotations and sales orders. Number prefixes are app settings, managed with the installed app.', 'muted')], [
           row([
             button('Reset', [{ 'reset-form': {} }], { disabled: 'form.saving || !form.dirty' }, 'ghost'),
             button('Save', [{ save: {} }, { toast: { message: 'Saved', variant: 'success' } }], { disabled: 'form.saving || !form.dirty || form.invalid' }, undefined, 'save'),
           ]),
-        ], 'between'),
+        ]),
         ...status('record'),
         grid(settingsSections.map(section => card(section.title, [grid(section.fields.map(field => formControl(field, null)))], section.description)), 1),
       ],
@@ -212,22 +256,27 @@ function homePage() {
       metadata: { id: 'sales-home', name: 'Sales', description: 'Sales overview.', icon: 'package' },
       spec: {
         // The launch page is unbound, so it can only read the folders it declares.
-        access: Object.values(containers).map(container => ({ path: container.path, reason: `List ${container.path.slice(1).split('-').join(' ')}` })),
+        access: [
+          ...Object.values(containers).map(container => ({ path: container.path, reason: `List ${container.path.slice(1).split('-').join(' ')}` })),
+          { path: products.path, reason: 'List the products Sales quotes' },
+        ],
         data: {
-          products: folder(containers.products.path, mimeTypes.product),
+          products: folder(products.path, products.mime),
           quotations: folder(containers.quotations.path, mimeTypes.quotation),
           orders: folder(containers.orders.path, mimeTypes.order),
+          ...appOperationsSource,
         },
+        state: { productname: '', productunit: 'ea', productprice: '' },
         tree: page([
-          row([
-            column([heading('Sales'), text('Products, quotations and sales orders are files in your workspace. Draft quotations in their folder, then confirm them from their forms into sales orders.', 'muted')]),
+          pageHeader(
+            [heading('Sales'), text('Quotations and sales orders are files in your workspace; the products they quote come from Products. Draft quotations in their folder, then confirm them from their forms into sales orders.', 'muted')], [
             row([
               button('Quotations', [openFile(`${installRoot}/canvas/quotations.page.yaml`)], undefined, 'outline', 'file-text'),
               button('Sales orders', [openFile(`${installRoot}/canvas/orders.page.yaml`)], undefined, 'outline', 'package-check'),
               button('Summary', [openFile(`${installRoot}/canvas/summary.page.yaml`)], undefined, 'outline', 'chart-no-axes-combined'),
               button('Settings', [openFile(settingsPath, 'edit')], undefined, 'ghost', 'settings'),
             ]),
-          ], 'between'),
+          ]),
           stats([
             stat('Products', count('products'), 'package', loading('products')),
             stat('Open quotations', count('quotations', "e.data.status === 'draft' || e.data.status === 'sent'"), 'file-pen', loading('quotations')),
@@ -241,8 +290,29 @@ function homePage() {
             { value: 'quotations', label: 'Quotations', icon: 'file-text' },
             { value: 'orders', label: 'Sales orders', icon: 'package-check' },
           ], [
-            panel('products', [row([button('Open /products', [openFile(containers.products.path)], undefined, 'outline', 'folder-open')]),
-              browse('products', 'product', [{ key: 'data.name', label: 'Name' }, { key: 'data.unit', label: 'Unit' }, { key: 'data.listPrice', label: 'List price', align: 'end' }])]),
+            panel('products', [
+              card('Add a product', [
+                text('Products keeps the catalogue; Sales adds to it through Products.', 'muted'),
+                grid([
+                  { type: 'canvas.form.input', props: { label: 'Name', placeholder: 'Standing desk', value: '{{ state.productname }}' } },
+                  { type: 'canvas.form.input', props: { label: 'Unit', placeholder: 'ea', value: '{{ state.productunit }}' } },
+                  { type: 'canvas.form.input', props: { label: 'List price', placeholder: '0.00', value: '{{ state.productprice }}' } },
+                ]),
+                row([button('Add product', [
+                  { 'call-app': { app: 'products', operation: 'create-product', assign: 'added',
+                    'idempotency-key': attemptKey("'product-' + state.productname.trim().toLowerCase()"),
+                    input: { $expr: "({ name: state.productname.trim(), unit: state.productunit.trim(), listPrice: state.productprice.trim() })" } } },
+                  { 'refresh-source': { source: 'products' } },
+                  { 'set-state': { key: 'productname', value: '' } },
+                  { 'set-state': { key: 'productprice', value: '' } },
+                  { toast: { message: "{{ 'Added ' + state.added.code + ' to Products' }}", variant: 'success' } },
+                  { 'open-file': { path: '{{ state.added.path }}' } },
+                ], { disabled: `!state.productname.trim() || !/^((0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?)?$/.test(state.productprice.trim()) || !(${offers('products', 'create-product')})` }, undefined, 'plus')], 'end'),
+              ]),
+              row([button('Open /products', [openFile(products.path)], undefined, 'outline', 'folder-open')]),
+              browser(products.path, products.mime, [{ key: 'name', label: 'Code' }, { key: 'data.name', label: 'Name' }, { key: 'data.unit', label: 'Unit' }, { key: 'data.listPrice', label: 'List price', align: 'end' }],
+                'No products yet. Add one above or in Products.'),
+            ]),
             panel('quotations', [row([button('Open /quotations', [openFile(containers.quotations.path)], undefined, 'outline', 'folder-open')]),
               browse('quotations', 'quotation', [{ key: 'data.customer.name', label: 'Customer' }, { key: 'data.date', label: 'Date' }, { key: 'data.totals.total', label: 'Total', align: 'end' }, { key: 'data.status', label: 'Status' }])]),
             panel('orders', [row([button('Open /sales-orders', [openFile(containers.orders.path)], undefined, 'outline', 'folder-open')]),
@@ -266,10 +336,10 @@ function quotationsPage() {
         data: { quotations: folder(containers.quotations.path, mimeTypes.quotation) },
         state: { showcancelled: false },
         tree: page([
-          row([
-            column([heading('Quotations'), text('Draft, sent and confirmed quotations. Confirming a quotation creates its sales order.', 'muted')]),
+          pageHeader(
+            [heading('Quotations'), text('Draft, sent and confirmed quotations. Confirming a quotation creates its sales order.', 'muted')], [
             button('Sales', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'package'),
-          ], 'between'),
+          ]),
           ...status('quotations'),
           stats([
             stat('Draft', count('quotations', "e.data.status === 'draft'"), 'file-pen', loading('quotations')),
@@ -297,10 +367,10 @@ function ordersPage() {
         data: { orders: folder(containers.orders.path, mimeTypes.order) },
         state: { showdelivered: false },
         tree: page([
-          row([
-            column([heading('Sales orders'), text('What confirmed quotations became, tracked by delivery status.', 'muted')]),
+          pageHeader(
+            [heading('Sales orders'), text('What confirmed quotations became, tracked by delivery status.', 'muted')], [
             button('Sales', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'package'),
-          ], 'between'),
+          ]),
           ...status('orders'),
           stats([
             stat('Pending', count('orders', "e.data.deliveryStatus === 'pending'"), 'hourglass', loading('orders')),
@@ -334,10 +404,10 @@ function summaryPage() {
           orders: folder(containers.orders.path, mimeTypes.order),
         },
         tree: page([
-          row([
-            column([heading('Sales summary'), text('Open quotations are estimated from their lines; confirmed quotations and sales orders use their exact totals.', 'muted')]),
+          pageHeader(
+            [heading('Sales summary'), text('Open quotations are estimated from their lines; confirmed quotations and sales orders use their exact totals.', 'muted')], [
             button('Sales', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'package'),
-          ], 'between'),
+          ]),
           ...status('quotations'),
           ...status('orders'),
           stats([
@@ -356,5 +426,5 @@ function summaryPage() {
 
 export function buildPages() {
   const documents = [homePage(), quotationsPage(), ordersPage(), summaryPage(), ...recordKinds.map(recordForm), settingsForm()]
-  return Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)]))
+  return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

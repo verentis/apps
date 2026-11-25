@@ -41,81 +41,199 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Expenses",
+          "icon": "receipt",
+          "active": "reports.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "My reports",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "reports.page.yaml",
+              "label": "All reports",
+              "icon": "kanban",
+              "count": "{{ (data.rows || []).filter(r => r.status === 'submitted').length }}"
+            },
+            {
+              "id": "by-category.page.yaml",
+              "label": "Categories",
+              "icon": "tags"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/expenses/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/expenses.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Expense reports",
+              "note": "Draft reports are estimates; submitting computes the exact total."
             },
-            "children": [
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Expense reports"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Draft reports are estimates; submitting computes the exact total.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.button",
-                "props": {
-                  "label": "Expenses",
-                  "variant": "ghost",
-                  "icon": "receipt",
-                  "size": "sm"
-                },
-                "on": {
-                  "click": [
-                    {
-                      "open-file": {
-                        "path": "/applications/expenses/canvas/home.page.yaml"
-                      }
-                    }
-                  ]
-                }
-              }
-            ]
+            "children": []
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.board",
             "props": {
-              "text": "{{ data.$reports.error }}"
+              "rows": "{{ (data.rows || []).filter(r => r.status !== 'refused') }}",
+              "groupBy": "status",
+              "columns": [
+                {
+                  "value": "draft",
+                  "label": "Draft",
+                  "locked": true
+                },
+                {
+                  "value": "submitted",
+                  "label": "Submitted"
+                },
+                {
+                  "value": "approved",
+                  "label": "Approved"
+                },
+                {
+                  "value": "posted",
+                  "label": "Posted"
+                }
+              ],
+              "card": {
+                "title": "employee",
+                "code": "code",
+                "meta": [
+                  "date",
+                  "approver"
+                ],
+                "trailing": "total"
+              },
+              "readOnly": false,
+              "rowKey": "path",
+              "emptyText": "Nothing here",
+              "lockedWhen": "[\"posted\"].includes(row.status)"
             },
-            "rules": {
-              "visible": "data.$reports.status === 'error'"
+            "on": {
+              "open": [
+                {
+                  "open-file": {
+                    "path": "{{ event.row.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ],
+              "move": [
+                {
+                  "confirm": {
+                    "if": "event.to === 'posted'",
+                    "title": "Move to Posted?",
+                    "message": "{{ event.row.code }} moves to Posted. Posting writes the expense journal.",
+                    "confirm-label": "Move to Posted"
+                  }
+                },
+                {
+                  "run-script": {
+                    "if": "event.to === 'submitted'",
+                    "file": "/applications/expenses/scripts/post",
+                    "timeout": 120,
+                    "parameters": {
+                      "operation": "submit-report",
+                      "path": "{{ event.path }}"
+                    },
+                    "assign": "lastmove"
+                  }
+                },
+                {
+                  "confirm": {
+                    "if": "event.to === 'approved'",
+                    "title": "Move to Approved",
+                    "message": "{{ event.row.code }} moves to Approved.",
+                    "confirm-label": "Move to Approved",
+                    "fields": [
+                      {
+                        "key": "approver",
+                        "label": "Approved by",
+                        "required": true,
+                        "placeholder": "Your name"
+                      }
+                    ],
+                    "assign": "moveanswer"
+                  }
+                },
+                {
+                  "run-script": {
+                    "if": "event.to === 'approved'",
+                    "file": "/applications/expenses/scripts/post",
+                    "timeout": 120,
+                    "parameters": {
+                      "operation": "approve-report",
+                      "path": "{{ event.path }}",
+                      "approver": "{{ state.moveanswer.approver }}"
+                    },
+                    "assign": "lastmove"
+                  }
+                },
+                {
+                  "run-script": {
+                    "if": "event.to === 'posted'",
+                    "file": "/applications/expenses/scripts/post",
+                    "timeout": 120,
+                    "parameters": {
+                      "operation": "post-report",
+                      "path": "{{ event.path }}"
+                    },
+                    "assign": "lastmove"
+                  }
+                },
+                {
+                  "refresh-source": {
+                    "source": "reports"
+                  }
+                },
+                {
+                  "refresh-source": {
+                    "source": "categories"
+                  }
+                },
+                {
+                  "toast": {
+                    "message": "{{ [\"submitted\",\"approved\",\"posted\"].includes(event.to) ? ((state.lastmove && state.lastmove.message) || 'Done') : 'Moved to ' + ({\"draft\":\"Draft\",\"submitted\":\"Submitted\",\"approved\":\"Approved\",\"posted\":\"Posted\"}[event.to] || event.to) }}",
+                    "variant": "success"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "reports",
+              "compact": true
             }
           },
           {
@@ -203,6 +321,10 @@
                 }
               ],
               "emptyText": "No expense reports",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
               "clickable": true
             },
             "on": {
@@ -210,7 +332,8 @@
                 {
                   "open-file": {
                     "path": "{{ event.path }}",
-                    "mode": "edit"
+                    "mode": "edit",
+                    "open": "side"
                   }
                 }
               ]

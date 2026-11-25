@@ -236,8 +236,8 @@
       },
       {
         "path": "/shifts",
-        "mode": "read",
-        "reason": "List shifts by status with their role names",
+        "mode": "write",
+        "reason": "List shifts by status with their role names; change records from this page",
         "origin": {
           "kind": "document",
           "id": "canvas/shifts.page.yaml"

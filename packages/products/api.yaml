@@ -1,0 +1,90 @@
+# Products' API: what other apps and agents may ask Products to do. The platform checks the caller lists the operation
+# under `uses`, validates the input, and runs scripts/api with Products' own file access. Callers read product files
+# (Products' published format, /products) but never write them.
+api-version: verentis.io/v1
+kind: Api
+metadata:
+  id: products
+spec:
+  operations:
+    - key: create-product
+      title: Add a product
+      description: >-
+        Adds a product to the shared catalogue, numbered like any new product. When a product with the same SKU
+        already exists it is returned instead of a second one.
+      effect: write
+      timeout-seconds: 60
+      input-schema:
+        type: object
+        additionalProperties: false
+        required: [name]
+        properties: &fields
+          name: { type: string, minLength: 1, maxLength: 1000 }
+          type: { enum: [goods, service] }
+          sku: { type: string, maxLength: 64 }
+          unit: { type: string, maxLength: 32 }
+          category: { type: string, maxLength: 100 }
+          description: { type: string, maxLength: 2000 }
+          listPrice: { type: string, pattern: "^((0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?)?$" }
+          reorderPoint: { type: string, pattern: "^((0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?)?$" }
+      output-schema: &product
+        type: object
+        properties:
+          path: { type: string }
+          code: { type: string }
+          name: { type: string }
+          created: { type: boolean }
+      implementation:
+        type: script
+        script: scripts/api
+    - key: update-product
+      title: Change a product
+      description: >-
+        Changes the given fields of a product (name, type, SKU, unit, category, description, list price, reorder
+        point). A product edited meanwhile is refused rather than overwritten; archived products are not changed.
+      effect: write
+      timeout-seconds: 60
+      input-schema:
+        type: object
+        additionalProperties: false
+        required: [path, values]
+        properties:
+          path: { type: string, pattern: "^/products/[^/]+$" }
+          values:
+            type: object
+            additionalProperties: false
+            minProperties: 1
+            properties: *fields
+      output-schema:
+        type: object
+        properties:
+          path: { type: string }
+          changed: { type: array, items: { type: string } }
+      implementation:
+        type: script
+        script: scripts/api
+    - key: find-products
+      title: Find products
+      description: >-
+        Finds products by text (name, code or SKU), exact SKU, category or type. Archived products are left out
+        unless asked for.
+      effect: read
+      timeout-seconds: 60
+      input-schema:
+        type: object
+        additionalProperties: false
+        properties:
+          query: { type: string, maxLength: 200 }
+          sku: { type: string, maxLength: 64 }
+          category: { type: string, maxLength: 100 }
+          type: { enum: [goods, service] }
+          includeArchived: { type: boolean }
+          limit: { type: integer, minimum: 1, maximum: 500 }
+      output-schema:
+        type: object
+        properties:
+          products: { type: array, items: *product }
+          total: { type: integer }
+      implementation:
+        type: script
+        script: scripts/api

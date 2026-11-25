@@ -203,8 +203,8 @@
       },
       {
         "path": "/events",
-        "mode": "read",
-        "reason": "List events by status with their seats taken",
+        "mode": "write",
+        "reason": "List events by status with their seats taken; move records between columns",
         "origin": {
           "kind": "document",
           "id": "canvas/events.page.yaml"

@@ -31,122 +31,182 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Manufacturing",
+          "icon": "factory",
+          "active": "orders.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "boms.page.yaml",
+              "label": "Bills of materials",
+              "icon": "list-tree"
+            },
+            {
+              "id": "orders.page.yaml",
+              "label": "Orders",
+              "icon": "kanban",
+              "count": "{{ (data.orderrows || []).filter(o => o.status === 'in-progress').length }}"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/manufacturing/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Manufacturing orders",
+              "note": "Orders move draft → confirmed → in progress → done. Confirmed orders are locked; done orders emitted their stock moves."
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
+                "type": "canvas.button",
+                "props": {
+                  "label": "Open /manufacturing-orders",
+                  "variant": "outline",
+                  "icon": "folder-open",
+                  "size": "sm"
                 },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Manufacturing orders"
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/manufacturing-orders"
+                      }
                     }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Orders move draft → confirmed → in progress → done. Confirmed orders are locked; done orders emitted their stock moves.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "direction": "row",
-                    "wrap": true,
-                    "gap": 2,
-                    "align": "center"
-                  }
+                  ]
                 },
-                "children": [
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Open /manufacturing-orders",
-                      "variant": "outline",
-                      "icon": "folder-open",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/manufacturing-orders"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Manufacturing",
-                      "variant": "ghost",
-                      "icon": "factory",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/manufacturing/canvas/home.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ]
+                "slot": "actions"
               }
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.board",
             "props": {
-              "text": "{{ data.$orders.error }}"
+              "rows": "{{ (data.orderrows || []).filter(o => o.status !== 'cancelled') }}",
+              "groupBy": "status",
+              "columns": [
+                {
+                  "value": "draft",
+                  "label": "Draft",
+                  "locked": true
+                },
+                {
+                  "value": "confirmed",
+                  "label": "Confirmed"
+                },
+                {
+                  "value": "in-progress",
+                  "label": "In progress"
+                },
+                {
+                  "value": "done",
+                  "label": "Done"
+                }
+              ],
+              "card": {
+                "title": "productName",
+                "code": "code",
+                "meta": [
+                  "quantity",
+                  "scheduledDate"
+                ]
+              },
+              "readOnly": false,
+              "rowKey": "path",
+              "emptyText": "Nothing here",
+              "lockedWhen": "[\"done\"].includes(row.status)"
             },
-            "rules": {
-              "visible": "data.$orders.status === 'error'"
+            "on": {
+              "open": [
+                {
+                  "open-file": {
+                    "path": "{{ event.row.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ],
+              "move": [
+                {
+                  "confirm": {
+                    "if": "event.to === 'done'",
+                    "title": "Move to Done?",
+                    "message": "{{ event.row.code }} moves to Done. Completing creates the stock moves in Inventory.",
+                    "confirm-label": "Move to Done"
+                  }
+                },
+                {
+                  "run-script": {
+                    "if": "event.to === 'confirmed'",
+                    "file": "/applications/manufacturing/scripts/post",
+                    "timeout": 120,
+                    "parameters": {
+                      "operation": "confirm-mo",
+                      "path": "{{ event.path }}"
+                    },
+                    "assign": "lastmove"
+                  }
+                },
+                {
+                  "run-script": {
+                    "if": "event.to === 'in-progress'",
+                    "file": "/applications/manufacturing/scripts/post",
+                    "timeout": 120,
+                    "parameters": {
+                      "operation": "start-mo",
+                      "path": "{{ event.path }}"
+                    },
+                    "assign": "lastmove"
+                  }
+                },
+                {
+                  "run-script": {
+                    "if": "event.to === 'done'",
+                    "file": "/applications/manufacturing/scripts/post",
+                    "timeout": 120,
+                    "parameters": {
+                      "operation": "complete-mo",
+                      "path": "{{ event.path }}"
+                    },
+                    "assign": "lastmove"
+                  }
+                },
+                {
+                  "refresh-source": {
+                    "source": "orders"
+                  }
+                },
+                {
+                  "toast": {
+                    "message": "{{ [\"confirmed\",\"in-progress\",\"done\"].includes(event.to) ? ((state.lastmove && state.lastmove.message) || 'Done') : 'Moved to ' + ({\"draft\":\"Draft\",\"confirmed\":\"Confirmed\",\"in-progress\":\"In progress\",\"done\":\"Done\"}[event.to] || event.to) }}",
+                    "variant": "success"
+                  }
+                }
+              ]
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "Loading…",
-              "tone": "muted"
-            },
-            "rules": {
-              "visible": "data.$orders.status === 'loading'"
+              "for": "orders",
+              "compact": true
             }
           },
           {
@@ -239,6 +299,10 @@
                 }
               ],
               "emptyText": "No open manufacturing orders",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
               "clickable": true
             },
             "on": {
@@ -246,7 +310,8 @@
                 {
                   "open-file": {
                     "path": "{{ event.path }}",
-                    "mode": "edit"
+                    "mode": "edit",
+                    "open": "side"
                   }
                 }
               ]

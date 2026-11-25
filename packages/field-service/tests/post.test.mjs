@@ -3,7 +3,8 @@ import addFormats from 'ajv-formats'
 import { describe, expect, it } from 'vitest'
 import { run, materialsTotal } from '../scripts/post/main.mjs'
 import { templates } from '../src/contracts.mjs'
-import { schemas as invoicingSchemas } from '../../invoicing/src/contracts.mjs'
+import { readFileSync } from 'node:fs'
+import { parse } from 'yaml'
 import { memoryFiles } from '../../../tools/file-apps/memory-files.mjs'
 
 const now = '2026-03-10T08:00:00Z'
@@ -11,7 +12,6 @@ let ids = 0
 const uuid = () => `00000000-0000-4000-8000-${String(++ids).padStart(12, '0')}`
 const ajv = new Ajv2020({ allErrors: true, strict: true })
 addFormats(ajv)
-const validInvoice = ajv.compile(invoicingSchemas.invoice)
 
 const task = (values = {}) => ({
   ...templates.task, id: uuid(), createdAt: now, updatedAt: now, code: 'FST-0001',
@@ -20,7 +20,7 @@ const task = (values = {}) => ({
   materials: [{ description: 'Filter', quantity: '2', unitPrice: '10.50' }, { description: 'Pipe', quantity: '1.5', unitPrice: '8.01' }],
   ...values,
 })
-const call = (files, operation, path = '/field-tasks/FST-0001') => run({ operation, path }, files, { now, uuid })
+const call = (files, operation, extra = {}) => run({ operation, path: '/field-tasks/FST-0001', ...extra }, files, { now, uuid })
 
 describe('Field Service task actions', () => {
   it('schedules a new task with a date and technician, idempotently', async () => {
@@ -80,33 +80,26 @@ describe('Field Service task actions', () => {
     expect(materialsTotal([{ description: '', quantity: '', unitPrice: '' }], { code: 'FST-0001' })).toBe('0.00')
   })
 
-  it('drafts a schema-valid draft invoice when Invoicing\'s /invoices container exists', async () => {
+  it('returns what Invoicing needs to draft the invoice, and never writes Invoicing\'s files', async () => {
     const files = memoryFiles({ '/field-tasks/FST-0001': task({ customerRef: '/customers/ACME' }), '/invoices': '' })
     const result = await call(files, 'complete')
-    expect(result.message).toContain('drafted invoice FST-0001')
-    expect(files.json('/field-tasks/FST-0001')).toMatchObject({ stage: 'done', invoice: '/invoices/FST-0001' })
-    const invoice = files.json('/invoices/FST-0001')
-    expect(validInvoice(invoice), JSON.stringify(validInvoice.errors)).toBe(true)
-    expect(invoice).toMatchObject({ kind: 'invoice', status: 'draft', code: 'FST-0001', customerRef: '/customers/ACME' })
-    expect(invoice.customer.name).toBe('Globex')
-    expect(invoice.lines[0]).toMatchObject({ quantity: '2.5' })
-    expect(invoice.lines).toHaveLength(3)
-    expect(files.nodes.get('/invoices/FST-0001').contentType).toBe('application/vnd.verentis.invoicing.invoice+json')
+    expect(result.message).toBe(`Completed FST-0001 (materials ${files.json('/field-tasks/FST-0001').materialsTotal})`)
+    expect(files.writes.some(path => path.startsWith('/invoices/'))).toBe(false)
+    const contract = parse(readFileSync(new URL('../../invoicing/api.yaml', import.meta.url), 'utf8'))
+    const validRequest = new Ajv2020({ strict: false }).compile(contract.spec.operations[0]['input-schema'])
+    expect(validRequest(result.invoiceRequest), JSON.stringify(validRequest.errors)).toBe(true)
+    expect(result.invoiceRequest).toMatchObject({ source: { path: '/field-tasks/FST-0001', code: 'FST-0001' }, customerRef: '/customers/ACME', customer: { name: 'Globex' } })
+    expect(result.invoiceRequest.lines[0]).toMatchObject({ quantity: '2.5' })
+    expect(result.invoiceRequest.lines).toHaveLength(3)
   })
 
-  it('never drafts twice: this task\'s own draft is kept when completion is retried', async () => {
-    const existing = { kind: 'invoice', status: 'draft', marker: 'first run', notes: 'Drafted from Field Service task FST-0001.' }
-    const files = memoryFiles({ '/field-tasks/FST-0001': task(), '/invoices': '', '/invoices/FST-0001': existing })
-    expect(await call(files, 'complete')).toMatchObject({ message: expect.stringContaining('drafted invoice') })
-    expect(files.json('/invoices/FST-0001')).toEqual(existing)
-    expect(files.json('/field-tasks/FST-0001')).toMatchObject({ stage: 'done', invoice: '/invoices/FST-0001' })
-  })
-
-  it('refuses to link an unrelated invoice occupying the task\'s code', async () => {
-    const foreign = { kind: 'invoice', status: 'draft', notes: 'Monthly retainer.' }
-    const files = memoryFiles({ '/field-tasks/FST-0001': task(), '/invoices': '', '/invoices/FST-0001': foreign })
-    await expect(call(files, 'complete')).rejects.toThrow(/already exists and was not drafted from FST-0001/)
-    expect(files.json('/field-tasks/FST-0001')).toMatchObject({ stage: 'on-site' })
+  it('records the invoice Invoicing drafted, and asks again for a done task without one', async () => {
+    const files = memoryFiles({ '/field-tasks/FST-0001': task() })
+    await call(files, 'complete')
+    expect((await call(files, 'complete')).invoiceRequest.source.code).toBe('FST-0001')
+    await call(files, 'record-invoice', { invoice: '/invoices/INV-0002' })
+    expect(files.json('/field-tasks/FST-0001')).toMatchObject({ stage: 'done', invoice: '/invoices/INV-0002' })
+    expect((await call(files, 'complete')).invoiceRequest).toBeUndefined()
   })
 
   it('cancels open tasks and refuses done ones, idempotently', async () => {
@@ -124,9 +117,9 @@ describe('Field Service task actions', () => {
       '/field-tasks/odd': { kind: 'ticket' },
     })
     await expect(call(files, 'start')).rejects.toThrow(/is archived/)
-    await expect(call(files, 'start', '/field-tasks/odd')).rejects.toThrow(/is not a field task/)
-    await expect(call(files, 'start', '/field-tasks/missing')).rejects.toThrow(/does not exist/)
-    await expect(call(files, 'start', '/invoices/INV-0001')).rejects.toThrow(/directly in \/field-tasks/)
+    await expect(call(files, 'start', { path: '/field-tasks/odd' })).rejects.toThrow(/is not a field task/)
+    await expect(call(files, 'start', { path: '/field-tasks/missing' })).rejects.toThrow(/does not exist/)
+    await expect(call(files, 'start', { path: '/invoices/INV-0001' })).rejects.toThrow(/directly in \/field-tasks/)
     await expect(call(files, 'escalate')).rejects.toThrow(/Unsupported operation/)
   })
 
