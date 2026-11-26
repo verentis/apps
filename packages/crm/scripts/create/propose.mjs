@@ -1,14 +1,14 @@
 import { randomUUID } from 'node:crypto'
 import config from './config.mjs'
 
-const allowed = new Set(['operation', 'creatable', 'mime', 'parentPath', 'branch', 'name', 'now', 'template', 'siblings', 'attempt'])
+const allowed = new Set(['operation', 'creatable', 'mime', 'parentPath', 'branch', 'name', 'now', 'user', 'template', 'siblings', 'attempt'])
 
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 function fill(template, values) {
-  return template.replace(/\{\{\s*(id|now|name)\s*\}\}/g, (_, key) => JSON.stringify(String(values[key] ?? '')).slice(1, -1))
+  return template.replace(/\{\{\s*(id|now|name|user)\s*\}\}/g, (_, key) => JSON.stringify(String(values[key] ?? '')).slice(1, -1))
 }
 
 /** The next code after the highest existing `<prefix><digits>` sibling, e.g. `CUST-0042`. */
@@ -60,7 +60,9 @@ export function propose(input, settings, uuid = randomUUID) {
   const siblings = Array.isArray(input.siblings) ? input.siblings : []
   const attempt = Number.isInteger(input.attempt) && input.attempt > 0 ? input.attempt : 1
 
-  const record = JSON.parse(fill(input.template, { id: uuid(), now, name }))
+  // Who is creating, from the workspace (`{ id, name }`): `{{ user }}` in a template becomes their name.
+  const user = input.user && typeof input.user === 'object' && typeof input.user.name === 'string' ? input.user.name.trim().slice(0, 200) : ''
+  const record = JSON.parse(fill(input.template, { id: uuid(), now, name, user }))
   if (record.kind !== kind) throw new Error(`The template does not describe a ${kind}`)
   const definition = config.kinds[kind]
 

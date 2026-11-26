@@ -1,0 +1,151 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "project-tasks",
+    "name": "Tasks",
+    "description": "Every task with its project, stage, assignee and due date.",
+    "icon": "list-checks"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/tasks",
+        "reason": "List tasks"
+      }
+    ],
+    "data": {
+      "records": {
+        "kind": "folder",
+        "path": "/tasks",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.project.task+json"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Project",
+          "icon": "folder-kanban",
+          "active": "tasks.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Projects",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "board.page.yaml",
+              "label": "Board",
+              "icon": "kanban"
+            },
+            {
+              "id": "tasks.page.yaml",
+              "label": "Tasks",
+              "icon": "list-checks"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
+            }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/project/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/project.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
+        },
+        "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Tasks",
+              "note": "Every task with its project, stage, assignee and due date."
+            },
+            "children": []
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "records",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, title: e.data.title || '', project: String(e.data.project || '').split('/').pop(), stage: e.data.stage || 'backlog', priority: e.data.priority || '', assignee: e.data.assignee || '', due: e.data.dueDate || '' })).sort((a, b) => (a.project + a.due) < (b.project + b.due) ? -1 : 1) }}",
+              "columns": [
+                {
+                  "key": "code",
+                  "label": "Task"
+                },
+                {
+                  "key": "title",
+                  "label": "Title"
+                },
+                {
+                  "key": "project",
+                  "label": "Project"
+                },
+                {
+                  "key": "stage",
+                  "label": "Stage",
+                  "format": "badge"
+                },
+                {
+                  "key": "priority",
+                  "label": "Priority",
+                  "format": "badge"
+                },
+                {
+                  "key": "assignee",
+                  "label": "Assignee"
+                },
+                {
+                  "key": "due",
+                  "label": "Due",
+                  "format": "date"
+                }
+              ],
+              "emptyText": "No tasks yet.",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -84,7 +84,7 @@ export const schemas = {
 }
 
 /**
- * New-record templates. `{{ id }}`, `{{ now }}` and `{{ name }}` are substituted; the create script then adds
+ * New-record templates. `{{ id }}`, `{{ now }}`, `{{ name }}` and `{{ user }}` (who is creating) are substituted; the create script then adds
  * the generated `code`, fills the date and the default type from the settings and schedules the end time and
  * host from the chosen type.
  */

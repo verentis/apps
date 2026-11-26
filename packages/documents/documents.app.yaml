@@ -410,6 +410,24 @@
         }
       },
       {
+        "path": "/document-cards",
+        "mode": "read",
+        "reason": "List all documents",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/all.page.yaml"
+        }
+      },
+      {
+        "path": "/document-tags",
+        "mode": "read",
+        "reason": "List tags",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/tags.page.yaml"
+        }
+      },
+      {
         "path": "/document-workspaces",
         "mode": "write",
         "reason": "Create workspaces with the next code",

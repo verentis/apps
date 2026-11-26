@@ -375,6 +375,51 @@
         }
       },
       {
+        "path": "/customers",
+        "mode": "read",
+        "reason": "Compare the frozen values with /customers now (when the owning app is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "spreadsheet-bi-snapshot"
+        }
+      },
+      {
+        "path": "/invoices",
+        "mode": "read",
+        "reason": "Compare the frozen values with /invoices now (when the owning app is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "spreadsheet-bi-snapshot"
+        }
+      },
+      {
+        "path": "/tickets",
+        "mode": "read",
+        "reason": "Compare the frozen values with /tickets now (when the owning app is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "spreadsheet-bi-snapshot"
+        }
+      },
+      {
+        "path": "/journals",
+        "mode": "read",
+        "reason": "Compare the frozen values with /journals now (when the owning app is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "spreadsheet-bi-snapshot"
+        }
+      },
+      {
+        "path": "/expenses",
+        "mode": "read",
+        "reason": "Compare the frozen values with /expenses now (when the owning app is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "spreadsheet-bi-snapshot"
+        }
+      },
+      {
         "path": "/bi-dashboards",
         "mode": "read",
         "reason": "Choose the default dashboard for new snapshots",

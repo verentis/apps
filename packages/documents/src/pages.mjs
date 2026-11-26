@@ -3,6 +3,7 @@
 // workflow (status transitions, validation stamp, locking) is done by the action script the document form runs.
 // Document cards only reference VFS paths — no page or form ever reads or writes the referenced files.
 import { views } from './views.mjs'
+import { listPages } from './lists.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   iconName, linkButton, openFile, options, page, panel, projectRegistration, recordButtons, row, scriptAction,
@@ -287,6 +288,6 @@ function libraryPage() {
 }
 
 export function buildPages() {
-  const documents = [homePage(), inboxPage(), workspacesPage(), libraryPage(), ...recordKinds.map(recordForm), settingsForm()]
+  const documents = [homePage(), inboxPage(), workspacesPage(), libraryPage(), ...recordKinds.map(recordForm), settingsForm(), ...listPages()]
   return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

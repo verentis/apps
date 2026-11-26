@@ -382,6 +382,15 @@
         }
       },
       {
+        "path": "/service-logs",
+        "mode": "read",
+        "reason": "List services",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/services.page.yaml"
+        }
+      },
+      {
         "path": "/vehicles",
         "mode": "write",
         "reason": "Create vehicles with the next code",

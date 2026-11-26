@@ -15,6 +15,7 @@
   "stage": "new",
   "slaDeadline": "",
   "assignee": "",
+  "assigneeRef": "",
   "description": "",
   "resolution": ""
 }

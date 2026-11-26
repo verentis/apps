@@ -80,14 +80,14 @@ export const schemas = {
 }
 
 /**
- * New-record templates. `{{ id }}`, `{{ now }}` and `{{ name }}` are substituted; the create script then adds
+ * New-record templates. `{{ id }}`, `{{ now }}`, `{{ name }}` and `{{ user }}` (who is creating) are substituted; the create script then adds
  * the generated `code`, fills the leave type from settings and computes `days` as the weekday count of the
  * date range (empty dates leave it empty; submitting recomputes it).
  */
 export const templates = {
   type: recordTemplate('type', { name: '{{ name }}', daysPerYear: '', requiresApproval: true }),
   request: recordTemplate('request', {
-    employeeName: '{{ name }}', employeeRef: '', type: '', startDate: '', endDate: '', days: '', reason: '',
+    employeeName: '{{ user }}', employeeRef: '', type: '', startDate: '', endDate: '', days: '', reason: '',
     status: 'draft',
   }),
 }

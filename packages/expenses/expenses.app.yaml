@@ -306,6 +306,15 @@
         }
       },
       {
+        "path": "/employees",
+        "mode": "read",
+        "reason": "Find your Employees record by your work email (when Employees is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "expenses-report"
+        }
+      },
+      {
         "path": "/applications/expenses/",
         "mode": "read",
         "reason": "Read the Expenses schemas and run the posting script",
@@ -330,6 +339,33 @@
         "origin": {
           "kind": "document",
           "id": "expenses-settings"
+        }
+      },
+      {
+        "path": "/expense-reports",
+        "mode": "read",
+        "reason": "List my reports",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/mine.page.yaml"
+        }
+      },
+      {
+        "path": "/employees",
+        "mode": "read",
+        "reason": "Find your Employees record by your work email (when Employees is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/mine.page.yaml"
+        }
+      },
+      {
+        "path": "/expense-reports",
+        "mode": "read",
+        "reason": "List to approve",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/to-approve.page.yaml"
         }
       },
       {
@@ -413,7 +449,10 @@
           "reason": "Post approved expense reports to the ledger"
         }
       ]
-    }
+    },
+    "capabilities": [
+      "user-profile"
+    ]
   },
   "packaging": {
     "publisher": "verentis",

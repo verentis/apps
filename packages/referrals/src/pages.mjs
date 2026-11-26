@@ -2,13 +2,14 @@
 // referrals list by status and the points leaderboard. Deciding referrals (status transitions, awarding points
 // from the settings, locking) is done by the action script the referral form runs.
 import { views } from './views.mjs'
+import { listPages } from './lists.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   humanize, iconName, options, openFile, page, panel, projectRegistration, recordButtons, row, scriptAction,
   sectionCards, stat, stats, status, table, tabs, text, toneExpression, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { containers, employees, installRoot, mimeTypes, recordKinds, recruitment, schemaId, settingsPath, statuses } from './contracts.mjs'
-import { entities, postScriptPath, settingsFields } from './app.mjs'
+import { referrer, entities, postScriptPath, settingsFields } from './app.mjs'
 
 export { collectSteps, documentFileAccess, projectRegistration } from '../../../tools/file-apps/canvas.mjs'
 
@@ -17,22 +18,19 @@ const schemaAccess = { path: `${installRoot}/`, reason: 'Read the Referrals sche
 const decided = "['hired','not-hired'].includes(form.values.status)"
 const idle = 'form.saving || form.dirty'
 
-const fromEmployee = "e.data.name || [e.data.givenName, e.data.familyName].filter(Boolean).join(' ')"
-const copyName = `((data.employeerecords || []).filter(e => e.kind === 'file' && e.data && e.path === form.values.referrerRef).map(e => ${fromEmployee})[0]) || form.values.referrerName`
 
 /** Data, access, actions, header buttons and notices of the referral form. */
 function recordExtras() {
   return {
     access: [
       { path: recruitment.jobs, reason: 'Offer Recruitment job positions on referrals (when Recruitment is installed)' },
-      { path: employees.container, reason: 'Offer Employees records on referrals (when Employees is installed)' },
+      ...referrer.sources.access,
       schemaAccess,
     ],
     data: {
       jobrecords: folder(recruitment.jobs, recruitment.jobMime),
       joboptions: { kind: 'computed', expr: options('jobrecords', 'e.data.title || e.data.code || e.name') },
-      employeerecords: folder(employees.container, employees.employeeMime),
-      employeeoptions: { kind: 'computed', expr: options('employeerecords', fromEmployee) },
+      ...referrer.sources.data,
     },
     notices: [
       { ...text('Hired on {{ form.values.decidedAt }}: {{ form.values.points }} points awarded. This referral is locked.', 'success'),
@@ -43,10 +41,10 @@ function recordExtras() {
     buttons: [
       button('Mark hired', 'mark-hired', { visible: `!(${decided}) && !(${archived})`, disabled: idle }, undefined, 'check'),
       button('Mark not hired', 'mark-not-hired', { visible: `!(${decided}) && !(${archived})`, disabled: idle }, 'outline', 'x'),
-      button('Copy name', 'copy-employee', { visible: `!(${decided}) && !!form.values.referrerRef`, disabled: `form.saving || ${archived}` }, 'ghost', 'copy'),
+      { ...referrer.meButton, rules: { ...referrer.meButton.rules, visible: `!(${decided}) && !(${archived}) && ${referrer.meButton.rules.visible}` } },
     ],
     actions: {
-      'copy-employee': { steps: [{ 'patch-form': { values: { referrerName: `{{ ${copyName} }}` } } }] },
+      ...referrer.meAction,
       'mark-hired': scriptAction(postScriptPath, 'mark-hired', {
         confirm: { title: 'Mark hired', message: 'Mark this referral hired and award the points from the Referrals settings? Decided referrals are locked.' },
       }),
@@ -230,6 +228,6 @@ function leaderboardPage() {
 }
 
 export function buildPages() {
-  const documents = [homePage(), referralsPage(), leaderboardPage(), ...recordKinds.map(recordForm), settingsForm()]
+  const documents = [homePage(), referralsPage(), leaderboardPage(), ...recordKinds.map(recordForm), settingsForm(), ...listPages()]
   return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

@@ -62,9 +62,13 @@ describe('Planning Canvas documents', () => {
 
   it('offers Employees records on shifts without requiring Employees', () => {
     const document = documents['shift.form.yaml']
-    expect(document.spec.data.people).toMatchObject({ kind: 'folder', path: '/employees' })
-    const patch = document.spec.actions['copy-employee'].steps[0]['patch-form'].values.employee
-    expect(patch).toContain('form.values.employeeRef')
+    expect(document.spec.data.employeelinks).toMatchObject({ kind: 'folder', path: '/employees' })
+    // Choosing an Employees record fills the name from it.
+    const nodes = []
+    const walk = node => { if (Array.isArray(node)) node.forEach(walk); else if (node && typeof node === 'object') { nodes.push(node); Object.values(node).forEach(walk) } }
+    walk(document.spec.tree)
+    const picker = nodes.find(node => node.type === 'canvas.form.select' && node.props?.value === '{{ form.values.employeeRef }}')
+    expect(picker.on.update[0]['patch-form'].values.employee).toContain('e.path === event')
     expect(manifest.spec.dependencies).toContainEqual({ package: 'verentis/employees', version: 'latest', optional: true })
   })
 

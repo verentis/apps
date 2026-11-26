@@ -2,6 +2,7 @@
 // task list by stage and the technician day schedule. Stage transitions (schedule, start, complete, cancel),
 // the materials total and the optional invoice draft are done by the action script the task form runs.
 import { views } from './views.mjs'
+import { listPages } from './lists.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   humanize, iconName, options, openFile, page, panel, projectRegistration, recordButtons, row, scriptAction, appOperationsSource, offers, withInvoice,
@@ -237,6 +238,6 @@ function schedulePage() {
 const taskInvoice = { script: postScriptPath, key: "'task-' + form.values.code" }
 
 export function buildPages() {
-  const documents = [homePage(), tasksPage(), schedulePage(), ...recordKinds.map(() => taskForm()), settingsForm()]
+  const documents = [homePage(), tasksPage(), schedulePage(), ...recordKinds.map(() => taskForm()), settingsForm(), ...listPages()]
   return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

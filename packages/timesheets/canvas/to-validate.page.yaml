@@ -1,0 +1,142 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "timesheets-to-validate",
+    "name": "To validate",
+    "description": "The team's draft entries with hours, by person; open one to validate it.",
+    "icon": "check-check"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/timesheets",
+        "reason": "List to validate"
+      }
+    ],
+    "data": {
+      "records": {
+        "kind": "folder",
+        "path": "/timesheets",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.timesheets.entry+json"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Timesheets",
+          "icon": "clock",
+          "active": "to-validate.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Entries",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "week.page.yaml",
+              "label": "Week",
+              "icon": "calendar-days"
+            },
+            {
+              "id": "to-validate.page.yaml",
+              "label": "To validate",
+              "icon": "check-check"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
+            }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/timesheets/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/timesheets.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
+        },
+        "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "To validate",
+              "note": "The team's draft entries with hours, by person; open one to validate it."
+            },
+            "children": []
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "records",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').filter(e => (e.data.status || 'draft') === 'draft' && Number(e.data.hours || 0) > 0).map(e => ({ path: e.path, employee: e.data.employee || '', date: e.data.date, project: String(e.data.project || '').split('/').pop(), task: e.data.task || '', hours: e.data.hours })).sort((a, b) => (a.employee + a.date) < (b.employee + b.date) ? -1 : 1) }}",
+              "columns": [
+                {
+                  "key": "employee",
+                  "label": "Person"
+                },
+                {
+                  "key": "date",
+                  "label": "Date",
+                  "format": "date"
+                },
+                {
+                  "key": "project",
+                  "label": "Project"
+                },
+                {
+                  "key": "task",
+                  "label": "Task"
+                },
+                {
+                  "key": "hours",
+                  "label": "Hours",
+                  "align": "end"
+                }
+              ],
+              "emptyText": "No draft entry is waiting.",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

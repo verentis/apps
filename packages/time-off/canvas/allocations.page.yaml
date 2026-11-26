@@ -65,6 +65,26 @@
               "icon": "scale"
             },
             {
+              "id": "calendar.page.yaml",
+              "label": "Team calendar",
+              "icon": "calendar-days"
+            },
+            {
+              "id": "mine.page.yaml",
+              "label": "My requests",
+              "icon": "user"
+            },
+            {
+              "id": "to-approve.page.yaml",
+              "label": "To approve",
+              "icon": "circle-check"
+            },
+            {
+              "id": "types.page.yaml",
+              "label": "Leave types",
+              "icon": "tags"
+            },
+            {
               "id": "settings",
               "label": "Settings",
               "icon": "settings"

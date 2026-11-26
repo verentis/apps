@@ -19,6 +19,16 @@
               "id": "home.page.yaml",
               "label": "Matters",
               "icon": "briefcase-business"
+            },
+            {
+              "id": "intake.page.yaml",
+              "label": "Intake",
+              "icon": "inbox"
+            },
+            {
+              "id": "billing.page.yaml",
+              "label": "Billing",
+              "icon": "receipt-text"
             }
           ],
           "page": true

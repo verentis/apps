@@ -78,7 +78,7 @@ describe('Payroll Canvas documents', () => {
 
   it('offers employee records on the pay profile form only as optional reads', () => {
     const document = documents['profile.form.yaml']
-    expect(document.spec.data.employeesrecords).toMatchObject({ kind: 'folder', path: '/employees' })
+    expect(document.spec.data.employeelinks).toMatchObject({ kind: 'folder', path: '/employees' })
     expect(document.spec.access).toContainEqual(expect.objectContaining({ path: '/employees' }))
   })
 

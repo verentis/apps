@@ -1,0 +1,153 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "fleet-services",
+    "name": "Services",
+    "description": "The service log across every vehicle.",
+    "icon": "wrench"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/service-logs",
+        "reason": "List services"
+      }
+    ],
+    "data": {
+      "records": {
+        "kind": "folder",
+        "path": "/service-logs",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.fleet.service+json"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Fleet",
+          "icon": "car",
+          "active": "services.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Vehicles",
+              "icon": "car"
+            },
+            {
+              "id": "contracts.page.yaml",
+              "label": "Contracts",
+              "icon": "file-signature"
+            },
+            {
+              "id": "costs.page.yaml",
+              "label": "Costs",
+              "icon": "chart-column"
+            },
+            {
+              "id": "services.page.yaml",
+              "label": "Services",
+              "icon": "wrench"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
+            }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/fleet/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/fleet.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
+        },
+        "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Services",
+              "note": "The service log across every vehicle."
+            },
+            "children": []
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "records",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, date: e.data.date, vehicle: String(e.data.vehicle || '').split('/').pop(), type: e.data.type || '', odometer: e.data.odometerKm, cost: e.data.cost || '', status: e.data.status || '' })).sort((a, b) => a.date < b.date ? 1 : -1) }}",
+              "columns": [
+                {
+                  "key": "date",
+                  "label": "Date",
+                  "format": "date"
+                },
+                {
+                  "key": "vehicle",
+                  "label": "Vehicle"
+                },
+                {
+                  "key": "type",
+                  "label": "Service"
+                },
+                {
+                  "key": "odometer",
+                  "label": "Odometer (km)",
+                  "align": "end"
+                },
+                {
+                  "key": "cost",
+                  "label": "Cost",
+                  "align": "end"
+                },
+                {
+                  "key": "status",
+                  "label": "Status",
+                  "format": "badge"
+                }
+              ],
+              "emptyText": "No services logged yet.",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

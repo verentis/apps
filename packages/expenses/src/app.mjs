@@ -1,8 +1,13 @@
+import { employeeLink } from '../../../tools/file-apps/canvas.mjs'
 import {
   accounting, accountingSettingsPath, codeDigits, codeSettings, containerOf, containers, createDefaults, installRoot,
   mimeTypes, recordKinds, sampleReport, settingsPath, starterCategories,
 } from './contracts.mjs'
 import { scriptConsent } from '../../../tools/file-apps/build.mjs'
+
+
+/** The report's employee: an Employees record when Employees is installed (the picker fills the name), else a name. */
+export const employee = employeeLink('employeeRecord', 'employeeName')
 
 export const version = '0.1.0'
 export const canvasOrigin = 'https://canvas.apps.localtest.me'
@@ -54,6 +59,7 @@ export const entities = {
     sections: [
       { title: 'Employee', fields: [
         text('employeeName', 'Employee', { required: true }),
+        employee.field,
         text('employeeRef', 'Employee reference', { placeholder: 'HR number' }),
         { key: 'date', label: 'Report date', type: 'date', required: true }] },
       { title: 'Receipts', description: 'A photo of each receipt. On a phone, Add photo opens the camera.', fields: [

@@ -1,0 +1,147 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "documents-tags",
+    "name": "Tags",
+    "description": "The curated tag vocabulary.",
+    "icon": "tags"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/document-tags",
+        "reason": "List tags"
+      }
+    ],
+    "data": {
+      "records": {
+        "kind": "folder",
+        "path": "/document-tags",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.documents.tag+json"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Documents",
+          "icon": "folder-kanban",
+          "active": "tags.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "inbox.page.yaml",
+              "label": "Inbox",
+              "icon": "inbox"
+            },
+            {
+              "id": "workspaces.page.yaml",
+              "label": "Workspaces",
+              "icon": "folders"
+            },
+            {
+              "id": "library.page.yaml",
+              "label": "All documents",
+              "icon": "library"
+            },
+            {
+              "id": "all.page.yaml",
+              "label": "All documents",
+              "icon": "files"
+            },
+            {
+              "id": "tags.page.yaml",
+              "label": "Tags",
+              "icon": "tags"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
+            }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/documents/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/documents.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
+        },
+        "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Tags",
+              "note": "The curated tag vocabulary."
+            },
+            "children": []
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "records",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, label: e.data.label || '', category: e.data.category || '' })) }}",
+              "columns": [
+                {
+                  "key": "code",
+                  "label": "Code"
+                },
+                {
+                  "key": "label",
+                  "label": "Tag"
+                },
+                {
+                  "key": "category",
+                  "label": "Category"
+                }
+              ],
+              "emptyText": "No tags yet.",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,8 +1,13 @@
+import { employeeLink } from '../../../tools/file-apps/canvas.mjs'
 import {
   codeDigits, codeSettings, containerOf, containers, createDefaults, installRoot, mimeTypes, recordKinds,
   settingsPath, starterRecords,
 } from './contracts.mjs'
 import { scriptConsent } from '../../../tools/file-apps/build.mjs'
+
+
+/** The request's employee: an Employees record when Employees is installed (the picker fills the name), else a name. */
+export const employee = employeeLink('employeeRef', 'employeeName')
 
 export const version = '0.1.0'
 export const canvasOrigin = 'https://canvas.apps.localtest.me'
@@ -55,7 +60,7 @@ export const entities = {
     sections: [
       { title: 'Employee', fields: [
         text('employeeName', 'Employee', { required: true }),
-        select('employeeRef', 'Employee record', '{{ data.employeeoptions }}', { description: 'Optional. Choose an Employees record, then Copy name.' })] },
+        employee.field] },
       { title: 'Leave', fields: [
         select('type', 'Leave type', '{{ data.typeoptions }}', { required: true }),
         text('days', 'Days', { readOnly: 'true', description: 'The weekday count of the date range, computed at submission.' }),

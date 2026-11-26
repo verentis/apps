@@ -1,0 +1,137 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "inventory-warehouses",
+    "name": "Warehouses",
+    "description": "Warehouses with their locations.",
+    "icon": "warehouse"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/warehouses",
+        "reason": "List warehouses"
+      }
+    ],
+    "data": {
+      "records": {
+        "kind": "folder",
+        "path": "/warehouses",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.inventory.warehouse+json"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Inventory",
+          "icon": "package",
+          "active": "warehouses.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "stock.page.yaml",
+              "label": "Stock",
+              "icon": "boxes"
+            },
+            {
+              "id": "counts.page.yaml",
+              "label": "Counts",
+              "icon": "clipboard-check"
+            },
+            {
+              "id": "warehouses.page.yaml",
+              "label": "Warehouses",
+              "icon": "warehouse"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
+            }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/inventory/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/inventory.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
+        },
+        "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Warehouses",
+              "note": "Warehouses with their locations."
+            },
+            "children": []
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "records",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, name: e.data.name || '', locations: (e.data.locations || []).join(', ') })) }}",
+              "columns": [
+                {
+                  "key": "code",
+                  "label": "Code"
+                },
+                {
+                  "key": "name",
+                  "label": "Warehouse"
+                },
+                {
+                  "key": "locations",
+                  "label": "Locations"
+                }
+              ],
+              "emptyText": "No warehouses yet.",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

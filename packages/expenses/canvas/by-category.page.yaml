@@ -68,6 +68,16 @@
               "icon": "tags"
             },
             {
+              "id": "mine.page.yaml",
+              "label": "My reports",
+              "icon": "user"
+            },
+            {
+              "id": "to-approve.page.yaml",
+              "label": "To approve",
+              "icon": "circle-check"
+            },
+            {
               "id": "settings",
               "label": "Settings",
               "icon": "settings"

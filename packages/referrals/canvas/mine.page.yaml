@@ -1,0 +1,164 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "referrals-mine",
+    "name": "My referrals",
+    "description": "The people you referred, where each stands, and the points earned.",
+    "icon": "user"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/referrals",
+        "reason": "List my referrals"
+      },
+      {
+        "path": "/employees",
+        "reason": "Find your Employees record by your work email (when Employees is installed)"
+      }
+    ],
+    "data": {
+      "records": {
+        "kind": "folder",
+        "path": "/referrals",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.referrals.referral+json"
+      },
+      "signedinstaff": {
+        "kind": "folder",
+        "path": "/employees",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.employees.employee+json"
+      },
+      "me": {
+        "kind": "computed",
+        "expr": "((data.signedinstaff || []).filter(e => e.kind === 'file' && e.data && e.data.status !== 'terminated' && !!ctx.user && !!ctx.user.email && String(e.data.workEmail || '').toLowerCase() === String(ctx.user.email).toLowerCase()).map(e => ({ path: e.path, name: String(e.data.name || '') }))[0] || { path: '', name: ctx.user ? String(ctx.user.name || '') : '' })"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Referrals",
+          "icon": "gift",
+          "active": "mine.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "My referrals",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "referrals.page.yaml",
+              "label": "All referrals",
+              "icon": "kanban"
+            },
+            {
+              "id": "leaderboard.page.yaml",
+              "label": "Leaderboard",
+              "icon": "trophy"
+            },
+            {
+              "id": "mine.page.yaml",
+              "label": "My referrals",
+              "icon": "user"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
+            }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/referrals/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/referrals.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
+        },
+        "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "My referrals",
+              "note": "The people you referred, where each stands, and the points earned."
+            },
+            "children": []
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "records",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.dashboard.stat",
+            "props": {
+              "label": "Points earned",
+              "value": "{{ (data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').filter(e => (!!ctx.user && ((!!data.me && !!data.me.path && e.data.referrerRef === data.me.path) || (String(e.data.referrerName || '').toLowerCase() !== '' && [data.me ? data.me.name : '', String(ctx.user.name || '')].filter(n => !!n).map(n => n.toLowerCase()).includes(String(e.data.referrerName || '').toLowerCase()))))).reduce((sum, e) => sum + (Number(e.data.points) || 0), 0) }}"
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').filter(e => (!!ctx.user && ((!!data.me && !!data.me.path && e.data.referrerRef === data.me.path) || (String(e.data.referrerName || '').toLowerCase() !== '' && [data.me ? data.me.name : '', String(ctx.user.name || '')].filter(n => !!n).map(n => n.toLowerCase()).includes(String(e.data.referrerName || '').toLowerCase()))))).map(e => ({ path: e.path, candidate: e.data.candidateName || '', job: String(e.data.job || '').split('/').pop(), status: e.data.status || 'submitted', points: e.data.points || 0 })) }}",
+              "columns": [
+                {
+                  "key": "candidate",
+                  "label": "Candidate"
+                },
+                {
+                  "key": "job",
+                  "label": "Job"
+                },
+                {
+                  "key": "status",
+                  "label": "Status",
+                  "format": "badge"
+                },
+                {
+                  "key": "points",
+                  "label": "Points",
+                  "align": "end"
+                }
+              ],
+              "emptyText": "You have not referred anyone yet.",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,155 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "appointments-all",
+    "name": "All appointments",
+    "description": "Every appointment; filter by status.",
+    "icon": "list"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/appointments",
+        "reason": "List all appointments"
+      }
+    ],
+    "data": {
+      "records": {
+        "kind": "folder",
+        "path": "/appointments",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.appointments.appointment+json"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Appointments",
+          "icon": "calendar-check",
+          "active": "all.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "upcoming.page.yaml",
+              "label": "Calendar",
+              "icon": "calendar"
+            },
+            {
+              "id": "types.page.yaml",
+              "label": "Types",
+              "icon": "shapes"
+            },
+            {
+              "id": "all.page.yaml",
+              "label": "All appointments",
+              "icon": "list"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
+            }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/appointments/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/appointments.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
+        },
+        "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "All appointments",
+              "note": "Every appointment; filter by status."
+            },
+            "children": []
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "records",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, date: e.data.date, time: (e.data.startTime || '') + '–' + (e.data.endTime || ''), guest: e.data.guestName || '', type: String(e.data.type || '').split('/').pop(), host: e.data.host || '', status: e.data.status || 'booked' })).sort((a, b) => (a.date + a.time) < (b.date + b.time) ? 1 : -1) }}",
+              "columns": [
+                {
+                  "key": "code",
+                  "label": "Appointment"
+                },
+                {
+                  "key": "date",
+                  "label": "Date",
+                  "format": "date"
+                },
+                {
+                  "key": "time",
+                  "label": "Time"
+                },
+                {
+                  "key": "guest",
+                  "label": "Guest"
+                },
+                {
+                  "key": "type",
+                  "label": "Type"
+                },
+                {
+                  "key": "host",
+                  "label": "Host"
+                },
+                {
+                  "key": "status",
+                  "label": "Status",
+                  "format": "badge"
+                }
+              ],
+              "emptyText": "No appointments yet.",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -60,6 +60,16 @@
               "icon": "chart-column"
             },
             {
+              "id": "calendar.page.yaml",
+              "label": "Content calendar",
+              "icon": "calendar-days"
+            },
+            {
+              "id": "channels.page.yaml",
+              "label": "Channels",
+              "icon": "radio-tower"
+            },
+            {
               "id": "settings",
               "label": "Settings",
               "icon": "settings"

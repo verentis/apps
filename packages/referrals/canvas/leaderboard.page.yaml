@@ -50,6 +50,11 @@
               "icon": "trophy"
             },
             {
+              "id": "mine.page.yaml",
+              "label": "My referrals",
+              "icon": "user"
+            },
+            {
               "id": "settings",
               "label": "Settings",
               "icon": "settings"

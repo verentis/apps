@@ -1,0 +1,172 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "expenses-mine",
+    "name": "My reports",
+    "description": "Your expense reports with their receipts and totals.",
+    "icon": "user"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/expense-reports",
+        "reason": "List my reports"
+      },
+      {
+        "path": "/employees",
+        "reason": "Find your Employees record by your work email (when Employees is installed)"
+      }
+    ],
+    "data": {
+      "records": {
+        "kind": "folder",
+        "path": "/expense-reports",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.expenses.report+json"
+      },
+      "signedinstaff": {
+        "kind": "folder",
+        "path": "/employees",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.employees.employee+json"
+      },
+      "me": {
+        "kind": "computed",
+        "expr": "((data.signedinstaff || []).filter(e => e.kind === 'file' && e.data && e.data.status !== 'terminated' && !!ctx.user && !!ctx.user.email && String(e.data.workEmail || '').toLowerCase() === String(ctx.user.email).toLowerCase()).map(e => ({ path: e.path, name: String(e.data.name || '') }))[0] || { path: '', name: ctx.user ? String(ctx.user.name || '') : '' })"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Expenses",
+          "icon": "receipt",
+          "active": "mine.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "My reports",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "reports.page.yaml",
+              "label": "All reports",
+              "icon": "kanban"
+            },
+            {
+              "id": "by-category.page.yaml",
+              "label": "Categories",
+              "icon": "tags"
+            },
+            {
+              "id": "mine.page.yaml",
+              "label": "My reports",
+              "icon": "user"
+            },
+            {
+              "id": "to-approve.page.yaml",
+              "label": "To approve",
+              "icon": "circle-check"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
+            }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/expenses/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/expenses.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
+        },
+        "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "My reports",
+              "note": "Your expense reports with their receipts and totals."
+            },
+            "children": []
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "records",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').filter(e => (!!ctx.user && ((!!data.me && !!data.me.path && e.data.employeeRecord === data.me.path) || (String(e.data.employeeName || '').toLowerCase() !== '' && [data.me ? data.me.name : '', String(ctx.user.name || '')].filter(n => !!n).map(n => n.toLowerCase()).includes(String(e.data.employeeName || '').toLowerCase()))))).map(e => ({ path: e.path, code: e.data.code || e.name, employee: e.data.employeeName || '', date: e.data.date, total: e.data.total || '', receipts: (e.data.receipts || []).length, status: e.data.status || 'draft' })) }}",
+              "columns": [
+                {
+                  "key": "code",
+                  "label": "Report"
+                },
+                {
+                  "key": "employee",
+                  "label": "Employee"
+                },
+                {
+                  "key": "date",
+                  "label": "Date",
+                  "format": "date"
+                },
+                {
+                  "key": "receipts",
+                  "label": "Receipts",
+                  "align": "end"
+                },
+                {
+                  "key": "total",
+                  "label": "Total",
+                  "align": "end"
+                },
+                {
+                  "key": "status",
+                  "label": "Status",
+                  "format": "badge"
+                }
+              ],
+              "emptyText": "You have no expense reports.",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

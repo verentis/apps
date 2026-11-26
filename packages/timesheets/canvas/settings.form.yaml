@@ -182,7 +182,7 @@
                         "props": {
                           "label": "Employee",
                           "value": "{{ form.values.employee }}",
-                          "description": "New entries start with this employee name."
+                          "description": "Used for new entries only when the person creating them is not known."
                         }
                       }
                     ]

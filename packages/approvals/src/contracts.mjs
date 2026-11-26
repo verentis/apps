@@ -65,6 +65,8 @@ export const schemas = {
     type: pathOrEmpty,
     title: optional(200),
     requester: optional(200),
+    // The requester's Employees record; empty when they are named only (Employees not installed).
+    requesterRef: pathOrEmpty,
     amount: money,
     date: optionalDate,
     reference: optional(200),
@@ -85,8 +87,8 @@ export const schemas = {
 }
 
 /**
- * New-record templates. `{{ id }}`, `{{ now }}` and `{{ name }}` are substituted; the create script then adds
- * the generated `code` and fills the empty requester from the settings.
+ * New-record templates. `{{ id }}`, `{{ now }}`, `{{ name }}` and `{{ user }}` (who is creating) are substituted; the create script then adds
+ * the generated `code` and fills the requester from the settings when the creator is unknown.
  */
 export const templates = {
   type: recordTemplate('type', {
@@ -94,7 +96,7 @@ export const templates = {
     requiresAmount: false, requiresDate: false, requiresReference: false,
   }),
   request: recordTemplate('request', {
-    type: '', title: '{{ name }}', requester: '', amount: '', date: '', reference: '', reason: '',
+    type: '', title: '{{ name }}', requester: '{{ user }}', requesterRef: '', amount: '', date: '', reference: '', reason: '',
     status: 'draft', approvals: [],
   }),
 }

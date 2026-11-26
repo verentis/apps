@@ -1,0 +1,137 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "field-service-technicians",
+    "name": "Technicians",
+    "description": "Who is out today and how much each has on.",
+    "icon": "users-round"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/field-tasks",
+        "reason": "List technicians"
+      }
+    ],
+    "data": {
+      "records": {
+        "kind": "folder",
+        "path": "/field-tasks",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.field-service.task+json"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Field Service",
+          "icon": "wrench",
+          "active": "technicians.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Today",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "tasks.page.yaml",
+              "label": "All tasks",
+              "icon": "kanban"
+            },
+            {
+              "id": "schedule.page.yaml",
+              "label": "Technicians",
+              "icon": "hard-hat"
+            },
+            {
+              "id": "technicians.page.yaml",
+              "label": "Technicians",
+              "icon": "users-round"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
+            }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/field-service/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/field-service.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
+        },
+        "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Technicians",
+              "note": "Who is out today and how much each has on."
+            },
+            "children": []
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "records",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').filter(e => ['new', 'scheduled', 'on-site'].includes(e.data.stage || 'new') && !!e.data.technician).map(e => e.data.technician).filter((t, i, all) => all.indexOf(t) === i).map(t => ({ technician: t, today: (data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').filter(e => e.data.technician === t && e.data.scheduledDate === Date().slice(0, 10)).length, onsite: (data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').filter(e => e.data.technician === t && e.data.stage === 'on-site').length, open: (data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').filter(e => e.data.technician === t && ['new', 'scheduled', 'on-site'].includes(e.data.stage || 'new')).length, hours: (data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').filter(e => e.data.technician === t && e.data.scheduledDate === Date().slice(0, 10)).reduce((sum, e) => sum + (Number(e.data.hours) || 0), 0) })).sort((a, b) => b.today - a.today) }}",
+              "columns": [
+                {
+                  "key": "technician",
+                  "label": "Technician"
+                },
+                {
+                  "key": "today",
+                  "label": "Jobs today",
+                  "align": "end"
+                },
+                {
+                  "key": "onsite",
+                  "label": "On site now",
+                  "align": "end"
+                },
+                {
+                  "key": "open",
+                  "label": "Open jobs",
+                  "align": "end"
+                },
+                {
+                  "key": "hours",
+                  "label": "Hours logged today",
+                  "align": "end"
+                }
+              ],
+              "emptyText": "No technician has open jobs.",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

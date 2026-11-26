@@ -40,6 +40,21 @@ describe('Timesheets validate-entry script', () => {
     expect(files.json('/timesheets/TS-0001').status).toBe('validated')
   })
 
+  it('checks a linked Employees record exists and is not terminated', async () => {
+    const employee = (status, name = 'Thandi Mokoena') => ({ kind: 'employee', code: 'EMP-0001', name, status })
+    const linked = (employees) => memoryFiles({ ...employees, '/timesheets/TS-0001': entry({ project: '', task: '', employeeRef: '/employees/EMP-0001' }) })
+
+    const active = linked({ '/employees/EMP-0001': employee('active') })
+    await call(active, 'validate-entry', '/timesheets/TS-0001')
+    expect(active.json('/timesheets/TS-0001').status).toBe('validated')
+
+    await expect(call(linked({ '/employees/EMP-0001': employee('terminated') }), 'validate-entry', '/timesheets/TS-0001')).rejects.toThrow(/Thandi Mokoena, who is terminated/)
+    await expect(call(linked({}), 'validate-entry', '/timesheets/TS-0001')).rejects.toThrow(/no longer exists/)
+    const elsewhere = memoryFiles({ '/timesheets/TS-0001': entry({ employeeRef: '/customers/C-1' }) })
+    await expect(call(elsewhere, 'validate-entry', '/timesheets/TS-0001')).rejects.toThrow(/not an Employees record/)
+    expect(elsewhere.json('/timesheets/TS-0001').status).toBe('draft')
+  })
+
   it('is idempotent: an already-validated entry keeps its validation time', async () => {
     const files = workspace({ status: 'validated', validatedAt: '2026-03-01T00:00:00Z' })
     expect(await call(files, 'validate-entry', '/timesheets/TS-0001')).toMatchObject({ message: 'TS-0001 is already validated' })

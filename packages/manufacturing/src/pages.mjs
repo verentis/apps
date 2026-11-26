@@ -3,6 +3,7 @@
 // stock-move emission, immutability once done) are enforced by the production script the forms run; the forms
 // only lock what the script has confirmed or completed.
 import { views } from './views.mjs'
+import { listPages } from './lists.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, grid, heading, humanize,
   iconName, linkButton, openFile, options, page, panel, projectRegistration, recordButtons, row, scriptAction, appOperationsSource, offers, withAppCall,
@@ -287,6 +288,6 @@ function ordersPage() {
 }
 
 export function buildPages() {
-  const documents = [homePage(), bomsPage(), ordersPage(), ...recordKinds.map(recordForm)]
+  const documents = [homePage(), bomsPage(), ordersPage(), ...recordKinds.map(recordForm), ...listPages()]
   return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

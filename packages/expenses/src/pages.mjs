@@ -3,13 +3,14 @@
 // journals, immutability) are done by the posting script the report form runs; the forms only lock what the
 // script has moved beyond draft.
 import { views } from './views.mjs'
+import { listPages } from './lists.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading, humanize,
   iconName, linkButton, openFile, options, page, panel, projectRegistration, recordButtons, row, scriptAction, appOperationsSource, withAppCall,
   sectionCards, stat, stats, status, table, tabs, text, toneExpression, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { accounting, containers, installRoot, mimeTypes, recordKinds, schemaId, settingsPath } from './contracts.mjs'
-import { entities, postScriptPath, settingsSections } from './app.mjs'
+import { employee, entities, postScriptPath, settingsSections } from './app.mjs'
 
 export { collectSteps, documentFileAccess, projectRegistration } from '../../../tools/file-apps/canvas.mjs'
 
@@ -55,8 +56,8 @@ function recordExtras(kind) {
   }
   const visibleWhenSubmitted = { visible: submitted }
   return {
-    access: [{ path: containers.categories.path, reason: 'Offer the expense categories for each line' }],
-    data: { ...categorySources, ...appOperationsSource },
+    access: [{ path: containers.categories.path, reason: 'Offer the expense categories for each line' }, ...employee.sources.access],
+    data: { ...categorySources, ...appOperationsSource, ...employee.sources.data },
     state: { approver: '', refusalreason: '' },
     notices: [
       text(`Total {{ form.values.total || ${display(lineSum('form.values'))} }}`, 'muted'),
@@ -68,6 +69,7 @@ function recordExtras(kind) {
       ]),
     ],
     buttons: [
+      { ...employee.meButton, rules: { ...employee.meButton.rules, visible: `${draft} && !(${archived}) && ${employee.meButton.rules.visible}` } },
       button('Submit', 'submit', { visible: `${draft} && !(${archived})`, disabled: `${idle} || form.invalid` }, undefined, 'send'),
       button('Approve', 'approve', { visible: submitted, disabled: idle }, undefined, 'check'),
       button('Refuse', 'refuse', { visible: submitted, disabled: idle }, 'outline', 'x'),
@@ -75,6 +77,7 @@ function recordExtras(kind) {
     ],
     links: [linkButton('Journal', 'form.values.journal && form.values.journal.path', 'notebook-pen')],
     actions: {
+      ...employee.meAction,
       submit: scriptAction(postScriptPath, 'submit-report', {
         confirm: { title: 'Submit report', message: 'Submit this expense report for approval? Submitted reports can no longer be edited.' },
       }),
@@ -276,6 +279,6 @@ function byCategoryPage() {
 }
 
 export function buildPages() {
-  const documents = [homePage(), reportsPage(), byCategoryPage(), ...recordKinds.map(recordForm), settingsForm()]
+  const documents = [homePage(), reportsPage(), byCategoryPage(), ...recordKinds.map(recordForm), settingsForm(), ...listPages()]
   return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

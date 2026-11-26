@@ -1,0 +1,177 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "planning-day",
+    "name": "Day timeline",
+    "description": "People by hours for a day, coloured by role.",
+    "icon": "gantt-chart"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/shifts",
+        "reason": "List day timeline"
+      }
+    ],
+    "data": {
+      "records": {
+        "kind": "folder",
+        "path": "/shifts",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.planning.shift+json"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Planning",
+          "icon": "calendar-days",
+          "active": "day.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "week.page.yaml",
+              "label": "Week",
+              "icon": "calendar"
+            },
+            {
+              "id": "shifts.page.yaml",
+              "label": "Shifts",
+              "icon": "list"
+            },
+            {
+              "id": "day.page.yaml",
+              "label": "Day timeline",
+              "icon": "gantt-chart"
+            },
+            {
+              "id": "roles.page.yaml",
+              "label": "Roles",
+              "icon": "palette"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
+            }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/planning/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/planning.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
+        },
+        "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Day timeline",
+              "note": "People by hours for a day, coloured by role."
+            },
+            "children": []
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "records",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.calendar",
+            "props": {
+              "rows": "{{ (data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').filter(e => !!e.data.date).map(e => ({ path: e.path, start: e.data.date + 'T' + (e.data.startTime || '00:00'), end: e.data.date + 'T' + (e.data.endTime || e.data.startTime || '23:59'), title: e.data.employee || e.data.code, employee: e.data.employee || 'Unfilled', role: String(e.data.role || '').split('/').pop(), status: e.data.status })) }}",
+              "views": [
+                "resource",
+                "day",
+                "week"
+              ],
+              "showLegend": true,
+              "emptyText": "Nothing scheduled",
+              "start": "start",
+              "end": "end",
+              "title": "title",
+              "colorBy": "role",
+              "view": "resource",
+              "resourceKey": "employee"
+            },
+            "on": {
+              "open": [
+                {
+                  "open-file": {
+                    "path": "{{ event.row.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').filter(e => (e.data.status || 'draft') === 'draft').map(e => ({ path: e.path, date: e.data.date, time: (e.data.startTime || '') + '–' + (e.data.endTime || ''), employee: e.data.employee || 'Unfilled', role: String(e.data.role || '').split('/').pop() })).sort((a, b) => a.date < b.date ? -1 : 1) }}",
+              "columns": [
+                {
+                  "key": "date",
+                  "label": "Draft shift",
+                  "format": "date"
+                },
+                {
+                  "key": "time",
+                  "label": "Time"
+                },
+                {
+                  "key": "employee",
+                  "label": "Person"
+                },
+                {
+                  "key": "role",
+                  "label": "Role"
+                }
+              ],
+              "emptyText": "No draft shifts; every shift is published.",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

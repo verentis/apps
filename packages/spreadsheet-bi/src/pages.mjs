@@ -63,9 +63,21 @@ function recordExtras(kind) {
   const resultRows = `(form.values.results || []).reduce((all, r) => all.concat(r.groups && r.groups.length`
     + ` ? r.groups.map(g => ({ title: r.title || '', detail: g.key || '', value: g.value === undefined ? '' : g.value, note: r.note || '' }))`
     + ` : [{ title: r.title || '', detail: '', value: r.value === undefined ? '' : r.value, note: r.note || '' }]), [])`
+  // The snapshot's dashboard computed live now, to set beside the frozen values.
+  const dashboardTiles = `(((data.dashboards || []).find(e => e.path === form.values.dashboard) || {}).data || {}).tiles || []`
+  const compared = `${resultRows}.map(r => ({ title: r.title, detail: r.detail, then: r.value,`
+    + ` now: ((data.liverows || []).find(l => l.title === r.title && String(l.detail || '') === String(r.detail || '')) || {}).value }))`
+    + `.map(r => ({ title: r.title, detail: r.detail, then: r.then, now: r.now === undefined ? '—' : r.now,`
+    + ` change: r.now === undefined || r.then === '' || !Number.isFinite(Number(r.then)) || !Number.isFinite(Number(r.now)) ? '' : (Number(r.now) - Number(r.then) > 0 ? '+' : '') + (Math.round((Number(r.now) - Number(r.then)) * 100) / 100) }))`
   return {
-    access: [dashboardsAccess('Choose the dashboard a snapshot computes'), schemaAccess],
-    data: dashboardSources,
+    access: [dashboardsAccess('Choose the dashboard a snapshot computes'), schemaAccess,
+      ...sourceContainers.map(path => ({ path, reason: `Compare the frozen values with ${path} now (when the owning app is installed)` }))],
+    data: {
+      ...dashboardSources,
+      ...Object.fromEntries(sourceContainers.map(path => [sourceKey(path), { kind: 'folder', path, contents: true }])),
+      liverows: { kind: 'computed', expr: tileRows(`(${dashboardTiles})`) },
+      compared: { kind: 'computed', expr: compared },
+    },
     notices: [
       { ...text('This snapshot was taken at {{ form.values.takenAt }} and is locked.', 'muted'), rules: { visible: taken } },
     ],
@@ -79,7 +91,10 @@ function recordExtras(kind) {
     },
     panels: [card('Results', [
       table(`{{ ${resultRows} }}`, [['title', 'Tile'], ['detail', 'Group'], ['value', 'Value', 'end'], ['note', 'Note']], 'No results yet. Take the snapshot to compute them.'),
-    ])],
+    ]), { ...card('Compared with live', [
+      text('The frozen values next to what the same tiles show now, computed from the source containers as this page loads.', 'muted'),
+      table('{{ data.compared }}', [['title', 'Tile'], ['detail', 'Group'], ['then', 'Then', 'end'], ['now', 'Now', 'end'], ['change', 'Change', 'end']], 'Nothing to compare yet.'),
+    ]), rules: { visible: taken } }],
     locked: taken,
   }
 }
@@ -288,8 +303,13 @@ function viewerPage() {
           dashboardoptions: { kind: 'computed', expr: options('dashboards', "e.data.name || ''") },
           selected: { kind: 'computed', expr: selected },
           tilerows: { kind: 'computed', expr: tileRows(`((${selected} || {}).tiles || [])`) },
+          drillrows: { kind: 'computed', expr: `(state.drill ? [((((${selected} || {}).tiles) || []).find(t => (t.title || '') === state.drill.title) || null)] : []).filter(t => !!t)`
+            + `.reduce((all, t) => all.concat((${sourcesMap}[t.source] || []).filter(x => x.kind === 'file' && x.data && x.data.state !== 'archived')`
+            + `.filter(x => !t.filter || !t.filter.field || String(${get('x.data', 't.filter.field')}) === String(t.filter.equals === undefined || t.filter.equals === null ? '' : t.filter.equals))`
+            + `.filter(x => !state.drill.detail || ${groupKey(get('x.data', 't.groupByField'))} === state.drill.detail)`
+            + `.map(x => ({ path: x.path, code: x.data.code || x.name, label: x.data.name || x.data.title || x.data.subject || x.data.description || '', value: t.valueField ? ${get('x.data', 't.valueField')} : '' }))), [])` },
         },
-        state: { dashboard: '' },
+        state: { dashboard: '', drill: null },
         tree: page([
           pageHeader(
             [heading('Dashboard viewer'), text('Tile values are computed live from the source containers each time this page loads. Take a snapshot to freeze them.', 'muted')], [
@@ -304,7 +324,14 @@ function viewerPage() {
           ]),
           { ...text('Choose a dashboard to compute its tiles.', 'muted'), rules: { visible: '!state.dashboard' } },
           { ...text('{{ (data.selected && data.selected.name) || \'\' }} — {{ (data.selected && data.selected.description) || \'\' }}', 'muted'), rules: { visible: '!!data.selected' } },
-          { ...table('{{ data.tilerows }}', tileColumns, 'This dashboard has no tiles yet. Add tiles in its form.'), rules: { visible: '!!state.dashboard' } },
+          { ...table('{{ data.tilerows }}', tileColumns, 'This dashboard has no tiles yet. Add tiles in its form.'), rules: { visible: '!!state.dashboard' },
+            props: { ...table('{{ data.tilerows }}', tileColumns, '').props, clickable: true, emptyText: 'This dashboard has no tiles yet. Add tiles in its form.' },
+            on: { 'row-click': [{ 'set-state': { key: 'drill', value: { $expr: '({ title: event.title, detail: event.detail })' } } }] } },
+          // Drill-down: the records behind the chosen tile row (its source, its filter, and the group the row is).
+          { ...card("{{ 'Records behind ' + state.drill.title + (state.drill.detail ? ' · ' + state.drill.detail : '') }}", [
+            table('{{ data.drillrows }}', [['code', 'Record'], ['label', 'Name'], ['value', 'Value', 'end']], 'No records behind this tile row.', true),
+            button('Close', [{ 'set-state': { key: 'drill', value: null } }], undefined, 'ghost'),
+          ]), rules: { visible: '!!state.dashboard && !!state.drill' } },
           text('Sums are computed from decimal-string amounts; non-numeric values and unavailable containers are skipped with a note. Spreadsheet editing itself is provided by the platform\'s Office integration.', 'muted'),
         ]),
       },

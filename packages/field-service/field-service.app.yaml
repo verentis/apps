@@ -236,6 +236,15 @@
       },
       {
         "path": "/field-tasks",
+        "mode": "read",
+        "reason": "List technicians",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/technicians.page.yaml"
+        }
+      },
+      {
+        "path": "/field-tasks",
         "mode": "write",
         "reason": "Create field tasks with the next number",
         "origin": {

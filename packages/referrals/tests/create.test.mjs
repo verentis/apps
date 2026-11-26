@@ -13,12 +13,12 @@ const input = (creatable, parentPath, values = {}) => ({
 })
 
 describe('Referrals create script', () => {
-  it('creates a referral with the next code, create-only', async () => {
+  it('creates a referral by whoever creates it, named after the candidate, with the next code, create-only', async () => {
     const files = memoryFiles({ '/referrals/REF-0012': {} })
-    const result = await createRecord(input('referral', '/referrals', { siblings: ['REF-0012'], name: 'Thandi Dlamini' }), settings(), files, { uuid })
+    const result = await createRecord(input('referral', '/referrals', { siblings: ['REF-0012'], name: 'Thandi Dlamini', user: { id: 'u-1', name: 'Ben Smith' } }), settings(), files, { uuid })
     expect(result).toEqual({ path: '/referrals/REF-0013' })
     expect(files.json('/referrals/REF-0013')).toMatchObject({
-      kind: 'referral', code: 'REF-0013', referrerName: 'Thandi Dlamini', status: 'submitted', points: 0, id: uuid(),
+      kind: 'referral', code: 'REF-0013', referrerName: 'Ben Smith', candidateName: 'Thandi Dlamini', status: 'submitted', points: 0, id: uuid(),
     })
   })
 

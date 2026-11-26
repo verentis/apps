@@ -1,13 +1,16 @@
 // What Timesheets adds to its generated pages: the week grid (project × day) where hours are typed straight into
 // the cells, and hours per project.
-import { button, chart, row, section } from '../../../tools/file-apps/canvas.mjs'
+import { button, chart, row, section, signedIn } from '../../../tools/file-apps/canvas.mjs'
 import { containers, installRoot, mimeTypes, settingsPath, templates } from './contracts.mjs'
 import { postScriptPath } from './app.mjs'
 
 const live = "e.kind === 'file' && e.data && e.data.state !== 'archived'"
 const days = "Array.from({ length: 7 }, (_, i) => Date(Date.now() - (6 - i) * 86400000).slice(0, 10))"
-// Whose week: the person picked above the grid, else the settings' default employee, else who is signed in.
-const person = "(state.employee || (data.settings && data.settings.employee) || (ctx.user && ctx.user.name) || '')"
+// Whose week: the person picked above the grid, else who is signed in (their Employees name, found by work email,
+// else their sign-in name), else the settings' default employee.
+const person = "(state.employee || (data.me && data.me.name) || (data.settings && data.settings.employee) || '')"
+// That person's Employees record (signed-in user's own, else the record with that name); empty when there is none.
+const personRef = `(data.me && data.me.path && data.me.name === ${person} ? data.me.path : ((data.signedinstaff || []).filter(e => e.kind === 'file' && e.data && e.data.status !== 'terminated' && String(e.data.name || '') === ${person}).map(e => e.path)[0] || ''))`
 const week = `(data.entries || []).filter(e => ${live} && ${days}.includes(e.data.date) && (!${person} || e.data.employee === ${person}))`
 const people = `(data.entries || []).filter(e => ${live} && !!e.data.employee).map(e => e.data.employee).filter((name, index, names) => names.indexOf(name) === index).sort()`
 // One entry per project and day can be typed into; a day with two entries for a project is changed on the entries.
@@ -23,8 +26,8 @@ export const views = {
     label: 'Week', icon: 'calendar-days',
     writes: [containers.entries.path],
     state: { employee: '' },
-    data: { settings: { kind: 'file', path: settingsPath, parse: 'json' } },
-    access: [{ path: settingsPath, mode: 'read', reason: 'Show the default employee\'s week' }],
+    data: { settings: { kind: 'file', path: settingsPath, parse: 'json' }, ...signedIn.data },
+    access: [{ path: settingsPath, mode: 'read', reason: 'Show the default employee\'s week when nobody is signed in' }, ...signedIn.access],
     top: [section('Week', [row([{
       type: 'canvas.form.select',
       props: { label: 'Employee', value: `{{ ${person} }}`, options: `{{ ${people}.concat(${person} && !${people}.includes(${person}) ? [${person}] : []).map(name => ({ value: name, label: name })) }}` },
@@ -58,7 +61,7 @@ export const views = {
               template: { $expr: `'${JSON.stringify(templates.entry).replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'` }, siblings: "{{ (data.entries || []).map(e => e.name) }}",
             },
           } },
-          { 'patch-record': { if: 'event.records.length === 0', path: '{{ state.created.path }}', values: { date: '{{ event.column }}', project: '{{ event.row }}', employee: `{{ ${person} }}`, hours, updatedAt: '{{ Date() }}' } } },
+          { 'patch-record': { if: 'event.records.length === 0', path: '{{ state.created.path }}', values: { date: '{{ event.column }}', project: '{{ event.row }}', employee: `{{ ${person} }}`, employeeRef: `{{ ${personRef} }}`, hours, updatedAt: '{{ Date() }}' } } },
           { 'refresh-source': { source: 'entries' } },
         ],
       },

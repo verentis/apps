@@ -283,6 +283,15 @@
         }
       },
       {
+        "path": "/appointments",
+        "mode": "read",
+        "reason": "List all appointments",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/all.page.yaml"
+        }
+      },
+      {
         "path": "/appointment-types",
         "mode": "write",
         "reason": "Create appointment types with the next code",

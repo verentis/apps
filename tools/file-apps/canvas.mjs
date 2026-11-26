@@ -224,7 +224,8 @@ export function formControl(field, readOnly = archived) {
       minimum: field.minimum ?? 0, maximum: field.maximum ?? 1000, addLabel: field.addLabel ?? 'Add row',
     }, layout: { tablet: { colSpan: 2 } }, ...ruleProps }
   }
-  const control = (type, extra = {}) => ({ type, props: { ...props, ...extra }, ...layout, ...ruleProps })
+  // `on` handlers run after the binding writes the value (e.g. a picker that also fills a name).
+  const control = (type, extra = {}) => ({ type, props: { ...props, ...extra }, ...layout, ...ruleProps, ...(field.on ? { on: field.on } : {}) })
   // A choice read from other records is searched as you type; a short fixed list is shown as segments.
   if (field.type === 'select') {
     const fixed = Array.isArray(field.options) ? field.options : null
@@ -857,3 +858,98 @@ export const customerLines = "[form.values.customer && form.values.customer.name
 
 /** The calling code for a party's phone numbers typed without one, from the party's country. */
 export const callingCode = countryExpression => `{{ ({ ZA: '+27', NA: '+264', BW: '+267', ZW: '+263', MZ: '+258', LS: '+266', SZ: '+268', KE: '+254', NG: '+234', GB: '+44', IE: '+353', NL: '+31', DE: '+49', FR: '+33', US: '+1', CA: '+1', AU: '+61', NZ: '+64' })[${countryExpression}] || '' }}`
+
+/**
+ * A list page over a container's records: `rows` is an expression over `data.records` (the container's active
+ * records, `{ path, name, data }`) mapped to table rows, each carrying the record's `path` so a row opens its form
+ * beside the list. `columns` are `table` columns. `top` adds nodes above the table (stats, a calendar…), `extra`
+ * more data sources. The page is unbound, so `appNavigation` adds it to the app's sidebar.
+ */
+export function listPage({ file, id, name, title = name, note, description, icon, container, mime, access, rows, columns, empty, top = [], extra = {}, state, clickable = true, permissions, me = false }) {
+  const records = `(data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived')`
+  if (me) {
+    extra = { ...signedIn.data, ...extra }
+    access = [...signedIn.access, ...(access ?? [])]
+  }
+  return {
+    file,
+    document: {
+      'api-version': apiVersion, kind: 'Page',
+      metadata: { id, name, description, icon },
+      spec: {
+        access: [{ path: container, reason: `List ${name.toLowerCase()}` }, ...(access ?? [])],
+        data: { records: folder(container, mime), ...extra },
+        ...(state ? { state } : {}),
+        ...(permissions ? { permissions } : {}),
+        tree: page([
+          pageHeader([heading(title), text(note ?? description, 'muted')]),
+          ...status('records'),
+          ...top.map(node => JSON.parse(JSON.stringify(node).replaceAll('RECORDS', records.replaceAll('"', '\\"')))),
+          table(`{{ ${rows.replaceAll('RECORDS', records)} }}`, columns, empty, clickable),
+        ]),
+      },
+    },
+  }
+}
+
+/** An Employees record's display name (`e`), including records written with given and family names. */
+const employeeName = "String(e.data.name || [e.data.givenName, e.data.familyName].filter(Boolean).join(' ') || '')"
+
+/** The Employees app's directory, which other apps read when it is installed. */
+export const employeeDirectory = { path: '/employees', mime: 'application/vnd.verentis.employees.employee+json' }
+
+/**
+ * Who the signed-in user is, as `data.me` = `{ path, name }`: their Employees record, found by its work email (the
+ * host shares the email once the app declares `user-profile`, which the build adds), else just their sign-in name.
+ * Spread `data` and `access` into a document, or pass `me: true` to `listPage`.
+ */
+export const signedIn = {
+  data: {
+    signedinstaff: folder(employeeDirectory.path, employeeDirectory.mime),
+    me: {
+      kind: 'computed',
+      expr: "((data.signedinstaff || []).filter(e => e.kind === 'file' && e.data && e.data.status !== 'terminated' && !!ctx.user && !!ctx.user.email"
+        + " && String(e.data.workEmail || '').toLowerCase() === String(ctx.user.email).toLowerCase()).map(e => ({ path: e.path, name: String(e.data.name || '') }))[0]"
+        + " || { path: '', name: ctx.user ? String(ctx.user.name || '') : '' })",
+    },
+  },
+  access: [{ path: employeeDirectory.path, reason: 'Find your Employees record by your work email (when Employees is installed)' }],
+}
+
+/**
+ * Whether record `e` is the signed-in user's (needs `signedIn`): its employee link is their Employees record, or the
+ * name on it is their employee name or sign-in name (case-insensitive). `refField` is optional.
+ */
+export function mine(nameField, refField) {
+  const name = `String(e.data.${nameField} || '').toLowerCase()`
+  const byRef = refField ? `(!!data.me && !!data.me.path && e.data.${refField} === data.me.path) || ` : ''
+  return `(!!ctx.user && (${byRef}(${name} !== '' && [data.me ? data.me.name : '', String(ctx.user.name || '')].filter(n => !!n).map(n => n.toLowerCase()).includes(${name}))))`
+}
+
+/**
+ * A record field that links a person to their Employees record (`refKey`, a path) beside the name it shows
+ * (`nameKey`). Spread `sources.data`/`sources.access` into the form (they include `signedIn`); `field` is the picker,
+ * which copies the chosen employee's name; `meButton` and `meAction` link the signed-in user's own record.
+ * Without Employees installed the picker is empty and the name stays typed.
+ */
+export function employeeLink(refKey, nameKey, { label = 'Employee record', description = 'Optional. Choosing a record fills the name.', visible = 'true', disabled = 'form.saving' } = {}) {
+  const nameOf = path => `((data.employeelinks || []).filter(e => e.kind === 'file' && e.data && e.path === ${path}).map(e => ${employeeName})[0] || form.values.${nameKey} || '')`
+  const action = `link-me-${refKey.toLowerCase()}`
+  return {
+    sources: {
+      data: {
+        ...signedIn.data,
+        employeelinks: folder(employeeDirectory.path, employeeDirectory.mime),
+        employeelinkoptions: { kind: 'computed', expr: `(data.employeelinks || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && e.data.status !== 'terminated').map(e => ({ value: e.path, label: (${employeeName} || e.name) + (e.data.jobTitle ? ' · ' + e.data.jobTitle : '') }))` },
+      },
+      access: signedIn.access,
+    },
+    field: { key: refKey, label, type: 'select', options: '{{ data.employeelinkoptions }}', description,
+      on: { update: [{ 'patch-form': { values: { [nameKey]: `{{ ${nameOf('event')} }}` } } }] } },
+    meButton: button('This is me', action, {
+      visible: `(${visible}) && !!data.me && !!data.me.path && form.values.${refKey} !== data.me.path`, disabled,
+    }, 'ghost', 'user-check'),
+    meAction: { [action]: { steps: [{ 'patch-form': { values: { [refKey]: '{{ data.me.path }}', [nameKey]: '{{ data.me.name }}' } } }] } },
+  }
+}
+

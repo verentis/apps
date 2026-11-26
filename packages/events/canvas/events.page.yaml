@@ -66,6 +66,11 @@
               "icon": "ticket"
             },
             {
+              "id": "check-in.page.yaml",
+              "label": "Check-in",
+              "icon": "scan-line"
+            },
+            {
               "id": "settings",
               "label": "Settings",
               "icon": "settings"

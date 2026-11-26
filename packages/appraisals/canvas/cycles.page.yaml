@@ -1,0 +1,127 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "appraisals-cycles",
+    "name": "Past cycles",
+    "description": "Completed cycles with how many were appraised and the average score.",
+    "icon": "history"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/appraisals",
+        "reason": "List past cycles"
+      }
+    ],
+    "data": {
+      "records": {
+        "kind": "folder",
+        "path": "/appraisals",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.appraisals.appraisal+json"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Appraisals",
+          "icon": "clipboard-check",
+          "active": "cycles.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Current cycle",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "appraisals.page.yaml",
+              "label": "Cycle board",
+              "icon": "kanban"
+            },
+            {
+              "id": "scores.page.yaml",
+              "label": "Scores",
+              "icon": "star"
+            },
+            {
+              "id": "cycles.page.yaml",
+              "label": "Past cycles",
+              "icon": "history"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
+            }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/appraisals/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/appraisals.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
+        },
+        "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Past cycles",
+              "note": "Completed cycles with how many were appraised and the average score."
+            },
+            "children": []
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "records",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').filter(e => e.data.status === 'done').map(e => e.data.period || 'No period').filter((p, i, all) => all.indexOf(p) === i).map(p => ({ cycle: p, appraised: (data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').filter(e => e.data.status === 'done' && (e.data.period || 'No period') === p).length, average: ((data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').filter(e => e.data.status === 'done' && (e.data.period || 'No period') === p && e.data.overallScore != null && e.data.overallScore !== '').reduce((sum, e, i, all) => sum + Number(e.data.overallScore) / all.length, 0)).toFixed(2) })).sort((a, b) => a.cycle < b.cycle ? 1 : -1) }}",
+              "columns": [
+                {
+                  "key": "cycle",
+                  "label": "Cycle"
+                },
+                {
+                  "key": "appraised",
+                  "label": "Appraised",
+                  "align": "end"
+                },
+                {
+                  "key": "average",
+                  "label": "Average score",
+                  "align": "end"
+                }
+              ],
+              "emptyText": "No cycle has been completed yet.",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

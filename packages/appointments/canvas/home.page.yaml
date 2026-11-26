@@ -72,6 +72,11 @@
               "icon": "shapes"
             },
             {
+              "id": "all.page.yaml",
+              "label": "All appointments",
+              "icon": "list"
+            },
+            {
               "id": "settings",
               "label": "Settings",
               "icon": "settings"

@@ -2,6 +2,7 @@
 // stage. Review rules (submit, approve with an approver, reject with a reason, apply with an effective date)
 // are enforced by the review script the form runs; the form only locks what the script has decided.
 import { views } from './views.mjs'
+import { listPages } from './lists.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, grid, heading, humanize,
   iconName, linkButton, openFile, options, page, panel, projectRegistration, recordButtons, row, scriptAction,
@@ -139,6 +140,6 @@ function homePage() {
 }
 
 export function buildPages() {
-  const documents = [homePage(), ...recordKinds.map(recordForm)]
+  const documents = [homePage(), ...recordKinds.map(recordForm), ...listPages()]
   return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

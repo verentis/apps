@@ -1,0 +1,153 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "manufacturing-queue",
+    "name": "Operation queue",
+    "description": "What is running now and what is next on the shop floor, by workcenter.",
+    "icon": "factory"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/manufacturing-orders",
+        "reason": "List operation queue"
+      },
+      {
+        "path": "/bills-of-materials",
+        "reason": "Name the workcenter of each operation"
+      }
+    ],
+    "data": {
+      "records": {
+        "kind": "folder",
+        "path": "/manufacturing-orders",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.manufacturing.order+json"
+      },
+      "boms": {
+        "kind": "folder",
+        "path": "/bills-of-materials",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.manufacturing.bom+json"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Manufacturing",
+          "icon": "factory",
+          "active": "queue.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "boms.page.yaml",
+              "label": "Bills of materials",
+              "icon": "list-tree"
+            },
+            {
+              "id": "orders.page.yaml",
+              "label": "Orders",
+              "icon": "kanban"
+            },
+            {
+              "id": "queue.page.yaml",
+              "label": "Operation queue",
+              "icon": "factory"
+            }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/manufacturing/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            }
+          ]
+        },
+        "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Operation queue",
+              "note": "What is running now and what is next on the shop floor, by workcenter."
+            },
+            "children": []
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "records",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').filter(e => e.data.status === 'in-progress' || e.data.status === 'confirmed').reduce((all, e) => all.concat((e.data.operations || []).map((o, i, ops) => ({ path: e.path, order: e.data.code || e.name, product: e.data.productName || '', operation: o.label, workcenter: (((((data.boms || []).find(b => b.path === e.data.bom) || {}).data || {}).routing || []).find(r => r.operation === o.label) || {}).workcenter || '', state: o.done ? 'Done' : o.startedAt ? 'Running' : ops.findIndex(x => !x.done) === i ? 'Next' : 'Waiting', started: o.startedAt || '', minutes: o.seconds ? Math.round(o.seconds / 60) : '' })).filter(r => r.state !== 'Done')), []).sort((a, b) => (a.state === 'Running' ? 0 : a.state === 'Next' ? 1 : 2) - (b.state === 'Running' ? 0 : b.state === 'Next' ? 1 : 2) || (a.workcenter < b.workcenter ? -1 : 1)) }}",
+              "columns": [
+                {
+                  "key": "state",
+                  "label": "State",
+                  "format": "badge"
+                },
+                {
+                  "key": "workcenter",
+                  "label": "Workcenter"
+                },
+                {
+                  "key": "operation",
+                  "label": "Operation"
+                },
+                {
+                  "key": "order",
+                  "label": "Order"
+                },
+                {
+                  "key": "product",
+                  "label": "Product"
+                },
+                {
+                  "key": "started",
+                  "label": "Started",
+                  "format": "relative"
+                },
+                {
+                  "key": "minutes",
+                  "label": "Minutes",
+                  "align": "end"
+                }
+              ],
+              "emptyText": "Nothing is running or waiting on the shop floor.",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

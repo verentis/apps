@@ -59,6 +59,11 @@
         "reason": "Offer the approval types and show each request's threshold"
       },
       {
+        "path": "/employees",
+        "mode": "read",
+        "reason": "Find your Employees record by your work email (when Employees is installed)"
+      },
+      {
         "path": "/applications/approvals/",
         "mode": "read",
         "reason": "Read the Approvals schemas and run the decision script"
@@ -68,6 +73,10 @@
       {
         "path": "/approval-types",
         "reason": "Offer the approval types and show each request's threshold"
+      },
+      {
+        "path": "/employees",
+        "reason": "Find your Employees record by your work email (when Employees is installed)"
       },
       {
         "path": "/applications/approvals/",
@@ -88,6 +97,26 @@
       "typeoptions": {
         "kind": "computed",
         "expr": "(data.types || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + (e.data.name || ''), value: e.path }))"
+      },
+      "signedinstaff": {
+        "kind": "folder",
+        "path": "/employees",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.employees.employee+json"
+      },
+      "me": {
+        "kind": "computed",
+        "expr": "((data.signedinstaff || []).filter(e => e.kind === 'file' && e.data && e.data.status !== 'terminated' && !!ctx.user && !!ctx.user.email && String(e.data.workEmail || '').toLowerCase() === String(ctx.user.email).toLowerCase()).map(e => ({ path: e.path, name: String(e.data.name || '') }))[0] || { path: '', name: ctx.user ? String(ctx.user.name || '') : '' })"
+      },
+      "employeelinks": {
+        "kind": "folder",
+        "path": "/employees",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.employees.employee+json"
+      },
+      "employeelinkoptions": {
+        "kind": "computed",
+        "expr": "(data.employeelinks || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && e.data.status !== 'terminated').map(e => ({ value: e.path, label: (String(e.data.name || [e.data.givenName, e.data.familyName].filter(Boolean).join(' ') || '') || e.name) + (e.data.jobTitle ? ' · ' + e.data.jobTitle : '') }))"
       }
     },
     "state": {
@@ -164,6 +193,23 @@
                     }
                   }
                 ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "This is me",
+                  "variant": "ghost",
+                  "icon": "user-check",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "link-me-requesterref"
+                },
+                "rules": {
+                  "visible": "(!form.values.status || form.values.status === 'draft') && !(form.values.state === 'archived') && (true) && !!data.me && !!data.me.path && form.values.requesterRef !== data.me.path",
+                  "disabled": "form.saving"
+                },
+                "slot": "actions"
               },
               {
                 "type": "canvas.button",
@@ -529,6 +575,30 @@
                         }
                       },
                       {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Employee record",
+                          "value": "{{ form.values.requesterRef }}",
+                          "description": "Optional. Choosing a record fills the name.",
+                          "options": "{{ data.employeelinkoptions }}",
+                          "searchable": true
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft')))"
+                        },
+                        "on": {
+                          "update": [
+                            {
+                              "patch-form": {
+                                "values": {
+                                  "requester": "{{ ((data.employeelinks || []).filter(e => e.kind === 'file' && e.data && e.path === event).map(e => String(e.data.name || [e.data.givenName, e.data.familyName].filter(Boolean).join(' ') || ''))[0] || form.values.requester || '') }}"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
                         "type": "canvas.form.input",
                         "props": {
                           "label": "Title",
@@ -698,6 +768,18 @@
             "toast": {
               "message": "Restored",
               "variant": "success"
+            }
+          }
+        ]
+      },
+      "link-me-requesterref": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "requesterRef": "{{ data.me.path }}",
+                "requester": "{{ data.me.name }}"
+              }
             }
           }
         ]

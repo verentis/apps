@@ -21,7 +21,11 @@
       {
         "path": "/settings/timesheets.json",
         "mode": "read",
-        "reason": "Show the default employee's week"
+        "reason": "Show the default employee's week when nobody is signed in"
+      },
+      {
+        "path": "/employees",
+        "reason": "Find your Employees record by your work email (when Employees is installed)"
       }
     ],
     "data": {
@@ -45,6 +49,16 @@
         "kind": "file",
         "path": "/settings/timesheets.json",
         "parse": "json"
+      },
+      "signedinstaff": {
+        "kind": "folder",
+        "path": "/employees",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.employees.employee+json"
+      },
+      "me": {
+        "kind": "computed",
+        "expr": "((data.signedinstaff || []).filter(e => e.kind === 'file' && e.data && e.data.status !== 'terminated' && !!ctx.user && !!ctx.user.email && String(e.data.workEmail || '').toLowerCase() === String(ctx.user.email).toLowerCase()).map(e => ({ path: e.path, name: String(e.data.name || '') }))[0] || { path: '', name: ctx.user ? String(ctx.user.name || '') : '' })"
       }
     },
     "tree": [
@@ -64,6 +78,11 @@
               "id": "week.page.yaml",
               "label": "Week",
               "icon": "calendar-days"
+            },
+            {
+              "id": "to-validate.page.yaml",
+              "label": "To validate",
+              "icon": "check-check"
             },
             {
               "id": "settings",
@@ -139,8 +158,8 @@
                     "type": "canvas.form.select",
                     "props": {
                       "label": "Employee",
-                      "value": "{{ (state.employee || (data.settings && data.settings.employee) || (ctx.user && ctx.user.name) || '') }}",
-                      "options": "{{ (data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && !!e.data.employee).map(e => e.data.employee).filter((name, index, names) => names.indexOf(name) === index).sort().concat((state.employee || (data.settings && data.settings.employee) || (ctx.user && ctx.user.name) || '') && !(data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && !!e.data.employee).map(e => e.data.employee).filter((name, index, names) => names.indexOf(name) === index).sort().includes((state.employee || (data.settings && data.settings.employee) || (ctx.user && ctx.user.name) || '')) ? [(state.employee || (data.settings && data.settings.employee) || (ctx.user && ctx.user.name) || '')] : []).map(name => ({ value: name, label: name })) }}"
+                      "value": "{{ (state.employee || (data.me && data.me.name) || (data.settings && data.settings.employee) || '') }}",
+                      "options": "{{ (data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && !!e.data.employee).map(e => e.data.employee).filter((name, index, names) => names.indexOf(name) === index).sort().concat((state.employee || (data.me && data.me.name) || (data.settings && data.settings.employee) || '') && !(data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && !!e.data.employee).map(e => e.data.employee).filter((name, index, names) => names.indexOf(name) === index).sort().includes((state.employee || (data.me && data.me.name) || (data.settings && data.settings.employee) || '')) ? [(state.employee || (data.me && data.me.name) || (data.settings && data.settings.employee) || '')] : []).map(name => ({ value: name, label: name })) }}"
                     },
                     "on": {
                       "update": [
@@ -156,7 +175,7 @@
                   {
                     "type": "canvas.button",
                     "props": {
-                      "label": "Validate week ({{ (data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && Array.from({ length: 7 }, (_, i) => Date(Date.now() - (6 - i) * 86400000).slice(0, 10)).includes(e.data.date) && (!(state.employee || (data.settings && data.settings.employee) || (ctx.user && ctx.user.name) || '') || e.data.employee === (state.employee || (data.settings && data.settings.employee) || (ctx.user && ctx.user.name) || ''))).filter(e => (e.data.status || 'draft') === 'draft' && Number(e.data.hours || 0) > 0).length }})",
+                      "label": "Validate week ({{ (data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && Array.from({ length: 7 }, (_, i) => Date(Date.now() - (6 - i) * 86400000).slice(0, 10)).includes(e.data.date) && (!(state.employee || (data.me && data.me.name) || (data.settings && data.settings.employee) || '') || e.data.employee === (state.employee || (data.me && data.me.name) || (data.settings && data.settings.employee) || ''))).filter(e => (e.data.status || 'draft') === 'draft' && Number(e.data.hours || 0) > 0).length }})",
                       "icon": "check-check",
                       "size": "sm"
                     },
@@ -165,12 +184,12 @@
                         {
                           "confirm": {
                             "title": "Validate this week",
-                            "message": "Validate {{ (data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && Array.from({ length: 7 }, (_, i) => Date(Date.now() - (6 - i) * 86400000).slice(0, 10)).includes(e.data.date) && (!(state.employee || (data.settings && data.settings.employee) || (ctx.user && ctx.user.name) || '') || e.data.employee === (state.employee || (data.settings && data.settings.employee) || (ctx.user && ctx.user.name) || ''))).filter(e => (e.data.status || 'draft') === 'draft' && Number(e.data.hours || 0) > 0).length }} draft entries of the last seven days? Each one's hours are checked and it is locked."
+                            "message": "Validate {{ (data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && Array.from({ length: 7 }, (_, i) => Date(Date.now() - (6 - i) * 86400000).slice(0, 10)).includes(e.data.date) && (!(state.employee || (data.me && data.me.name) || (data.settings && data.settings.employee) || '') || e.data.employee === (state.employee || (data.me && data.me.name) || (data.settings && data.settings.employee) || ''))).filter(e => (e.data.status || 'draft') === 'draft' && Number(e.data.hours || 0) > 0).length }} draft entries of the last seven days? Each one's hours are checked and it is locked."
                           }
                         },
                         {
                           "for-each": {
-                            "items": "{{ (data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && Array.from({ length: 7 }, (_, i) => Date(Date.now() - (6 - i) * 86400000).slice(0, 10)).includes(e.data.date) && (!(state.employee || (data.settings && data.settings.employee) || (ctx.user && ctx.user.name) || '') || e.data.employee === (state.employee || (data.settings && data.settings.employee) || (ctx.user && ctx.user.name) || ''))).filter(e => (e.data.status || 'draft') === 'draft' && Number(e.data.hours || 0) > 0).map(e => e.path) }}",
+                            "items": "{{ (data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && Array.from({ length: 7 }, (_, i) => Date(Date.now() - (6 - i) * 86400000).slice(0, 10)).includes(e.data.date) && (!(state.employee || (data.me && data.me.name) || (data.settings && data.settings.employee) || '') || e.data.employee === (state.employee || (data.me && data.me.name) || (data.settings && data.settings.employee) || ''))).filter(e => (e.data.status || 'draft') === 'draft' && Number(e.data.hours || 0) > 0).map(e => e.path) }}",
                             "as": "entry",
                             "steps": [
                               {
@@ -200,7 +219,7 @@
                       ]
                     },
                     "rules": {
-                      "disabled": "(data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && Array.from({ length: 7 }, (_, i) => Date(Date.now() - (6 - i) * 86400000).slice(0, 10)).includes(e.data.date) && (!(state.employee || (data.settings && data.settings.employee) || (ctx.user && ctx.user.name) || '') || e.data.employee === (state.employee || (data.settings && data.settings.employee) || (ctx.user && ctx.user.name) || ''))).filter(e => (e.data.status || 'draft') === 'draft' && Number(e.data.hours || 0) > 0).length === 0"
+                      "disabled": "(data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && Array.from({ length: 7 }, (_, i) => Date(Date.now() - (6 - i) * 86400000).slice(0, 10)).includes(e.data.date) && (!(state.employee || (data.me && data.me.name) || (data.settings && data.settings.employee) || '') || e.data.employee === (state.employee || (data.me && data.me.name) || (data.settings && data.settings.employee) || ''))).filter(e => (e.data.status || 'draft') === 'draft' && Number(e.data.hours || 0) > 0).length === 0"
                     }
                   }
                 ]
@@ -208,7 +227,7 @@
               {
                 "type": "canvas.matrix",
                 "props": {
-                  "rows": "{{ (data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && Array.from({ length: 7 }, (_, i) => Date(Date.now() - (6 - i) * 86400000).slice(0, 10)).includes(e.data.date) && (!(state.employee || (data.settings && data.settings.employee) || (ctx.user && ctx.user.name) || '') || e.data.employee === (state.employee || (data.settings && data.settings.employee) || (ctx.user && ctx.user.name) || ''))).map(e => ({ path: e.path, project: e.data.project || '', date: e.data.date, hours: Number(e.data.hours || 0), status: e.data.status, shared: (data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && Array.from({ length: 7 }, (_, i) => Date(Date.now() - (6 - i) * 86400000).slice(0, 10)).includes(e.data.date) && (!(state.employee || (data.settings && data.settings.employee) || (ctx.user && ctx.user.name) || '') || e.data.employee === (state.employee || (data.settings && data.settings.employee) || (ctx.user && ctx.user.name) || ''))).filter(o => (o.data.project || '') === (e.data.project || '') && o.data.date === e.data.date).length > 1 })) }}",
+                  "rows": "{{ (data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && Array.from({ length: 7 }, (_, i) => Date(Date.now() - (6 - i) * 86400000).slice(0, 10)).includes(e.data.date) && (!(state.employee || (data.me && data.me.name) || (data.settings && data.settings.employee) || '') || e.data.employee === (state.employee || (data.me && data.me.name) || (data.settings && data.settings.employee) || ''))).map(e => ({ path: e.path, project: e.data.project || '', date: e.data.date, hours: Number(e.data.hours || 0), status: e.data.status, shared: (data.entries || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && Array.from({ length: 7 }, (_, i) => Date(Date.now() - (6 - i) * 86400000).slice(0, 10)).includes(e.data.date) && (!(state.employee || (data.me && data.me.name) || (data.settings && data.settings.employee) || '') || e.data.employee === (state.employee || (data.me && data.me.name) || (data.settings && data.settings.employee) || ''))).filter(o => (o.data.project || '') === (e.data.project || '') && o.data.date === e.data.date).length > 1 })) }}",
                   "rowKey": "project",
                   "columnKey": "date",
                   "value": "hours",
@@ -246,7 +265,7 @@
                           "parentPath": "/timesheets",
                           "mime": "application/vnd.verentis.timesheets.entry+json",
                           "template": {
-                            "$expr": "'{\"$schema\":\"https://schemas.verentis.io/timesheets/v1/entry.schema.json\",\"schemaVersion\":1,\"kind\":\"entry\",\"id\":\"{{ id }}\",\"state\":\"active\",\"createdAt\":\"{{ now }}\",\"updatedAt\":\"{{ now }}\",\"code\":\"\",\"employee\":\"\",\"date\":\"\",\"project\":\"\",\"task\":\"\",\"hours\":\"\",\"description\":\"{{ name }}\",\"status\":\"draft\"}'"
+                            "$expr": "'{\"$schema\":\"https://schemas.verentis.io/timesheets/v1/entry.schema.json\",\"schemaVersion\":1,\"kind\":\"entry\",\"id\":\"{{ id }}\",\"state\":\"active\",\"createdAt\":\"{{ now }}\",\"updatedAt\":\"{{ now }}\",\"code\":\"\",\"employee\":\"{{ user }}\",\"employeeRef\":\"\",\"date\":\"\",\"project\":\"\",\"task\":\"\",\"hours\":\"\",\"description\":\"{{ name }}\",\"status\":\"draft\"}'"
                           },
                           "siblings": "{{ (data.entries || []).map(e => e.name) }}"
                         }
@@ -259,7 +278,8 @@
                         "values": {
                           "date": "{{ event.column }}",
                           "project": "{{ event.row }}",
-                          "employee": "{{ (state.employee || (data.settings && data.settings.employee) || (ctx.user && ctx.user.name) || '') }}",
+                          "employee": "{{ (state.employee || (data.me && data.me.name) || (data.settings && data.settings.employee) || '') }}",
+                          "employeeRef": "{{ (data.me && data.me.path && data.me.name === (state.employee || (data.me && data.me.name) || (data.settings && data.settings.employee) || '') ? data.me.path : ((data.signedinstaff || []).filter(e => e.kind === 'file' && e.data && e.data.status !== 'terminated' && String(e.data.name || '') === (state.employee || (data.me && data.me.name) || (data.settings && data.settings.employee) || '')).map(e => e.path)[0] || '')) }}",
                           "hours": "{{ event.value.toFixed(2) }}",
                           "updatedAt": "{{ Date() }}"
                         }

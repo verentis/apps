@@ -2,13 +2,14 @@
 // the structures page. Computing, approving and posting (payslips, totals, the journal, immutability) are done by
 // the run script the forms run; the forms only lock what the script has posted.
 import { views } from './views.mjs'
+import { listPages } from './lists.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading, humanize,
   iconName, linkButton, openFile, options, page, panel, projectRegistration, recordButtons, row, scriptAction, appOperationsSource, withAppCall,
   sectionCards, stat, stats, status, table, tabs, text, toneExpression, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { accounting, containers, employees, installRoot, mimeTypes, recordKinds, schemaId, settingsPath } from './contracts.mjs'
-import { entities, postScriptPath, settingsSections } from './app.mjs'
+import { payee, entities, postScriptPath, settingsSections } from './app.mjs'
 
 export { collectSteps, documentFileAccess, projectRegistration } from '../../../tools/file-apps/canvas.mjs'
 
@@ -43,12 +44,11 @@ function recordExtras(kind) {
   if (kind === 'profile') {
     return {
       access: [
-        { path: employees.root, reason: 'Offer employee records to link (when Employees is installed)' },
+        ...payee.sources.access,
         { path: containers.structures.path, reason: 'Choose the salary structure this profile is paid by' },
       ],
       data: {
-        employeesrecords: folder(employees.root, employees.employeeMime),
-        employeeoptions: { kind: 'computed', expr: options('employeesrecords', "(e.data.name || [e.data.givenName, e.data.familyName].filter(Boolean).join(' ') || e.name)") },
+        ...payee.sources.data,
         structures: folder(containers.structures.path, mimeTypes.structure),
         structureoptions: { kind: 'computed', expr: options('structures', "e.data.name || ''") },
       },
@@ -244,6 +244,6 @@ function structuresPage() {
 }
 
 export function buildPages() {
-  const documents = [homePage(), structuresPage(), ...recordKinds.map(recordForm), settingsForm()]
+  const documents = [homePage(), structuresPage(), ...recordKinds.map(recordForm), settingsForm(), ...listPages()]
   return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

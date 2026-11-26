@@ -127,6 +127,24 @@
       {
         "path": "/legal-matters",
         "mode": "read",
+        "reason": "List intake",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/intake.page.yaml"
+        }
+      },
+      {
+        "path": "/legal-matters",
+        "mode": "read",
+        "reason": "List billing",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/billing.page.yaml"
+        }
+      },
+      {
+        "path": "/legal-matters",
+        "mode": "read",
         "reason": "List the matters and where each one stands",
         "origin": {
           "kind": "document",

@@ -1,8 +1,13 @@
+import { employeeLink } from '../../../tools/file-apps/canvas.mjs'
 import {
   codeDigits, codeSettings, containerOf, containers, createDefaults, installRoot, mimeTypes, recordKinds,
   settingsPath, statuses,
 } from './contracts.mjs'
 import { scriptConsent } from '../../../tools/file-apps/build.mjs'
+
+
+/** Who works the shift: an Employees record when Employees is installed (the picker fills the name), else a name. */
+export const worker = employeeLink('employeeRef', 'employee')
 
 export const version = '0.1.0'
 export const canvasOrigin = 'https://canvas.apps.localtest.me'
@@ -51,7 +56,7 @@ export const entities = {
     folderNames: ['shifts', 'planning'],
     sections: [
       { title: 'Shift', fields: [
-        select('employeeRef', 'Employee record', '{{ data.employeeoptions }}', { description: 'Optional. Choose an Employees record, then Copy name.' }),
+        worker.field,
         text('employee', 'Employee', { required: true, placeholder: 'Name or email' }),
         select('role', 'Role', '{{ data.roleoptions }}'),
         select('status', 'Status', labelled(statuses), { description: 'Published and confirmed are set by Publish and Confirm.', readOnly: 'true' })] },

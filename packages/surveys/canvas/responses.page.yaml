@@ -1,0 +1,147 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "surveys-responses",
+    "name": "Responses",
+    "description": "Every response; open one to read it.",
+    "icon": "message-square-text"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/survey-responses",
+        "reason": "List responses"
+      }
+    ],
+    "data": {
+      "records": {
+        "kind": "folder",
+        "path": "/survey-responses",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.surveys.response+json"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Surveys",
+          "icon": "clipboard-list",
+          "active": "responses.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "surveys.page.yaml",
+              "label": "Surveys",
+              "icon": "kanban"
+            },
+            {
+              "id": "results.page.yaml",
+              "label": "Results",
+              "icon": "chart-column"
+            },
+            {
+              "id": "responses.page.yaml",
+              "label": "Responses",
+              "icon": "message-square-text"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
+            }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/surveys/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/surveys.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
+        },
+        "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Responses",
+              "note": "Every response; open one to read it."
+            },
+            "children": []
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "records",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, survey: String(e.data.survey || '').split('/').pop(), respondent: e.data.respondentName || e.data.respondentEmail || 'Anonymous', status: e.data.status || 'draft', submitted: e.data.submittedAt || '' })).sort((a, b) => a.submitted < b.submitted ? 1 : -1) }}",
+              "columns": [
+                {
+                  "key": "code",
+                  "label": "Response"
+                },
+                {
+                  "key": "survey",
+                  "label": "Survey"
+                },
+                {
+                  "key": "respondent",
+                  "label": "Respondent"
+                },
+                {
+                  "key": "status",
+                  "label": "Status",
+                  "format": "badge"
+                },
+                {
+                  "key": "submitted",
+                  "label": "Submitted",
+                  "format": "relative"
+                }
+              ],
+              "emptyText": "No responses yet.",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

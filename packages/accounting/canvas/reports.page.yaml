@@ -63,6 +63,21 @@
               "icon": "chart-column"
             },
             {
+              "id": "journals.page.yaml",
+              "label": "Journals",
+              "icon": "notebook-pen"
+            },
+            {
+              "id": "expenses.page.yaml",
+              "label": "Expenses",
+              "icon": "receipt"
+            },
+            {
+              "id": "periods.page.yaml",
+              "label": "Periods",
+              "icon": "calendar-range"
+            },
+            {
               "id": "settings",
               "label": "Settings",
               "icon": "settings"

@@ -1,3 +1,4 @@
+import { withUserProfile } from '../../../tools/file-apps/build.mjs'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { parse } from 'yaml'
 import { describe, expect, it } from 'vitest'
@@ -27,9 +28,9 @@ describe('Referrals Canvas documents', () => {
     expect(Object.keys(documents).sort()).toEqual(Object.keys(pages).sort())
     for (const [name, document] of Object.entries(pages)) expect(documents[name], name).toEqual(plain(document))
     const { metadata: { version: _version, ...metadata }, ...installed } = read('referrals.app.yaml')
-    const { metadata: { version: _source, ...expectedMetadata }, ...expected } = plain({
+    const { metadata: { version: _source, ...expectedMetadata }, ...expected } = plain(withUserProfile({
       ...manifest, spec: { ...manifest.spec, 'file-access': [...documentFileAccess(pages), ...scriptConsents] },
-    })
+    }, pages))
     expect({ ...installed, metadata }).toEqual({ ...expected, metadata: expectedMetadata })
     expect(read('environments/feature.yaml')).toEqual(featureOverlay)
     expect(read('environments/production.yaml')).toEqual(productionOverlay)
@@ -63,9 +64,13 @@ describe('Referrals Canvas documents', () => {
   it('offers Recruitment jobs and Employees records on referrals without requiring either', () => {
     const document = documents['referral.form.yaml']
     expect(document.spec.data.jobrecords).toMatchObject({ kind: 'folder', path: '/job-positions' })
-    expect(document.spec.data.employeerecords).toMatchObject({ kind: 'folder', path: '/employees' })
-    const patch = document.spec.actions['copy-employee'].steps[0]['patch-form'].values.referrerName
-    expect(patch).toContain('form.values.referrerRef')
+    expect(document.spec.data.employeelinks).toMatchObject({ kind: 'folder', path: '/employees' })
+    // Choosing an Employees record fills the name from it.
+    const nodes = []
+    const walk = node => { if (Array.isArray(node)) node.forEach(walk); else if (node && typeof node === 'object') { nodes.push(node); Object.values(node).forEach(walk) } }
+    walk(document.spec.tree)
+    const picker = nodes.find(node => node.type === 'canvas.form.select' && node.props?.value === '{{ form.values.referrerRef }}')
+    expect(picker.on.update[0]['patch-form'].values.referrerName).toContain('e.path === event')
     expect(manifest.spec.dependencies).toContainEqual({ package: 'verentis/recruitment', version: 'latest', optional: true })
     expect(manifest.spec.dependencies).toContainEqual({ package: 'verentis/employees', version: 'latest', optional: true })
   })
