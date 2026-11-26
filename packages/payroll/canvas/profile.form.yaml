@@ -41,7 +41,9 @@
       "file.read",
       "file.write"
     ],
-    "capabilities": [],
+    "capabilities": [
+      "user-profile"
+    ],
     "sandbox": {
       "allow-scripts": true,
       "allow-same-origin": true,
@@ -52,7 +54,7 @@
       {
         "path": "/employees",
         "mode": "read",
-        "reason": "Offer employee records to link (when Employees is installed)"
+        "reason": "Find your Employees record by your work email (when Employees is installed)"
       },
       {
         "path": "/salary-structures",
@@ -68,7 +70,7 @@
     "access": [
       {
         "path": "/employees",
-        "reason": "Offer employee records to link (when Employees is installed)"
+        "reason": "Find your Employees record by your work email (when Employees is installed)"
       },
       {
         "path": "/salary-structures",
@@ -84,15 +86,25 @@
         "kind": "document",
         "consistency": "conditional"
       },
-      "employeesrecords": {
+      "signedinstaff": {
         "kind": "folder",
         "path": "/employees",
         "contents": true,
         "mime-pattern": "application/vnd.verentis.employees.employee+json"
       },
-      "employeeoptions": {
+      "me": {
         "kind": "computed",
-        "expr": "(data.employeesrecords || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + ((e.data.name || [e.data.givenName, e.data.familyName].filter(Boolean).join(' ') || e.name)), value: e.path }))"
+        "expr": "((data.signedinstaff || []).filter(e => e.kind === 'file' && e.data && e.data.status !== 'terminated' && !!ctx.user && !!ctx.user.email && String(e.data.workEmail || '').toLowerCase() === String(ctx.user.email).toLowerCase()).map(e => ({ path: e.path, name: String(e.data.name || '') }))[0] || { path: '', name: ctx.user ? String(ctx.user.name || '') : '' })"
+      },
+      "employeelinks": {
+        "kind": "folder",
+        "path": "/employees",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.employees.employee+json"
+      },
+      "employeelinkoptions": {
+        "kind": "computed",
+        "expr": "(data.employeelinks || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && e.data.status !== 'terminated').map(e => ({ value: e.path, label: (String(e.data.name || [e.data.givenName, e.data.familyName].filter(Boolean).join(' ') || '') || e.name) + (e.data.jobTitle ? ' · ' + e.data.jobTitle : '') }))"
       },
       "structures": {
         "kind": "folder",
@@ -372,12 +384,23 @@
                         "props": {
                           "label": "Employee record",
                           "value": "{{ form.values.employeeRef }}",
-                          "description": "Optional. Link the Employees record (when Employees is installed).",
-                          "options": "{{ data.employeeoptions }}",
+                          "description": "Optional. Choosing a record fills the name.",
+                          "options": "{{ data.employeelinkoptions }}",
                           "searchable": true
                         },
                         "rules": {
                           "disabled": "(form.values.state === 'archived' || (false))"
+                        },
+                        "on": {
+                          "update": [
+                            {
+                              "patch-form": {
+                                "values": {
+                                  "employeeName": "{{ ((data.employeelinks || []).filter(e => e.kind === 'file' && e.data && e.path === event).map(e => String(e.data.name || [e.data.givenName, e.data.familyName].filter(Boolean).join(' ') || ''))[0] || form.values.employeeName || '') }}"
+                                }
+                              }
+                            }
+                          ]
                         }
                       }
                     ]

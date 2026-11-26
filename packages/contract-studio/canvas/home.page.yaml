@@ -138,6 +138,16 @@
               "id": "home.page.yaml",
               "label": "Agreements",
               "icon": "file-signature"
+            },
+            {
+              "id": "library.page.yaml",
+              "label": "Clause library",
+              "icon": "library"
+            },
+            {
+              "id": "issued.page.yaml",
+              "label": "Issued",
+              "icon": "file-check-2"
             }
           ],
           "page": true

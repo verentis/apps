@@ -1,3 +1,4 @@
+import { handOvers } from '../scripts/post/main.mjs'
 import { apiContract } from '../../../tools/file-apps/build.mjs'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { parse } from 'yaml'
@@ -52,7 +53,9 @@ describe('Field Service Canvas documents', () => {
   it('runs the task action script from the task form', () => {
     const document = documents['task.form.yaml']
     const runs = steps(document).filter(step => 'run-script' in step).map(step => step['run-script'])
-    expect([...new Set(runs.map(run => run.parameters.operation))]).toEqual(['schedule', 'start', 'complete', 'record-invoice', 'cancel'])
+    expect([...new Set(runs.map(run => run.parameters.operation))]).toEqual(['schedule', 'start', 'complete', 'cancel'])
+    expect(Object.values(documents).some(page => JSON.stringify(page).includes('call-app'))).toBe(false)
+    expect(handOvers.complete).toMatchObject({ app: 'invoicing', operation: 'create-draft-invoice', recordOperation: 'record-invoice' })
     for (const run of runs) expect(run).toMatchObject({ file: postScriptPath, parameters: { path: '{{ ctx.file.path }}' } })
     expect(document.spec.permissions).toEqual(expect.arrayContaining(['execution.run']))
     // A script reloads the record afterwards, which a dirty form would refuse.

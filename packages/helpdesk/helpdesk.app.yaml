@@ -11,9 +11,23 @@
   },
   "marketplace": {
     "logo": "./icons/app.svg",
-      "hero": {"source": "./marketplace/hero.svg", "alt": "Helpdesk cover"},
-      "images": [{"source": "./marketplace/overview.png", "alt": "Helpdesk overview in Canvas", "caption": "Helpdesk overview"}, {"source": "./marketplace/detail.png", "alt": "Tickets in Canvas", "caption": "Tickets"}],
-      "readme": "./marketplace/README.md",
+    "hero": {
+      "source": "./marketplace/hero.svg",
+      "alt": "Helpdesk cover"
+    },
+    "images": [
+      {
+        "source": "./marketplace/overview.png",
+        "alt": "Helpdesk overview in Canvas",
+        "caption": "Helpdesk overview"
+      },
+      {
+        "source": "./marketplace/detail.png",
+        "alt": "Tickets in Canvas",
+        "caption": "Tickets"
+      }
+    ],
+    "readme": "./marketplace/README.md",
     "keywords": [
       "helpdesk",
       "support",
@@ -320,6 +334,15 @@
         }
       },
       {
+        "path": "/employees",
+        "mode": "read",
+        "reason": "Find your Employees record by your work email (when Employees is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "helpdesk-ticket"
+        }
+      },
+      {
         "path": "/applications/helpdesk/",
         "mode": "read",
         "reason": "Read the Helpdesk schemas and run the ticket action script",
@@ -344,6 +367,60 @@
         "origin": {
           "kind": "document",
           "id": "helpdesk-settings"
+        }
+      },
+      {
+        "path": "/tickets",
+        "mode": "read",
+        "reason": "List mine",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/mine.page.yaml"
+        }
+      },
+      {
+        "path": "/employees",
+        "mode": "read",
+        "reason": "Find your Employees record by your work email (when Employees is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/mine.page.yaml"
+        }
+      },
+      {
+        "path": "/tickets",
+        "mode": "read",
+        "reason": "List unassigned",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/unassigned.page.yaml"
+        }
+      },
+      {
+        "path": "/tickets",
+        "mode": "read",
+        "reason": "List overdue",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/overdue.page.yaml"
+        }
+      },
+      {
+        "path": "/tickets",
+        "mode": "read",
+        "reason": "List waiting",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/waiting.page.yaml"
+        }
+      },
+      {
+        "path": "/tickets",
+        "mode": "read",
+        "reason": "List solved",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/solved.page.yaml"
         }
       },
       {
@@ -382,6 +459,9 @@
           "id": "helpdesk-post"
         }
       }
+    ],
+    "capabilities": [
+      "user-profile"
     ]
   },
   "packaging": {

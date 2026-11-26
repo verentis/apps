@@ -450,6 +450,24 @@
         }
       },
       {
+        "path": "/inventory-adjustments",
+        "mode": "read",
+        "reason": "List counts",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/counts.page.yaml"
+        }
+      },
+      {
+        "path": "/warehouses",
+        "mode": "read",
+        "reason": "List warehouses",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/warehouses.page.yaml"
+        }
+      },
+      {
         "path": "/warehouses",
         "mode": "write",
         "reason": "Create warehouses with the next code",

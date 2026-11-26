@@ -189,7 +189,7 @@
       {
         "path": "/employees",
         "mode": "read",
-        "reason": "Offer Employees records on appraisals (when Employees is installed)",
+        "reason": "Find your Employees record by your work email (when Employees is installed)",
         "origin": {
           "kind": "document",
           "id": "appraisals-appraisal"
@@ -211,6 +211,15 @@
         "origin": {
           "kind": "document",
           "id": "appraisals-settings"
+        }
+      },
+      {
+        "path": "/appraisals",
+        "mode": "read",
+        "reason": "List past cycles",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/cycles.page.yaml"
         }
       },
       {

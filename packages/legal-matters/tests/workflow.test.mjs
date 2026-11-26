@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto'
 import test from 'node:test'
 import { memoryFiles } from '../../../tools/file-apps/memory-files.mjs'
 import { lineTotals } from '../../invoicing/scripts/post/main.mjs'
-import { run } from '../scripts/workflow/main.mjs'
+import { run, runWithApps } from '../scripts/workflow/main.mjs'
 import { createDraftInvoice } from '../../invoicing/scripts/api/main.mjs'
 import { pages } from '../src/pages.mjs'
 
@@ -37,14 +37,11 @@ function fixture() {
     return path
   }
   const prepare = async (path,charges) => { await edit(path,{billingReviewer:'Billing reviewer',charges}); await op(path,'prepare') }
-  // What the matter form does on Approve: the workflow reserves and returns the request, Invoicing drafts it through
-  // its API (run here directly, as the platform would), and the workflow records the draft.
-  const approve = async path => {
-    const approved = await op(path,'approve')
-    const drafted = await createDraftInvoice(approved.invoiceRequest,{files,settings:{get:()=>undefined},caller:{app:'legal-matters'},now:new Date().toISOString()})
-    return call({path,operation:'record-invoice',revision:approved.revision,invoice:drafted.path})
-  }
-  return {call,op,edit,create,intake,open,prepare,approve,files,settings}
+  // Approve in one workflow run: it reserves the sources, has Invoicing draft the invoice through the platform (here
+  // Invoicing's real operation against the same files) and records the draft against the new revision.
+  const invoicing = {call:async (app,operation,input) => ({result:await createDraftInvoice(input,{files,settings:{get:()=>undefined},caller:{app:'legal-matters'},now:new Date().toISOString()})})}
+  const approve = (path,apps=invoicing) => runWithApps({context:{workspace:{id:workspace},input:{parameters:{path,operation:'approve',revision:files.json(path).revision}}},files,settings:{get:k=>settings[k]},apps})
+  return {call,op,edit,create,intake,open,prepare,approve,files,settings,invoicing}
 }
 
 test('runs without any pilot setting; other branches, other folders and indirect paths fail before any file access', async () => {
@@ -166,4 +163,16 @@ test('missing ETags stop writes and missing allocation register stops invoice cr
   const stat=f.files.stat.bind(f.files)
   f.files.stat=async p=>({...await stat(p),etag:''})
   await assert.rejects(f.op(path,'approve'),/ETag/)
+})
+
+test('approving without Invoicing installed leaves the pre-bill approved and asks nothing else', async () => {
+  const f=fixture(), path=await f.open()
+  await f.prepare(path,[charge('fixed-fee','','Agreed fixed fee')])
+  const missing={call:async () => { throw Object.assign(new Error('invoicing is not installed'),{code:'target_not_installed'}) }}
+  const result=await f.approve(path,missing)
+  assert.equal(result.invoiceRequest,undefined)
+  assert.deepEqual(f.files.json(path).invoices,[])
+  // Approved and waiting for its invoice: Approve again once Invoicing is installed.
+  assert.equal(f.files.json(path).prebill.stage,'pending')
+  assert.ok(f.files.json(path).prebill.approvedAt)
 })

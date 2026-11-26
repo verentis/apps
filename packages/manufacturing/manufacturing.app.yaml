@@ -295,6 +295,24 @@
         }
       },
       {
+        "path": "/manufacturing-orders",
+        "mode": "read",
+        "reason": "List operation queue",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/queue.page.yaml"
+        }
+      },
+      {
+        "path": "/bills-of-materials",
+        "mode": "read",
+        "reason": "Name the workcenter of each operation",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/queue.page.yaml"
+        }
+      },
+      {
         "path": "/bills-of-materials",
         "mode": "write",
         "reason": "Create bills of materials with the next code",

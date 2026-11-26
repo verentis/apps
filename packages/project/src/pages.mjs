@@ -2,6 +2,7 @@
 // the task board. Completing a task (stage transition to done, completion stamp) is done by the task script the
 // form runs; the form only locks tasks the script has completed.
 import { views } from './views.mjs'
+import { listPages } from './lists.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   humanize, iconName, openFile, options, page, panel, projectRegistration, recordButtons, row, scriptAction,
@@ -215,6 +216,6 @@ function boardPage() {
 }
 
 export function buildPages() {
-  const documents = [homePage(), boardPage(), ...recordKinds.map(recordForm), settingsForm()]
+  const documents = [homePage(), boardPage(), ...recordKinds.map(recordForm), settingsForm(), ...listPages()]
   return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

@@ -172,6 +172,15 @@
       },
       {
         "path": "/engineering-change-orders",
+        "mode": "read",
+        "reason": "List change orders",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/changes.page.yaml"
+        }
+      },
+      {
+        "path": "/engineering-change-orders",
         "mode": "write",
         "reason": "Create engineering change orders with the next code",
         "origin": {

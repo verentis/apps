@@ -2,6 +2,7 @@
 // and the financial reports page. Ledger rules (balancing, open periods, immutability once posted) are enforced by
 // the posting script the forms run; the forms only lock what the script has posted.
 import { views } from './views.mjs'
+import { listPages } from './lists.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, documentsPanel, folder, grid, heading, iconName,
   jsonFile, linkButton, openFile, options, page, panel, projectRegistration, recordButtons, row, saveSteps, scriptAction,
@@ -409,6 +410,6 @@ function balancesWidget() {
 }
 
 export function buildPages() {
-  const documents = [homePage(), reportsPage(), balancesWidget(), ...recordKinds.map(recordForm), settingsForm()]
+  const documents = [homePage(), reportsPage(), balancesWidget(), ...recordKinds.map(recordForm), settingsForm(), ...listPages()]
   return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

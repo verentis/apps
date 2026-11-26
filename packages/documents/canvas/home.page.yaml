@@ -94,6 +94,16 @@
               "icon": "library"
             },
             {
+              "id": "all.page.yaml",
+              "label": "All documents",
+              "icon": "files"
+            },
+            {
+              "id": "tags.page.yaml",
+              "label": "Tags",
+              "icon": "tags"
+            },
+            {
               "id": "settings",
               "label": "Settings",
               "icon": "settings"

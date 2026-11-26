@@ -1,7 +1,7 @@
 import { views } from './views.mjs'
 import {
   apiVersion, boundForm, button, card, folder, grid, heading, openFile, page,
-  projectRegistration, row, scriptPermissions, status, table, text, appNavigation,
+  projectRegistration, row, scriptPermissions, status, table, text, appNavigation, listPage,
 } from '../../../tools/file-apps/canvas.mjs'
 import { catalog, contracts, mime, packs, precedents, root, schemaId } from '../scripts/draft/model.mjs'
 
@@ -144,4 +144,16 @@ function contract() {
   })
 }
 
-export const pages = appNavigation(Object.fromEntries([['home.page.yaml',home()],['contract.form.yaml',contract()]].map(([name,doc]) => [name,projectRegistration(doc,`${root}/canvas/${name}`)])), root, views)
+// The design's Clause library and Issued lists.
+const library = listPage({ file: 'library.page.yaml', id: 'contract-studio-library', name: 'Clause library', description: 'Published firm precedent revisions: jurisdiction, intended use and approver.', icon: 'library',
+  container: precedents, mime: mime('precedent'),
+  rows: "RECORDS.map(e => ({ path: e.path, code: e.data.code || e.name, title: e.data.title || '', revision: e.data.revision, jurisdiction: e.data.jurisdiction || '', use: e.data.intendedUse || '', approver: e.data.approvedBy || '', approved: e.data.approvedAt || '' })).sort((a, b) => (a.code + String(b.revision).padStart(6, '0')) < (b.code + String(a.revision).padStart(6, '0')) ? -1 : 1)",
+  columns: [['code', 'Clause'], ['title', 'Title'], ['revision', 'Revision', 'end'], ['jurisdiction', 'Jurisdiction'], ['use', 'Intended use'], ['approver', 'Approved by'], ['approved', 'Approved', undefined, 'date']],
+  empty: 'No precedent has been published yet. Publish one from the home page.' })
+const issued = listPage({ file: 'issued.page.yaml', id: 'contract-studio-issued', name: 'Issued', description: 'Issued agreements and their client and internal files.', icon: 'file-check-2',
+  container: contracts, mime: mime('contract'),
+  rows: "RECORDS.filter(e => e.data.stage === 'issued').map(e => ({ path: e.path, code: e.data.code || e.name, title: e.data.title || '', version: e.data.version, client: e.data.clientPath || '', schedule: e.data.schedulePath || '' }))",
+  columns: [['code', 'Agreement'], ['title', 'Title'], ['version', 'Version', 'end'], ['client', 'Client file'], ['schedule', 'Internal schedule']],
+  empty: 'No agreement has been issued yet.' })
+
+export const pages = appNavigation(Object.fromEntries([['home.page.yaml',home()],['contract.form.yaml',contract()],['library.page.yaml',library.document],['issued.page.yaml',issued.document]].map(([name,doc]) => [name,projectRegistration(doc,`${root}/canvas/${name}`)])), root, views)

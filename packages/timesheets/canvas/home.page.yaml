@@ -57,6 +57,11 @@
               "icon": "calendar-days"
             },
             {
+              "id": "to-validate.page.yaml",
+              "label": "To validate",
+              "icon": "check-check"
+            },
+            {
               "id": "settings",
               "label": "Settings",
               "icon": "settings"

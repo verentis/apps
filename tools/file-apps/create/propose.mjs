@@ -1,14 +1,14 @@
 import { randomUUID } from 'node:crypto'
 import config from './config.mjs'
 
-const allowed = new Set(['operation', 'creatable', 'mime', 'parentPath', 'branch', 'name', 'now', 'template', 'siblings', 'attempt'])
+const allowed = new Set(['operation', 'creatable', 'mime', 'parentPath', 'branch', 'name', 'now', 'user', 'template', 'siblings', 'attempt'])
 
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 function fill(template, values) {
-  return template.replace(/\{\{\s*(id|now|name)\s*\}\}/g, (_, key) => JSON.stringify(String(values[key] ?? '')).slice(1, -1))
+  return template.replace(/\{\{\s*(id|now|name|user)\s*\}\}/g, (_, key) => JSON.stringify(String(values[key] ?? '')).slice(1, -1))
 }
 
 /** The next code after the highest existing `<prefix><digits>` sibling, e.g. `INV-0042`. */
@@ -75,9 +75,12 @@ export function propose(input, settings, uuid = randomUUID, documents = {}) {
   if (typeof input.template !== 'string' || !input.template) throw new Error('The record template is missing')
   const now = typeof input.now === 'string' && !Number.isNaN(Date.parse(input.now)) ? new Date(input.now).toISOString() : new Date().toISOString()
   const name = typeof input.name === 'string' ? input.name.trim() : ''
+  // Who is creating, from the workspace (`{ id, name }`): `{{ user }}` in a template becomes their name. Empty when
+  // the workspace did not say, so the app's settings default then fills the field.
+  const user = input.user && typeof input.user === 'object' && typeof input.user.name === 'string' ? input.user.name.trim().slice(0, 200) : ''
   const siblings = Array.isArray(input.siblings) ? input.siblings : []
 
-  const record = JSON.parse(fill(input.template, { id: uuid(), now, name }))
+  const record = JSON.parse(fill(input.template, { id: uuid(), now, name, user }))
   if (record.kind !== kind) throw new Error(`The template does not describe a ${kind}`)
   const definition = config.kinds[kind]
   const prefix = String(setting(settings, definition.code.key, definition.code.default))

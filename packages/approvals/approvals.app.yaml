@@ -11,9 +11,23 @@
   },
   "marketplace": {
     "logo": "./icons/app.svg",
-      "hero": {"source": "./marketplace/hero.svg", "alt": "Approvals cover"},
-      "images": [{"source": "./marketplace/overview.png", "alt": "Approvals overview in Canvas", "caption": "Approvals overview"}, {"source": "./marketplace/detail.png", "alt": "Approval requests in Canvas", "caption": "Approval requests"}],
-      "readme": "./marketplace/README.md",
+    "hero": {
+      "source": "./marketplace/hero.svg",
+      "alt": "Approvals cover"
+    },
+    "images": [
+      {
+        "source": "./marketplace/overview.png",
+        "alt": "Approvals overview in Canvas",
+        "caption": "Approvals overview"
+      },
+      {
+        "source": "./marketplace/detail.png",
+        "alt": "Approval requests in Canvas",
+        "caption": "Approval requests"
+      }
+    ],
+    "readme": "./marketplace/README.md",
     "keywords": [
       "approvals",
       "approval requests",
@@ -303,6 +317,15 @@
         }
       },
       {
+        "path": "/employees",
+        "mode": "read",
+        "reason": "Find your Employees record by your work email (when Employees is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "approvals-request"
+        }
+      },
+      {
         "path": "/applications/approvals/",
         "mode": "read",
         "reason": "Read the Approvals schemas and run the decision script",
@@ -318,6 +341,24 @@
         "origin": {
           "kind": "document",
           "id": "approvals-settings"
+        }
+      },
+      {
+        "path": "/approval-requests",
+        "mode": "read",
+        "reason": "List my requests",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/mine.page.yaml"
+        }
+      },
+      {
+        "path": "/employees",
+        "mode": "read",
+        "reason": "Find your Employees record by your work email (when Employees is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/mine.page.yaml"
         }
       },
       {
@@ -365,6 +406,9 @@
           "id": "approvals-post"
         }
       }
+    ],
+    "capabilities": [
+      "user-profile"
     ]
   },
   "packaging": {

@@ -6,7 +6,7 @@ import { views } from './views.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   humanize, iconName, linkButton, openFile, options, page, panel, projectRegistration, recordButtons, row,
-  appOperationsSource, offers, scriptAction, withInvoice, sectionCards, stat, stats, status, table, tabs, text, toneExpression, recordHeader, pageHeader, appNavigation, lifecycle,
+  appOperationsSource, offers, scriptAction, sectionCards, stat, stats, status, table, tabs, text, toneExpression, recordHeader, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { containers, crm, installRoot, mimeTypes, recordKinds, schemaId, settingsPath } from './contracts.mjs'
 import { entities, postScriptPath, settingsSections } from './app.mjs'
@@ -33,8 +33,6 @@ const display = value => `(${value} / 10000).toFixed(2)`
 const copyName = `(data.companies || []).concat(data.contacts || []).filter(e => e.kind === 'file' && e.data && e.path === form.values.customerRef).map(e => e.data.name || [e.data.givenName, e.data.familyName].filter(Boolean).join(' '))[0] || form.values.customerName`
 
 /** Kind-specific data, access, actions, header buttons and lock of a record form. */
-/** Invoicing drafts a returned booking's invoice; the booking's code keys the call. */
-const bookingInvoice = { script: postScriptPath, key: "'booking-' + form.values.code" }
 
 function recordExtras(kind) {
   if (kind === 'booking') {
@@ -85,11 +83,11 @@ function recordExtras(kind) {
         'copy-name': { steps: [{ 'patch-form': { values: { customerName: `{{ ${copyName} }}` } } }] },
         confirm: scriptAction(postScriptPath, 'confirm-booking', { confirm: { title: 'Confirm booking', message: 'Confirm this booking? Availability is checked against overlapping bookings and the exact total is computed. Confirmed bookings cannot be edited.' } }),
         pickup: scriptAction(postScriptPath, 'pickup-booking', { confirm: { title: 'Pick up', message: 'Mark this booking picked up? The rented units leave with the customer.' } }),
-        return: withInvoice(scriptAction(postScriptPath, 'return-booking', {
+        return: scriptAction(postScriptPath, 'return-booking', {
           confirm: { title: 'Return', message: 'Mark this booking returned? Days past the end date are charged at the daily late rate, and Invoicing drafts the invoice when it is installed.' },
           parameters: { date: '{{ state.returndate }}' },
-        }), bookingInvoice),
-        'draft-invoice': withInvoice(scriptAction(postScriptPath, 'return-booking', {}), bookingInvoice),
+        }),
+        'draft-invoice': scriptAction(postScriptPath, 'return-booking', {}),
         cancel: scriptAction(postScriptPath, 'cancel-booking', { confirm: { title: 'Cancel booking', message: 'Cancel this booking? Its units become available again. It can be reopened later.' } }),
         reopen: { steps: [
           { 'patch-form': { values: { status: 'draft', updatedAt: '{{ Date() }}' } } },

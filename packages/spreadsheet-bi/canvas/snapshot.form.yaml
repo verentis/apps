@@ -60,6 +60,31 @@
         "path": "/applications/spreadsheet-bi/",
         "mode": "read",
         "reason": "Read the Spreadsheet BI schemas and run the snapshot script"
+      },
+      {
+        "path": "/customers",
+        "mode": "read",
+        "reason": "Compare the frozen values with /customers now (when the owning app is installed)"
+      },
+      {
+        "path": "/invoices",
+        "mode": "read",
+        "reason": "Compare the frozen values with /invoices now (when the owning app is installed)"
+      },
+      {
+        "path": "/tickets",
+        "mode": "read",
+        "reason": "Compare the frozen values with /tickets now (when the owning app is installed)"
+      },
+      {
+        "path": "/journals",
+        "mode": "read",
+        "reason": "Compare the frozen values with /journals now (when the owning app is installed)"
+      },
+      {
+        "path": "/expenses",
+        "mode": "read",
+        "reason": "Compare the frozen values with /expenses now (when the owning app is installed)"
       }
     ],
     "access": [
@@ -70,6 +95,26 @@
       {
         "path": "/applications/spreadsheet-bi/",
         "reason": "Read the Spreadsheet BI schemas and run the snapshot script"
+      },
+      {
+        "path": "/customers",
+        "reason": "Compare the frozen values with /customers now (when the owning app is installed)"
+      },
+      {
+        "path": "/invoices",
+        "reason": "Compare the frozen values with /invoices now (when the owning app is installed)"
+      },
+      {
+        "path": "/tickets",
+        "reason": "Compare the frozen values with /tickets now (when the owning app is installed)"
+      },
+      {
+        "path": "/journals",
+        "reason": "Compare the frozen values with /journals now (when the owning app is installed)"
+      },
+      {
+        "path": "/expenses",
+        "reason": "Compare the frozen values with /expenses now (when the owning app is installed)"
       }
     ],
     "data": {
@@ -86,6 +131,39 @@
       "dashboardoptions": {
         "kind": "computed",
         "expr": "(data.dashboards || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + (e.data.name || ''), value: e.path }))"
+      },
+      "customers": {
+        "kind": "folder",
+        "path": "/customers",
+        "contents": true
+      },
+      "invoices": {
+        "kind": "folder",
+        "path": "/invoices",
+        "contents": true
+      },
+      "tickets": {
+        "kind": "folder",
+        "path": "/tickets",
+        "contents": true
+      },
+      "journals": {
+        "kind": "folder",
+        "path": "/journals",
+        "contents": true
+      },
+      "expenses": {
+        "kind": "folder",
+        "path": "/expenses",
+        "contents": true
+      },
+      "liverows": {
+        "kind": "computed",
+        "expr": "((((data.dashboards || []).find(e => e.path === form.values.dashboard) || {}).data || {}).tiles || []).slice().sort((a, b) => Number(a.sequence || 0) - Number(b.sequence || 0)).map(t => ({ t: t, entries: ({ '/customers': data.customers, '/invoices': data.invoices, '/tickets': data.tickets, '/journals': data.journals, '/expenses': data.expenses })[t.source] })).map(c => ({ t: c.t, note: ([\"/customers\",\"/invoices\",\"/tickets\",\"/journals\",\"/expenses\"].indexOf(c.t.source) < 0 ? 'Source ' + (c.t.source || '(none)') + ' is not readable from this viewer; tile skipped.' : (!Array.isArray(c.entries) ? 'Container ' + c.t.source + ' is unavailable; tile skipped. Is its app installed?' : '')), items: (Array.isArray(c.entries) ? c.entries : []).filter(x => x.kind === 'file' && x.data && x.data.state !== 'archived').filter(x => (!c.t.filter || !c.t.filter.field || String(String(c.t.filter.field || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data)) === String(c.t.filter.equals === undefined || c.t.filter.equals === null ? '' : c.t.filter.equals))).map(x => ({ key: (String(c.t.groupByField || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data) === undefined || String(c.t.groupByField || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data) === null || String(c.t.groupByField || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data) === '' ? '(none)' : String(String(c.t.groupByField || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data))), raw: String(c.t.valueField || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data) })) })).map(c => ({ c: c, numeric: c.items.filter(i => (typeof i.raw === 'number' || typeof i.raw === 'string') && i.raw !== '' && Number.isFinite(Number(i.raw))), keys: c.items.map(i => i.key).filter((v, idx, a) => a.indexOf(v) === idx).sort() })).reduce((all, s) => all.concat(s.c.note ? [({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: '', value: '', note: s.c.note })] : s.c.t.kind === 'count' ? [({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: '', value: String(s.c.items.length), note: '' })] : s.c.t.kind === 'sum' ? [({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: '', value: (s.numeric.reduce((m, i) => m + Math.round(Number(i.raw) * 10000), 0) / 10000).toFixed(2), note: (s.c.items.length > s.numeric.length ? (s.c.items.length - s.numeric.length) + ' non-numeric value(s) skipped' : '') })] : s.c.t.kind === 'group-count' ? (s.keys.length ? s.keys.map(k => ({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: k, value: String(s.c.items.filter(i => i.key === k).length), note: '' })) : [({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: '', value: '0', note: 'No matching records.' })]) : s.c.t.kind === 'group-sum' ? (s.keys.length ? s.keys.map(k => ({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: k, value: (s.numeric.filter(i => i.key === k).reduce((m, i) => m + Math.round(Number(i.raw) * 10000), 0) / 10000).toFixed(2), note: (s.c.items.length > s.numeric.length ? (s.c.items.length - s.numeric.length) + ' non-numeric value(s) skipped' : '') })) : [({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: '', value: '0', note: 'No matching records.' })]) : [({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: '', value: '', note: 'Unknown tile kind ' + JSON.stringify(s.c.t.kind || '') + '; tile skipped.' })]), [])"
+      },
+      "compared": {
+        "kind": "computed",
+        "expr": "(form.values.results || []).reduce((all, r) => all.concat(r.groups && r.groups.length ? r.groups.map(g => ({ title: r.title || '', detail: g.key || '', value: g.value === undefined ? '' : g.value, note: r.note || '' })) : [{ title: r.title || '', detail: '', value: r.value === undefined ? '' : r.value, note: r.note || '' }]), []).map(r => ({ title: r.title, detail: r.detail, then: r.value, now: ((data.liverows || []).find(l => l.title === r.title && String(l.detail || '') === String(r.detail || '')) || {}).value })).map(r => ({ title: r.title, detail: r.detail, then: r.then, now: r.now === undefined ? '—' : r.now, change: r.now === undefined || r.then === '' || !Number.isFinite(Number(r.then)) || !Number.isFinite(Number(r.now)) ? '' : (Number(r.now) - Number(r.then) > 0 ? '+' : '') + (Math.round((Number(r.now) - Number(r.then)) * 100) / 100) }))"
       }
     },
     "tree": [
@@ -379,6 +457,60 @@
                 }
               }
             ]
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Compared with live"
+            },
+            "children": [
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "The frozen values next to what the same tiles show now, computed from the source containers as this page loads.",
+                  "tone": "muted"
+                }
+              },
+              {
+                "type": "canvas.table",
+                "props": {
+                  "rows": "{{ data.compared }}",
+                  "columns": [
+                    {
+                      "key": "title",
+                      "label": "Tile"
+                    },
+                    {
+                      "key": "detail",
+                      "label": "Group"
+                    },
+                    {
+                      "key": "then",
+                      "label": "Then",
+                      "align": "end"
+                    },
+                    {
+                      "key": "now",
+                      "label": "Now",
+                      "align": "end"
+                    },
+                    {
+                      "key": "change",
+                      "label": "Change",
+                      "align": "end"
+                    }
+                  ],
+                  "emptyText": "Nothing to compare yet.",
+                  "search": true,
+                  "sortable": true,
+                  "pageSize": 25,
+                  "narrow": "list"
+                }
+              }
+            ],
+            "rules": {
+              "visible": "form.values.status === 'taken'"
+            }
           }
         ]
       }

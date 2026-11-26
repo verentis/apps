@@ -95,6 +95,16 @@
               "icon": "boxes"
             },
             {
+              "id": "counts.page.yaml",
+              "label": "Counts",
+              "icon": "clipboard-check"
+            },
+            {
+              "id": "warehouses.page.yaml",
+              "label": "Warehouses",
+              "icon": "warehouse"
+            },
+            {
               "id": "settings",
               "label": "Settings",
               "icon": "settings"

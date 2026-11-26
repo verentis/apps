@@ -2,13 +2,14 @@
 // validates the lines and the vendor, computes the exact total, then marks the order confirmed or received with
 // the file access its installer consented to (manifest `file-access`).
 //
-// Receiving returns what Invoicing needs to draft the vendor bill; the form asks Invoicing through the platform
+// Receiving returns what Invoicing needs to draft the vendor bill; the script asks Invoicing through the platform
 // (Invoicing returns the same draft when asked again) and `record-bill` stores the link. Purchase never writes
 // Invoicing's files. Records are updated conditionally (If-Match), so a concurrent edit fails instead of being
 // overwritten.
 import {
   divideHalfUp, fail, formatMinor, nameOf, nowIso, parseDecimal, readRecord, saveRecord, statusOf, toMinor,
 } from './ledger.mjs'
+import { withAppCalls } from './app-calls.mjs'
 
 export const operations = ['confirm-order', 'receive-order', 'record-bill']
 export const purchase = {
@@ -88,7 +89,7 @@ export async function confirmOrder(files, path, { now }) {
 
 /**
  * What Invoicing needs to draft the received order's vendor bill (its `create-draft-invoice` operation; Invoicing keeps
- * vendor bills as invoices addressed to the vendor). The order form asks Invoicing through the platform; Purchase never
+ * vendor bills as invoices addressed to the vendor). The script asks Invoicing through the platform; Purchase never
  * writes Invoicing's files.
  */
 export function billRequest(record, path) {
@@ -127,7 +128,7 @@ export async function receiveOrder(files, path, { now }) {
   // Counted lines that came in short are named in the message, so the buyer can chase the vendor.
   const short = (record.lines ?? []).filter(line => line.received !== undefined && line.received !== '' && Number(line.received) < Number(line.quantity))
   const shortNote = short.length ? `; ${short.length} ${short.length === 1 ? 'line' : 'lines'} short (${short.map(line => `${line.description || 'line'}: ${line.received} of ${line.quantity}`).join(', ')})` : ''
-  // The form asks Invoicing (when installed) to draft the vendor bill from this, then records the link.
+  // The script asks Invoicing (when installed; see `handOvers`) to draft the vendor bill from this, then records the link.
   return { message: `Received ${label(record)}${shortNote}`, path, invoiceRequest: billRequest(record, path) }
 }
 
@@ -140,6 +141,15 @@ export async function run(parameters, files, { now = nowIso() } = {}) {
   return fail(`Unsupported operation ${JSON.stringify(operation ?? '')}. Expected one of ${operations.join(', ')}.`)
 }
 
+/**
+ * Operations that hand a request to another app: the script calls that app's API operation itself
+ * (`engine.apps.call`, as the same user under the other app's consent) and records the result, in the same run.
+ */
+export const handOvers = {
+  'receive-order': { app: 'invoicing', operation: 'create-draft-invoice', field: 'invoiceRequest', recordOperation: 'record-bill', parameter: 'bill', key: 'order' },
+}
+export const runWithApps = withAppCalls(run, handOvers)
+
 export default async function post(engine) {
-  await engine.output.result(await run(engine.context.input.parameters, engine.files))
+  await engine.output.result(await runWithApps(engine.context.input.parameters, engine.files, engine.apps))
 }

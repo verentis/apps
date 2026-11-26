@@ -63,6 +63,11 @@
               "icon": "layers"
             },
             {
+              "id": "payslips.page.yaml",
+              "label": "Payslips",
+              "icon": "file-text"
+            },
+            {
               "id": "settings",
               "label": "Settings",
               "icon": "settings"

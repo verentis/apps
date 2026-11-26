@@ -6,7 +6,7 @@ import { views } from './views.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   humanize, iconName, linkButton, openFile, options, page, panel, projectRegistration, recordButtons, row,
-  appOperationsSource, offers, scriptAction, withInvoice, sectionCards, stat, stats, status, table, tabs, text, toneExpression, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
+  appOperationsSource, offers, scriptAction, sectionCards, stat, stats, status, table, tabs, text, toneExpression, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { containers, installRoot, mimeTypes, recordKinds, schemaId, settingsPath } from './contracts.mjs'
 import { entities, postScriptPath, settingsSections } from './app.mjs'
@@ -88,10 +88,10 @@ function recordExtras(kind) {
       confirm: scriptAction(postScriptPath, 'confirm-order', {
         confirm: { title: 'Confirm order', message: 'Confirm this purchase order with its vendor? Confirmed orders cannot be edited, only received or archived.' },
       }),
-      receive: withInvoice(scriptAction(postScriptPath, 'receive-order', {
+      receive: scriptAction(postScriptPath, 'receive-order', {
         confirm: { title: 'Receive order', message: 'Mark this purchase order as received? When Invoicing is installed, it drafts the vendor bill.' },
-      }), orderBill),
-      'draft-bill': withInvoice(scriptAction(postScriptPath, 'receive-order', {}), orderBill),
+      }),
+      'draft-bill': scriptAction(postScriptPath, 'receive-order', {}),
       cancel: { steps: [
         { confirm: { title: 'Cancel order', message: 'Cancel this purchase order? Cancelled orders cannot be confirmed or received.' } },
         { 'patch-form': { values: { status: 'cancelled', cancelledAt: '{{ Date() }}', updatedAt: '{{ Date() }}' } } },
@@ -102,8 +102,6 @@ function recordExtras(kind) {
   }
 }
 
-/** Invoicing drafts a received order's vendor bill; the order's code keys the call; `record-bill` stores the link. */
-const orderBill = { script: postScriptPath, key: "'order-' + form.values.code", recordOperation: 'record-bill', parameter: 'bill' }
 
 function recordForm(kind) {
   const entity = entities[kind]

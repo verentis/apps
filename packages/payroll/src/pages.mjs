@@ -2,13 +2,14 @@
 // the structures page. Computing, approving and posting (payslips, totals, the journal, immutability) are done by
 // the run script the forms run; the forms only lock what the script has posted.
 import { views } from './views.mjs'
+import { listPages } from './lists.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading, humanize,
-  iconName, linkButton, openFile, options, page, panel, projectRegistration, recordButtons, row, scriptAction, appOperationsSource, withAppCall,
+  iconName, linkButton, openFile, options, page, panel, projectRegistration, recordButtons, row, scriptAction, appOperationsSource, 
   sectionCards, stat, stats, status, table, tabs, text, toneExpression, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { accounting, containers, employees, installRoot, mimeTypes, recordKinds, schemaId, settingsPath } from './contracts.mjs'
-import { entities, postScriptPath, settingsSections } from './app.mjs'
+import { payee, entities, postScriptPath, settingsSections } from './app.mjs'
 
 export { collectSteps, documentFileAccess, projectRegistration } from '../../../tools/file-apps/canvas.mjs'
 
@@ -32,10 +33,6 @@ const totalsValue = key => `{{ (form.values.totals && form.values.totals.${key})
 const payslipRows = `{{ (form.values.payslips || []).map(p => ({ employee: p.employee, base: p.base, gross: p.gross, deductions: p.deductions, contributions: p.contributions, net: p.net })) }}`
 
 /** Kind-specific data, access, actions, header buttons and tabs of a record form. */
-/** Accounting posts the journal through its API from what the script returned; the script then completes the record. */
-const posting = complete => ({ app: 'accounting', operation: 'post-journal', required: true, label: 'Accounting', script: postScriptPath, recordOperation: complete,
-  parameter: 'journal', field: 'journalRequest', key: "'journal-' + form.values.code" })
-
 function recordExtras(kind) {
   if (kind === 'structure') {
     return { access: [], data: {}, notices: [], buttons: [], links: [], actions: {} }
@@ -43,12 +40,11 @@ function recordExtras(kind) {
   if (kind === 'profile') {
     return {
       access: [
-        { path: employees.root, reason: 'Offer employee records to link (when Employees is installed)' },
+        ...payee.sources.access,
         { path: containers.structures.path, reason: 'Choose the salary structure this profile is paid by' },
       ],
       data: {
-        employeesrecords: folder(employees.root, employees.employeeMime),
-        employeeoptions: { kind: 'computed', expr: options('employeesrecords', "(e.data.name || [e.data.givenName, e.data.familyName].filter(Boolean).join(' ') || e.name)") },
+        ...payee.sources.data,
         structures: folder(containers.structures.path, mimeTypes.structure),
         structureoptions: { kind: 'computed', expr: options('structures', "e.data.name || ''") },
       },
@@ -90,7 +86,7 @@ function recordExtras(kind) {
     actions: {
       compute: scriptAction(postScriptPath, 'compute-run', { confirm: { title: 'Compute pay run', message: 'Compute a payslip for every active pay profile from its salary structure? Computing again replaces the payslips.' } }),
       approve: scriptAction(postScriptPath, 'approve-run', { confirm: { title: 'Approve pay run', message: 'Approve the computed payslips? An approved run is ready to post.' } }),
-      post: withAppCall(scriptAction(postScriptPath, 'post-run', { confirm: { title: 'Post pay run', message: 'Post this pay run to the Accounting ledger? Posted runs are locked and cannot be edited.' } }), posting('complete-run')),
+      post: scriptAction(postScriptPath, 'post-run', { confirm: { title: 'Post pay run', message: 'Post this pay run to the Accounting ledger? Posted runs are locked and cannot be edited.' } }),
     },
   }
 }
@@ -244,6 +240,6 @@ function structuresPage() {
 }
 
 export function buildPages() {
-  const documents = [homePage(), structuresPage(), ...recordKinds.map(recordForm), settingsForm()]
+  const documents = [homePage(), structuresPage(), ...recordKinds.map(recordForm), settingsForm(), ...listPages()]
   return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

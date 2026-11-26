@@ -1,0 +1,56 @@
+// Cross-app steps in one script run. A record operation that needs another app (a ledger posting, a draft invoice, a
+// stock move) prepares a request; the script hands it to the other app's API operation through the platform
+// (`engine.apps.call`, as the same user under the other app's own consent) and records what came back with its own
+// record operation. Shared by the app packages' scripts (copied next to each script by the build).
+
+/** Codes the platform uses when the other app cannot take the call at all (not installed, or it does not offer it). */
+export const unavailableCodes = new Set(['target_not_installed', 'operation_not_offered'])
+
+class HandOverError extends Error {}
+
+/**
+ * Hands `prepared[field]` to `app`'s `operation` and records the result's `returned` value with `record`.
+ * Nothing is handed over when the prepared result has no request (already done). `key` names the record; each call is
+ * a new attempt (the platform keeps a key for good, a failed run included), and every operation is idempotent by its
+ * source. Optional hand-overs (`required: false`) skip a missing app and return the record's own result; required ones
+ * (`label`: the other app's name) fail, leaving the record as it was.
+ */
+export async function handOver(apps, prepared, { app, operation, field, key, required = false, label = app, returned = 'path', record, now = Date.now() }) {
+  const request = prepared?.[field]
+  if (!request) return prepared
+  if (!apps?.call) throw new HandOverError(`${label} cannot be reached from this run.`)
+  let called
+  try {
+    called = await apps.call(app, operation, request, { key: `${key}-${now}` })
+  } catch (error) {
+    if (unavailableCodes.has(error?.code)) {
+      if (required) throw new HandOverError(`${label} is not available right now, so nothing was done. Check that ${label} is installed and approved, then try again.`)
+      const { [field]: _skipped, ...own } = prepared
+      return own
+    }
+    throw error
+  }
+  const value = called?.result?.[returned]
+  if (value === undefined || value === null || value === '') throw new HandOverError(`${label} did not confirm this. Nothing was marked as done; try again.`)
+  return record(value)
+}
+
+/**
+ * The script's `run` with its hand-overs: `handOvers` maps an operation to `{ app, operation, field, recordOperation,
+ * parameter, key, required, label, returned, recordParameters }`. The returned function runs the operation, then (for
+ * an operation that hands over) the other app's operation and the record operation, all in this run.
+ */
+export function withAppCalls(run, handOvers) {
+  return async function runWithApps(parameters, files, apps, options = {}) {
+    const prepared = await run(parameters, files, options)
+    const spec = Object.hasOwn(handOvers, parameters?.operation ?? '') ? handOvers[parameters.operation] : null
+    if (!spec) return prepared
+    const code = String(parameters?.path ?? '').split('/').filter(Boolean).pop() ?? ''
+    return handOver(apps, prepared, {
+      ...spec,
+      key: typeof spec.key === 'function' ? spec.key(prepared, parameters) : `${spec.key}-${code}`,
+      record: value => run({ ...parameters, operation: spec.recordOperation, [spec.parameter]: value,
+        ...(spec.recordParameters?.(prepared) ?? {}) }, files, options),
+    })
+  }
+}

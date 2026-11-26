@@ -3,6 +3,7 @@
 // host conflict check), completing, cancelling and marking no-shows are done by the action script the
 // appointment form runs.
 import { views } from './views.mjs'
+import { listPages } from './lists.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   humanize, iconName, options, openFile, page, panel, projectRegistration, recordButtons, row, scriptAction,
@@ -243,6 +244,6 @@ function typesPage() {
 }
 
 export function buildPages() {
-  const documents = [homePage(), upcomingPage(), typesPage(), ...recordKinds.map(recordForm), settingsForm()]
+  const documents = [homePage(), upcomingPage(), typesPage(), ...recordKinds.map(recordForm), settingsForm(), ...listPages()]
   return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

@@ -3,9 +3,10 @@
 // stock-move emission, immutability once done) are enforced by the production script the forms run; the forms
 // only lock what the script has confirmed or completed.
 import { views } from './views.mjs'
+import { listPages } from './lists.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, grid, heading, humanize,
-  iconName, linkButton, openFile, options, page, panel, projectRegistration, recordButtons, row, scriptAction, appOperationsSource, offers, withAppCall,
+  iconName, linkButton, openFile, options, page, panel, projectRegistration, recordButtons, row, scriptAction, appOperationsSource, offers, 
   sectionCards, stat, stats, status, table, tabs, text, toneExpression, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { containers, installRoot, inventory, mimeTypes, products, recordKinds, schemaId } from './contracts.mjs'
@@ -39,9 +40,6 @@ const productSources = {
 }
 
 /** Kind-specific data, access, actions, header buttons and links of a record form. */
-/** Inventory records a completed order's stock moves through its API; the order's code keys the call. */
-const orderProduction = { app: 'inventory', operation: 'record-production', script: postScriptPath, recordOperation: 'record-moves',
-  parameter: 'moves', field: 'productionRequest', returned: 'moves', key: "'production-' + form.values.code" }
 
 function recordExtras(kind) {
   if (kind === 'bom') {
@@ -117,10 +115,10 @@ function recordExtras(kind) {
       start: scriptAction(postScriptPath, 'start-mo', {
         confirm: { title: 'Start production', message: 'Start production of this manufacturing order?' },
       }),
-      complete: withAppCall(scriptAction(postScriptPath, 'complete-mo', {
+      complete: scriptAction(postScriptPath, 'complete-mo', {
         confirm: { title: 'Complete order', message: 'Complete this manufacturing order? When Inventory is installed, it records the consumption and production stock moves. Done orders cannot be edited.' },
-      }), orderProduction),
-      'record-production': withAppCall(scriptAction(postScriptPath, 'complete-mo', {}), orderProduction),
+      }),
+      'record-production': scriptAction(postScriptPath, 'complete-mo', {}),
       cancel: { steps: [
         { confirm: { title: 'Cancel order', message: 'Cancel this manufacturing order? Cancelled orders cannot be confirmed or completed.' } },
         { 'patch-form': { values: { status: 'cancelled', cancelledAt: '{{ Date() }}', updatedAt: '{{ Date() }}' } } },
@@ -287,6 +285,6 @@ function ordersPage() {
 }
 
 export function buildPages() {
-  const documents = [homePage(), bomsPage(), ordersPage(), ...recordKinds.map(recordForm)]
+  const documents = [homePage(), bomsPage(), ordersPage(), ...recordKinds.map(recordForm), ...listPages()]
   return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

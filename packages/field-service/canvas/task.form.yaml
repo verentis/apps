@@ -1074,24 +1074,6 @@
         ],
         "steps": [
           {
-            "set-state": {
-              "key": "lastresult",
-              "value": null
-            }
-          },
-          {
-            "set-state": {
-              "key": "appcall",
-              "value": null
-            }
-          },
-          {
-            "set-state": {
-              "key": "recorded",
-              "value": null
-            }
-          },
-          {
             "confirm": {
               "title": "Complete task",
               "message": "Complete this task? The materials total is computed, the task is locked and Invoicing drafts the invoice when it is installed."
@@ -1109,38 +1091,13 @@
             }
           },
           {
-            "call-app": {
-              "if": "(data.appops || []).some(o => o.app === 'invoicing' && o.operation === 'create-draft-invoice' && o.available) && !!state.lastresult && !!state.lastresult.invoiceRequest",
-              "app": "invoicing",
-              "operation": "create-draft-invoice",
-              "input": {
-                "$expr": "state.lastresult.invoiceRequest"
-              },
-              "idempotency-key": "{{ ('task-' + form.values.code) + '-' + Date.now() }}",
-              "assign": "appcall"
-            }
-          },
-          {
-            "run-script": {
-              "if": "(data.appops || []).some(o => o.app === 'invoicing' && o.operation === 'create-draft-invoice' && o.available) && !!state.lastresult && !!state.lastresult.invoiceRequest && !!state.appcall && !!state.appcall.path",
-              "file": "/applications/field-service/scripts/post",
-              "timeout": 120,
-              "parameters": {
-                "operation": "record-invoice",
-                "path": "{{ ctx.file.path }}",
-                "invoice": "{{ state.appcall.path }}"
-              },
-              "assign": "recorded"
-            }
-          },
-          {
             "refresh-source": {
               "source": "record"
             }
           },
           {
             "toast": {
-              "message": "{{ (state.recorded && state.recorded.message) || (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
               "variant": "success"
             }
           }
@@ -1153,24 +1110,6 @@
         ],
         "steps": [
           {
-            "set-state": {
-              "key": "lastresult",
-              "value": null
-            }
-          },
-          {
-            "set-state": {
-              "key": "appcall",
-              "value": null
-            }
-          },
-          {
-            "set-state": {
-              "key": "recorded",
-              "value": null
-            }
-          },
-          {
             "run-script": {
               "file": "/applications/field-service/scripts/post",
               "timeout": 120,
@@ -1182,38 +1121,13 @@
             }
           },
           {
-            "call-app": {
-              "if": "(data.appops || []).some(o => o.app === 'invoicing' && o.operation === 'create-draft-invoice' && o.available) && !!state.lastresult && !!state.lastresult.invoiceRequest",
-              "app": "invoicing",
-              "operation": "create-draft-invoice",
-              "input": {
-                "$expr": "state.lastresult.invoiceRequest"
-              },
-              "idempotency-key": "{{ ('task-' + form.values.code) + '-' + Date.now() }}",
-              "assign": "appcall"
-            }
-          },
-          {
-            "run-script": {
-              "if": "(data.appops || []).some(o => o.app === 'invoicing' && o.operation === 'create-draft-invoice' && o.available) && !!state.lastresult && !!state.lastresult.invoiceRequest && !!state.appcall && !!state.appcall.path",
-              "file": "/applications/field-service/scripts/post",
-              "timeout": 120,
-              "parameters": {
-                "operation": "record-invoice",
-                "path": "{{ ctx.file.path }}",
-                "invoice": "{{ state.appcall.path }}"
-              },
-              "assign": "recorded"
-            }
-          },
-          {
             "refresh-source": {
               "source": "record"
             }
           },
           {
             "toast": {
-              "message": "{{ (state.recorded && state.recorded.message) || (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
               "variant": "success"
             }
           }

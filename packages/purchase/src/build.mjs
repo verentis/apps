@@ -32,6 +32,7 @@ await generate({
     'scripts/post/manifest.yaml': scriptManifest(postScriptName, postScriptFileAccess,
       'Confirming validates lines and the vendor and computes the total; receiving marks receipt and drafts a vendor bill create-only when Invoicing is installed.'),
     'scripts/post/ledger.mjs': await sharedSource('ledger.mjs'),
+    'scripts/post/app-calls.mjs': await sharedSource('app-calls.mjs'),
     'scripts/api/manifest.yaml': scriptManifest(apiScriptName, apiScriptFileAccess,
       'The operations other apps call through the platform (api.yaml); drafts are written create-only.'),
     'scripts/api/runtime.mjs': await sharedSource('api/runtime.mjs'),

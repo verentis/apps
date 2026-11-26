@@ -4,7 +4,7 @@
 import { views } from './views.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, documentsPanel, folder, formControl, grid, heading,
-  humanize, iconName, jsonFile, appOperationsSource, appCallSettled, withAppCall, linkButton, openFile, options, page, panel, projectRegistration, recordButtons, row, scriptAction,
+  humanize, iconName, jsonFile, appOperationsSource, linkButton, openFile, options, page, panel, projectRegistration, recordButtons, row, scriptAction,
   sectionCards, stat, stats, status, table, tabs, text, toneExpression, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle, customerLines, documentPreview, pdfSteps,
 } from '../../../tools/file-apps/canvas.mjs'
 import { accounting, containers, crm, installRoot, mimeTypes, recordKinds, schemaId, settingsPath } from './contracts.mjs'
@@ -78,13 +78,6 @@ const address = field => `((e.data.address || {}).${field} || '')`
 const copyCustomer = `(data.companies || []).concat(data.contacts || []).filter(e => e.kind === 'file' && e.data && e.path === form.values.customerRef).map(e => ({ name: e.data.name || [e.data.givenName, e.data.familyName].filter(Boolean).join(' '), legalName: ${fromCrm('legalName')}, email: ${fromCrm('email')}, phone: ${fromCrm('phone')}, taxIdentifier: ${fromCrm('taxIdentifier')}, address: { lines: (e.data.address || {}).lines || [], city: ${address('city')}, region: ${address('region')}, postalCode: ${address('postalCode')}, country: ${address('country')} } }))[0] || form.values.customer`
 
 /** Kind-specific data, access, actions, header buttons and tabs of a record form. */
-/**
- * Accounting posts the record's journal through its API (`post-journal`), from what the posting script returned; the
- * script then completes the record with the posted journal (`complete`). The record's code keys the call.
- */
-const posting = complete => ({ app: 'accounting', operation: 'post-journal', required: true, label: 'Accounting', script: postScriptPath, recordOperation: complete,
-  parameter: 'journal', field: 'journalRequest', key: "'journal-' + form.values.code" })
-
 function recordExtras(kind) {
   if (kind === 'invoice') {
     const outstanding = `${units('form.values.totals.gross')} - ${issuedCredits('ctx.file.path')} - ${allocatedPayments('ctx.file.path')}`
@@ -126,7 +119,7 @@ function recordExtras(kind) {
       actions: {
         'copy-customer': { steps: [{ 'patch-form': { values: { customer: `{{ ${copyCustomer} }}` } } }] },
         savepdf: { steps: pdfSteps(invoiceTemplate('invoice')) },
-        issue: withIssuedCopy('invoice', withAppCall(scriptAction(postScriptPath, 'issue-invoice', { confirm: { title: 'Issue invoice', details: journalPreview(false), message: 'Issue this invoice and post it to the ledger? Issued invoices cannot be edited; correct them with a credit note.' } }), posting('complete-invoice'))),
+        issue: withIssuedCopy('invoice', scriptAction(postScriptPath, 'issue-invoice', { confirm: { title: 'Issue invoice', details: journalPreview(false), message: 'Issue this invoice and post it to the ledger? Issued invoices cannot be edited; correct them with a credit note.' } })),
       },
       tabs: [
         { value: 'settlement', label: 'Credits and payments', icon: 'banknote' },
@@ -159,7 +152,7 @@ function recordExtras(kind) {
       ],
       actions: {
         savepdf: { steps: pdfSteps(invoiceTemplate('credit')) },
-        issue: withIssuedCopy('credit', withAppCall(scriptAction(postScriptPath, 'issue-credit', { confirm: { title: 'Issue credit note', details: journalPreview(true), message: 'Issue this credit note against its invoice and post it to the ledger? Issued credit notes cannot be edited.' } }), posting('complete-credit'))),
+        issue: withIssuedCopy('credit', scriptAction(postScriptPath, 'issue-credit', { confirm: { title: 'Issue credit note', details: journalPreview(true), message: 'Issue this credit note against its invoice and post it to the ledger? Issued credit notes cannot be edited.' } })),
       },
       tabs: [{ value: 'documents', label: 'Documents', icon: 'paperclip' }],
       panels: [documentsPanel('The issued credit note copy and any supporting documents.')],
@@ -199,12 +192,11 @@ function recordExtras(kind) {
     ],
     actions: {
       allocate: { steps: [{ 'patch-form': { values: { allocations: { $expr: `(data.openinvoices || []).reduce((acc, inv) => acc.left <= 0 ? acc : ({ left: acc.left - Math.min(acc.left, inv.open), rows: acc.rows.concat([{ invoice: inv.path, amount: ${display('Math.min(acc.left, inv.open)')} }]) }), { left: ${units('form.values.amount')}, rows: [] }).rows` } } } }] },
-      post: withAppCall(scriptAction(postScriptPath, 'post-payment', { confirm: { title: 'Post payment', details: "{{ [{ label: 'Debit ' + ((((data.accounts || []).find(a => a.path === form.values.bankAccount) || {}).data || {}).name || 'the bank account'), value: Number(form.values.amount || 0).toFixed(2) }].concat((form.values.allocations || []).map(a => ({ label: 'Settles ' + (((data.invoiceoptions || []).find(o => o.value === a.invoice) || {}).label || a.invoice), value: Number(a.amount || 0).toFixed(2) }))) }}", message: 'Post this payment to the ledger and settle its allocations? Posted payments cannot be edited, only reversed.' } }), posting('complete-payment')),
-      reverse: withAppCall(scriptAction(postScriptPath, 'reverse-payment', {
+      post: scriptAction(postScriptPath, 'post-payment', { confirm: { title: 'Post payment', details: "{{ [{ label: 'Debit ' + ((((data.accounts || []).find(a => a.path === form.values.bankAccount) || {}).data || {}).name || 'the bank account'), value: Number(form.values.amount || 0).toFixed(2) }].concat((form.values.allocations || []).map(a => ({ label: 'Settles ' + (((data.invoiceoptions || []).find(o => o.value === a.invoice) || {}).label || a.invoice), value: Number(a.amount || 0).toFixed(2) }))) }}", message: 'Post this payment to the ledger and settle its allocations? Posted payments cannot be edited, only reversed.' } }),
+      reverse: scriptAction(postScriptPath, 'reverse-payment', {
         confirm: { title: 'Reverse payment', message: 'Reverse this payment\'s journal? Its allocations no longer settle their invoices.' },
         parameters: { date: '{{ state.reversaldate }}', reason: '{{ state.reversalreason }}' },
-      }), { app: 'accounting', operation: 'reverse-journal', required: true, label: 'Accounting', script: postScriptPath, recordOperation: 'complete-reversal',
-        parameter: 'reversal', field: 'reversalRequest', key: "'reversal-' + form.values.code" }),
+      }),
     },
   }
 }
@@ -234,8 +226,8 @@ function invoiceTemplate(kind) {
 
 /** After issuing, the issued copy is saved as a PDF in the record's documents (never replaced). */
 function withIssuedCopy(kind, action) {
-  // Only once the record is issued: Accounting posted its journal and the script marked it (or it already was).
-  const issued = appCallSettled('journalRequest')
+  // Only once the record is issued: the script had Accounting post its journal and marked it (or it already was).
+  const issued = '!!state.lastresult && !state.lastresult.journalRequest'
   return { ...action, steps: [...action.steps, ...pdfSteps(invoiceTemplate(kind), { immutable: true }).map(step => {
     const [type] = Object.keys(step)
     return { [type]: { ...step[type], if: issued } }

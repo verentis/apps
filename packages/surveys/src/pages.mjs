@@ -3,6 +3,7 @@
 // (transitions, questionnaire and answer validation, stamps, locking) are done by the action script the
 // forms run.
 import { views } from './views.mjs'
+import { listPages } from './lists.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   humanize, iconName, options, openFile, page, panel, projectRegistration, recordButtons, row, scriptAction,
@@ -292,6 +293,6 @@ function resultsPage() {
 }
 
 export function buildPages() {
-  const documents = [homePage(), surveysPage(), resultsPage(), ...recordKinds.map(recordForm), settingsForm()]
+  const documents = [homePage(), surveysPage(), resultsPage(), ...recordKinds.map(recordForm), settingsForm(), ...listPages()]
   return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

@@ -1,3 +1,4 @@
+import { handOvers } from '../scripts/post/main.mjs'
 import { apiContract } from '../../../tools/file-apps/build.mjs'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { parse } from 'yaml'
@@ -50,9 +51,10 @@ describe('Rental Canvas documents', () => {
   it('runs the booking script from the booking form', () => {
     const document = documents['booking.form.yaml']
     const runs = steps(document).filter(step => 'run-script' in step).map(step => step['run-script'])
-    expect([...new Set(runs.map(run => run.parameters.operation))]).toEqual(['confirm-booking', 'pickup-booking', 'return-booking', 'record-invoice', 'cancel-booking'])
+    expect([...new Set(runs.map(run => run.parameters.operation))]).toEqual(['confirm-booking', 'pickup-booking', 'return-booking', 'cancel-booking'])
     // Returning asks Invoicing (through the platform) to draft the invoice; Rental never writes /invoices.
-    expect(steps(document).filter(step => 'call-app' in step).map(step => step['call-app'].app)).toContain('invoicing')
+    expect(Object.values(documents).some(page => JSON.stringify(page).includes('call-app'))).toBe(false)
+    expect(handOvers['return-booking']).toMatchObject({ app: 'invoicing', operation: 'create-draft-invoice', recordOperation: 'record-invoice' })
     for (const run of runs) expect(run).toMatchObject({ file: postScriptPath, parameters: { path: '{{ ctx.file.path }}' } })
     expect(runs.find(run => run.parameters.operation === 'return-booking' && run.parameters.date).parameters.date).toBe('{{ state.returndate }}')
     expect(document.spec.permissions).toEqual(expect.arrayContaining(['execution.run']))

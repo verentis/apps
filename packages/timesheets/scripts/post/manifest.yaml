@@ -13,3 +13,6 @@ file-access:
   - path: "/timesheets"
     mode: write
     reason: "Mark timesheet entries validated with their validation time"
+  - path: "/employees"
+    mode: read
+    reason: "Check the linked employee still exists and is not terminated (when Employees is installed)"

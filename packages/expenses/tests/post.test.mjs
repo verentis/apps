@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { containers, defaultSettings, starterCategories, templates } from '../src/contracts.mjs'
 import { defaultSettings as ledgerDefaults, starterAccounts, templates as ledgerTemplates } from '../../accounting/src/contracts.mjs'
-import { reportTotal, run } from '../scripts/post/main.mjs'
+import { reportTotal, run, runWithApps } from '../scripts/post/main.mjs'
 import { postJournal } from '../../accounting/scripts/api/main.mjs'
 import { memoryFiles } from '../../../tools/file-apps/memory-files.mjs'
 
@@ -31,13 +31,18 @@ const report = (values = {}) => record('report', {
   ],
   ...values,
 })
-// Posting runs as the form runs it: the script returns the journal, Accounting posts it through its API (its real
-// operation, as the platform would run it), then the script completes the record with the posted journal.
+// Posting runs as the script runs it: it prepares the journal, calls Accounting's post-journal through the platform
+// (here its real operation, as the platform would run it) and completes the record with the posted journal.
+const appCalls = []
+const accountingApp = files => ({
+  call: async (app, operation, input, callOptions) => {
+    appCalls.push({ app, operation, key: callOptions?.key })
+    return { app, operation, executionId: 'op-1', result: await postJournal(input, { files, caller: { app: 'expenses' }, now }, options) }
+  },
+})
 async function call(files, operation, path = '/expense-reports/EXP-0001', extra = {}) {
-  const first = await run({ operation, path, ...extra }, files, options)
-  if (operation !== 'post-report' || !first.journalRequest) return first
-  const posted = await postJournal(first.journalRequest, { files, caller: { app: 'expenses' }, now }, options)
-  return run({ operation: 'complete-report', path, journal: posted.path }, files, options)
+  if (operation === 'post-report') return runWithApps({ operation, path, ...extra }, files, accountingApp(files), options)
+  return run({ operation, path, ...extra }, files, options)
 }
 const approve = (files, extra = { approver: 'Fin Manager' }) => call(files, 'approve-report', '/expense-reports/EXP-0001', extra)
 
@@ -54,6 +59,31 @@ describe('Expenses report totals', () => {
     [[{ category: categoryPath('CAT-0001'), description: 'Taxi', amount: '-5', date: '' }], /non-negative decimal amount/],
     [[{ category: categoryPath('CAT-0001'), description: 'Taxi', amount: '10', date: 'soon' }], /invalid date/],
   ])('refuses %j', (lines, error) => expect(() => reportTotal(lines, 2)).toThrow(error))
+})
+
+describe('Expenses posts through Accounting from its script', () => {
+  const approved = () => workspace({ '/expense-reports/EXP-0001': report({ status: 'approved', approver: 'Fin', approvedAt: now, submittedAt: now, total: '1300.00' }) })
+
+  it('calls accounting.post-journal once, keyed by the attempt, and records the journal', async () => {
+    appCalls.length = 0
+    const files = approved()
+    expect(await call(files, 'post-report')).toMatchObject({ path: '/journals/EXP-0001' })
+    expect(appCalls).toEqual([{ app: 'accounting', operation: 'post-journal', key: expect.stringMatching(/^journal-EXP-0001-\d{13}$/) }])
+    // Posting again finds the report posted and calls nothing.
+    expect(await call(files, 'post-report')).toMatchObject({ message: 'EXP-0001 is already posted' })
+    expect(appCalls).toHaveLength(1)
+  })
+
+  it('leaves the report approved when Accounting is missing or refuses', async () => {
+    const files = approved()
+    const missing = { call: async () => { throw Object.assign(new Error('accounting is not installed'), { code: 'target_not_installed' }) } }
+    await expect(runWithApps({ operation: 'post-report', path: '/expense-reports/EXP-0001' }, files, missing, options)).rejects.toThrow(/Accounting is not available right now, so nothing was done/)
+    const closed = { call: async () => { throw Object.assign(new Error('The period 2026-03 is closed.'), { code: 'operation_failed' }) } }
+    await expect(runWithApps({ operation: 'post-report', path: '/expense-reports/EXP-0001' }, files, closed, options)).rejects.toThrow(/period 2026-03 is closed/)
+    const wrong = { call: async () => ({ result: { path: '/journals/OTHER' } }) }
+    await expect(runWithApps({ operation: 'post-report', path: '/expense-reports/EXP-0001' }, files, wrong, options)).rejects.toThrow(/another journal/)
+    expect(files.json('/expense-reports/EXP-0001').status).toBe('approved')
+  })
 })
 
 describe('Expenses posting script', () => {

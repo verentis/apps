@@ -1,3 +1,4 @@
+import { handOvers } from '../scripts/post/main.mjs'
 import { apiContract } from '../../../tools/file-apps/build.mjs'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { parse } from 'yaml'
@@ -51,9 +52,9 @@ describe('Sales Canvas documents', () => {
     const document = documents['quotation.form.yaml']
     const runs = steps(document).filter(step => 'run-script' in step).map(step => step['run-script'])
     // Confirm, then record the invoice Invoicing drafted (both steps of the confirm action, and of Draft invoice).
-    expect([...new Set(runs.map(run => run.parameters.operation))]).toEqual(['confirm-quotation', 'record-invoice'])
-    const calls = steps(document).filter(step => 'call-app' in step).map(step => step['call-app'])
-    expect(calls[0]).toMatchObject({ app: 'invoicing', operation: 'create-draft-invoice' })
+    expect([...new Set(runs.map(run => run.parameters.operation))]).toEqual(['confirm-quotation'])
+    expect(steps(document).some(step => 'call-app' in step)).toBe(false)
+    expect(handOvers['confirm-quotation']).toMatchObject({ app: 'invoicing', operation: 'create-draft-invoice', recordOperation: 'record-invoice' })
     for (const run of runs) expect(run).toMatchObject({ file: postScriptPath, parameters: { path: '{{ ctx.file.path }}' } })
     expect(document.spec.permissions).toEqual(expect.arrayContaining(['execution.run']))
     // The script reloads the record afterwards, which a dirty form would refuse.

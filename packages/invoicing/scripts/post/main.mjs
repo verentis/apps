@@ -11,6 +11,7 @@ import {
   parseDecimal, readAccounts, readFolder, readRecord, readSettings, saveRecord, toMinor, journalRequest,
   postedJournalFor,
 } from './ledger.mjs'
+import { withAppCalls } from './app-calls.mjs'
 
 export const operations = ['issue-invoice', 'complete-invoice', 'issue-credit', 'complete-credit', 'post-payment', 'complete-payment', 'reverse-payment', 'complete-reversal']
 export const invoicing = {
@@ -162,7 +163,7 @@ export async function issueInvoice(files, path, { now, journal }) {
   ]
   await readAccounts(files, lines.map(item => item.account))
   await openPeriodFor(files, record.issueDate)
-  // Accounting posts the journal through its API (the form asks it); `complete-invoice` then marks the invoice issued.
+  // Accounting posts the journal through its API (this script asks it; see `handOvers`); `complete-invoice` then marks the invoice issued.
   if (!journal) return { message: `Posting ${label(record)} to the ledger`, journalRequest: journalRequest(path, record.issueDate, `Invoice ${memo}`, currency, lines) }
   const journalPath = await postedJournalFor(files, path, journal)
   Object.assign(record, { currency, seller: config.seller ?? {}, lines: totals.lines, totals: formatTotals(totals, digits) })
@@ -257,7 +258,7 @@ export async function reversePayment(files, path, { date, reason, now, reversal:
   const { record } = payment
   if (record.status === 'reversed') return { message: `${label(record)} is already reversed`, path: record.reversalJournal?.path ?? path }
   if (record.status !== 'posted' || !record.journal?.path) fail(`${label(record)} is not posted.`)
-  // Accounting reverses the journal through its API (the form asks it); `complete-reversal` then marks the payment.
+  // Accounting reverses the journal through its API (this script asks it; see `handOvers`); `complete-reversal` then marks the payment.
   if (!reversalPath) {
     return { message: `Reversing ${label(record)}`, reversalRequest: {
       journal: record.journal.path, date: datePattern.test(date ?? '') ? date : now.slice(0, 10), reason: reason ?? '', source: { path } } }
@@ -271,7 +272,7 @@ export async function reversePayment(files, path, { date, reason, now, reversal:
 export async function run(parameters, files, { now = nowIso() } = {}) {
   const { operation, path, date, reason } = parameters ?? {}
   const options = { now, date, reason: typeof reason === 'string' ? reason.trim().slice(0, 500) : '' }
-  // Each posting runs twice: first it returns the journal for Accounting to post (through its API), then, given the
+  // Each posting has two steps: first it returns the journal for Accounting to post (through its API), then, given the
   // journal Accounting posted (`journal` / `reversal`), it marks the record.
   const posted = { ...options, journal: parameters.journal, reversal: parameters.reversal }
   if (operation === 'issue-invoice') return issueInvoice(files, path, options)
@@ -285,6 +286,18 @@ export async function run(parameters, files, { now = nowIso() } = {}) {
   return fail(`Unsupported operation ${JSON.stringify(operation ?? '')}. Expected one of ${operations.join(', ')}.`)
 }
 
+/**
+ * Operations that hand a request to another app: the script calls that app's API operation itself
+ * (`engine.apps.call`, as the same user under the other app's consent) and records the result, in the same run.
+ */
+export const handOvers = {
+  'issue-invoice': { app: 'accounting', operation: 'post-journal', field: 'journalRequest', recordOperation: 'complete-invoice', parameter: 'journal', key: 'journal', required: true, label: 'Accounting' },
+  'issue-credit': { app: 'accounting', operation: 'post-journal', field: 'journalRequest', recordOperation: 'complete-credit', parameter: 'journal', key: 'journal', required: true, label: 'Accounting' },
+  'post-payment': { app: 'accounting', operation: 'post-journal', field: 'journalRequest', recordOperation: 'complete-payment', parameter: 'journal', key: 'journal', required: true, label: 'Accounting' },
+  'reverse-payment': { app: 'accounting', operation: 'reverse-journal', field: 'reversalRequest', recordOperation: 'complete-reversal', parameter: 'reversal', key: 'reversal', required: true, label: 'Accounting' },
+}
+export const runWithApps = withAppCalls(run, handOvers)
+
 export default async function post(engine) {
-  await engine.output.result(await run(engine.context.input.parameters, engine.files))
+  await engine.output.result(await runWithApps(engine.context.input.parameters, engine.files, engine.apps))
 }

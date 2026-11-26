@@ -1,3 +1,4 @@
+import { handOvers } from '../scripts/post/main.mjs'
 import { apiContract } from '../../../tools/file-apps/build.mjs'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { parse } from 'yaml'
@@ -53,15 +54,15 @@ describe('Invoicing Canvas documents', () => {
     for (const grant of spec.access) expect(grant.mode ?? 'read').toBe('read')
   })
 
-  it.each([['invoice', ['issue-invoice', 'complete-invoice']], ['credit', ['issue-credit', 'complete-credit']],
-    ['payment', ['post-payment', 'complete-payment', 'reverse-payment', 'complete-reversal']]])(
+  it.each([['invoice', ['issue-invoice']], ['credit', ['issue-credit']], ['payment', ['post-payment', 'reverse-payment']]])(
     'runs the posting script from %s forms', (kind, operations) => {
       const document = documents[`${kind}.form.yaml`]
       const runs = steps(document).filter(step => 'run-script' in step).map(step => step['run-script'])
       expect(runs.map(run => run.parameters.operation)).toEqual(operations)
       for (const run of runs) expect(run).toMatchObject({ file: postScriptPath, parameters: { path: '{{ ctx.file.path }}' } })
-      // Accounting posts the journal through its API between the two runs; Invoicing never writes /journals.
-      expect(steps(document).filter(step => 'call-app' in step).map(step => step['call-app'].app)).toEqual(operations.length > 2 ? ['accounting', 'accounting'] : ['accounting'])
+      // The script has Accounting post the journal itself (a server-side app call); no page calls an app.
+      expect(steps(document).some(step => 'call-app' in step)).toBe(false)
+      for (const operation of operations) expect(handOvers[operation]).toMatchObject({ app: 'accounting', required: true })
       expect(document.spec.permissions).toEqual(expect.arrayContaining(['execution.run']))
       // A script reloads the record afterwards, which a dirty form would refuse.
       expect(JSON.stringify(document.spec.tree)).toMatch(/form\.saving \|\| form\.dirty/)

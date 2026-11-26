@@ -11,9 +11,23 @@
   },
   "marketplace": {
     "logo": "./icons/app.svg",
-      "hero": {"source": "./marketplace/hero.svg", "alt": "Timesheets cover"},
-      "images": [{"source": "./marketplace/overview.png", "alt": "Timesheets overview in Canvas", "caption": "Timesheets overview"}, {"source": "./marketplace/detail.png", "alt": "This week in Canvas", "caption": "This week"}],
-      "readme": "./marketplace/README.md",
+    "hero": {
+      "source": "./marketplace/hero.svg",
+      "alt": "Timesheets cover"
+    },
+    "images": [
+      {
+        "source": "./marketplace/overview.png",
+        "alt": "Timesheets overview in Canvas",
+        "caption": "Timesheets overview"
+      },
+      {
+        "source": "./marketplace/detail.png",
+        "alt": "This week in Canvas",
+        "caption": "This week"
+      }
+    ],
+    "readme": "./marketplace/README.md",
     "keywords": [
       "timesheets",
       "time tracking",
@@ -191,7 +205,16 @@
       {
         "path": "/settings/timesheets.json",
         "mode": "read",
-        "reason": "Show the default employee's week",
+        "reason": "Show the default employee's week when nobody is signed in",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/week.page.yaml"
+        }
+      },
+      {
+        "path": "/employees",
+        "mode": "read",
+        "reason": "Find your Employees record by your work email (when Employees is installed)",
         "origin": {
           "kind": "document",
           "id": "canvas/week.page.yaml"
@@ -216,6 +239,15 @@
         }
       },
       {
+        "path": "/employees",
+        "mode": "read",
+        "reason": "Find your Employees record by your work email (when Employees is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "timesheets-entry"
+        }
+      },
+      {
         "path": "/applications/timesheets/",
         "mode": "read",
         "reason": "Read the Timesheets schemas and run the validation script",
@@ -231,6 +263,15 @@
         "origin": {
           "kind": "document",
           "id": "timesheets-settings"
+        }
+      },
+      {
+        "path": "/timesheets",
+        "mode": "read",
+        "reason": "List to validate",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/to-validate.page.yaml"
         }
       },
       {
@@ -259,7 +300,19 @@
           "kind": "script",
           "id": "timesheets-post"
         }
+      },
+      {
+        "path": "/employees",
+        "mode": "read",
+        "reason": "Check the linked employee still exists and is not terminated (when Employees is installed)",
+        "origin": {
+          "kind": "script",
+          "id": "timesheets-post"
+        }
       }
+    ],
+    "capabilities": [
+      "user-profile"
     ]
   },
   "packaging": {

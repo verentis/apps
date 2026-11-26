@@ -1,3 +1,4 @@
+import { employeeLink } from '../../../tools/file-apps/canvas.mjs'
 import {
   codeDigits, codeSettings, containerOf, containers, createDefaults, installRoot, mimeTypes, recordKinds, settingsPath,
 } from './contracts.mjs'
@@ -25,7 +26,12 @@ export const createScriptFileAccess = [
 /** What the validation script may touch: it marks entries validated with a conditional write. */
 export const postScriptFileAccess = [
   { path: containers.entries.path, mode: 'write', reason: 'Mark timesheet entries validated with their validation time' },
+  { path: '/employees', mode: 'read', reason: 'Check the linked employee still exists and is not terminated (when Employees is installed)' },
 ]
+
+
+/** The entry's person: an Employees record when Employees is installed (the picker fills the name), else a name. */
+export const employee = employeeLink('employeeRef', 'employee')
 
 const text = (key, label, extra = {}) => ({ key, label, ...extra })
 const select = (key, label, options, extra = {}) => ({ key, label, type: 'select', options, ...extra })
@@ -38,6 +44,7 @@ export const entities = {
     sections: [
       { title: 'Entry', fields: [
         text('employee', 'Employee', { required: true }),
+        employee.field,
         { key: 'date', label: 'Date', type: 'date', required: true },
         text('hours', 'Hours', { placeholder: '7.5', required: true, description: 'A decimal number of hours, e.g. 7.5.' }),
         { key: 'description', label: 'Description', type: 'textarea', span: 2 }] },
@@ -50,7 +57,7 @@ export const entities = {
 
 export const settingsSections = [
   { title: 'Defaults', fields: [
-    text('employee', 'Employee', { description: 'New entries start with this employee name.' })] },
+    text('employee', 'Employee', { description: 'Used for new entries only when the person creating them is not known.' })] },
 ]
 
 /** `spec.settings`: code prefixes and width the create script reads through the engine SDK. */

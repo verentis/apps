@@ -1,8 +1,13 @@
+import { employeeLink } from '../../../tools/file-apps/canvas.mjs'
 import {
   accounting, accountingSettingsPath, codeDigits, codeSettings, computations, containerOf, containers, createDefaults,
   employees, installRoot, mimeTypes, recordKinds, ruleKinds, seedRecords, settingsPath,
 } from './contracts.mjs'
 import { scriptConsent } from '../../../tools/file-apps/build.mjs'
+
+
+/** Who the profile pays: an Employees record when Employees is installed (the picker fills the name), else a name. */
+export const payee = employeeLink('employeeRef', 'employeeName')
 
 export const version = '0.1.0'
 export const canvasOrigin = 'https://canvas.apps.localtest.me'
@@ -74,7 +79,7 @@ export const entities = {
     sections: [
       { title: 'Employee', fields: [
         text('employeeName', 'Employee name', { required: true }),
-        select('employeeRef', 'Employee record', '{{ data.employeeoptions }}', { description: 'Optional. Link the Employees record (when Employees is installed).' })] },
+        payee.field] },
       { title: 'Pay', fields: [
         select('structure', 'Salary structure', '{{ data.structureoptions }}', { required: true, span: 2 }),
         text('baseWage', 'Base monthly wage', { placeholder: '0.00', required: true }),

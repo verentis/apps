@@ -11,9 +11,23 @@
   },
   "marketplace": {
     "logo": "./icons/app.svg",
-      "hero": {"source": "./marketplace/hero.svg", "alt": "Time Off cover"},
-      "images": [{"source": "./marketplace/overview.png", "alt": "Time Off overview in Canvas", "caption": "Time Off overview"}, {"source": "./marketplace/detail.png", "alt": "Leave requests in Canvas", "caption": "Leave requests"}],
-      "readme": "./marketplace/README.md",
+    "hero": {
+      "source": "./marketplace/hero.svg",
+      "alt": "Time Off cover"
+    },
+    "images": [
+      {
+        "source": "./marketplace/overview.png",
+        "alt": "Time Off overview in Canvas",
+        "caption": "Time Off overview"
+      },
+      {
+        "source": "./marketplace/detail.png",
+        "alt": "Leave requests in Canvas",
+        "caption": "Leave requests"
+      }
+    ],
+    "readme": "./marketplace/README.md",
     "keywords": [
       "time off",
       "leave",
@@ -289,7 +303,7 @@
       {
         "path": "/employees",
         "mode": "read",
-        "reason": "Offer Employees records on requests (when Employees is installed)",
+        "reason": "Find your Employees record by your work email (when Employees is installed)",
         "origin": {
           "kind": "document",
           "id": "time-off-request"
@@ -329,6 +343,51 @@
         "origin": {
           "kind": "document",
           "id": "time-off-settings"
+        }
+      },
+      {
+        "path": "/leave-requests",
+        "mode": "read",
+        "reason": "List team calendar",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/calendar.page.yaml"
+        }
+      },
+      {
+        "path": "/leave-requests",
+        "mode": "read",
+        "reason": "List my requests",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/mine.page.yaml"
+        }
+      },
+      {
+        "path": "/employees",
+        "mode": "read",
+        "reason": "Find your Employees record by your work email (when Employees is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/mine.page.yaml"
+        }
+      },
+      {
+        "path": "/leave-requests",
+        "mode": "read",
+        "reason": "List to approve",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/to-approve.page.yaml"
+        }
+      },
+      {
+        "path": "/leave-types",
+        "mode": "read",
+        "reason": "List leave types",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/types.page.yaml"
         }
       },
       {
@@ -376,6 +435,9 @@
           "id": "time-off-post"
         }
       }
+    ],
+    "capabilities": [
+      "user-profile"
     ]
   },
   "packaging": {

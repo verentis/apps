@@ -6,7 +6,7 @@ import { views } from './views.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   humanize, iconName, linkButton, openFile, options, page, panel, projectRegistration, recordButtons, row,
-  appOperationsSource, attemptKey, offers, scriptAction, withInvoice, sectionCards, stat, stats, status, table, tabs, text, toneExpression, recordHeader, pageHeader, appNavigation, lifecycle, customerLines, documentPreview, pdfSteps,
+  appOperationsSource, attemptKey, offers, scriptAction, sectionCards, stat, stats, status, table, tabs, text, toneExpression, recordHeader, pageHeader, appNavigation, lifecycle, customerLines, documentPreview, pdfSteps,
 } from '../../../tools/file-apps/canvas.mjs'
 import { containers, crm, installRoot, mimeTypes, products, recordKinds, schemaId, settingsPath } from './contracts.mjs'
 import { entities, postScriptPath, settingsSections } from './app.mjs'
@@ -56,8 +56,6 @@ const fromCrm = field => `(e.data.${field} || '')`
 const crmAddress = field => `((e.data.address || {}).${field} || '')`
 const copyCustomer = `(data.companies || []).concat(data.contacts || []).filter(e => e.kind === 'file' && e.data && e.path === form.values.customerRef).map(e => ({ name: e.data.name || [e.data.givenName, e.data.familyName].filter(Boolean).join(' '), legalName: ${fromCrm('legalName')}, email: ${fromCrm('email')}, phone: ${fromCrm('phone')}, taxIdentifier: ${fromCrm('taxIdentifier')}, address: { lines: (e.data.address || {}).lines || [], city: ${crmAddress('city')}, region: ${crmAddress('region')}, postalCode: ${crmAddress('postalCode')}, country: ${crmAddress('country')} } }))[0] || form.values.customer`
 
-/** Invoicing drafts a confirmed quotation's invoice; the quotation's code keys the call. */
-const quotationInvoice = { script: postScriptPath, key: "'quotation-' + form.values.code" }
 
 /** Kind-specific data, access, actions, header buttons and notices of a record form. */
 function recordExtras(kind) {
@@ -104,12 +102,12 @@ function recordExtras(kind) {
         ] },
         // The quotation as the customer receives it; saved again (replaced) each time.
         savepdf: { steps: pdfSteps(salesTemplate('quotation'), { suffix: '' }) },
-        confirm: withInvoice(scriptAction(postScriptPath, 'confirm-quotation', { confirm: { title: 'Confirm quotation', fields: [
+        confirm: scriptAction(postScriptPath, 'confirm-quotation', { confirm: { title: 'Confirm quotation', fields: [
           { key: 'prices', label: 'Prices and discounts are agreed with the customer', type: 'checkbox', required: true },
           { key: 'delivery', label: 'The delivery date is agreed', type: 'checkbox', required: true },
           { key: 'po', label: 'The customer’s order number is on the quotation (when they use one)', type: 'checkbox' },
-        ], message: 'Confirm this quotation and create its sales order? Confirmed quotations cannot be edited. When Invoicing is installed, it drafts the invoice.' } }), quotationInvoice),
-        'draft-invoice': withInvoice(scriptAction(postScriptPath, 'confirm-quotation', {}), quotationInvoice),
+        ], message: 'Confirm this quotation and create its sales order? Confirmed quotations cannot be edited. When Invoicing is installed, it drafts the invoice.' } }),
+        'draft-invoice': scriptAction(postScriptPath, 'confirm-quotation', {}),
         cancel: { steps: [
           { confirm: { title: 'Cancel quotation', message: 'Cancel this quotation? It can be reopened later.' } },
           { 'patch-form': { values: { status: 'cancelled', updatedAt: '{{ Date() }}' } } },

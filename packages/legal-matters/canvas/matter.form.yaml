@@ -1097,24 +1097,6 @@
         ],
         "steps": [
           {
-            "set-state": {
-              "key": "lastresult",
-              "value": null
-            }
-          },
-          {
-            "set-state": {
-              "key": "appcall",
-              "value": null
-            }
-          },
-          {
-            "set-state": {
-              "key": "recorded",
-              "value": null
-            }
-          },
-          {
             "confirm": {
               "title": "Approve or resume invoice draft",
               "message": "Reserve these sources and create one ordinary draft in Invoicing? Only released narratives leave the pre-bill."
@@ -1133,39 +1115,13 @@
             }
           },
           {
-            "call-app": {
-              "if": "(data.appops || []).some(o => o.app === 'invoicing' && o.operation === 'create-draft-invoice' && o.available) && !!state.lastresult && !!state.lastresult.invoiceRequest",
-              "app": "invoicing",
-              "operation": "create-draft-invoice",
-              "input": {
-                "$expr": "state.lastresult.invoiceRequest"
-              },
-              "idempotency-key": "{{ ('prebill-' + (form.values.prebill && form.values.prebill.id)) + '-' + Date.now() }}",
-              "assign": "appcall"
-            }
-          },
-          {
-            "run-script": {
-              "if": "(data.appops || []).some(o => o.app === 'invoicing' && o.operation === 'create-draft-invoice' && o.available) && !!state.lastresult && !!state.lastresult.invoiceRequest && !!state.appcall && !!state.appcall.path",
-              "file": "/applications/legal-matters/scripts/workflow",
-              "timeout": 120,
-              "parameters": {
-                "operation": "record-invoice",
-                "path": "{{ ctx.file.path }}",
-                "invoice": "{{ state.appcall.path }}",
-                "revision": "{{ state.lastresult.revision }}"
-              },
-              "assign": "recorded"
-            }
-          },
-          {
             "refresh-source": {
               "source": "record"
             }
           },
           {
             "toast": {
-              "message": "{{ (state.recorded && state.recorded.message) || (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
               "variant": "success"
             }
           }

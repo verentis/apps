@@ -1,3 +1,4 @@
+import { withUserProfile } from '../../../tools/file-apps/build.mjs'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { parse } from 'yaml'
 import { describe, expect, it } from 'vitest'
@@ -25,9 +26,9 @@ describe('Timesheets Canvas documents', () => {
     expect(Object.keys(documents).sort()).toEqual(Object.keys(pages).sort())
     for (const [name, document] of Object.entries(pages)) expect(documents[name], name).toEqual(plain(document))
     const { metadata: { version: _version, ...metadata }, ...installed } = read('timesheets.app.yaml')
-    const { metadata: { version: _source, ...expectedMetadata }, ...expected } = plain({
+    const { metadata: { version: _source, ...expectedMetadata }, ...expected } = plain(withUserProfile({
       ...manifest, spec: { ...manifest.spec, 'file-access': [...documentFileAccess(pages), ...scriptConsents] },
-    })
+    }, pages))
     expect({ ...installed, metadata }).toEqual({ ...expected, metadata: expectedMetadata })
     expect(read('environments/feature.yaml')).toEqual(featureOverlay)
     expect(read('environments/production.yaml')).toEqual(productionOverlay)

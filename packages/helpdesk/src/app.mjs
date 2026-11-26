@@ -1,8 +1,13 @@
+import { employeeLink } from '../../../tools/file-apps/canvas.mjs'
 import {
   codeDigits, codeSettings, containerOf, containers, createDefaults, installRoot, mimeTypes, priorities,
   recordKinds, settingsPath, stages, starterRecords,
 } from './contracts.mjs'
 import { scriptConsent } from '../../../tools/file-apps/build.mjs'
+
+
+/** Who works the ticket: an Employees record when Employees is installed (the picker fills the name), else a name. */
+export const assignee = employeeLink('assigneeRef', 'assignee', { label: 'Assignee record' })
 
 export const version = '0.1.0'
 export const canvasOrigin = 'https://canvas.apps.localtest.me'
@@ -53,6 +58,7 @@ export const entities = {
       { title: 'Ticket', fields: [text('subject', 'Subject', { required: true, span: 2 }),
         { key: 'team', label: 'Team', type: 'select', options: '{{ data.teamoptions }}' },
         text('assignee', 'Assignee', { placeholder: 'Name or email' }),
+        assignee.field,
         select('priority', 'Priority', labelled(priorities)),
         select('stage', 'Stage', labelled(stages), { description: 'Solved and closed are set by Resolve and Close.' }),
         text('slaDeadline', 'SLA deadline', { readOnly: 'true', description: 'Computed from the team\'s SLA hours at creation.' })] },

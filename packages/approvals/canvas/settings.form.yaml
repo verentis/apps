@@ -183,6 +183,7 @@
                         "props": {
                           "label": "Default requester",
                           "value": "{{ form.values.defaultRequester }}",
+                          "description": "Used for new requests only when the person creating them is not known.",
                           "placeholder": "Who usually raises requests here?"
                         }
                       }

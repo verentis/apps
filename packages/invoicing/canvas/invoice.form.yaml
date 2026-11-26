@@ -1261,36 +1261,10 @@
         ],
         "steps": [
           {
-            "set-state": {
-              "key": "lastresult",
-              "value": null
-            }
-          },
-          {
-            "set-state": {
-              "key": "appcall",
-              "value": null
-            }
-          },
-          {
-            "set-state": {
-              "key": "recorded",
-              "value": null
-            }
-          },
-          {
-            "toast": {
-              "if": "!((data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available))",
-              "variant": "error",
-              "message": "Accounting is not available right now, so nothing was done. Check that Accounting is installed and approved, then try again."
-            }
-          },
-          {
             "confirm": {
               "title": "Issue invoice",
               "message": "Issue this invoice and post it to the ledger? Issued invoices cannot be edited; correct them with a credit note.",
-              "details": "{{ [{ label: 'Debit ' + ((((data.accounts || []).find(a => a.path === (data.settings && data.settings.receivableAccount)) || {}).data || {}).name || 'the receivable account (choose it in settings)'), value: (((form.values.lines || []).reduce((s, l) => s + Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)), 0) + (form.values.lines || []).reduce((s, l) => s + Math.round(Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)) * Number(l.taxRate === '' || l.taxRate == null ? ((data.settings && data.settings.defaultTaxRate) || 0) : l.taxRate) / 100), 0)) / 100).toFixed(2) }, { label: 'Credit ' + ((((data.accounts || []).find(a => a.path === (data.settings && data.settings.incomeAccount)) || {}).data || {}).name || 'the income account (choose it in settings)'), value: ((form.values.lines || []).reduce((s, l) => s + Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)), 0) / 100).toFixed(2) }].concat((form.values.lines || []).reduce((s, l) => s + Math.round(Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)) * Number(l.taxRate === '' || l.taxRate == null ? ((data.settings && data.settings.defaultTaxRate) || 0) : l.taxRate) / 100), 0) ? [{ label: 'Credit ' + ((((data.accounts || []).find(a => a.path === (data.settings && data.settings.taxAccount)) || {}).data || {}).name || 'the tax account (choose it in settings)'), value: ((form.values.lines || []).reduce((s, l) => s + Math.round(Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)) * Number(l.taxRate === '' || l.taxRate == null ? ((data.settings && data.settings.defaultTaxRate) || 0) : l.taxRate) / 100), 0) / 100).toFixed(2) }] : []) }}",
-              "if": "(data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available)"
+              "details": "{{ [{ label: 'Debit ' + ((((data.accounts || []).find(a => a.path === (data.settings && data.settings.receivableAccount)) || {}).data || {}).name || 'the receivable account (choose it in settings)'), value: (((form.values.lines || []).reduce((s, l) => s + Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)), 0) + (form.values.lines || []).reduce((s, l) => s + Math.round(Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)) * Number(l.taxRate === '' || l.taxRate == null ? ((data.settings && data.settings.defaultTaxRate) || 0) : l.taxRate) / 100), 0)) / 100).toFixed(2) }, { label: 'Credit ' + ((((data.accounts || []).find(a => a.path === (data.settings && data.settings.incomeAccount)) || {}).data || {}).name || 'the income account (choose it in settings)'), value: ((form.values.lines || []).reduce((s, l) => s + Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)), 0) / 100).toFixed(2) }].concat((form.values.lines || []).reduce((s, l) => s + Math.round(Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)) * Number(l.taxRate === '' || l.taxRate == null ? ((data.settings && data.settings.defaultTaxRate) || 0) : l.taxRate) / 100), 0) ? [{ label: 'Credit ' + ((((data.accounts || []).find(a => a.path === (data.settings && data.settings.taxAccount)) || {}).data || {}).name || 'the tax account (choose it in settings)'), value: ((form.values.lines || []).reduce((s, l) => s + Math.round(Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)) * Number(l.taxRate === '' || l.taxRate == null ? ((data.settings && data.settings.defaultTaxRate) || 0) : l.taxRate) / 100), 0) / 100).toFixed(2) }] : []) }}"
             }
           },
           {
@@ -1301,53 +1275,18 @@
                 "operation": "issue-invoice",
                 "path": "{{ ctx.file.path }}"
               },
-              "assign": "lastresult",
-              "if": "(data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available)"
-            }
-          },
-          {
-            "call-app": {
-              "if": "((data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available)) && ((data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available) && !!state.lastresult && !!state.lastresult.journalRequest)",
-              "app": "accounting",
-              "operation": "post-journal",
-              "input": {
-                "$expr": "state.lastresult.journalRequest"
-              },
-              "idempotency-key": "{{ ('journal-' + form.values.code) + '-' + Date.now() }}",
-              "assign": "appcall"
-            }
-          },
-          {
-            "run-script": {
-              "if": "((data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available)) && ((data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available) && !!state.lastresult && !!state.lastresult.journalRequest && !!state.appcall && !!state.appcall.path)",
-              "file": "/applications/invoicing/scripts/post",
-              "timeout": 120,
-              "parameters": {
-                "operation": "complete-invoice",
-                "path": "{{ ctx.file.path }}",
-                "journal": "{{ state.appcall.path }}"
-              },
-              "assign": "recorded"
+              "assign": "lastresult"
             }
           },
           {
             "refresh-source": {
-              "source": "record",
-              "if": "(data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available)"
+              "source": "record"
             }
           },
           {
             "toast": {
-              "message": "{{ (state.recorded && state.recorded.message) || (state.lastresult && state.lastresult.message) || 'Done' }}",
-              "variant": "success",
-              "if": "((data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available)) && (!(!!state.lastresult && !!state.lastresult.journalRequest) || !!state.recorded)"
-            }
-          },
-          {
-            "toast": {
-              "if": "((data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available)) && !!state.lastresult && !!state.lastresult.journalRequest && !state.recorded",
-              "variant": "error",
-              "message": "Accounting did not confirm this. Nothing was marked as done; try again."
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
             }
           },
           {
@@ -1403,14 +1342,14 @@
               },
               "path": "./documents/{{ form.values.code || 'document' }}.pdf",
               "immutable": true,
-              "if": "!!state.lastresult && (!state.lastresult.journalRequest || !!state.recorded)"
+              "if": "!!state.lastresult && !state.lastresult.journalRequest"
             }
           },
           {
             "toast": {
               "message": "Saved the issued copy in Documents",
               "variant": "success",
-              "if": "!!state.lastresult && (!state.lastresult.journalRequest || !!state.recorded)"
+              "if": "!!state.lastresult && !state.lastresult.journalRequest"
             }
           }
         ]

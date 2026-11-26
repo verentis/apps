@@ -1,0 +1,147 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "social-channels",
+    "name": "Channels",
+    "description": "The connected social accounts.",
+    "icon": "radio-tower"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/social-accounts",
+        "reason": "List channels"
+      }
+    ],
+    "data": {
+      "records": {
+        "kind": "folder",
+        "path": "/social-accounts",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.social-marketing.account+json"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Social Marketing",
+          "icon": "megaphone",
+          "active": "channels.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "upcoming.page.yaml",
+              "label": "Calendar",
+              "icon": "calendar"
+            },
+            {
+              "id": "engagement.page.yaml",
+              "label": "Engagement",
+              "icon": "chart-column"
+            },
+            {
+              "id": "calendar.page.yaml",
+              "label": "Content calendar",
+              "icon": "calendar-days"
+            },
+            {
+              "id": "channels.page.yaml",
+              "label": "Channels",
+              "icon": "radio-tower"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
+            }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/social-marketing/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/social-marketing.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
+        },
+        "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Channels",
+              "note": "The connected social accounts."
+            },
+            "children": []
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "records",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, network: e.data.network || '', handle: e.data.handle || '', active: e.data.active === false ? 'Paused' : 'Active' })) }}",
+              "columns": [
+                {
+                  "key": "code",
+                  "label": "Code"
+                },
+                {
+                  "key": "network",
+                  "label": "Network"
+                },
+                {
+                  "key": "handle",
+                  "label": "Handle"
+                },
+                {
+                  "key": "active",
+                  "label": "Status",
+                  "format": "badge"
+                }
+              ],
+              "emptyText": "No channels yet.",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

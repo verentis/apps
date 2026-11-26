@@ -3,6 +3,7 @@
 // quantities, immutability once done) are enforced by the posting script the forms run; the forms only lock what
 // the script has done or applied.
 import { views } from './views.mjs'
+import { listPages } from './lists.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading, iconName,
   linkButton, openFile, options, page, panel, projectRegistration, recordButtons, row, scriptAction, sectionCards,
@@ -321,6 +322,6 @@ function lowStockWidget() {
 }
 
 export function buildPages() {
-  const documents = [homePage(), stockPage(), lowStockWidget(), ...recordKinds.map(recordForm), settingsForm()]
+  const documents = [homePage(), stockPage(), lowStockWidget(), ...recordKinds.map(recordForm), settingsForm(), ...listPages()]
   return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

@@ -43,7 +43,9 @@
       "execution.run",
       "execution.read"
     ],
-    "capabilities": [],
+    "capabilities": [
+      "user-profile"
+    ],
     "sandbox": {
       "allow-scripts": true,
       "allow-same-origin": true,
@@ -59,7 +61,7 @@
       {
         "path": "/employees",
         "mode": "read",
-        "reason": "Offer employees on shifts (when Employees is installed)"
+        "reason": "Find your Employees record by your work email (when Employees is installed)"
       },
       {
         "path": "/applications/planning/",
@@ -74,7 +76,7 @@
       },
       {
         "path": "/employees",
-        "reason": "Offer employees on shifts (when Employees is installed)"
+        "reason": "Find your Employees record by your work email (when Employees is installed)"
       },
       {
         "path": "/applications/planning/",
@@ -96,15 +98,25 @@
         "kind": "computed",
         "expr": "(data.roles || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + (e.data.name || ''), value: e.path }))"
       },
-      "people": {
+      "signedinstaff": {
         "kind": "folder",
         "path": "/employees",
         "contents": true,
         "mime-pattern": "application/vnd.verentis.employees.employee+json"
       },
-      "employeeoptions": {
+      "me": {
         "kind": "computed",
-        "expr": "(data.people || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + (e.data.name || ''), value: e.path }))"
+        "expr": "((data.signedinstaff || []).filter(e => e.kind === 'file' && e.data && e.data.status !== 'terminated' && !!ctx.user && !!ctx.user.email && String(e.data.workEmail || '').toLowerCase() === String(ctx.user.email).toLowerCase()).map(e => ({ path: e.path, name: String(e.data.name || '') }))[0] || { path: '', name: ctx.user ? String(ctx.user.name || '') : '' })"
+      },
+      "employeelinks": {
+        "kind": "folder",
+        "path": "/employees",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.employees.employee+json"
+      },
+      "employeelinkoptions": {
+        "kind": "computed",
+        "expr": "(data.employeelinks || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && e.data.status !== 'terminated').map(e => ({ value: e.path, label: (String(e.data.name || [e.data.givenName, e.data.familyName].filter(Boolean).join(' ') || '') || e.name) + (e.data.jobTitle ? ' · ' + e.data.jobTitle : '') }))"
       }
     },
     "tree": [
@@ -197,23 +209,6 @@
                 "rules": {
                   "visible": "form.values.status === 'published' && !(form.values.state === 'archived')",
                   "disabled": "form.saving || form.dirty"
-                },
-                "slot": "actions"
-              },
-              {
-                "type": "canvas.button",
-                "props": {
-                  "label": "Copy name",
-                  "variant": "ghost",
-                  "icon": "copy",
-                  "size": "sm"
-                },
-                "on": {
-                  "click": "copy-employee"
-                },
-                "rules": {
-                  "visible": "!(form.values.status === 'confirmed') && !!form.values.employeeRef",
-                  "disabled": "form.saving || form.values.state === 'archived'"
                 },
                 "slot": "actions"
               },
@@ -387,12 +382,23 @@
                         "props": {
                           "label": "Employee record",
                           "value": "{{ form.values.employeeRef }}",
-                          "description": "Optional. Choose an Employees record, then Copy name.",
-                          "options": "{{ data.employeeoptions }}",
+                          "description": "Optional. Choosing a record fills the name.",
+                          "options": "{{ data.employeelinkoptions }}",
                           "searchable": true
                         },
                         "rules": {
                           "disabled": "(form.values.state === 'archived' || (form.values.status === 'confirmed'))"
+                        },
+                        "on": {
+                          "update": [
+                            {
+                              "patch-form": {
+                                "values": {
+                                  "employee": "{{ ((data.employeelinks || []).filter(e => e.kind === 'file' && e.data && e.path === event).map(e => String(e.data.name || [e.data.givenName, e.data.familyName].filter(Boolean).join(' ') || ''))[0] || form.values.employee || '') }}"
+                                }
+                              }
+                            }
+                          ]
                         }
                       },
                       {
@@ -600,17 +606,6 @@
             "toast": {
               "message": "Restored",
               "variant": "success"
-            }
-          }
-        ]
-      },
-      "copy-employee": {
-        "steps": [
-          {
-            "patch-form": {
-              "values": {
-                "employee": "{{ (((data.people || []).filter(e => e.kind === 'file' && e.data && e.path === form.values.employeeRef).map(e => e.data.name || '')[0]) || form.values.employee) }}"
-              }
             }
           }
         ]

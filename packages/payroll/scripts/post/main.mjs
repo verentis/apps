@@ -11,6 +11,7 @@ import {
   balanceLines, journalRequest, postedJournalFor, divideHalfUp, fail, formatMinor, journalLine, ledgerSettings,
   nowIso, openPeriodFor, parseDecimal, readAccounts, readFolder, readRecord, readSettings, saveRecord, toMinor,
 } from './ledger.mjs'
+import { withAppCalls } from './app-calls.mjs'
 
 export const operations = ['compute-run', 'approve-run', 'post-run', 'complete-run']
 export const payroll = {
@@ -201,7 +202,7 @@ export async function postRun(files, path, { now, journal }) {
   await readAccounts(files, lines.map(item => item.account))
   const date = periodEnd(record.period)
   await openPeriodFor(files, date)
-  // Accounting posts the journal through its API (the form asks it); `complete-run` then marks the run posted.
+  // Accounting posts the journal through its API (this script asks it; see `handOvers`); `complete-run` then marks the run posted.
   if (!journal) return { message: `Posting ${label(record)} to the ledger`, journalRequest: journalRequest(path, date, `Pay run ${memo}`, currency, lines) }
   const journalPath = await postedJournalFor(files, path, journal)
   Object.assign(record, { status: 'posted', postedAt: now, journal: { path: journalPath }, updatedAt: now })
@@ -219,6 +220,15 @@ export async function run(parameters, files, { now = nowIso() } = {}) {
   return fail(`Unsupported operation ${JSON.stringify(operation ?? '')}. Expected one of ${operations.join(', ')}.`)
 }
 
+/**
+ * Operations that hand a request to another app: the script calls that app's API operation itself
+ * (`engine.apps.call`, as the same user under the other app's consent) and records the result, in the same run.
+ */
+export const handOvers = {
+  'post-run': { app: 'accounting', operation: 'post-journal', field: 'journalRequest', recordOperation: 'complete-run', parameter: 'journal', key: 'journal', required: true, label: 'Accounting' },
+}
+export const runWithApps = withAppCalls(run, handOvers)
+
 export default async function post(engine) {
-  await engine.output.result(await run(engine.context.input.parameters, engine.files))
+  await engine.output.result(await runWithApps(engine.context.input.parameters, engine.files, engine.apps))
 }

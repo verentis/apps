@@ -97,7 +97,7 @@ async function dispatch(files, current, now) {
     await persist(files, reg)
   }
   check(batch.matter === m.id && digest(batch.quote) === digest(p.quote), 'Reservation mismatch; reconcile manually.')
-  // The form asks Invoicing to draft it (through the platform), then `record-invoice` marks the batch delivered.
+  // The workflow asks Invoicing to draft it (through the platform, in the same run), then `record-invoice` marks the batch delivered.
   // `revision` lets the form record the invoice against the matter as it now stands.
   return { message: 'Pre-bill approved; Invoicing drafts the invoice.', invoiceRequest: invoiceRequest(batch, current.path), revision: m.revision }
 }

@@ -3,13 +3,14 @@
 // (required fields, thresholds, immutability) are done by the decision script the request form runs; the forms
 // only lock what the script has moved beyond draft.
 import { views } from './views.mjs'
+import { listPages } from './lists.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   humanize, iconName, options, openFile, page, panel, projectRegistration, recordButtons, row, scriptAction,
   stat, stats, status, table, tabs, text, toneExpression, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { containers, installRoot, mimeTypes, recordKinds, schemaId, settingsPath } from './contracts.mjs'
-import { entities, postScriptPath, settingsSections } from './app.mjs'
+import { entities, postScriptPath, requester, settingsSections } from './app.mjs'
 
 export { collectSteps, documentFileAccess, projectRegistration } from '../../../tools/file-apps/canvas.mjs'
 
@@ -48,8 +49,8 @@ function recordExtras(kind) {
   }
   const visibleWhenSubmitted = { visible: submitted }
   return {
-    access: [{ path: containers.types.path, reason: 'Offer the approval types and show each request\'s threshold' }],
-    data: typeSources,
+    access: [{ path: containers.types.path, reason: 'Offer the approval types and show each request\'s threshold' }, ...requester.sources.access],
+    data: { ...typeSources, ...requester.sources.data },
     state: { approver: '', comment: '' },
     // Who may decide: a workspace role granted `approve` (role keys or names, as the platform shares them). When the
     // platform shares no roles (the app was installed without the profile consent), anyone may decide, as before.
@@ -79,12 +80,14 @@ function recordExtras(kind) {
         [['approver', 'Approver'], ['decision', 'Decision'], ['date', 'Date'], ['comment', 'Comment']], 'No decisions yet'),
     ],
     buttons: [
+      { ...requester.meButton, rules: { ...requester.meButton.rules, visible: `${draft} && !(${archived}) && ${requester.meButton.rules.visible}` } },
       button('Submit', 'submit', { visible: `${draft} && !(${archived})`, disabled: `${idle} || form.invalid` }, undefined, 'send'),
       button('Approve', 'approve', { visible: submitted, disabled: `${idle} || ${mayNotDecide}` }, undefined, 'check'),
       button('Refuse', 'refuse', { visible: submitted, disabled: `${idle} || ${mayNotDecide}` }, 'outline', 'x'),
       button('Cancel request', 'cancel', { visible: `${cancellable} && !(${archived})`, disabled: idle }, 'ghost', 'ban'),
     ],
     actions: {
+      ...requester.meAction,
       submit: scriptAction(postScriptPath, 'submit', {
         confirm: { title: 'Submit request', message: 'Submit this request for approval? The type\'s required fields are checked and submitted requests can no longer be edited.' },
       }),
@@ -313,6 +316,6 @@ function byTypePage() {
 }
 
 export function buildPages() {
-  const documents = [homePage(), requestsPage(), pendingPage(), byTypePage(), ...recordKinds.map(recordForm), settingsForm()]
+  const documents = [homePage(), requestsPage(), pendingPage(), byTypePage(), ...recordKinds.map(recordForm), settingsForm(), ...listPages()]
   return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

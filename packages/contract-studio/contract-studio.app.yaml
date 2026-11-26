@@ -196,6 +196,24 @@
         }
       },
       {
+        "path": "/legal-precedents",
+        "mode": "read",
+        "reason": "List clause library",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/library.page.yaml"
+        }
+      },
+      {
+        "path": "/legal-contracts",
+        "mode": "read",
+        "reason": "List issued",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/issued.page.yaml"
+        }
+      },
+      {
         "path": "/legal-contracts",
         "mode": "write",
         "reason": "Create and conditionally edit, submit and approve agreements",

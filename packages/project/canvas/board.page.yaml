@@ -52,6 +52,11 @@
               "icon": "kanban"
             },
             {
+              "id": "tasks.page.yaml",
+              "label": "Tasks",
+              "icon": "list-checks"
+            },
+            {
               "id": "settings",
               "label": "Settings",
               "icon": "settings"

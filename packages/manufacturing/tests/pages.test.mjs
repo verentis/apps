@@ -1,3 +1,4 @@
+import { handOvers } from '../scripts/post/main.mjs'
 import { apiContract } from '../../../tools/file-apps/build.mjs'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { parse } from 'yaml'
@@ -51,7 +52,9 @@ describe('Manufacturing Canvas documents', () => {
   it('runs the production script against order files, in transition order', () => {
     const document = documents['order.form.yaml']
     const runs = steps(document).filter(step => 'run-script' in step).map(step => step['run-script'])
-    expect([...new Set(runs.map(run => run.parameters.operation))]).toEqual(['confirm-mo', 'start-mo', 'complete-mo', 'record-moves'])
+    expect([...new Set(runs.map(run => run.parameters.operation))]).toEqual(['confirm-mo', 'start-mo', 'complete-mo'])
+    expect(Object.values(documents).some(page => JSON.stringify(page).includes('call-app'))).toBe(false)
+    expect(handOvers['complete-mo']).toMatchObject({ app: 'inventory', operation: 'record-production', recordOperation: 'record-moves', returned: 'moves' })
     for (const run of runs) {
       expect(run.file).toBe(postScriptPath)
       expect(run.parameters.path).toBe('{{ ctx.file.path }}')

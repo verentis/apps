@@ -1,4 +1,4 @@
-import { apiContract } from '../../../tools/file-apps/build.mjs'
+import { apiContract, withUserProfile } from '../../../tools/file-apps/build.mjs'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { parse } from 'yaml'
 import { describe, expect, it } from 'vitest'
@@ -26,9 +26,9 @@ describe('Expenses Canvas documents', () => {
     expect(Object.keys(documents).sort()).toEqual(Object.keys(pages).sort())
     for (const [name, document] of Object.entries(pages)) expect(documents[name], name).toEqual(plain(document))
     const { metadata: { version: _version, ...metadata }, ...installed } = read('expenses.app.yaml')
-    const { metadata: { version: _source, ...expectedMetadata }, ...expected } = plain({
+    const { metadata: { version: _source, ...expectedMetadata }, ...expected } = plain(withUserProfile({
       ...manifest, spec: { ...manifest.spec, 'file-access': [...documentFileAccess(pages), ...scriptConsents], api: await apiContract(new URL('../', import.meta.url)) },
-    })
+    }, pages))
     expect({ ...installed, metadata }).toEqual({ ...expected, metadata: expectedMetadata })
     expect(read('environments/feature.yaml')).toEqual(featureOverlay)
     expect(read('environments/production.yaml')).toEqual(productionOverlay)
@@ -47,12 +47,13 @@ describe('Expenses Canvas documents', () => {
     for (const grant of spec.access) expect(grant.mode ?? 'read').toBe('read')
   })
 
-  it('runs the posting script with every status transition from the report form', () => {
+  it('runs the posting script with every status transition from the report form', async () => {
     const document = documents['report.form.yaml']
     const runs = steps(document).filter(step => 'run-script' in step).map(step => step['run-script'])
-    expect(runs.map(run => run.parameters.operation)).toEqual(['submit-report', 'approve-report', 'refuse-report', 'post-report', 'complete-report'])
-    // Accounting posts the journal through its API; the app never writes /journals.
-    expect(steps(documents[Object.keys(documents).find(name => JSON.stringify(documents[name]).includes('call-app'))]).filter(step => 'call-app' in step).map(step => step['call-app'].operation)).toEqual(['post-journal'])
+    expect(runs.map(run => run.parameters.operation)).toEqual(['submit-report', 'approve-report', 'refuse-report', 'post-report'])
+    // The post script asks Accounting itself (a server-side app call, declared in api.yaml); no page calls it.
+    expect(Object.values(documents).some(page => JSON.stringify(page).includes('call-app'))).toBe(false)
+    expect((await apiContract(new URL('../', import.meta.url))).uses).toContainEqual(expect.objectContaining({ app: 'accounting', operation: 'post-journal' }))
     for (const run of runs) expect(run).toMatchObject({ file: postScriptPath, parameters: { path: '{{ ctx.file.path }}' } })
     expect(runs.find(run => run.parameters.operation === 'approve-report').parameters.approver).toBe('{{ state.approver }}')
     expect(runs.find(run => run.parameters.operation === 'refuse-report').parameters.reason).toBe('{{ state.refusalreason }}')

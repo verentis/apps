@@ -33,6 +33,7 @@ await generate({
     'scripts/post/manifest.yaml': scriptManifest(postScriptName, postScriptFileAccess,
       'Computing, approving and posting validate against the Accounting ledger and write payslips and one journal per run conditionally.'),
     'scripts/post/ledger.mjs': await sharedSource('ledger.mjs'),
+    'scripts/post/app-calls.mjs': await sharedSource('app-calls.mjs'),
   },
   directories: ['canvas', 'schemas', 'templates', 'seed', 'seed/sample', 'scripts', 'scripts/create', 'scripts/post'],
   sources: ['scripts/post/main.mjs'],

@@ -1,7 +1,7 @@
 import { views } from './views.mjs'
 import {
   apiVersion, baseActions, boundForm, button, card, formControl, heading, openFile, page, projectRegistration,
-  row, scriptAction, stat, stats, status, table, text, appNavigation, appOperationsSource, offers, withInvoice,
+  row, scriptAction, stat, stats, status, table, text, appNavigation, appOperationsSource, offers, listPage,
 } from '../../../tools/file-apps/canvas.mjs'
 import { matters, mime, root, schema } from './contracts.mjs'
 
@@ -101,11 +101,26 @@ const form = boundForm({
   ]},reset:baseActions.reset,...Object.fromEntries(['screen','decide','prepare','discard'].map(op=>[op,openWhen(op)])),
     // Approving reserves the sources; Invoicing drafts the invoice through its API (keyed by the pre-bill), then the
     // workflow records it against the matter's new revision. Without Invoicing the pre-bill waits, approved.
-    approve:withInvoice(openWhen('approve'),{script:`${root}/scripts/workflow`,key:"'prebill-' + (form.values.prebill && form.values.prebill.id)",
-      recordParameters:{revision:'{{ state.lastresult.revision }}'}})},
+    approve:openWhen('approve')},
 })
+// The design's Intake and Billing lists: matters before their conflict decision, and open matters' unbilled work.
+const intake = listPage({ file: 'intake.page.yaml', id: 'legal-matters-intake', name: 'Intake', description: 'New matters before screening and the conflict decision.', icon: 'inbox',
+  container: matters, mime,
+  rows: "RECORDS.filter(e => e.data.status === 'intake' || e.data.status === 'screened').map(e => ({ path: e.path, code: e.data.code || e.name, title: e.data.title || '', parties: (e.data.parties || []).length,"
+    + " screened: e.data.screen && e.data.screen.at ? e.data.screen.count + ' possible conflicts' : 'Not screened', status: e.data.status }))",
+  columns: [['code', 'Matter'], ['title', 'Title'], ['parties', 'Parties', 'end'], ['screened', 'Screen'], ['status', 'Status', undefined, 'badge']],
+  empty: 'No matter is waiting for intake or a conflict decision.' })
+const billing = listPage({ file: 'billing.page.yaml', id: 'legal-matters-billing', name: 'Billing', description: 'Unbilled work per open matter, its pre-bill and the invoice drafts made so far.', icon: 'receipt-text',
+  container: matters, mime,
+  rows: "RECORDS.filter(e => e.data.status === 'open').map(e => ({ path: e.path, code: e.data.code || e.name, title: e.data.title || '', sources: (e.data.charges || []).length,"
+    + " prebill: (e.data.prebill && e.data.prebill.stage) || 'Not prepared', drafts: (e.data.invoices || []).length, reviewer: e.data.billingReviewer || '' }))",
+  columns: [['code', 'Matter'], ['title', 'Title'], ['sources', 'Unbilled sources', 'end'], ['prebill', 'Pre-bill', undefined, 'badge'], ['drafts', 'Invoice drafts', 'end'], ['reviewer', 'Billing reviewer']],
+  empty: 'No open matters.' })
+
 export const pages = appNavigation({
   'matter.form.yaml':projectRegistration(form,`${root}/canvas/matter.form.yaml`),
+  'intake.page.yaml':projectRegistration(intake.document,`${root}/canvas/intake.page.yaml`),
+  'billing.page.yaml':projectRegistration(billing.document,`${root}/canvas/billing.page.yaml`),
   'home.page.yaml':{'api-version':apiVersion,kind:'Page',metadata:{id:'legal-matters-home',name:'Legal Matters',icon:'briefcase-business'},
     spec:{tree:page([heading('Legal Matters'),text(warning),
       card('Start an instruction',[text('In Files choose New → Legal matter inside /legal-matters. The new matter opens for intake and conflict screening.'),

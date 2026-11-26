@@ -52,6 +52,11 @@
               "label": "Orders",
               "icon": "kanban",
               "count": "{{ (data.orderrows || []).filter(o => o.status === 'in-progress').length }}"
+            },
+            {
+              "id": "queue.page.yaml",
+              "label": "Operation queue",
+              "icon": "factory"
             }
           ],
           "page": true

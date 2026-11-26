@@ -1,3 +1,4 @@
+import { handOvers } from '../scripts/post/main.mjs'
 import { apiContract } from '../../../tools/file-apps/build.mjs'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { parse } from 'yaml'
@@ -56,7 +57,9 @@ describe('Purchase Canvas documents', () => {
   it('runs the order script from the purchase order form', () => {
     const document = documents['order.form.yaml']
     const runs = steps(document).filter(step => 'run-script' in step).map(step => step['run-script'])
-    expect([...new Set(runs.map(run => run.parameters.operation))]).toEqual(['confirm-order', 'receive-order', 'record-bill'])
+    expect([...new Set(runs.map(run => run.parameters.operation))]).toEqual(['confirm-order', 'receive-order'])
+    expect(Object.values(documents).some(page => JSON.stringify(page).includes('call-app'))).toBe(false)
+    expect(handOvers['receive-order']).toMatchObject({ app: 'invoicing', operation: 'create-draft-invoice', recordOperation: 'record-bill', parameter: 'bill' })
     for (const run of runs) expect(run).toMatchObject({ file: postScriptPath, parameters: { path: '{{ ctx.file.path }}' } })
     expect(document.spec.permissions).toEqual(expect.arrayContaining(['execution.run']))
     // A script reloads the record afterwards, which a dirty form would refuse.

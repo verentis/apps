@@ -69,12 +69,12 @@ export const schemas = {
 }
 
 /**
- * New-record templates. `{{ id }}`, `{{ now }}` and `{{ name }}` are substituted; the create script then adds
+ * New-record templates. `{{ id }}`, `{{ now }}`, `{{ name }}` and `{{ user }}` (who is creating) are substituted; the create script then adds
  * the generated `code`. `decidedAt` is stamped by the script actions, never by the template.
  */
 export const templates = {
   referral: recordTemplate('referral', {
-    referrerName: '{{ name }}', referrerRef: '', candidateName: '', job: '', status: 'submitted', points: 0, notes: '',
+    referrerName: '{{ user }}', referrerRef: '', candidateName: '{{ name }}', job: '', status: 'submitted', points: 0, notes: '',
   }),
 }
 

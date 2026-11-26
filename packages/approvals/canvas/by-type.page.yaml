@@ -73,6 +73,11 @@
               "icon": "shapes"
             },
             {
+              "id": "mine.page.yaml",
+              "label": "My requests",
+              "icon": "user"
+            },
+            {
               "id": "settings",
               "label": "Settings",
               "icon": "settings"

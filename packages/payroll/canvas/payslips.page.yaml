@@ -1,0 +1,147 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "payroll-payslips",
+    "name": "Payslips",
+    "description": "One payslip per employee per posted pay run; a row opens its run.",
+    "icon": "file-text"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/pay-runs",
+        "reason": "List payslips"
+      }
+    ],
+    "data": {
+      "records": {
+        "kind": "folder",
+        "path": "/pay-runs",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.payroll.payrun+json"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Payroll",
+          "icon": "calendar-check",
+          "active": "payslips.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Pay runs",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "structures.page.yaml",
+              "label": "Structures",
+              "icon": "layers"
+            },
+            {
+              "id": "payslips.page.yaml",
+              "label": "Payslips",
+              "icon": "file-text"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
+            }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/payroll/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/payroll.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
+        },
+        "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Payslips",
+              "note": "One payslip per employee per posted pay run; a row opens its run."
+            },
+            "children": []
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "records",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').filter(e => e.data.status === 'posted').reduce((all, e) => all.concat((e.data.payslips || []).map(p => ({ path: e.path, run: e.data.code || e.name, period: e.data.period, employee: p.employeeName || p.employee || '', gross: p.gross, deductions: p.deductions, net: p.net }))), []).sort((a, b) => (b.period + a.employee) < (a.period + b.employee) ? -1 : 1) }}",
+              "columns": [
+                {
+                  "key": "period",
+                  "label": "Period"
+                },
+                {
+                  "key": "employee",
+                  "label": "Employee"
+                },
+                {
+                  "key": "gross",
+                  "label": "Gross",
+                  "align": "end"
+                },
+                {
+                  "key": "deductions",
+                  "label": "Deductions",
+                  "align": "end"
+                },
+                {
+                  "key": "net",
+                  "label": "Net",
+                  "align": "end"
+                },
+                {
+                  "key": "run",
+                  "label": "Pay run"
+                }
+              ],
+              "emptyText": "No posted pay runs yet.",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -2,13 +2,14 @@
 // the week schedule summary and the shift list by status. Publishing (overlap check) and confirming (locking)
 // are done by the action script the shift form runs.
 import { views } from './views.mjs'
+import { listPages } from './lists.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   humanize, iconName, options, openFile, page, panel, projectRegistration, recordButtons, row, scriptAction,
   sectionCards, stat, stats, status, table, tabs, text, toneExpression, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { containers, employees, installRoot, mimeTypes, recordKinds, schemaId, settingsPath, statuses } from './contracts.mjs'
-import { entities, postScriptPath, settingsSections } from './app.mjs'
+import { worker, entities, postScriptPath, settingsSections } from './app.mjs'
 
 export { collectSteps, documentFileAccess, projectRegistration } from '../../../tools/file-apps/canvas.mjs'
 
@@ -23,7 +24,6 @@ const roleSources = {
 }
 const rolesAccess = reason => ({ path: containers.roles.path, reason })
 
-const copyName = `(((data.people || []).filter(e => e.kind === 'file' && e.data && e.path === form.values.employeeRef).map(e => e.data.name || '')[0]) || form.values.employee)`
 
 /** Kind-specific data, access, actions, header buttons and notices of a record form. */
 function recordExtras(kind) {
@@ -33,13 +33,12 @@ function recordExtras(kind) {
   return {
     access: [
       rolesAccess('Choose the role a shift is planned for'),
-      { path: employees.employees, reason: 'Offer employees on shifts (when Employees is installed)' },
+      ...worker.sources.access,
       schemaAccess,
     ],
     data: {
       ...roleSources,
-      people: folder(employees.employees, employees.employeeMime),
-      employeeoptions: { kind: 'computed', expr: options('people', "e.data.name || ''") },
+      ...worker.sources.data,
     },
     notices: [
       { ...text('This shift is confirmed and can no longer be edited.', 'muted'), rules: { visible: locked } },
@@ -48,10 +47,8 @@ function recordExtras(kind) {
       button('Publish', 'publish', { visible: `form.values.status === 'draft' && !(${archived})`,
         disabled: `${idle} || !form.values.date || !form.values.startTime || !form.values.endTime || !String(form.values.employee || '').trim()` }, undefined, 'send'),
       button('Confirm', 'confirm', { visible: `form.values.status === 'published' && !(${archived})`, disabled: idle }, undefined, 'lock'),
-      button('Copy name', 'copy-employee', { visible: `!(${locked}) && !!form.values.employeeRef`, disabled: `form.saving || ${archived}` }, 'ghost', 'copy'),
     ],
     actions: {
-      'copy-employee': { steps: [{ 'patch-form': { values: { employee: `{{ ${copyName} }}` } } }] },
       publish: scriptAction(postScriptPath, 'publish', {
         confirm: { title: 'Publish shift', message: 'Publish this shift? The employee\'s schedule is checked for overlapping published or confirmed shifts.' },
       }),
@@ -245,6 +242,6 @@ function shiftsPage() {
 }
 
 export function buildPages() {
-  const documents = [homePage(), weekPage(), shiftsPage(), ...recordKinds.map(recordForm), settingsForm()]
+  const documents = [homePage(), weekPage(), shiftsPage(), ...recordKinds.map(recordForm), settingsForm(), ...listPages()]
   return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

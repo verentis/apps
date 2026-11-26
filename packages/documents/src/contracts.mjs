@@ -89,7 +89,7 @@ export const schemas = {
 }
 
 /**
- * New-record templates. `{{ id }}`, `{{ now }}` and `{{ name }}` are substituted; the create script then adds the
+ * New-record templates. `{{ id }}`, `{{ now }}`, `{{ name }}` and `{{ user }}` (who is creating) are substituted; the create script then adds the
  * generated `code`, fills the workspace from settings and defaults the tags from the workspace's `defaultTags`.
  */
 export const templates = {

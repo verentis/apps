@@ -3,6 +3,7 @@
 // vehicles, monotonic odometer readings, the active-to-retired transition) are enforced by the posting script
 // the forms run; the forms only lock what the script has done.
 import { views } from './views.mjs'
+import { listPages } from './lists.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   iconName, jsonFile, options, page, panel, projectRegistration, recordButtons, row, scriptAction, sectionCards,
@@ -285,6 +286,6 @@ function costsPage() {
 }
 
 export function buildPages() {
-  const documents = [homePage(), contractsPage(), costsPage(), ...recordKinds.map(recordForm), settingsForm()]
+  const documents = [homePage(), contractsPage(), costsPage(), ...recordKinds.map(recordForm), settingsForm(), ...listPages()]
   return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { defaultSettings, templates } from '../src/contracts.mjs'
 import { readFileSync } from 'node:fs'
 import { parse } from 'yaml'
-import { lineTotals, run } from '../scripts/post/main.mjs'
+import { lineTotals, run, runWithApps } from '../scripts/post/main.mjs'
 import { createDraftOrder } from '../scripts/api/main.mjs'
 
 const invoicingContract = parse(readFileSync(new URL('../../invoicing/api.yaml', import.meta.url), 'utf8'))
@@ -127,6 +127,13 @@ describe('Purchase order script', () => {
     await run({ operation: 'record-bill', path: '/purchase-orders/PO-0001', bill: '/invoices/INV-0009' }, files, options)
     expect(files.json('/purchase-orders/PO-0001').bill).toEqual({ path: '/invoices/INV-0009' })
     expect(await call(files, 'receive-order', '/purchase-orders/PO-0001')).toMatchObject({ message: 'PO-0001 is already received', path: '/invoices/INV-0009' })
+  })
+
+  it('receiving has Invoicing draft the bill in the same run and records it', async () => {
+    const files = await confirmed()
+    const invoicing = { call: async (app, operation, input) => ({ result: { path: `/invoices/${input.source.code}` } }) }
+    await runWithApps({ operation: 'receive-order', path: '/purchase-orders/PO-0001' }, files, invoicing, options)
+    expect(files.json('/purchase-orders/PO-0001')).toMatchObject({ status: 'received', bill: { path: '/invoices/PO-0001' } })
   })
 
   it('refuses to receive an order that is not confirmed', async () => {

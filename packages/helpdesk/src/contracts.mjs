@@ -75,6 +75,8 @@ export const schemas = {
     stage: { enum: stages },
     slaDeadline: optionalTimestamp,
     assignee: optional(200),
+    // The assignee's Employees record; empty when they are named only (Employees not installed).
+    assigneeRef: pathOrEmpty,
     description: optional(10000),
     resolution: optional(10000),
     resolvedAt: timestamp,
@@ -89,14 +91,14 @@ export const schemas = {
 }
 
 /**
- * New-record templates. `{{ id }}`, `{{ now }}` and `{{ name }}` are substituted; the create script then adds
+ * New-record templates. `{{ id }}`, `{{ now }}`, `{{ name }}` and `{{ user }}` (who is creating) are substituted; the create script then adds
  * the generated `code`, fills the team from settings and computes the SLA deadline from the team's SLA hours.
  */
 export const templates = {
   team: recordTemplate('team', { name: '{{ name }}', members: [], slaHours: 24 }),
   ticket: recordTemplate('ticket', {
     team: '', subject: '{{ name }}', customerRef: '', customerName: '', priority: 'normal', stage: 'new',
-    slaDeadline: '', assignee: '', description: '', resolution: '',
+    slaDeadline: '', assignee: '', assigneeRef: '', description: '', resolution: '',
   }),
 }
 
