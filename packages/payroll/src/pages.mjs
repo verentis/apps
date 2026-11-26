@@ -1,10 +1,11 @@
 // Generates the Payroll Canvas documents: one bound form per record kind, the settings form, the launch page and
 // the structures page. Computing, approving and posting (payslips, totals, the journal, immutability) are done by
 // the run script the forms run; the forms only lock what the script has posted.
+import { views } from './views.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading, humanize,
-  iconName, linkButton, openFile, options, page, panel, projectRegistration, recordButtons, row, scriptAction,
-  sectionCards, stat, stats, status, table, tabs, text, toneExpression,
+  iconName, linkButton, openFile, options, page, panel, projectRegistration, recordButtons, row, scriptAction, appOperationsSource, withAppCall,
+  sectionCards, stat, stats, status, table, tabs, text, toneExpression, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { accounting, containers, employees, installRoot, mimeTypes, recordKinds, schemaId, settingsPath } from './contracts.mjs'
 import { entities, postScriptPath, settingsSections } from './app.mjs'
@@ -31,6 +32,10 @@ const totalsValue = key => `{{ (form.values.totals && form.values.totals.${key})
 const payslipRows = `{{ (form.values.payslips || []).map(p => ({ employee: p.employee, base: p.base, gross: p.gross, deductions: p.deductions, contributions: p.contributions, net: p.net })) }}`
 
 /** Kind-specific data, access, actions, header buttons and tabs of a record form. */
+/** Accounting posts the journal through its API from what the script returned; the script then completes the record. */
+const posting = complete => ({ app: 'accounting', operation: 'post-journal', required: true, label: 'Accounting', script: postScriptPath, recordOperation: complete,
+  parameter: 'journal', field: 'journalRequest', key: "'journal-' + form.values.code" })
+
 function recordExtras(kind) {
   if (kind === 'structure') {
     return { access: [], data: {}, notices: [], buttons: [], links: [], actions: {} }
@@ -61,7 +66,7 @@ function recordExtras(kind) {
   const approved = "form.values.status === 'approved'"
   return {
     access: [],
-    data: {},
+    data: { ...appOperationsSource },
     notices: [
       { ...stats([
         stat('Gross', totalsValue('gross'), 'sigma'),
@@ -85,7 +90,7 @@ function recordExtras(kind) {
     actions: {
       compute: scriptAction(postScriptPath, 'compute-run', { confirm: { title: 'Compute pay run', message: 'Compute a payslip for every active pay profile from its salary structure? Computing again replaces the payslips.' } }),
       approve: scriptAction(postScriptPath, 'approve-run', { confirm: { title: 'Approve pay run', message: 'Approve the computed payslips? An approved run is ready to post.' } }),
-      post: scriptAction(postScriptPath, 'post-run', { confirm: { title: 'Post pay run', message: 'Post this pay run to the Accounting ledger? Posted runs are locked and cannot be edited.' } }),
+      post: withAppCall(scriptAction(postScriptPath, 'post-run', { confirm: { title: 'Post pay run', message: 'Post this pay run to the Accounting ledger? Posted runs are locked and cannot be edited.' } }), posting('complete-run')),
     },
   }
 }
@@ -95,21 +100,19 @@ function recordForm(kind) {
   const extras = recordExtras(kind)
   const locked = kind === 'payrun' ? "form.values.status === 'posted'" : 'false'
   const readOnly = `${archived} || (${locked})`
-  const header = row([
-    column([
-      row([
-        heading(`{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`),
+  const header = recordHeader(
+    `{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`,
+    [
         ...(entity.status ? [badge(humanize(entity.status), toneExpression(entity.status, statusTones), { visible: `!!form.values.${entity.status}` })] : []),
         badge('Archived', 'warning', { visible: archived }, 'archive'),
-      ]),
-      text(`${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`, 'muted'),
-    ]),
-    row([...extras.buttons, recordButtons(locked)]),
-  ], 'between')
+    ],
+    `${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`,
+    [...extras.buttons, recordButtons(locked)],
+  )
   const tree = [
     header,
-    ...status('record'),
-    badge(`This ${entity.singular.toLowerCase()} is archived. Restore it to edit.`, 'warning', { visible: archived }, 'archive'),
+    ...status('record'), ...lifecycle(entity),
+    archivedAlert(entity.singular),
     ...(extras.links.length ? [row(extras.links)] : []),
     ...extras.notices,
     grid(sectionCards(entity.sections, readOnly)),
@@ -136,13 +139,13 @@ function settingsForm() {
       access: [accountsAccess('Choose the accounts pay runs post to'), schemaAccess],
       data: accountSources,
       tree: [
-        row([
-          column([heading('Payroll settings'), text('The accounts pay runs post to. The currency is the Accounting base currency; code prefixes are app settings, managed with the installed app.', 'muted')]),
+        pageHeader(
+          [heading('Payroll settings'), text('The accounts pay runs post to. The currency is the Accounting base currency; code prefixes are app settings, managed with the installed app.', 'muted')], [
           row([
             button('Reset', [{ 'reset-form': {} }], { disabled: 'form.saving || !form.dirty' }, 'ghost'),
             button('Save', [{ save: {} }, { toast: { message: 'Saved', variant: 'success' } }], { disabled: 'form.saving || !form.dirty || form.invalid' }, undefined, 'save'),
           ]),
-        ], 'between'),
+        ]),
         ...status('record'),
         ...status('accounts', `The Accounting chart of accounts (${accounting.accounts}) could not be read. Install Accounting to post pay runs.`),
         grid(settingsSections.map(section => card(section.title, [grid(section.fields.map(field => formControl(field, null)))], section.description)), 1),
@@ -169,13 +172,13 @@ function homePage() {
         access: [{ path: containers.runs.path, reason: 'List pay runs' }],
         data: { runs: folder(containers.runs.path, mimeTypes.payrun) },
         tree: page([
-          row([
-            column([heading('Payroll'), text('A region-agnostic payroll engine: salary structures and their rules are your data. Draft a pay run for a period, Compute payslips for every active pay profile, Approve, then Post one journal to the Accounting ledger.', 'muted')]),
+          pageHeader(
+            [heading('Payroll'), text('A region-agnostic payroll engine: salary structures and their rules are your data. Draft a pay run for a period, Compute payslips for every active pay profile, Approve, then Post one journal to the Accounting ledger.', 'muted')], [
             row([
               button('Structures', [openFile(`${installRoot}/canvas/structures.page.yaml`)], undefined, 'outline', 'layers'),
               button('Settings', [openFile(settingsPath, 'edit')], undefined, 'ghost', 'settings'),
             ]),
-          ], 'between'),
+          ]),
           stats([
             stat('Draft runs', count('runs', byStatus('draft')), 'file-pen', loading('runs')),
             stat('Awaiting approval', count('runs', byStatus('computed')), 'calculator', loading('runs')),
@@ -210,10 +213,10 @@ function structuresPage() {
           profiles: folder(containers.profiles.path, mimeTypes.profile),
         },
         tree: page([
-          row([
-            column([heading('Salary structures'), text('Structures hold the pay rules — earnings, deductions and employer contributions as fixed amounts or percentages of the base wage. No tax tables are built in; rules are your data.', 'muted')]),
+          pageHeader(
+            [heading('Salary structures'), text('Structures hold the pay rules — earnings, deductions and employer contributions as fixed amounts or percentages of the base wage. No tax tables are built in; rules are your data.', 'muted')], [
             button('Payroll', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'calendar-check'),
-          ], 'between'),
+          ]),
           stats([
             stat('Structures', count('structures'), 'layers', loading('structures')),
             stat('Pay profiles', count('profiles'), 'id-card', loading('profiles')),
@@ -242,5 +245,5 @@ function structuresPage() {
 
 export function buildPages() {
   const documents = [homePage(), structuresPage(), ...recordKinds.map(recordForm), settingsForm()]
-  return Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)]))
+  return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

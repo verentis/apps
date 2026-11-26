@@ -24,127 +24,72 @@
       "rows": {
         "kind": "computed",
         "expr": "(data.referrals || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, referrer: e.data.referrerName || '', candidate: e.data.candidateName || '', status: e.data.status || '', points: Number(e.data.points) || 0, decidedAt: e.data.decidedAt || '' }))"
+      },
+      "listreferrals": {
+        "kind": "folder",
+        "path": "/referrals",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.referrals.referral+json"
       }
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Referrals",
+          "icon": "gift",
+          "active": "home.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "My referrals",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "referrals.page.yaml",
+              "label": "All referrals",
+              "icon": "kanban"
+            },
+            {
+              "id": "leaderboard.page.yaml",
+              "label": "Leaderboard",
+              "icon": "trophy"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/referrals/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/referrals.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Referrals",
+              "note": "Employee referrals are files in your workspace. Submit them in /referrals, track them, then decide them from their forms. Hires award points from the settings."
             },
-            "children": [
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Referrals"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Employee referrals are files in your workspace. Submit them in /referrals, track them, then decide them from their forms. Hires award points from the settings.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "direction": "row",
-                    "wrap": true,
-                    "gap": 2,
-                    "align": "center"
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "By status",
-                      "variant": "outline",
-                      "icon": "list",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/referrals/canvas/referrals.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Leaderboard",
-                      "variant": "outline",
-                      "icon": "trophy",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/referrals/canvas/leaderboard.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Settings",
-                      "variant": "ghost",
-                      "icon": "settings",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/settings/referrals.json",
-                            "mode": "edit"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ]
-              }
-            ]
+            "children": []
           },
           {
             "type": "canvas.grid",
@@ -197,12 +142,11 @@
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /referrals folder could not be read. Reinstall Referrals to recreate it."
-            },
-            "rules": {
-              "visible": "data.$referrals.status === 'error'"
+              "for": "referrals",
+              "compact": true,
+              "description": "The /referrals folder could not be read. Reinstall Referrals to recreate it."
             }
           },
           {
@@ -237,17 +181,19 @@
             ]
           },
           {
-            "type": "canvas.files",
+            "type": "canvas.empty-state",
             "props": {
-              "path": "/referrals/",
-              "mimeTypes": [
-                "application/vnd.verentis.referrals.referral+json"
-              ],
-              "showFolders": false,
-              "navigable": false,
+              "for": "listreferrals",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.listreferrals || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
               "columns": [
                 {
-                  "key": "name",
+                  "key": "data.code",
                   "label": "Referral"
                 },
                 {
@@ -260,14 +206,38 @@
                 },
                 {
                   "key": "data.status",
-                  "label": "Status"
+                  "label": "Status",
+                  "format": "badge"
                 },
                 {
                   "key": "data.points",
                   "label": "Points"
                 }
               ],
+              "facets": [
+                "data.status"
+              ],
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
+              "clickable": true,
+              "rowKey": "path",
               "emptyText": "No referrals yet. Use New in /referrals."
+            },
+            "rules": {
+              "visible": "data.$listreferrals.status === 'ready'"
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ]
             }
           }
         ]

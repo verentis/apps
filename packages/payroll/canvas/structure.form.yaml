@@ -82,61 +82,38 @@
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.validation-summary",
+            "props": {
+              "title": "Fix these before saving"
+            }
+          },
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "{{ form.values.name || 'New salary structure' }}",
+              "note": "Salary structure {{ form.values.code || '' }}"
             },
             "children": [
               {
                 "type": "canvas.stack",
                 "layout": {
                   "base": {
-                    "gap": 1
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
                   }
                 },
                 "children": [
                   {
-                    "type": "canvas.stack",
-                    "layout": {
-                      "base": {
-                        "direction": "row",
-                        "wrap": true,
-                        "gap": 2,
-                        "align": "center"
-                      }
-                    },
-                    "children": [
-                      {
-                        "type": "canvas.heading",
-                        "props": {
-                          "level": 2,
-                          "text": "{{ form.values.name || 'New salary structure' }}"
-                        }
-                      },
-                      {
-                        "type": "canvas.dashboard.badge",
-                        "props": {
-                          "text": "Archived",
-                          "tone": "warning",
-                          "icon": "archive"
-                        },
-                        "rules": {
-                          "visible": "form.values.state === 'archived'"
-                        }
-                      }
-                    ]
-                  },
-                  {
-                    "type": "canvas.text",
+                    "type": "canvas.dashboard.badge",
                     "props": {
-                      "text": "Salary structure {{ form.values.code || '' }} · {{ ctx.file.path }}",
-                      "tone": "muted"
+                      "text": "Archived",
+                      "tone": "warning",
+                      "icon": "archive"
+                    },
+                    "rules": {
+                      "visible": "form.values.state === 'archived'"
                     }
                   }
                 ]
@@ -153,110 +130,94 @@
                 },
                 "children": [
                   {
-                    "type": "canvas.stack",
-                    "layout": {
-                      "base": {
-                        "direction": "row",
-                        "wrap": true,
-                        "gap": 2,
-                        "align": "center"
-                      }
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Archive",
+                      "variant": "ghost",
+                      "icon": "archive",
+                      "size": "sm"
                     },
-                    "children": [
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Archive",
-                          "variant": "ghost",
-                          "icon": "archive",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "archive"
-                        },
-                        "rules": {
-                          "visible": "!(form.values.state === 'archived') && !(false)",
-                          "disabled": "form.saving || form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Restore",
-                          "variant": "outline",
-                          "icon": "archive-restore",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "restore"
-                        },
-                        "rules": {
-                          "visible": "form.values.state === 'archived'",
-                          "disabled": "form.saving || form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Reset",
-                          "variant": "ghost",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "reset"
-                        },
-                        "rules": {
-                          "disabled": "form.saving || !form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Save",
-                          "icon": "save",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "save"
-                        },
-                        "rules": {
-                          "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (false)"
-                        }
-                      }
-                    ]
+                    "on": {
+                      "click": "archive"
+                    },
+                    "rules": {
+                      "visible": "!(form.values.state === 'archived') && !(false)",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Restore",
+                      "variant": "outline",
+                      "icon": "archive-restore",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "restore"
+                    },
+                    "rules": {
+                      "visible": "form.values.state === 'archived'",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Reset",
+                      "variant": "ghost",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "reset"
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Save",
+                      "icon": "save",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "save"
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (false)"
+                    }
                   }
-                ]
+                ],
+                "slot": "actions"
               }
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "{{ data.$record.error }}"
-            },
-            "rules": {
-              "visible": "data.$record.status === 'error'"
+              "for": "record",
+              "compact": true
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.alert",
             "props": {
-              "text": "Loading…",
-              "tone": "muted"
-            },
-            "rules": {
-              "visible": "data.$record.status === 'loading'"
-            }
-          },
-          {
-            "type": "canvas.dashboard.badge",
-            "props": {
-              "text": "This salary structure is archived. Restore it to edit.",
               "tone": "warning",
-              "icon": "archive"
+              "title": "This salary structure is archived",
+              "text": "Restore it to edit.",
+              "icon": "archive",
+              "action": {
+                "label": "Restore",
+                "id": "restore"
+              }
             },
             "rules": {
               "visible": "form.values.state === 'archived'"
+            },
+            "on": {
+              "action": "restore"
             }
           },
           {
@@ -329,20 +290,20 @@
                     },
                     "children": [
                       {
-                        "type": "canvas.form.array",
+                        "type": "canvas.form.line-items",
                         "props": {
                           "label": "Rules",
                           "value": "{{ form.values.rules }}",
-                          "fields": [
+                          "columns": [
                             {
                               "key": "code",
                               "label": "Code",
-                              "required": true
+                              "type": "text"
                             },
                             {
                               "key": "name",
                               "label": "Name",
-                              "required": true
+                              "type": "text"
                             },
                             {
                               "key": "kind",
@@ -380,16 +341,20 @@
                             },
                             {
                               "key": "amount",
-                              "label": "Amount"
+                              "label": "Amount",
+                              "type": "text",
+                              "align": "right"
                             },
                             {
                               "key": "rate",
-                              "label": "Rate %"
+                              "label": "Rate %",
+                              "type": "text",
+                              "align": "right"
                             },
                             {
                               "key": "sequence",
                               "label": "Sequence",
-                              "required": true
+                              "type": "text"
                             }
                           ],
                           "defaultRow": {
@@ -401,11 +366,10 @@
                             "rate": "",
                             "sequence": ""
                           },
-                          "rowIds": false,
+                          "storeComputed": false,
                           "minimum": 1,
                           "maximum": 100,
-                          "addLabel": "Add rule",
-                          "removeLabel": "Remove row"
+                          "addLabel": "Add rule"
                         },
                         "layout": {
                           "tablet": {

@@ -103,74 +103,140 @@
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.validation-summary",
+            "props": {
+              "title": "Fix these before saving"
+            }
+          },
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "{{ form.values.title || 'New document' }}",
+              "note": "Document {{ form.values.code || '' }}"
             },
             "children": [
               {
                 "type": "canvas.stack",
                 "layout": {
                   "base": {
-                    "gap": 1
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
                   }
                 },
                 "children": [
                   {
-                    "type": "canvas.stack",
-                    "layout": {
-                      "base": {
-                        "direction": "row",
-                        "wrap": true,
-                        "gap": 2,
-                        "align": "center"
-                      }
+                    "type": "canvas.dashboard.badge",
+                    "props": {
+                      "text": "{{ {\"inbox\":\"Inbox\",\"in-review\":\"In review\",\"validated\":\"Validated\",\"archived-status\":\"Archived\"}[form.values.status] || '' }}",
+                      "tone": "{{ [\"validated\"].includes(form.values.status) ? 'success' : [\"in-review\"].includes(form.values.status) ? 'warning' : [\"archived-status\"].includes(form.values.status) ? 'danger' : 'neutral' }}"
                     },
-                    "children": [
-                      {
-                        "type": "canvas.heading",
-                        "props": {
-                          "level": 2,
-                          "text": "{{ form.values.title || 'New document' }}"
-                        }
-                      },
-                      {
-                        "type": "canvas.dashboard.badge",
-                        "props": {
-                          "text": "{{ {\"inbox\":\"Inbox\",\"in-review\":\"In review\",\"validated\":\"Validated\",\"archived-status\":\"Archived\"}[form.values.status] || '' }}",
-                          "tone": "{{ [\"validated\"].includes(form.values.status) ? 'success' : [\"in-review\"].includes(form.values.status) ? 'warning' : [\"archived-status\"].includes(form.values.status) ? 'danger' : 'neutral' }}"
-                        },
-                        "rules": {
-                          "visible": "!!form.values.status"
-                        }
-                      },
-                      {
-                        "type": "canvas.dashboard.badge",
-                        "props": {
-                          "text": "Archived",
-                          "tone": "warning",
-                          "icon": "archive"
-                        },
-                        "rules": {
-                          "visible": "form.values.state === 'archived'"
-                        }
-                      }
-                    ]
+                    "rules": {
+                      "visible": "!!form.values.status"
+                    }
                   },
                   {
-                    "type": "canvas.text",
+                    "type": "canvas.dashboard.badge",
                     "props": {
-                      "text": "Document {{ form.values.code || '' }} · {{ ctx.file.path }}",
-                      "tone": "muted"
+                      "text": "Archived",
+                      "tone": "warning",
+                      "icon": "archive"
+                    },
+                    "rules": {
+                      "visible": "form.values.state === 'archived'"
                     }
                   }
                 ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Open file beside",
+                  "variant": "outline",
+                  "icon": "panel-right-open",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "{{ form.values.filePath }}",
+                        "open": "side"
+                      }
+                    }
+                  ]
+                },
+                "rules": {
+                  "visible": "!!(form.values.filePath)"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Send to review",
+                  "icon": "send",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "send-to-review"
+                },
+                "rules": {
+                  "visible": "form.values.status === 'inbox' && !(form.values.state === 'archived')",
+                  "disabled": "form.saving || form.dirty"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Validate",
+                  "icon": "check",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "validate"
+                },
+                "rules": {
+                  "visible": "form.values.status === 'in-review' && !(form.values.state === 'archived')",
+                  "disabled": "form.saving || form.dirty"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Return to inbox",
+                  "variant": "outline",
+                  "icon": "undo-2",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "return-to-inbox"
+                },
+                "rules": {
+                  "visible": "form.values.status === 'in-review' && !(form.values.state === 'archived')",
+                  "disabled": "form.saving || form.dirty || !String(form.values.reviewComment || '').trim()"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Archive document",
+                  "variant": "outline",
+                  "icon": "archive",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "archive-document"
+                },
+                "rules": {
+                  "visible": "form.values.status === 'validated' && !(form.values.state === 'archived')",
+                  "disabled": "form.saving || form.dirty"
+                },
+                "slot": "actions"
               },
               {
                 "type": "canvas.stack",
@@ -186,192 +252,119 @@
                   {
                     "type": "canvas.button",
                     "props": {
-                      "label": "Open file",
+                      "label": "Archive",
                       "variant": "ghost",
-                      "icon": "external-link",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "{{ form.values.filePath }}",
-                            "mode": "edit"
-                          }
-                        }
-                      ]
-                    },
-                    "rules": {
-                      "visible": "!!(form.values.filePath)"
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Send to review",
-                      "icon": "send",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": "send-to-review"
-                    },
-                    "rules": {
-                      "visible": "form.values.status === 'inbox' && !(form.values.state === 'archived')",
-                      "disabled": "form.saving || form.dirty"
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Validate",
-                      "icon": "check",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": "validate"
-                    },
-                    "rules": {
-                      "visible": "form.values.status === 'in-review' && !(form.values.state === 'archived')",
-                      "disabled": "form.saving || form.dirty"
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Return to inbox",
-                      "variant": "outline",
-                      "icon": "undo-2",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": "return-to-inbox"
-                    },
-                    "rules": {
-                      "visible": "form.values.status === 'in-review' && !(form.values.state === 'archived')",
-                      "disabled": "form.saving || form.dirty || !String(form.values.reviewComment || '').trim()"
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Archive document",
-                      "variant": "outline",
                       "icon": "archive",
                       "size": "sm"
                     },
                     "on": {
-                      "click": "archive-document"
+                      "click": "archive"
                     },
                     "rules": {
-                      "visible": "form.values.status === 'validated' && !(form.values.state === 'archived')",
+                      "visible": "!(form.values.state === 'archived') && !([\"validated\",\"archived-status\"].includes(form.values.status))",
                       "disabled": "form.saving || form.dirty"
                     }
                   },
                   {
-                    "type": "canvas.stack",
-                    "layout": {
-                      "base": {
-                        "direction": "row",
-                        "wrap": true,
-                        "gap": 2,
-                        "align": "center"
-                      }
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Restore",
+                      "variant": "outline",
+                      "icon": "archive-restore",
+                      "size": "sm"
                     },
-                    "children": [
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Archive",
-                          "variant": "ghost",
-                          "icon": "archive",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "archive"
-                        },
-                        "rules": {
-                          "visible": "!(form.values.state === 'archived') && !([\"validated\",\"archived-status\"].includes(form.values.status))",
-                          "disabled": "form.saving || form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Restore",
-                          "variant": "outline",
-                          "icon": "archive-restore",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "restore"
-                        },
-                        "rules": {
-                          "visible": "form.values.state === 'archived'",
-                          "disabled": "form.saving || form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Reset",
-                          "variant": "ghost",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "reset"
-                        },
-                        "rules": {
-                          "disabled": "form.saving || !form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Save",
-                          "icon": "save",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "save"
-                        },
-                        "rules": {
-                          "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || ([\"validated\",\"archived-status\"].includes(form.values.status))"
-                        }
-                      }
-                    ]
+                    "on": {
+                      "click": "restore"
+                    },
+                    "rules": {
+                      "visible": "form.values.state === 'archived'",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Reset",
+                      "variant": "ghost",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "reset"
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Save",
+                      "icon": "save",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "save"
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || ([\"validated\",\"archived-status\"].includes(form.values.status))"
+                    }
                   }
-                ]
+                ],
+                "slot": "actions"
               }
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "{{ data.$record.error }}"
-            },
-            "rules": {
-              "visible": "data.$record.status === 'error'"
+              "for": "record",
+              "compact": true
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.status-steps",
             "props": {
-              "text": "Loading…",
-              "tone": "muted"
+              "value": "{{ form.values.status }}",
+              "steps": [
+                {
+                  "value": "inbox",
+                  "label": "Inbox"
+                },
+                {
+                  "value": "in-review",
+                  "label": "In review"
+                },
+                {
+                  "value": "validated",
+                  "label": "Validated"
+                },
+                {
+                  "value": "archived-status",
+                  "label": "Archived"
+                }
+              ]
             },
             "rules": {
-              "visible": "data.$record.status === 'loading'"
+              "visible": "!!form.values.status"
             }
           },
           {
-            "type": "canvas.dashboard.badge",
+            "type": "canvas.alert",
             "props": {
-              "text": "This document is archived. Restore it to edit.",
               "tone": "warning",
-              "icon": "archive"
+              "title": "This document is archived",
+              "text": "Restore it to edit.",
+              "icon": "archive",
+              "action": {
+                "label": "Restore",
+                "id": "restore"
+              }
             },
             "rules": {
               "visible": "form.values.state === 'archived'"
+            },
+            "on": {
+              "action": "restore"
             }
           },
           {
@@ -472,7 +465,8 @@
                         "props": {
                           "label": "Workspace",
                           "value": "{{ form.values.workspace }}",
-                          "options": "{{ data.workspaceoptions }}"
+                          "options": "{{ data.workspaceoptions }}",
+                          "searchable": true
                         },
                         "rules": {
                           "disabled": "(form.values.state === 'archived' || ([\"validated\",\"archived-status\"].includes(form.values.status)))"
@@ -512,7 +506,8 @@
                               "value": "archived-status",
                               "label": "Archived"
                             }
-                          ]
+                          ],
+                          "display": "segmented"
                         },
                         "rules": {
                           "disabled": "(form.values.state === 'archived' || ([\"validated\",\"archived-status\"].includes(form.values.status)))"
@@ -552,7 +547,7 @@
                     },
                     "children": [
                       {
-                        "type": "canvas.form.text-list",
+                        "type": "canvas.form.tags",
                         "props": {
                           "label": "Tags",
                           "value": "{{ form.values.tags }}",

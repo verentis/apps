@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { parse } from 'yaml'
 import { describe, expect, it } from 'vitest'
+import { stagePanels } from '../../../tools/file-apps/test-helpers.mjs'
 import {
   createScriptFileAccess, createScriptName, featureOverlay, manifest, postScriptFileAccess, postScriptName,
   postScriptPath, productionOverlay, scriptConsents,
@@ -162,11 +163,11 @@ describe('Recruitment report pages', () => {
 
   it('groups candidates by stage on the pipeline page', () => {
     const page = documents['pipeline.page.yaml']
-    const panels = page.spec.tree[0].children.find(node => node.type === 'canvas.tabs').children
+    const panels = stagePanels(page.spec.tree[0].children.find(node => node.type === 'canvas.tabs'))
     expect(panels.map(panel => panel.slot)).toEqual(stages)
     const interview = panels.find(panel => panel.slot === 'interview').children[0]
     expect(template(interview.props.rows, data).map(row => row.code)).toEqual(['APP-2'])
-    expect(interview.on['row-click']).toEqual([{ 'open-file': { path: '{{ event.path }}', mode: 'edit' } }])
+    expect(interview.on['row-click']).toEqual([{ 'open-file': { path: '{{ event.path }}', mode: 'edit', open: 'side' } }])
   })
 
   it('counts each position\'s pipeline and hires on the positions page', () => {

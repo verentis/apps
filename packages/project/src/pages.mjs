@@ -1,10 +1,11 @@
 // Generates the Project Canvas documents: one bound form per record kind, the settings form, the launch page and
 // the task board. Completing a task (stage transition to done, completion stamp) is done by the task script the
 // form runs; the form only locks tasks the script has completed.
+import { views } from './views.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   humanize, iconName, openFile, options, page, panel, projectRegistration, recordButtons, row, scriptAction,
-  sectionCards, stat, stats, status, table, tabs, text, toneExpression,
+  sectionCards, stat, stats, status, table, tabs, text, toneExpression, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { containers, crm, installRoot, mimeTypes, recordKinds, schemaId, settingsPath, taskStages } from './contracts.mjs'
 import { entities, postScriptPath, settingsSections } from './app.mjs'
@@ -82,25 +83,23 @@ function recordForm(kind) {
   const entity = entities[kind]
   const extras = recordExtras(kind)
   const readOnly = `${archived} || (${extras.locked})`
-  const header = row([
-    column([
-      row([
-        heading(`{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`),
+  const header = recordHeader(
+    `{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`,
+    [
         badge(humanize(entity.status), toneExpression(entity.status, statusTones), { visible: `!!form.values.${entity.status}` }),
         badge('Archived', 'warning', { visible: archived }, 'archive'),
-      ]),
-      text(`${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`, 'muted'),
-    ]),
-    row([...extras.buttons, recordButtons(extras.locked)]),
-  ], 'between')
+    ],
+    `${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`,
+    [...extras.buttons, recordButtons(extras.locked)],
+  )
   const overview = [
     ...extras.notices,
     grid(sectionCards(entity.sections, readOnly)),
   ]
   const tree = [
     header,
-    ...status('record'),
-    badge(`This ${entity.singular.toLowerCase()} is archived. Restore it to edit.`, 'warning', { visible: archived }, 'archive'),
+    ...status('record'), ...lifecycle(entity),
+    archivedAlert(entity.singular),
     ...(extras.tabs
       ? [tabs([{ value: 'overview', label: 'Overview', icon: iconName(entity.icon) }, ...extras.tabs], [panel('overview', overview), ...extras.panels])]
       : overview),
@@ -127,13 +126,13 @@ function settingsForm() {
       access: [schemaAccess],
       data: {},
       tree: [
-        row([
-          column([heading('Project settings'), text('Defaults new tasks start with. Code prefixes are app settings, managed with the installed app.', 'muted')]),
+        pageHeader(
+          [heading('Project settings'), text('Defaults new tasks start with. Code prefixes are app settings, managed with the installed app.', 'muted')], [
           row([
             button('Reset', [{ 'reset-form': {} }], { disabled: 'form.saving || !form.dirty' }, 'ghost'),
             button('Save', [{ save: {} }, { toast: { message: 'Saved', variant: 'success' } }], { disabled: 'form.saving || !form.dirty || form.invalid' }, undefined, 'save'),
           ]),
-        ], 'between'),
+        ]),
         ...status('record'),
         grid(settingsSections.map(section => card(section.title, [grid(section.fields.map(field => formControl(field, null)))], section.description)), 1),
       ],
@@ -158,13 +157,13 @@ function homePage() {
         access: Object.values(containers).map(container => ({ path: container.path, reason: `List ${container.path.slice(1)}` })),
         data: { ...projectSources, ...taskSources },
         tree: page([
-          row([
-            column([heading('Project'), text('Projects and tasks are files in your workspace. Draft them in their folders, then complete tasks from their forms.', 'muted')]),
+          pageHeader(
+            [heading('Project'), text('Projects and tasks are files in your workspace. Draft them in their folders, then complete tasks from their forms.', 'muted')], [
             row([
               button('Task board', [openFile(`${installRoot}/canvas/board.page.yaml`)], undefined, 'outline', 'kanban'),
               button('Settings', [openFile(settingsPath, 'edit')], undefined, 'ghost', 'settings'),
             ]),
-          ], 'between'),
+          ]),
           stats([
             stat('Active projects', count('projects', "e.data.status === 'active'"), 'folder-kanban', loading('projects')),
             stat('On hold', count('projects', "e.data.status === 'on-hold'"), 'pause', loading('projects')),
@@ -201,10 +200,10 @@ function boardPage() {
         ],
         data: { ...taskSources, projects: projectSources.projects },
         tree: page([
-          row([
-            column([heading('Task board'), text('Every active task, grouped by stage. Click a task to open its form; complete it from there.', 'muted')]),
+          pageHeader(
+            [heading('Task board'), text('Every active task, grouped by stage. Click a task to open its form; complete it from there.', 'muted')], [
             button('Project', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'folder-kanban'),
-          ], 'between'),
+          ]),
           ...status('tasks', `The ${containers.tasks.path} folder could not be read. Reinstall Project to recreate it.`),
           stats(taskStages.map(stage => stat(humanizedStage(stage), `{{ ${stageTasks(stage)}.length }}`, 'square-check-big', loading('tasks'))), 4),
           grid(taskStages.map(stage =>
@@ -217,5 +216,5 @@ function boardPage() {
 
 export function buildPages() {
   const documents = [homePage(), boardPage(), ...recordKinds.map(recordForm), settingsForm()]
-  return Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)]))
+  return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

@@ -19,6 +19,3 @@ file-access:
   - path: "/rental-bookings"
     mode: write
     reason: "Confirm, pick up, return and cancel bookings, checking overlapping bookings"
-  - path: "/invoices"
-    mode: write
-    reason: "Draft an invoice for a returned booking when Invoicing is installed"

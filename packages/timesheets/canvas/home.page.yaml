@@ -30,109 +30,67 @@
         "path": "/projects",
         "contents": true,
         "mime-pattern": "application/vnd.verentis.project.project+json"
+      },
+      "listtimesheets": {
+        "kind": "folder",
+        "path": "/timesheets",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.timesheets.entry+json"
       }
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Timesheets",
+          "icon": "clock",
+          "active": "home.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Entries",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "week.page.yaml",
+              "label": "Week",
+              "icon": "calendar-days"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/timesheets/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/timesheets.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Timesheets",
+              "note": "Timesheet entries are files in your workspace. Draft them in /timesheets, then validate them from their forms."
             },
-            "children": [
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Timesheets"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Timesheet entries are files in your workspace. Draft them in /timesheets, then validate them from their forms.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "direction": "row",
-                    "wrap": true,
-                    "gap": 2,
-                    "align": "center"
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "This week",
-                      "variant": "outline",
-                      "icon": "calendar-days",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/timesheets/canvas/week.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Settings",
-                      "variant": "ghost",
-                      "icon": "settings",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/settings/timesheets.json",
-                            "mode": "edit"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ]
-              }
-            ]
+            "children": []
           },
           {
             "type": "canvas.grid",
@@ -185,12 +143,11 @@
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /timesheets folder could not be read. Reinstall Timesheets to recreate it."
-            },
-            "rules": {
-              "visible": "data.$entries.status === 'error'"
+              "for": "entries",
+              "compact": true,
+              "description": "The /timesheets folder could not be read. Reinstall Timesheets to recreate it."
             }
           },
           {
@@ -225,17 +182,19 @@
             ]
           },
           {
-            "type": "canvas.files",
+            "type": "canvas.empty-state",
             "props": {
-              "path": "/timesheets/",
-              "mimeTypes": [
-                "application/vnd.verentis.timesheets.entry+json"
-              ],
-              "showFolders": false,
-              "navigable": false,
+              "for": "listtimesheets",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.listtimesheets || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
               "columns": [
                 {
-                  "key": "name",
+                  "key": "data.code",
                   "label": "Code"
                 },
                 {
@@ -244,19 +203,43 @@
                 },
                 {
                   "key": "data.date",
-                  "label": "Date"
+                  "label": "Date",
+                  "format": "date"
                 },
                 {
                   "key": "data.hours",
-                  "label": "Hours",
-                  "align": "end"
+                  "label": "Hours"
                 },
                 {
                   "key": "data.status",
-                  "label": "Status"
+                  "label": "Status",
+                  "format": "badge"
                 }
               ],
+              "facets": [
+                "data.status"
+              ],
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
+              "clickable": true,
+              "rowKey": "path",
               "emptyText": "No entries yet. Use New in /timesheets."
+            },
+            "rules": {
+              "visible": "data.$listtimesheets.status === 'ready'"
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ]
             }
           }
         ]

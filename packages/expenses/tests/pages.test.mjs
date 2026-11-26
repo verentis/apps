@@ -1,3 +1,4 @@
+import { apiContract } from '../../../tools/file-apps/build.mjs'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { parse } from 'yaml'
 import { describe, expect, it } from 'vitest'
@@ -20,13 +21,13 @@ const steps = document => Object.values(document.spec.actions ?? {}).flatMap(act
 describe('Expenses Canvas documents', () => {
   // The committed manifest and Canvas documents are YAML renderings of what src/build.mjs models; CI owns the
   // manifest's metadata.version.
-  it('are up to date with the generator', () => {
+  it('are up to date with the generator', async () => {
     const pages = buildPages()
     expect(Object.keys(documents).sort()).toEqual(Object.keys(pages).sort())
     for (const [name, document] of Object.entries(pages)) expect(documents[name], name).toEqual(plain(document))
     const { metadata: { version: _version, ...metadata }, ...installed } = read('expenses.app.yaml')
     const { metadata: { version: _source, ...expectedMetadata }, ...expected } = plain({
-      ...manifest, spec: { ...manifest.spec, 'file-access': [...documentFileAccess(pages), ...scriptConsents] },
+      ...manifest, spec: { ...manifest.spec, 'file-access': [...documentFileAccess(pages), ...scriptConsents], api: await apiContract(new URL('../', import.meta.url)) },
     })
     expect({ ...installed, metadata }).toEqual({ ...expected, metadata: expectedMetadata })
     expect(read('environments/feature.yaml')).toEqual(featureOverlay)
@@ -49,7 +50,9 @@ describe('Expenses Canvas documents', () => {
   it('runs the posting script with every status transition from the report form', () => {
     const document = documents['report.form.yaml']
     const runs = steps(document).filter(step => 'run-script' in step).map(step => step['run-script'])
-    expect(runs.map(run => run.parameters.operation)).toEqual(['submit-report', 'approve-report', 'refuse-report', 'post-report'])
+    expect(runs.map(run => run.parameters.operation)).toEqual(['submit-report', 'approve-report', 'refuse-report', 'post-report', 'complete-report'])
+    // Accounting posts the journal through its API; the app never writes /journals.
+    expect(steps(documents[Object.keys(documents).find(name => JSON.stringify(documents[name]).includes('call-app'))]).filter(step => 'call-app' in step).map(step => step['call-app'].operation)).toEqual(['post-journal'])
     for (const run of runs) expect(run).toMatchObject({ file: postScriptPath, parameters: { path: '{{ ctx.file.path }}' } })
     expect(runs.find(run => run.parameters.operation === 'approve-report').parameters.approver).toBe('{{ state.approver }}')
     expect(runs.find(run => run.parameters.operation === 'refuse-report').parameters.reason).toBe('{{ state.refusalreason }}')

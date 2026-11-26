@@ -89,6 +89,37 @@
       "minItems": 0,
       "maxItems": 200
     },
+    "receipts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "src": {
+            "type": "string",
+            "maxLength": 400000,
+            "pattern": "^data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$"
+          },
+          "takenAt": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "src"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "maxItems": 10
+    },
     "status": {
       "enum": [
         "draft",

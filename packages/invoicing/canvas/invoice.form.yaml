@@ -1,775 +1,1420 @@
-api-version: canvas.verentis.io/v1
-kind: Form
-metadata:
-  id: invoicing-invoice
-  name: Invoicing invoice
-  description: View and edit an Invoicing invoice.
-  icon: file-text
-spec:
-  binds:
-  - pattern: application/vnd.verentis.invoicing.invoice+json
-    mode: edit
-    priority: 200
-    scope: global
-    json-schema:
-      id: https://schemas.verentis.io/invoicing/v1/invoice.schema.json
-      source: /applications/invoicing/schemas/invoice.schema.json
-      title: Invoicing invoice
-      version: '1'
-  entry: ${var:canvas-origin}/render?document=%2Fapplications%2Finvoicing%2Fcanvas%2Finvoice.form.yaml
-  scope: global
-  mime-types:
-  - pattern: application/vnd.verentis.invoicing.invoice+json
-    mode: edit
-    priority: 200
-    json-schema:
-      id: https://schemas.verentis.io/invoicing/v1/invoice.schema.json
-      source: /applications/invoicing/schemas/invoice.schema.json
-      title: Invoicing invoice
-      version: '1'
-  permissions:
-  - file.read
-  - file.write
-  - execution.run
-  - execution.read
-  capabilities: []
-  sandbox:
-    allow-scripts: true
-    allow-same-origin: true
-    allow-popups: false
-    allow-forms: true
-  file-access:
-  - path: /customers
-    mode: read
-    reason: Offer CRM customers to bill (when CRM is installed)
-  - path: /credit-notes
-    mode: read
-    reason: Show the credit notes against this invoice
-  - path: /payments
-    mode: read
-    reason: Show the payments allocated to this invoice
-  - path: /settings/invoicing.json
-    mode: read
-    reason: Estimate tax with the default rate
-  - path: /applications/invoicing/
-    mode: read
-    reason: Read the Invoicing schemas and run the posting script
-  access:
-  - path: /customers
-    reason: Offer CRM customers to bill (when CRM is installed)
-  - path: /credit-notes
-    reason: Show the credit notes against this invoice
-  - path: /payments
-    reason: Show the payments allocated to this invoice
-  - path: /settings/invoicing.json
-    reason: Estimate tax with the default rate
-  - path: /applications/invoicing/
-    reason: Read the Invoicing schemas and run the posting script
-  data:
-    record:
-      kind: document
-      consistency: conditional
-    companies:
-      kind: folder
-      path: /customers
-      contents: true
-      mime-pattern: application/vnd.verentis.crm.company+json
-    contacts:
-      kind: folder
-      path: /customers
-      contents: true
-      mime-pattern: application/vnd.verentis.crm.contact+json
-    customeroptions:
-      kind: computed
-      expr: '(data.companies || []).filter(e => e.kind === ''file'' && e.data && e.data.state !== ''archived''
-        && (true)).map(e => ({ label: (e.data.code || e.name) + '' · '' + (e.data.name || ''''), value:
-        e.path })).concat((data.contacts || []).filter(e => e.kind === ''file'' && e.data && e.data.state
-        !== ''archived'' && (true)).map(e => ({ label: (e.data.code || e.name) + '' · '' + ([e.data.givenName,
-        e.data.familyName].filter(Boolean).join('' '')), value: e.path })))'
-    settings:
-      kind: file
-      path: /settings/invoicing.json
-      parse: json
-    credits:
-      kind: folder
-      path: /credit-notes
-      contents: true
-      mime-pattern: application/vnd.verentis.invoicing.credit+json
-    payments:
-      kind: folder
-      path: /payments
-      contents: true
-      mime-pattern: application/vnd.verentis.invoicing.payment+json
-  tree:
-  - type: canvas.stack
-    layout:
-      base:
-        padding: 6
-        gap: 4
-        maxWidth: 72rem
-        margin:
-          x: auto
-    children:
-    - type: canvas.stack
-      layout:
-        base:
-          direction: row
-          wrap: true
-          gap: 2
-          align: center
-          justify: between
-      children:
-      - type: canvas.stack
-        layout:
-          base:
-            gap: 1
-        children:
-        - type: canvas.stack
-          layout:
-            base:
-              direction: row
-              wrap: true
-              gap: 2
-              align: center
-          children:
-          - type: canvas.heading
-            props:
-              level: 2
-              text: '{{ form.values.customer.name || ''New invoice'' }}'
-          - type: canvas.dashboard.badge
-            props:
-              text: '{{ String(form.values.status || '''').split(''-'').join('' '') }}'
-              tone: '{{ ["issued","posted"].includes(form.values.status) ? ''success'' : ["draft"].includes(form.values.status)
-                ? ''warning'' : ["reversed"].includes(form.values.status) ? ''danger'' : ''neutral'' }}'
-            rules:
-              visible: '!!form.values.status'
-          - type: canvas.dashboard.badge
-            props:
-              text: Archived
-              tone: warning
-              icon: archive
-            rules:
-              visible: form.values.state === 'archived'
-        - type: canvas.text
-          props:
-            text: Invoice {{ form.values.code || '' }} · {{ ctx.file.path }}
-            tone: muted
-      - type: canvas.stack
-        layout:
-          base:
-            direction: row
-            wrap: true
-            gap: 2
-            align: center
-        children:
-        - type: canvas.button
-          props:
-            label: Copy details
-            variant: outline
-            icon: copy
-            size: sm
-          'on':
-            click: copy-customer
-          rules:
-            visible: (!form.values.status || form.values.status === 'draft') && !!form.values.customerRef
-            disabled: form.saving || form.values.state === 'archived'
-        - type: canvas.button
-          props:
-            label: Issue
-            icon: send
-            size: sm
-          'on':
-            click: issue
-          rules:
-            visible: (!form.values.status || form.values.status === 'draft') && !(form.values.state ===
-              'archived')
-            disabled: form.saving || form.dirty || form.invalid
-        - type: canvas.stack
-          layout:
-            base:
-              direction: row
-              wrap: true
-              gap: 2
-              align: center
-          children:
-          - type: canvas.button
-            props:
-              label: Archive
-              variant: ghost
-              icon: archive
-              size: sm
-            'on':
-              click: archive
-            rules:
-              visible: '!(form.values.state === ''archived'') && !(!(!form.values.status || form.values.status
-                === ''draft''))'
-              disabled: form.saving || form.dirty
-          - type: canvas.button
-            props:
-              label: Restore
-              variant: outline
-              icon: archive-restore
-              size: sm
-            'on':
-              click: restore
-            rules:
-              visible: form.values.state === 'archived'
-              disabled: form.saving || form.dirty
-          - type: canvas.button
-            props:
-              label: Reset
-              variant: ghost
-              size: sm
-            'on':
-              click: reset
-            rules:
-              disabled: form.saving || !form.dirty
-          - type: canvas.button
-            props:
-              label: Save
-              icon: save
-              size: sm
-            'on':
-              click: save
-            rules:
-              disabled: form.saving || !form.dirty || form.invalid || form.values.state === 'archived'
-                || (!(!form.values.status || form.values.status === 'draft'))
-    - type: canvas.text
-      props:
-        text: '{{ data.$record.error }}'
-      rules:
-        visible: data.$record.status === 'error'
-    - type: canvas.text
-      props:
-        text: Loading…
-        tone: muted
-      rules:
-        visible: data.$record.status === 'loading'
-    - type: canvas.dashboard.badge
-      props:
-        text: This invoice is archived. Restore it to edit.
-        tone: warning
-        icon: archive
-      rules:
-        visible: form.values.state === 'archived'
-    - type: canvas.tabs
-      props:
-        items:
-        - value: overview
-          label: Overview
-          icon: file-text
-        - value: settlement
-          label: Credits and payments
-          icon: banknote
-        - value: documents
-          label: Documents
-          icon: paperclip
-      children:
-      - type: canvas.stack
-        layout:
-          base:
-            gap: 4
-        children:
-        - type: canvas.stack
-          layout:
-            base:
-              direction: row
-              wrap: true
-              gap: 2
-              align: center
-          children:
-          - type: canvas.button
-            props:
-              label: Document
-              variant: ghost
-              icon: file-text
-              size: sm
-            'on':
-              click:
-              - open-file:
-                  path: '{{ form.values.document && form.values.document.path }}'
-                  mode: edit
-            rules:
-              visible: '!!(form.values.document && form.values.document.path)'
-          - type: canvas.button
-            props:
-              label: Journal
-              variant: ghost
-              icon: notebook-pen
-              size: sm
-            'on':
-              click:
-              - open-file:
-                  path: '{{ form.values.journal && form.values.journal.path }}'
-                  mode: edit
-            rules:
-              visible: '!!(form.values.journal && form.values.journal.path)'
-          - type: canvas.button
-            props:
-              label: CRM customer
-              variant: ghost
-              icon: building-2
-              size: sm
-            'on':
-              click:
-              - open-file:
-                  path: '{{ form.values.customerRef }}'
-                  mode: edit
-            rules:
-              visible: '!!(form.values.customerRef)'
-        - type: canvas.grid
-          layout:
-            base:
-              columns: 2
-              gap: 4
-            desktop:
-              columns: 3
-          children:
-          - type: canvas.dashboard.stat
-            props:
-              label: Net
-              value: '{{ form.values.totals ? form.values.totals.net : ((form.values.lines || []).reduce((s,
-                l) => s + Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)),
-                0) / 100).toFixed(2) }}'
-              icon: sigma
-          - type: canvas.dashboard.stat
-            props:
-              label: Tax
-              value: '{{ form.values.totals ? form.values.totals.tax : ((form.values.lines || []).reduce((s,
-                l) => s + Math.round(Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice
-                || 0) * 100)) * Number(l.taxRate === '''' || l.taxRate == null ? ((data.settings && data.settings.defaultTaxRate)
-                || 0) : l.taxRate) / 100), 0) / 100).toFixed(2) }}'
-              icon: percent
-          - type: canvas.dashboard.stat
-            props:
-              label: Total {{ form.values.currency }}
-              value: '{{ form.values.totals ? form.values.totals.gross : (((form.values.lines || []).reduce((s,
-                l) => s + Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)),
-                0) + (form.values.lines || []).reduce((s, l) => s + Math.round(Math.round(Number(l.quantity
-                || 0) * Math.round(Number(l.unitPrice || 0) * 100)) * Number(l.taxRate === '''' || l.taxRate
-                == null ? ((data.settings && data.settings.defaultTaxRate) || 0) : l.taxRate) / 100),
-                0)) / 100).toFixed(2) }}'
-              icon: receipt
-        - type: canvas.text
-          props:
-            text: Estimated while drafting; issuing computes the exact totals.
-            tone: muted
-          rules:
-            visible: '!form.values.totals'
-        - type: canvas.grid
-          layout:
-            base:
-              columns: 2
-              gap: 4
-            desktop:
-              columns: 3
-          children:
-          - type: canvas.dashboard.stat
-            props:
-              label: Credited
-              value: '{{ ((data.credits || []).filter(c => c.kind === ''file'' && c.data && c.data.status
-                === ''issued'' && c.data.invoice === ctx.file.path).reduce((s, c) => s + Math.round(Number(c.data.totals.gross
-                || 0) * 10000), 0) / 10000).toFixed(2) }}'
-              icon: file-minus
-          - type: canvas.dashboard.stat
-            props:
-              label: Paid
-              value: '{{ ((data.payments || []).filter(p => p.kind === ''file'' && p.data && p.data.status
-                === ''posted'').reduce((s, p) => s + (p.data.allocations || []).filter(a => a.invoice
-                === ctx.file.path).reduce((t, a) => t + Math.round(Number(a.amount || 0) * 10000), 0),
-                0) / 10000).toFixed(2) }}'
-              icon: banknote
-          - type: canvas.dashboard.stat
-            props:
-              label: Outstanding
-              value: '{{ form.values.totals ? (Math.round(Number(form.values.totals.gross || 0) * 10000)
-                - (data.credits || []).filter(c => c.kind === ''file'' && c.data && c.data.status ===
-                ''issued'' && c.data.invoice === ctx.file.path).reduce((s, c) => s + Math.round(Number(c.data.totals.gross
-                || 0) * 10000), 0) - (data.payments || []).filter(p => p.kind === ''file'' && p.data &&
-                p.data.status === ''posted'').reduce((s, p) => s + (p.data.allocations || []).filter(a
-                => a.invoice === ctx.file.path).reduce((t, a) => t + Math.round(Number(a.amount || 0)
-                * 10000), 0), 0) / 10000).toFixed(2) : '''' }}'
-              icon: hourglass
-          rules:
-            visible: form.values.status === 'issued'
-        - type: canvas.grid
-          layout:
-            base:
-              columns: 1
-              gap: 4
-            tablet:
-              columns: 2
-          children:
-          - type: canvas.card
-            props:
-              title: Customer
-            children:
-            - type: canvas.grid
-              layout:
-                base:
-                  columns: 1
-                  gap: 4
-                tablet:
-                  columns: 2
-              children:
-              - type: canvas.form.select
-                props:
-                  label: CRM customer
-                  value: '{{ form.values.customerRef }}'
-                  description: Optional. Choose a CRM customer, then Copy details.
-                  options: '{{ data.customeroptions }}'
-                layout:
-                  tablet:
-                    colSpan: 2
-                rules:
-                  disabled: (form.values.state === 'archived' || (!(!form.values.status || form.values.status
-                    === 'draft')))
-              - type: canvas.form.input
-                props:
-                  label: Name
-                  value: '{{ form.values.customer.name }}'
-                  required: true
-                rules:
-                  disabled: (form.values.state === 'archived' || (!(!form.values.status || form.values.status
-                    === 'draft')))
-              - type: canvas.form.input
-                props:
-                  label: Legal name
-                  value: '{{ form.values.customer.legalName }}'
-                rules:
-                  disabled: (form.values.state === 'archived' || (!(!form.values.status || form.values.status
-                    === 'draft')))
-              - type: canvas.form.input
-                props:
-                  label: Email
-                  value: '{{ form.values.customer.email }}'
-                  inputType: email
-                rules:
-                  disabled: (form.values.state === 'archived' || (!(!form.values.status || form.values.status
-                    === 'draft')))
-              - type: canvas.form.input
-                props:
-                  label: Phone
-                  value: '{{ form.values.customer.phone }}'
-                rules:
-                  disabled: (form.values.state === 'archived' || (!(!form.values.status || form.values.status
-                    === 'draft')))
-              - type: canvas.form.input
-                props:
-                  label: Tax number
-                  value: '{{ form.values.customer.taxIdentifier }}'
-                rules:
-                  disabled: (form.values.state === 'archived' || (!(!form.values.status || form.values.status
-                    === 'draft')))
-              - type: canvas.form.text-list
-                props:
-                  label: Street
-                  value: '{{ form.values.customer.address.lines }}'
-                layout:
-                  tablet:
-                    colSpan: 2
-                rules:
-                  disabled: (form.values.state === 'archived' || (!(!form.values.status || form.values.status
-                    === 'draft')))
-              - type: canvas.form.input
-                props:
-                  label: City
-                  value: '{{ form.values.customer.address.city }}'
-                rules:
-                  disabled: (form.values.state === 'archived' || (!(!form.values.status || form.values.status
-                    === 'draft')))
-              - type: canvas.form.input
-                props:
-                  label: Region
-                  value: '{{ form.values.customer.address.region }}'
-                rules:
-                  disabled: (form.values.state === 'archived' || (!(!form.values.status || form.values.status
-                    === 'draft')))
-              - type: canvas.form.input
-                props:
-                  label: Postal code
-                  value: '{{ form.values.customer.address.postalCode }}'
-                rules:
-                  disabled: (form.values.state === 'archived' || (!(!form.values.status || form.values.status
-                    === 'draft')))
-              - type: canvas.form.input
-                props:
-                  label: Country code
-                  value: '{{ form.values.customer.address.country }}'
-                  placeholder: ZA
-                rules:
-                  disabled: (form.values.state === 'archived' || (!(!form.values.status || form.values.status
-                    === 'draft')))
-          - type: canvas.card
-            props:
-              title: Invoice
-            children:
-            - type: canvas.grid
-              layout:
-                base:
-                  columns: 1
-                  gap: 4
-                tablet:
-                  columns: 2
-              children:
-              - type: canvas.form.date
-                props:
-                  label: Issue date
-                  value: '{{ form.values.issueDate }}'
-                  required: true
-                rules:
-                  disabled: (form.values.state === 'archived' || (!(!form.values.status || form.values.status
-                    === 'draft')))
-              - type: canvas.form.date
-                props:
-                  label: Due date
-                  value: '{{ form.values.dueDate }}'
-                  required: true
-                rules:
-                  disabled: (form.values.state === 'archived' || (!(!form.values.status || form.values.status
-                    === 'draft')))
-              - type: canvas.form.input
-                props:
-                  label: Currency
-                  value: '{{ form.values.currency }}'
-                  required: true
-                  placeholder: ZAR
-                rules:
-                  disabled: (form.values.state === 'archived' || (!(!form.values.status || form.values.status
-                    === 'draft')))
-              - type: canvas.form.input
-                props:
-                  label: Customer reference
-                  value: '{{ form.values.reference }}'
-                  placeholder: PO number
-                rules:
-                  disabled: (form.values.state === 'archived' || (!(!form.values.status || form.values.status
-                    === 'draft')))
-              - type: canvas.form.textarea
-                props:
-                  label: Notes
-                  value: '{{ form.values.notes }}'
-                  rows: 4
-                layout:
-                  tablet:
-                    colSpan: 2
-                rules:
-                  disabled: (form.values.state === 'archived' || (!(!form.values.status || form.values.status
-                    === 'draft')))
-          - type: canvas.card
-            props:
-              title: Lines
-              description: Exact decimals. Each line is rounded to the cent; an empty tax rate takes the
-                default from Invoicing settings.
-            children:
-            - type: canvas.grid
-              layout:
-                base:
-                  columns: 1
-                  gap: 4
-                tablet:
-                  columns: 2
-              children:
-              - type: canvas.form.array
-                props:
-                  label: Lines
-                  value: '{{ form.values.lines }}'
-                  fields:
-                  - key: description
-                    label: Description
-                    required: true
-                  - key: quantity
-                    label: Quantity
-                    required: true
-                  - key: unitPrice
-                    label: Unit price
-                    required: true
-                  - key: taxRate
-                    label: Tax %
-                  defaultRow:
-                    description: ''
-                    quantity: '1'
-                    unitPrice: ''
-                    taxRate: ''
-                  rowIds: false
-                  minimum: 1
-                  maximum: 500
-                  addLabel: Add line
-                  removeLabel: Remove row
-                layout:
-                  tablet:
-                    colSpan: 2
-                rules:
-                  disabled: (form.values.state === 'archived' || (!(!form.values.status || form.values.status
-                    === 'draft')))
-        slot: overview
-      - type: canvas.stack
-        layout:
-          base:
-            gap: 4
-        children:
-        - type: canvas.card
-          props:
-            title: Credit notes
-          children:
-          - type: canvas.table
-            props:
-              rows: '{{ (data.credits || []).filter(c => c.kind === ''file'' && c.data && c.data.invoice
-                === ctx.file.path).map(c => ({ path: c.path, code: c.data.code || c.name, date: c.data.date,
-                reason: c.data.reason, status: c.data.status, gross: (c.data.totals && c.data.totals.gross)
-                || '''' })) }}'
-              columns:
-              - key: code
-                label: Number
-              - key: date
-                label: Date
-              - key: reason
-                label: Reason
-              - key: status
-                label: Status
-              - key: gross
-                label: Total
-                align: end
-              emptyText: No credit notes against this invoice
-              clickable: true
-            'on':
-              row-click:
-              - open-file:
-                  path: '{{ event.path }}'
-                  mode: edit
-        - type: canvas.card
-          props:
-            title: Payments
-          children:
-          - type: canvas.table
-            props:
-              rows: '{{ (data.payments || []).filter(p => p.kind === ''file'' && p.data && (p.data.allocations
-                || []).some(a => a.invoice === ctx.file.path)).map(p => ({ path: p.path, code: p.data.code
-                || p.name, date: p.data.date, status: p.data.status, amount: p.data.allocations.filter(a
-                => a.invoice === ctx.file.path).map(a => a.amount).join('' + '') })) }}'
-              columns:
-              - key: code
-                label: Payment
-              - key: date
-                label: Date
-              - key: status
-                label: Status
-              - key: amount
-                label: Allocated
-                align: end
-              emptyText: No payments allocated to this invoice
-              clickable: true
-            'on':
-              row-click:
-              - open-file:
-                  path: '{{ event.path }}'
-                  mode: edit
-        slot: settlement
-      - type: canvas.stack
-        layout:
-          base:
-            gap: 4
-        children:
-        - type: canvas.text
-          props:
-            text: The issued invoice copy and any supporting documents. Files live in {{ ctx.file.path
-              }}/documents.
-            tone: muted
-        - type: canvas.stack
-          layout:
-            base:
-              direction: row
-              wrap: true
-              gap: 2
-              align: center
-          children:
-          - type: canvas.button
-            props:
-              label: Open in Files
-              variant: outline
-              icon: folder-open
-              size: sm
-            'on':
-              click:
-              - open-file:
-                  path: '{{ ctx.file.path }}/documents'
-        - type: canvas.files
-          props:
-            path: ./documents/
-            columns:
-            - name
-            - type
-            - size
-            - modified
-            emptyText: No documents yet
-        slot: documents
-  actions:
-    save:
-      steps:
-      - patch-form:
-          values:
-            updatedAt: '{{ Date() }}'
-      - save: {}
-      - toast:
-          message: Saved
-          variant: success
-    reset:
-      steps:
-      - reset-form: {}
-    archive:
-      steps:
-      - confirm:
-          title: Archive
-          message: Archive this record? It stays in the workspace and can be restored.
-      - patch-form:
-          values:
-            state: archived
-            archivedAt: '{{ Date() }}'
-            updatedAt: '{{ Date() }}'
-      - save: {}
-      - toast:
-          message: Archived
-          variant: success
-    restore:
-      steps:
-      - patch-form:
-          values:
-            state: active
-            updatedAt: '{{ Date() }}'
-      - save: {}
-      - toast:
-          message: Restored
-          variant: success
-    copy-customer:
-      steps:
-      - patch-form:
-          values:
-            customer: '{{ (data.companies || []).concat(data.contacts || []).filter(e => e.kind === ''file''
-              && e.data && e.path === form.values.customerRef).map(e => ({ name: e.data.name || [e.data.givenName,
-              e.data.familyName].filter(Boolean).join('' ''), legalName: (e.data.legalName || ''''), email:
-              (e.data.email || ''''), phone: (e.data.phone || ''''), taxIdentifier: (e.data.taxIdentifier
-              || ''''), address: { lines: (e.data.address || {}).lines || [], city: ((e.data.address ||
-              {}).city || ''''), region: ((e.data.address || {}).region || ''''), postalCode: ((e.data.address
-              || {}).postalCode || ''''), country: ((e.data.address || {}).country || '''') } }))[0] ||
-              form.values.customer }}'
-    issue:
-      permissions:
-      - execution.run
-      - execution.read
-      steps:
-      - confirm:
-          title: Issue invoice
-          message: Issue this invoice and post it to the ledger? Issued invoices cannot be edited; correct
-            them with a credit note.
-      - run-script:
-          file: /applications/invoicing/scripts/post
-          timeout: 120
-          parameters:
-            operation: issue-invoice
-            path: '{{ ctx.file.path }}'
-          assign: lastresult
-      - refresh-source:
-          source: record
-      - toast:
-          message: '{{ (state.lastresult && state.lastresult.message) || ''Done'' }}'
-          variant: success
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Form",
+  "metadata": {
+    "id": "invoicing-invoice",
+    "name": "Invoicing invoice",
+    "description": "View and edit an Invoicing invoice.",
+    "icon": "file-text"
+  },
+  "spec": {
+    "binds": [
+      {
+        "pattern": "application/vnd.verentis.invoicing.invoice+json",
+        "mode": "edit",
+        "priority": 200,
+        "scope": "global",
+        "json-schema": {
+          "id": "https://schemas.verentis.io/invoicing/v1/invoice.schema.json",
+          "source": "/applications/invoicing/schemas/invoice.schema.json",
+          "title": "Invoicing invoice",
+          "version": "1"
+        }
+      }
+    ],
+    "entry": "${var:canvas-origin}/render?document=%2Fapplications%2Finvoicing%2Fcanvas%2Finvoice.form.yaml",
+    "scope": "global",
+    "mime-types": [
+      {
+        "pattern": "application/vnd.verentis.invoicing.invoice+json",
+        "mode": "edit",
+        "priority": 200,
+        "json-schema": {
+          "id": "https://schemas.verentis.io/invoicing/v1/invoice.schema.json",
+          "source": "/applications/invoicing/schemas/invoice.schema.json",
+          "title": "Invoicing invoice",
+          "version": "1"
+        }
+      }
+    ],
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run",
+      "execution.read"
+    ],
+    "capabilities": [],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-popups": false,
+      "allow-forms": true
+    },
+    "file-access": [
+      {
+        "path": "/customers",
+        "mode": "read",
+        "reason": "Offer CRM customers to bill (when CRM is installed)"
+      },
+      {
+        "path": "/credit-notes",
+        "mode": "read",
+        "reason": "Show the credit notes against this invoice"
+      },
+      {
+        "path": "/payments",
+        "mode": "read",
+        "reason": "Show the payments allocated to this invoice"
+      },
+      {
+        "path": "/settings/invoicing.json",
+        "mode": "read",
+        "reason": "Estimate tax with the default rate"
+      },
+      {
+        "path": "/chart-of-accounts",
+        "mode": "read",
+        "reason": "Name the accounts the invoice posts to"
+      },
+      {
+        "path": "/applications/invoicing/",
+        "mode": "read",
+        "reason": "Read the Invoicing schemas and run the posting script"
+      }
+    ],
+    "access": [
+      {
+        "path": "/customers",
+        "reason": "Offer CRM customers to bill (when CRM is installed)"
+      },
+      {
+        "path": "/credit-notes",
+        "reason": "Show the credit notes against this invoice"
+      },
+      {
+        "path": "/payments",
+        "reason": "Show the payments allocated to this invoice"
+      },
+      {
+        "path": "/settings/invoicing.json",
+        "reason": "Estimate tax with the default rate"
+      },
+      {
+        "path": "/chart-of-accounts",
+        "reason": "Name the accounts the invoice posts to"
+      },
+      {
+        "path": "/applications/invoicing/",
+        "reason": "Read the Invoicing schemas and run the posting script"
+      }
+    ],
+    "data": {
+      "record": {
+        "kind": "document",
+        "consistency": "conditional"
+      },
+      "appops": {
+        "kind": "app-operations"
+      },
+      "accounts": {
+        "kind": "folder",
+        "path": "/chart-of-accounts",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.accounting.account+json"
+      },
+      "accountoptions": {
+        "kind": "computed",
+        "expr": "(data.accounts || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + ((e.data.number ? e.data.number + ' ' : '') + (e.data.name || '')), value: e.path }))"
+      },
+      "companies": {
+        "kind": "folder",
+        "path": "/customers",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.crm.company+json"
+      },
+      "contacts": {
+        "kind": "folder",
+        "path": "/customers",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.crm.contact+json"
+      },
+      "customeroptions": {
+        "kind": "computed",
+        "expr": "(data.companies || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + (e.data.name || ''), value: e.path })).concat((data.contacts || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + ([e.data.givenName, e.data.familyName].filter(Boolean).join(' ')), value: e.path })))"
+      },
+      "settings": {
+        "kind": "file",
+        "path": "/settings/invoicing.json",
+        "parse": "json"
+      },
+      "credits": {
+        "kind": "folder",
+        "path": "/credit-notes",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.invoicing.credit+json"
+      },
+      "payments": {
+        "kind": "folder",
+        "path": "/payments",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.invoicing.payment+json"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.validation-summary",
+            "props": {
+              "title": "Fix these before saving"
+            }
+          },
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "{{ form.values.customer.name || 'New invoice' }}",
+              "note": "Invoice {{ form.values.code || '' }}"
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.dashboard.badge",
+                    "props": {
+                      "text": "{{ String(form.values.status || '').split('-').join(' ') }}",
+                      "tone": "{{ [\"issued\",\"posted\"].includes(form.values.status) ? 'success' : [\"draft\"].includes(form.values.status) ? 'warning' : [\"reversed\"].includes(form.values.status) ? 'danger' : 'neutral' }}"
+                    },
+                    "rules": {
+                      "visible": "!!form.values.status"
+                    }
+                  },
+                  {
+                    "type": "canvas.dashboard.badge",
+                    "props": {
+                      "text": "Archived",
+                      "tone": "warning",
+                      "icon": "archive"
+                    },
+                    "rules": {
+                      "visible": "form.values.state === 'archived'"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Copy details",
+                  "variant": "outline",
+                  "icon": "copy",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "copy-customer"
+                },
+                "rules": {
+                  "visible": "(!form.values.status || form.values.status === 'draft') && !!form.values.customerRef",
+                  "disabled": "form.saving || form.values.state === 'archived'"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Save PDF",
+                  "variant": "outline",
+                  "icon": "file-down",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "savepdf"
+                },
+                "rules": {
+                  "visible": "(!form.values.status || form.values.status === 'draft')",
+                  "disabled": "form.saving || form.dirty"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Issue",
+                  "icon": "send",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "issue"
+                },
+                "rules": {
+                  "visible": "(!form.values.status || form.values.status === 'draft') && !(form.values.state === 'archived')",
+                  "disabled": "form.saving || form.dirty || form.invalid"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Archive",
+                      "variant": "ghost",
+                      "icon": "archive",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "archive"
+                    },
+                    "rules": {
+                      "visible": "!(form.values.state === 'archived') && !(!(!form.values.status || form.values.status === 'draft'))",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Restore",
+                      "variant": "outline",
+                      "icon": "archive-restore",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "restore"
+                    },
+                    "rules": {
+                      "visible": "form.values.state === 'archived'",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Reset",
+                      "variant": "ghost",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "reset"
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Save",
+                      "icon": "save",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "save"
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft'))"
+                    }
+                  }
+                ],
+                "slot": "actions"
+              }
+            ]
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "record",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.alert",
+            "props": {
+              "tone": "warning",
+              "title": "This invoice is archived",
+              "text": "Restore it to edit.",
+              "icon": "archive",
+              "action": {
+                "label": "Restore",
+                "id": "restore"
+              }
+            },
+            "rules": {
+              "visible": "form.values.state === 'archived'"
+            },
+            "on": {
+              "action": "restore"
+            }
+          },
+          {
+            "type": "canvas.tabs",
+            "props": {
+              "items": [
+                {
+                  "value": "overview",
+                  "label": "Overview",
+                  "icon": "file-text"
+                },
+                {
+                  "value": "settlement",
+                  "label": "Credits and payments",
+                  "icon": "banknote"
+                },
+                {
+                  "value": "documents",
+                  "label": "Documents",
+                  "icon": "paperclip"
+                }
+              ]
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Document",
+                          "variant": "ghost",
+                          "icon": "file-text",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "open-file": {
+                                "path": "{{ form.values.document && form.values.document.path }}",
+                                "mode": "edit"
+                              }
+                            }
+                          ]
+                        },
+                        "rules": {
+                          "visible": "!!(form.values.document && form.values.document.path)"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Journal",
+                          "variant": "ghost",
+                          "icon": "notebook-pen",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "open-file": {
+                                "path": "{{ form.values.journal && form.values.journal.path }}",
+                                "mode": "edit"
+                              }
+                            }
+                          ]
+                        },
+                        "rules": {
+                          "visible": "!!(form.values.journal && form.values.journal.path)"
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "CRM customer",
+                          "variant": "ghost",
+                          "icon": "building-2",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "open-file": {
+                                "path": "{{ form.values.customerRef }}",
+                                "mode": "edit"
+                              }
+                            }
+                          ]
+                        },
+                        "rules": {
+                          "visible": "!!(form.values.customerRef)"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 2,
+                        "gap": 4
+                      },
+                      "desktop": {
+                        "columns": 3
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.dashboard.stat",
+                        "props": {
+                          "label": "Net",
+                          "value": "{{ form.values.totals ? form.values.totals.net : ((form.values.lines || []).reduce((s, l) => s + Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)), 0) / 100).toFixed(2) }}",
+                          "icon": "sigma"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.stat",
+                        "props": {
+                          "label": "Tax",
+                          "value": "{{ form.values.totals ? form.values.totals.tax : ((form.values.lines || []).reduce((s, l) => s + Math.round(Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)) * Number(l.taxRate === '' || l.taxRate == null ? ((data.settings && data.settings.defaultTaxRate) || 0) : l.taxRate) / 100), 0) / 100).toFixed(2) }}",
+                          "icon": "percent"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.stat",
+                        "props": {
+                          "label": "Total {{ form.values.currency }}",
+                          "value": "{{ form.values.totals ? form.values.totals.gross : (((form.values.lines || []).reduce((s, l) => s + Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)), 0) + (form.values.lines || []).reduce((s, l) => s + Math.round(Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)) * Number(l.taxRate === '' || l.taxRate == null ? ((data.settings && data.settings.defaultTaxRate) || 0) : l.taxRate) / 100), 0)) / 100).toFixed(2) }}",
+                          "icon": "receipt"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Estimated while drafting; issuing computes the exact totals.",
+                      "tone": "muted"
+                    },
+                    "rules": {
+                      "visible": "!form.values.totals"
+                    }
+                  },
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 2,
+                        "gap": 4
+                      },
+                      "desktop": {
+                        "columns": 3
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.dashboard.stat",
+                        "props": {
+                          "label": "Credited",
+                          "value": "{{ ((data.credits || []).filter(c => c.kind === 'file' && c.data && c.data.status === 'issued' && c.data.invoice === ctx.file.path).reduce((s, c) => s + Math.round(Number(c.data.totals.gross || 0) * 10000), 0) / 10000).toFixed(2) }}",
+                          "icon": "file-minus"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.stat",
+                        "props": {
+                          "label": "Paid",
+                          "value": "{{ ((data.payments || []).filter(p => p.kind === 'file' && p.data && p.data.status === 'posted').reduce((s, p) => s + (p.data.allocations || []).filter(a => a.invoice === ctx.file.path).reduce((t, a) => t + Math.round(Number(a.amount || 0) * 10000), 0), 0) / 10000).toFixed(2) }}",
+                          "icon": "banknote"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.stat",
+                        "props": {
+                          "label": "Outstanding",
+                          "value": "{{ form.values.totals ? (Math.round(Number(form.values.totals.gross || 0) * 10000) - (data.credits || []).filter(c => c.kind === 'file' && c.data && c.data.status === 'issued' && c.data.invoice === ctx.file.path).reduce((s, c) => s + Math.round(Number(c.data.totals.gross || 0) * 10000), 0) - (data.payments || []).filter(p => p.kind === 'file' && p.data && p.data.status === 'posted').reduce((s, p) => s + (p.data.allocations || []).filter(a => a.invoice === ctx.file.path).reduce((t, a) => t + Math.round(Number(a.amount || 0) * 10000), 0), 0) / 10000).toFixed(2) : '' }}",
+                          "icon": "hourglass"
+                        }
+                      }
+                    ],
+                    "rules": {
+                      "visible": "form.values.status === 'issued'"
+                    }
+                  },
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.card",
+                        "props": {
+                          "title": "Customer"
+                        },
+                        "children": [
+                          {
+                            "type": "canvas.grid",
+                            "layout": {
+                              "base": {
+                                "columns": 1,
+                                "gap": 4
+                              },
+                              "tablet": {
+                                "columns": 2
+                              }
+                            },
+                            "children": [
+                              {
+                                "type": "canvas.form.select",
+                                "props": {
+                                  "label": "CRM customer",
+                                  "value": "{{ form.values.customerRef }}",
+                                  "description": "Optional. Choose a CRM customer, then Copy details.",
+                                  "options": "{{ data.customeroptions }}",
+                                  "searchable": true
+                                },
+                                "layout": {
+                                  "tablet": {
+                                    "colSpan": 2
+                                  }
+                                },
+                                "rules": {
+                                  "disabled": "(form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft')))"
+                                }
+                              },
+                              {
+                                "type": "canvas.form.input",
+                                "props": {
+                                  "label": "Name",
+                                  "value": "{{ form.values.customer.name }}",
+                                  "required": true
+                                },
+                                "rules": {
+                                  "disabled": "(form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft')))"
+                                }
+                              },
+                              {
+                                "type": "canvas.form.input",
+                                "props": {
+                                  "label": "Legal name",
+                                  "value": "{{ form.values.customer.legalName }}"
+                                },
+                                "rules": {
+                                  "disabled": "(form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft')))"
+                                }
+                              },
+                              {
+                                "type": "canvas.form.input",
+                                "props": {
+                                  "label": "Email",
+                                  "value": "{{ form.values.customer.email }}",
+                                  "inputType": "email"
+                                },
+                                "rules": {
+                                  "disabled": "(form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft')))"
+                                }
+                              },
+                              {
+                                "type": "canvas.form.phone",
+                                "props": {
+                                  "label": "Phone",
+                                  "value": "{{ form.values.customer.phone }}",
+                                  "defaultCode": "{{ ({ ZA: '+27', NA: '+264', BW: '+267', ZW: '+263', MZ: '+258', LS: '+266', SZ: '+268', KE: '+254', NG: '+234', GB: '+44', IE: '+353', NL: '+31', DE: '+49', FR: '+33', US: '+1', CA: '+1', AU: '+61', NZ: '+64' })[form.values.customer && form.values.customer.address && form.values.customer.address.country] || '' }}"
+                                },
+                                "rules": {
+                                  "disabled": "(form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft')))"
+                                }
+                              },
+                              {
+                                "type": "canvas.form.input",
+                                "props": {
+                                  "label": "Tax number",
+                                  "value": "{{ form.values.customer.taxIdentifier }}"
+                                },
+                                "rules": {
+                                  "disabled": "(form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft')))"
+                                }
+                              },
+                              {
+                                "type": "canvas.form.address",
+                                "props": {
+                                  "label": "Address",
+                                  "value": "{{ form.values.customer.address }}"
+                                },
+                                "layout": {
+                                  "tablet": {
+                                    "colSpan": 2
+                                  }
+                                },
+                                "rules": {
+                                  "disabled": "(form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft')))"
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "canvas.card",
+                        "props": {
+                          "title": "Invoice"
+                        },
+                        "children": [
+                          {
+                            "type": "canvas.grid",
+                            "layout": {
+                              "base": {
+                                "columns": 1,
+                                "gap": 4
+                              },
+                              "tablet": {
+                                "columns": 2
+                              }
+                            },
+                            "children": [
+                              {
+                                "type": "canvas.form.date",
+                                "props": {
+                                  "label": "Issue date",
+                                  "value": "{{ form.values.issueDate }}",
+                                  "required": true
+                                },
+                                "rules": {
+                                  "disabled": "(form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft')))"
+                                }
+                              },
+                              {
+                                "type": "canvas.form.date",
+                                "props": {
+                                  "label": "Due date",
+                                  "value": "{{ form.values.dueDate }}",
+                                  "required": true
+                                },
+                                "rules": {
+                                  "disabled": "(form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft')))"
+                                }
+                              },
+                              {
+                                "type": "canvas.form.input",
+                                "props": {
+                                  "label": "Currency",
+                                  "value": "{{ form.values.currency }}",
+                                  "required": true,
+                                  "placeholder": "ZAR"
+                                },
+                                "rules": {
+                                  "disabled": "(form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft')))"
+                                }
+                              },
+                              {
+                                "type": "canvas.form.input",
+                                "props": {
+                                  "label": "Customer reference",
+                                  "value": "{{ form.values.reference }}",
+                                  "placeholder": "PO number"
+                                },
+                                "rules": {
+                                  "disabled": "(form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft')))"
+                                }
+                              },
+                              {
+                                "type": "canvas.form.textarea",
+                                "props": {
+                                  "label": "Notes",
+                                  "value": "{{ form.values.notes }}",
+                                  "rows": 4
+                                },
+                                "layout": {
+                                  "tablet": {
+                                    "colSpan": 2
+                                  }
+                                },
+                                "rules": {
+                                  "disabled": "(form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft')))"
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "canvas.card",
+                        "props": {
+                          "title": "Lines",
+                          "description": "Exact decimals. Each line is rounded to the cent; an empty tax rate takes the default from Invoicing settings."
+                        },
+                        "children": [
+                          {
+                            "type": "canvas.grid",
+                            "layout": {
+                              "base": {
+                                "columns": 1,
+                                "gap": 4
+                              },
+                              "tablet": {
+                                "columns": 2
+                              }
+                            },
+                            "children": [
+                              {
+                                "type": "canvas.form.line-items",
+                                "props": {
+                                  "label": "Lines",
+                                  "value": "{{ form.values.lines }}",
+                                  "columns": [
+                                    {
+                                      "key": "description",
+                                      "label": "Description",
+                                      "type": "text"
+                                    },
+                                    {
+                                      "key": "quantity",
+                                      "label": "Quantity",
+                                      "type": "text",
+                                      "align": "right",
+                                      "sum": true
+                                    },
+                                    {
+                                      "key": "unitPrice",
+                                      "label": "Unit price",
+                                      "type": "text",
+                                      "align": "right"
+                                    },
+                                    {
+                                      "key": "taxRate",
+                                      "label": "Tax %",
+                                      "type": "text",
+                                      "align": "right"
+                                    },
+                                    {
+                                      "key": "lineTotal",
+                                      "label": "Line total",
+                                      "type": "computed",
+                                      "expr": "Number(row.quantity || 0) * Number(row.unitPrice || 0)",
+                                      "decimals": 2,
+                                      "sum": true,
+                                      "align": "right"
+                                    }
+                                  ],
+                                  "defaultRow": {
+                                    "description": "",
+                                    "quantity": "1",
+                                    "unitPrice": "",
+                                    "taxRate": ""
+                                  },
+                                  "storeComputed": false,
+                                  "minimum": 1,
+                                  "maximum": 500,
+                                  "addLabel": "Add line"
+                                },
+                                "layout": {
+                                  "tablet": {
+                                    "colSpan": 2
+                                  }
+                                },
+                                "rules": {
+                                  "disabled": "(form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft')))"
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.card",
+                    "props": {
+                      "title": "Preview",
+                      "description": "How this looks printed or saved as PDF.",
+                      "collapsible": true,
+                      "defaultOpen": false
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.document",
+                        "props": {
+                          "title": "{{ 'Tax invoice ' + (form.values.code || '') }}",
+                          "subtitle": "{{ form.values.reference }}",
+                          "parties": {
+                            "$expr": "[{ label: 'Bill to', lines: ([form.values.customer && form.values.customer.name, form.values.customer && form.values.customer.legalName !== form.values.customer.name ? form.values.customer.legalName : ''].concat((form.values.customer && form.values.customer.address && form.values.customer.address.lines) || []).concat([form.values.customer && form.values.customer.address ? [form.values.customer.address.city, form.values.customer.address.postalCode].filter(part => part).join(' ') : '', form.values.customer && form.values.customer.address && form.values.customer.address.country, form.values.customer && form.values.customer.taxIdentifier ? 'Tax number ' + form.values.customer.taxIdentifier : '']).filter(line => line)).filter(line => line) }]"
+                          },
+                          "meta": {
+                            "$expr": "[{ label: 'Issued', value: format(form.values.issueDate, 'date') }, { label: 'Due', value: format(form.values.dueDate, 'date') }, { label: 'Currency', value: form.values.currency }]"
+                          },
+                          "lines": {
+                            "$expr": "(form.values.lines || []).map(l => ({ item: l.description || '', quantity: l.quantity, price: Number(l.unitPrice || 0).toFixed(2), tax: (Number(l.taxRate === '' || l.taxRate == null ? ((data.settings && data.settings.defaultTaxRate) || 0) : l.taxRate)) + '%', amount: (Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)) / 100).toFixed(2) }))"
+                          },
+                          "columns": [
+                            {
+                              "key": "item",
+                              "label": "Item"
+                            },
+                            {
+                              "key": "quantity",
+                              "label": "Qty",
+                              "align": "right"
+                            },
+                            {
+                              "key": "price",
+                              "label": "Price",
+                              "align": "right"
+                            },
+                            {
+                              "key": "tax",
+                              "label": "Tax",
+                              "align": "right"
+                            },
+                            {
+                              "key": "amount",
+                              "label": "Amount",
+                              "align": "right"
+                            }
+                          ],
+                          "totals": {
+                            "$expr": "[{ label: 'Net', value: form.values.totals ? form.values.totals.net : ((form.values.lines || []).reduce((s, l) => s + Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)), 0) / 100).toFixed(2) }, { label: 'Tax', value: form.values.totals ? form.values.totals.tax : ((form.values.lines || []).reduce((s, l) => s + Math.round(Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)) * Number(l.taxRate === '' || l.taxRate == null ? ((data.settings && data.settings.defaultTaxRate) || 0) : l.taxRate) / 100), 0) / 100).toFixed(2) }, { label: 'Total ' + (form.values.currency || ''), value: form.values.totals ? form.values.totals.gross : (((form.values.lines || []).reduce((s, l) => s + Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)), 0) + (form.values.lines || []).reduce((s, l) => s + Math.round(Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)) * Number(l.taxRate === '' || l.taxRate == null ? ((data.settings && data.settings.defaultTaxRate) || 0) : l.taxRate) / 100), 0)) / 100).toFixed(2), strong: true }]"
+                          },
+                          "footer": "{{ form.values.notes }}",
+                          "stamp": "{{ ['draft', 'cancelled'].includes(form.values.status) ? (form.values.status === 'draft' ? 'Draft' : 'Cancelled') : '' }}"
+                        }
+                      }
+                    ]
+                  }
+                ],
+                "slot": "overview"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.card",
+                    "props": {
+                      "title": "Credit notes"
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.table",
+                        "props": {
+                          "rows": "{{ (data.credits || []).filter(c => c.kind === 'file' && c.data && c.data.invoice === ctx.file.path).map(c => ({ path: c.path, code: c.data.code || c.name, date: c.data.date, reason: c.data.reason, status: c.data.status, gross: (c.data.totals && c.data.totals.gross) || '' })) }}",
+                          "columns": [
+                            {
+                              "key": "code",
+                              "label": "Number"
+                            },
+                            {
+                              "key": "date",
+                              "label": "Date"
+                            },
+                            {
+                              "key": "reason",
+                              "label": "Reason"
+                            },
+                            {
+                              "key": "status",
+                              "label": "Status"
+                            },
+                            {
+                              "key": "gross",
+                              "label": "Total",
+                              "align": "end"
+                            }
+                          ],
+                          "emptyText": "No credit notes against this invoice",
+                          "search": true,
+                          "sortable": true,
+                          "pageSize": 25,
+                          "narrow": "list",
+                          "clickable": true
+                        },
+                        "on": {
+                          "row-click": [
+                            {
+                              "open-file": {
+                                "path": "{{ event.path }}",
+                                "mode": "edit",
+                                "open": "side"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.card",
+                    "props": {
+                      "title": "Payments"
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.table",
+                        "props": {
+                          "rows": "{{ (data.payments || []).filter(p => p.kind === 'file' && p.data && (p.data.allocations || []).some(a => a.invoice === ctx.file.path)).map(p => ({ path: p.path, code: p.data.code || p.name, date: p.data.date, status: p.data.status, amount: p.data.allocations.filter(a => a.invoice === ctx.file.path).map(a => a.amount).join(' + ') })) }}",
+                          "columns": [
+                            {
+                              "key": "code",
+                              "label": "Payment"
+                            },
+                            {
+                              "key": "date",
+                              "label": "Date"
+                            },
+                            {
+                              "key": "status",
+                              "label": "Status"
+                            },
+                            {
+                              "key": "amount",
+                              "label": "Allocated",
+                              "align": "end"
+                            }
+                          ],
+                          "emptyText": "No payments allocated to this invoice",
+                          "search": true,
+                          "sortable": true,
+                          "pageSize": 25,
+                          "narrow": "list",
+                          "clickable": true
+                        },
+                        "on": {
+                          "row-click": [
+                            {
+                              "open-file": {
+                                "path": "{{ event.path }}",
+                                "mode": "edit",
+                                "open": "side"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ],
+                "slot": "settlement"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "The issued invoice copy and any supporting documents.",
+                      "tone": "muted"
+                    }
+                  },
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Open in Files",
+                          "variant": "outline",
+                          "icon": "folder-open",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "open-file": {
+                                "path": "{{ ctx.file.path }}/documents"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.files",
+                    "props": {
+                      "path": "./documents/",
+                      "columns": [
+                        "name",
+                        "type",
+                        "size",
+                        "modified"
+                      ],
+                      "emptyText": "No documents yet"
+                    }
+                  }
+                ],
+                "slot": "documents"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "actions": {
+      "save": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Saved",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "reset": {
+        "steps": [
+          {
+            "reset-form": {}
+          }
+        ]
+      },
+      "archive": {
+        "steps": [
+          {
+            "confirm": {
+              "title": "Archive",
+              "message": "Archive this record? It stays in the workspace and can be restored."
+            }
+          },
+          {
+            "patch-form": {
+              "values": {
+                "state": "archived",
+                "archivedAt": "{{ Date() }}",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Archived",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "restore": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "state": "active",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Restored",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "copy-customer": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "customer": "{{ (data.companies || []).concat(data.contacts || []).filter(e => e.kind === 'file' && e.data && e.path === form.values.customerRef).map(e => ({ name: e.data.name || [e.data.givenName, e.data.familyName].filter(Boolean).join(' '), legalName: (e.data.legalName || ''), email: (e.data.email || ''), phone: (e.data.phone || ''), taxIdentifier: (e.data.taxIdentifier || ''), address: { lines: (e.data.address || {}).lines || [], city: ((e.data.address || {}).city || ''), region: ((e.data.address || {}).region || ''), postalCode: ((e.data.address || {}).postalCode || ''), country: ((e.data.address || {}).country || '') } }))[0] || form.values.customer }}"
+              }
+            }
+          }
+        ]
+      },
+      "savepdf": {
+        "steps": [
+          {
+            "render-pdf": {
+              "template": {
+                "title": "{{ 'Tax invoice ' + (form.values.code || '') }}",
+                "subtitle": "{{ form.values.reference }}",
+                "parties": {
+                  "$expr": "[{ label: 'Bill to', lines: ([form.values.customer && form.values.customer.name, form.values.customer && form.values.customer.legalName !== form.values.customer.name ? form.values.customer.legalName : ''].concat((form.values.customer && form.values.customer.address && form.values.customer.address.lines) || []).concat([form.values.customer && form.values.customer.address ? [form.values.customer.address.city, form.values.customer.address.postalCode].filter(part => part).join(' ') : '', form.values.customer && form.values.customer.address && form.values.customer.address.country, form.values.customer && form.values.customer.taxIdentifier ? 'Tax number ' + form.values.customer.taxIdentifier : '']).filter(line => line)).filter(line => line) }]"
+                },
+                "meta": {
+                  "$expr": "[{ label: 'Issued', value: format(form.values.issueDate, 'date') }, { label: 'Due', value: format(form.values.dueDate, 'date') }, { label: 'Currency', value: form.values.currency }]"
+                },
+                "lines": {
+                  "$expr": "(form.values.lines || []).map(l => ({ item: l.description || '', quantity: l.quantity, price: Number(l.unitPrice || 0).toFixed(2), tax: (Number(l.taxRate === '' || l.taxRate == null ? ((data.settings && data.settings.defaultTaxRate) || 0) : l.taxRate)) + '%', amount: (Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)) / 100).toFixed(2) }))"
+                },
+                "columns": [
+                  {
+                    "key": "item",
+                    "label": "Item"
+                  },
+                  {
+                    "key": "quantity",
+                    "label": "Qty",
+                    "align": "right"
+                  },
+                  {
+                    "key": "price",
+                    "label": "Price",
+                    "align": "right"
+                  },
+                  {
+                    "key": "tax",
+                    "label": "Tax",
+                    "align": "right"
+                  },
+                  {
+                    "key": "amount",
+                    "label": "Amount",
+                    "align": "right"
+                  }
+                ],
+                "totals": {
+                  "$expr": "[{ label: 'Net', value: form.values.totals ? form.values.totals.net : ((form.values.lines || []).reduce((s, l) => s + Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)), 0) / 100).toFixed(2) }, { label: 'Tax', value: form.values.totals ? form.values.totals.tax : ((form.values.lines || []).reduce((s, l) => s + Math.round(Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)) * Number(l.taxRate === '' || l.taxRate == null ? ((data.settings && data.settings.defaultTaxRate) || 0) : l.taxRate) / 100), 0) / 100).toFixed(2) }, { label: 'Total ' + (form.values.currency || ''), value: form.values.totals ? form.values.totals.gross : (((form.values.lines || []).reduce((s, l) => s + Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)), 0) + (form.values.lines || []).reduce((s, l) => s + Math.round(Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)) * Number(l.taxRate === '' || l.taxRate == null ? ((data.settings && data.settings.defaultTaxRate) || 0) : l.taxRate) / 100), 0)) / 100).toFixed(2), strong: true }]"
+                },
+                "footer": "{{ form.values.notes }}",
+                "stamp": "{{ ['draft', 'cancelled'].includes(form.values.status) ? (form.values.status === 'draft' ? 'Draft' : 'Cancelled') : '' }}",
+                "page": {
+                  "size": "A4",
+                  "margin": 18,
+                  "footer": "Page {page} of {pages}"
+                }
+              },
+              "path": "./documents/{{ form.values.code || 'document' }}-draft.pdf"
+            }
+          },
+          {
+            "toast": {
+              "message": "Saved the PDF in Documents",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "issue": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "set-state": {
+              "key": "lastresult",
+              "value": null
+            }
+          },
+          {
+            "set-state": {
+              "key": "appcall",
+              "value": null
+            }
+          },
+          {
+            "set-state": {
+              "key": "recorded",
+              "value": null
+            }
+          },
+          {
+            "toast": {
+              "if": "!((data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available))",
+              "variant": "error",
+              "message": "Accounting is not available right now, so nothing was done. Check that Accounting is installed and approved, then try again."
+            }
+          },
+          {
+            "confirm": {
+              "title": "Issue invoice",
+              "message": "Issue this invoice and post it to the ledger? Issued invoices cannot be edited; correct them with a credit note.",
+              "details": "{{ [{ label: 'Debit ' + ((((data.accounts || []).find(a => a.path === (data.settings && data.settings.receivableAccount)) || {}).data || {}).name || 'the receivable account (choose it in settings)'), value: (((form.values.lines || []).reduce((s, l) => s + Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)), 0) + (form.values.lines || []).reduce((s, l) => s + Math.round(Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)) * Number(l.taxRate === '' || l.taxRate == null ? ((data.settings && data.settings.defaultTaxRate) || 0) : l.taxRate) / 100), 0)) / 100).toFixed(2) }, { label: 'Credit ' + ((((data.accounts || []).find(a => a.path === (data.settings && data.settings.incomeAccount)) || {}).data || {}).name || 'the income account (choose it in settings)'), value: ((form.values.lines || []).reduce((s, l) => s + Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)), 0) / 100).toFixed(2) }].concat((form.values.lines || []).reduce((s, l) => s + Math.round(Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)) * Number(l.taxRate === '' || l.taxRate == null ? ((data.settings && data.settings.defaultTaxRate) || 0) : l.taxRate) / 100), 0) ? [{ label: 'Credit ' + ((((data.accounts || []).find(a => a.path === (data.settings && data.settings.taxAccount)) || {}).data || {}).name || 'the tax account (choose it in settings)'), value: ((form.values.lines || []).reduce((s, l) => s + Math.round(Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)) * Number(l.taxRate === '' || l.taxRate == null ? ((data.settings && data.settings.defaultTaxRate) || 0) : l.taxRate) / 100), 0) / 100).toFixed(2) }] : []) }}",
+              "if": "(data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available)"
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/invoicing/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "issue-invoice",
+                "path": "{{ ctx.file.path }}"
+              },
+              "assign": "lastresult",
+              "if": "(data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available)"
+            }
+          },
+          {
+            "call-app": {
+              "if": "((data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available)) && ((data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available) && !!state.lastresult && !!state.lastresult.journalRequest)",
+              "app": "accounting",
+              "operation": "post-journal",
+              "input": {
+                "$expr": "state.lastresult.journalRequest"
+              },
+              "idempotency-key": "{{ ('journal-' + form.values.code) + '-' + Date.now() }}",
+              "assign": "appcall"
+            }
+          },
+          {
+            "run-script": {
+              "if": "((data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available)) && ((data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available) && !!state.lastresult && !!state.lastresult.journalRequest && !!state.appcall && !!state.appcall.path)",
+              "file": "/applications/invoicing/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "complete-invoice",
+                "path": "{{ ctx.file.path }}",
+                "journal": "{{ state.appcall.path }}"
+              },
+              "assign": "recorded"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record",
+              "if": "(data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available)"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.recorded && state.recorded.message) || (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success",
+              "if": "((data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available)) && (!(!!state.lastresult && !!state.lastresult.journalRequest) || !!state.recorded)"
+            }
+          },
+          {
+            "toast": {
+              "if": "((data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available)) && !!state.lastresult && !!state.lastresult.journalRequest && !state.recorded",
+              "variant": "error",
+              "message": "Accounting did not confirm this. Nothing was marked as done; try again."
+            }
+          },
+          {
+            "render-pdf": {
+              "template": {
+                "title": "{{ 'Tax invoice ' + (form.values.code || '') }}",
+                "subtitle": "{{ form.values.reference }}",
+                "parties": {
+                  "$expr": "[{ label: 'Bill to', lines: ([form.values.customer && form.values.customer.name, form.values.customer && form.values.customer.legalName !== form.values.customer.name ? form.values.customer.legalName : ''].concat((form.values.customer && form.values.customer.address && form.values.customer.address.lines) || []).concat([form.values.customer && form.values.customer.address ? [form.values.customer.address.city, form.values.customer.address.postalCode].filter(part => part).join(' ') : '', form.values.customer && form.values.customer.address && form.values.customer.address.country, form.values.customer && form.values.customer.taxIdentifier ? 'Tax number ' + form.values.customer.taxIdentifier : '']).filter(line => line)).filter(line => line) }]"
+                },
+                "meta": {
+                  "$expr": "[{ label: 'Issued', value: format(form.values.issueDate, 'date') }, { label: 'Due', value: format(form.values.dueDate, 'date') }, { label: 'Currency', value: form.values.currency }]"
+                },
+                "lines": {
+                  "$expr": "(form.values.lines || []).map(l => ({ item: l.description || '', quantity: l.quantity, price: Number(l.unitPrice || 0).toFixed(2), tax: (Number(l.taxRate === '' || l.taxRate == null ? ((data.settings && data.settings.defaultTaxRate) || 0) : l.taxRate)) + '%', amount: (Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)) / 100).toFixed(2) }))"
+                },
+                "columns": [
+                  {
+                    "key": "item",
+                    "label": "Item"
+                  },
+                  {
+                    "key": "quantity",
+                    "label": "Qty",
+                    "align": "right"
+                  },
+                  {
+                    "key": "price",
+                    "label": "Price",
+                    "align": "right"
+                  },
+                  {
+                    "key": "tax",
+                    "label": "Tax",
+                    "align": "right"
+                  },
+                  {
+                    "key": "amount",
+                    "label": "Amount",
+                    "align": "right"
+                  }
+                ],
+                "totals": {
+                  "$expr": "[{ label: 'Net', value: form.values.totals ? form.values.totals.net : ((form.values.lines || []).reduce((s, l) => s + Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)), 0) / 100).toFixed(2) }, { label: 'Tax', value: form.values.totals ? form.values.totals.tax : ((form.values.lines || []).reduce((s, l) => s + Math.round(Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)) * Number(l.taxRate === '' || l.taxRate == null ? ((data.settings && data.settings.defaultTaxRate) || 0) : l.taxRate) / 100), 0) / 100).toFixed(2) }, { label: 'Total ' + (form.values.currency || ''), value: form.values.totals ? form.values.totals.gross : (((form.values.lines || []).reduce((s, l) => s + Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)), 0) + (form.values.lines || []).reduce((s, l) => s + Math.round(Math.round(Number(l.quantity || 0) * Math.round(Number(l.unitPrice || 0) * 100)) * Number(l.taxRate === '' || l.taxRate == null ? ((data.settings && data.settings.defaultTaxRate) || 0) : l.taxRate) / 100), 0)) / 100).toFixed(2), strong: true }]"
+                },
+                "footer": "{{ form.values.notes }}",
+                "stamp": "{{ ['draft', 'cancelled'].includes(form.values.status) ? (form.values.status === 'draft' ? 'Draft' : 'Cancelled') : '' }}",
+                "page": {
+                  "size": "A4",
+                  "margin": 18,
+                  "footer": "Page {page} of {pages}"
+                }
+              },
+              "path": "./documents/{{ form.values.code || 'document' }}.pdf",
+              "immutable": true,
+              "if": "!!state.lastresult && (!state.lastresult.journalRequest || !!state.recorded)"
+            }
+          },
+          {
+            "toast": {
+              "message": "Saved the issued copy in Documents",
+              "variant": "success",
+              "if": "!!state.lastresult && (!state.lastresult.journalRequest || !!state.recorded)"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

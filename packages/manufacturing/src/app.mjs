@@ -30,8 +30,6 @@ export const createScriptFileAccess = recordKinds.map(kind => ({
 export const postScriptFileAccess = [
   { path: containers.boms.path, mode: 'read', reason: 'Check the bill of materials a confirmed order builds' },
   { path: containers.orders.path, mode: 'write', reason: 'Confirm, start and complete manufacturing orders' },
-  { path: inventory.moves, mode: 'write', reason: 'Emit consumption and production stock moves for completed orders when Inventory is installed' },
-  { path: inventory.settingsPath, mode: 'read', reason: 'Stamp emitted stock moves with the Inventory default warehouse when it is set' },
 ]
 
 const text = (key, label, extra = {}) => ({ key, label, ...extra })
@@ -65,7 +63,7 @@ export const entities = {
     folderNames: ['bills-of-materials', 'boms', 'manufacturing'],
     sections: [
       { title: 'Output', fields: [
-        select('product', 'Product', '{{ data.productoptions }}', { span: 2, description: 'The product this BoM builds, from Inventory when it is installed.' }),
+        select('product', 'Product', '{{ data.productoptions }}', { span: 2, description: 'The product this BoM builds, from Products when it is installed.' }),
         text('productName', 'Product name', { required: true }),
         qty('outputQty', 'Output quantity', { required: true, description: 'How many units one run of this BoM produces.' })] },
       { title: 'Components', description: 'Quantities are per BoM output quantity. Confirming an order scales them to the quantity to produce.', fields: [componentRows] },
@@ -81,6 +79,11 @@ export const entities = {
         select('bom', 'Bill of materials', '{{ data.bomoptions }}', { required: true, span: 2, description: 'Confirming snapshots the BoM product and computes the component demand.' }),
         qty('quantity', 'Quantity to produce', { required: true }),
         { key: 'scheduledDate', label: 'Scheduled date', type: 'date', required: true }] },
+      { title: 'Shop floor', description: 'The operations of the bill of materials, in order. Time each one while it runs.', fields: [
+        { key: 'operations', label: 'Operations', type: 'checklist', timers: true, touch: true, live: "form.values.status === 'in-progress'",
+          // Offered from the chosen BoM's routing until the first operation is ticked or timed.
+          items: "{{ ((((data.boms || []).find(e => e.path === form.values.bom) || {}).data || {}).routing || []).map((step, index) => ({ id: 'op-' + (index + 1), label: [step.operation, step.workcenter].filter(part => part).join(' · '), note: step.minutes ? step.minutes + ' min expected' : '' })) }}",
+          visible: "['confirmed', 'in-progress', 'done'].includes(form.values.status)" }] },
     ],
   },
 }
@@ -149,6 +152,7 @@ export const manifest = {
     dependencies: [
       { package: 'verentis/canvas', version: 'latest' },
       { package: 'verentis/nodejs', version: 'latest' },
+      { package: 'verentis/products', version: 'latest', optional: true },
       { package: 'verentis/inventory', version: 'latest', optional: true },
     ],
     engine: 'verentis/nodejs',

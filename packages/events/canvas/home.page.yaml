@@ -38,125 +38,124 @@
       "registrationrows": {
         "kind": "computed",
         "expr": "(data.registrations || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, attendee: e.data.attendeeName || '', event: ((((data.events || []).find(v => v.kind === 'file' && v.data && v.path === e.data.event) || {}).data || {}).name) || '', eventPath: e.data.event || '', qty: Number(e.data.qty) || 0, status: e.data.status || '' }))"
+      },
+      "listevents": {
+        "kind": "folder",
+        "path": "/events",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.events.event+json"
+      },
+      "listeventregistrations": {
+        "kind": "folder",
+        "path": "/event-registrations",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.events.registration+json"
       }
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Events",
+          "icon": "calendar",
+          "active": "home.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "events.page.yaml",
+              "label": "Events",
+              "icon": "kanban",
+              "count": "{{ (data.rows || []).filter(r => ['published', 'ongoing'].includes(r.status)).length }}"
+            },
+            {
+              "id": "registrations.page.yaml",
+              "label": "Registrations",
+              "icon": "ticket"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/events/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/events.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Events",
+              "note": "Events and registrations are files in your workspace. Draft events in /events, publish them, then confirm and check in registrations from their forms."
+            },
+            "children": []
+          },
           {
             "type": "canvas.stack",
             "layout": {
               "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
+                "gap": 2
               }
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Events"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Events and registrations are files in your workspace. Draft events in /events, publish them, then confirm and check in registrations from their forms.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Capacity"
+                }
               },
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "direction": "row",
-                    "wrap": true,
-                    "gap": 2,
-                    "align": "center"
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "All events",
-                      "variant": "outline",
-                      "icon": "calendar",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/events/canvas/events.page.yaml"
-                          }
-                        }
-                      ]
-                    }
+                "type": "canvas.text",
+                "props": {
+                  "text": "Registered places against capacity for published and ongoing events.",
+                  "tone": "muted"
+                }
+              },
+              {
+                "type": "canvas.chart",
+                "props": {
+                  "rows": "{{ (data.rows || []).filter(r => ['published', 'ongoing'].includes(r.status)).map(r => ({ path: r.path, label: r.name || r.code, taken: r.taken || 0, left: Math.max(0, r.remaining || 0) })) }}",
+                  "showLegend": true,
+                  "emptyText": "No published events",
+                  "kind": "stacked-hbar",
+                  "x": "label",
+                  "y": [
+                    "taken",
+                    "left"
+                  ],
+                  "labels": {
+                    "taken": "Registered",
+                    "left": "Places left"
                   },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Registrations",
-                      "variant": "outline",
-                      "icon": "user-check",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/events/canvas/registrations.page.yaml"
-                          }
-                        }
-                      ]
-                    }
+                  "palette": {
+                    "taken": "chart-1",
+                    "left": "muted"
                   },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Settings",
-                      "variant": "ghost",
-                      "icon": "settings",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/settings/events.json",
-                            "mode": "edit"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ]
+                  "format": "integer"
+                }
               }
             ]
           },
@@ -211,21 +210,19 @@
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /events folder could not be read. Reinstall Events to recreate it."
-            },
-            "rules": {
-              "visible": "data.$events.status === 'error'"
+              "for": "events",
+              "compact": true,
+              "description": "The /events folder could not be read. Reinstall Events to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /event-registrations folder could not be read. Reinstall Events to recreate it."
-            },
-            "rules": {
-              "visible": "data.$registrations.status === 'error'"
+              "for": "registrations",
+              "compact": true,
+              "description": "The /event-registrations folder could not be read. Reinstall Events to recreate it."
             }
           },
           {
@@ -285,17 +282,19 @@
                     ]
                   },
                   {
-                    "type": "canvas.files",
+                    "type": "canvas.empty-state",
                     "props": {
-                      "path": "/events/",
-                      "mimeTypes": [
-                        "application/vnd.verentis.events.event+json"
-                      ],
-                      "showFolders": false,
-                      "navigable": false,
+                      "for": "listevents",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listevents || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
                       "columns": [
                         {
-                          "key": "name",
+                          "key": "data.code",
                           "label": "Event"
                         },
                         {
@@ -304,18 +303,43 @@
                         },
                         {
                           "key": "data.status",
-                          "label": "Status"
+                          "label": "Status",
+                          "format": "badge"
                         },
                         {
                           "key": "data.startsAt",
-                          "label": "Starts at"
+                          "label": "Starts at",
+                          "format": "date"
                         },
                         {
                           "key": "data.capacity",
                           "label": "Capacity"
                         }
                       ],
+                      "facets": [
+                        "data.status"
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
                       "emptyText": "No events yet. Use New in /events."
+                    },
+                    "rules": {
+                      "visible": "data.$listevents.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
                     }
                   }
                 ],
@@ -361,17 +385,19 @@
                     ]
                   },
                   {
-                    "type": "canvas.files",
+                    "type": "canvas.empty-state",
                     "props": {
-                      "path": "/event-registrations/",
-                      "mimeTypes": [
-                        "application/vnd.verentis.events.registration+json"
-                      ],
-                      "showFolders": false,
-                      "navigable": false,
+                      "for": "listeventregistrations",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listeventregistrations || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
                       "columns": [
                         {
-                          "key": "name",
+                          "key": "data.code",
                           "label": "Registration"
                         },
                         {
@@ -384,10 +410,34 @@
                         },
                         {
                           "key": "data.status",
-                          "label": "Status"
+                          "label": "Status",
+                          "format": "badge"
                         }
                       ],
+                      "facets": [
+                        "data.status"
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
                       "emptyText": "No registrations yet. Use New in /event-registrations."
+                    },
+                    "rules": {
+                      "visible": "data.$listeventregistrations.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
                     }
                   }
                 ],

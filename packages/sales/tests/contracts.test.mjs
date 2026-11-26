@@ -36,7 +36,6 @@ describe('Sales file contracts', () => {
     expectValid('quotation', record('quotation', { lines }))
     expect(validators.quotation(record('quotation', { lines: [{ ...lines[0], unitPrice: 499.99 }] }))).toBe(false)
     expect(validators.quotation(record('quotation', { lines: [{ ...lines[0], unitPrice: '-5' }] }))).toBe(false)
-    expect(validators.product(record('product', { listPrice: 12 }))).toBe(false)
   })
 
   it('requires the confirmation trail once confirmed', () => {

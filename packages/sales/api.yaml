@@ -1,0 +1,13 @@
+# Sales' API contract: Sales offers no operations yet; it asks Invoicing to draft the invoice of a confirmed quotation.
+api-version: verentis.io/v1
+kind: Api
+metadata:
+  id: sales
+spec:
+  uses:
+    - app: invoicing
+      operation: create-draft-invoice
+      reason: Draft the invoice of a confirmed quotation
+    - app: products
+      operation: create-product
+      reason: Add a product to the catalogue Sales quotes

@@ -2,10 +2,11 @@
 // form, the launch page, the upcoming list and the per-type summary. Confirming (schedule completion and the
 // host conflict check), completing, cancelling and marking no-shows are done by the action script the
 // appointment form runs.
+import { views } from './views.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   humanize, iconName, options, openFile, page, panel, projectRegistration, recordButtons, row, scriptAction,
-  sectionCards, stat, stats, status, table, tabs, text, toneExpression,
+  sectionCards, stat, stats, status, table, tabs, text, toneExpression, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { activeStatuses, containers, installRoot, mimeTypes, recordKinds, schemaId, settingsPath, statuses } from './contracts.mjs'
 import { entities, postScriptPath, settingsSections } from './app.mjs'
@@ -67,21 +68,19 @@ function recordForm(kind) {
   const entity = entities[kind]
   const extras = recordExtras(kind)
   const readOnly = `${archived} || (${extras.locked})`
-  const header = row([
-    column([
-      row([
-        heading(`{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`),
+  const header = recordHeader(
+    `{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`,
+    [
         ...(entity.status ? [badge(humanize(entity.status), toneExpression(entity.status, statusTones), { visible: `!!form.values.${entity.status}` })] : []),
         badge('Archived', 'warning', { visible: archived }, 'archive'),
-      ]),
-      text(`${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`, 'muted'),
-    ]),
-    row([...extras.buttons, recordButtons(extras.locked)]),
-  ], 'between')
+    ],
+    `${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`,
+    [...extras.buttons, recordButtons(extras.locked)],
+  )
   const tree = [
     header,
-    ...status('record'),
-    badge(`This ${entity.singular.toLowerCase()} is archived. Restore it to edit.`, 'warning', { visible: archived }, 'archive'),
+    ...status('record'), ...lifecycle(entity),
+    archivedAlert(entity.singular),
     ...extras.notices,
     grid(sectionCards(entity.sections, readOnly)),
   ]
@@ -106,13 +105,13 @@ function settingsForm() {
       access: [typesAccess('Choose the default type for new appointments'), schemaAccess],
       data: typeSources,
       tree: [
-        row([
-          column([heading('Appointments settings'), text('The default type for new appointments. Code prefixes are app settings, managed with the installed app.', 'muted')]),
+        pageHeader(
+          [heading('Appointments settings'), text('The default type for new appointments. Code prefixes are app settings, managed with the installed app.', 'muted')], [
           row([
             button('Reset', [{ 'reset-form': {} }], { disabled: 'form.saving || !form.dirty' }, 'ghost'),
             button('Save', [{ save: {} }, { toast: { message: 'Saved', variant: 'success' } }], { disabled: 'form.saving || !form.dirty || form.invalid' }, undefined, 'save'),
           ]),
-        ], 'between'),
+        ]),
         ...status('record'),
         ...status('types', `The ${containers.types.path} folder could not be read. Reinstall Appointments to recreate it.`),
         grid(settingsSections.map(section => card(section.title, [grid(section.fields.map(field => formControl(field, null)))], section.description)), 1),
@@ -154,14 +153,14 @@ function homePage() {
         access: pageAccess('Count appointments and show the types and appointments'),
         data: appointmentSources,
         tree: page([
-          row([
-            column([heading('Appointments'), text('Appointment types and bookings are files in your workspace. Book appointments in /appointments, confirm them conflict-checked, then complete them from their forms.', 'muted')]),
+          pageHeader(
+            [heading('Appointments'), text('Appointment types and bookings are files in your workspace. Book appointments in /appointments, confirm them conflict-checked, then complete them from their forms.', 'muted')], [
             row([
               button('Upcoming', [openFile(`${installRoot}/canvas/upcoming.page.yaml`)], undefined, 'outline', 'calendar-check'),
               button('Types', [openFile(`${installRoot}/canvas/types.page.yaml`)], undefined, 'outline', 'calendar-clock'),
               button('Settings', [openFile(settingsPath, 'edit')], undefined, 'ghost', 'settings'),
             ]),
-          ], 'between'),
+          ]),
           stats([
             stat('Appointments', countOf('true'), 'calendar-check', loading('appointments')),
             stat('Upcoming', `{{ ${upcoming}.length }}`, 'calendar-days', loading('appointments')),
@@ -199,10 +198,10 @@ function upcomingPage() {
         access: pageAccess('List the upcoming booked and confirmed appointments'),
         data: appointmentSources,
         tree: page([
-          row([
-            column([heading('Upcoming appointments'), text('Booked and confirmed appointments from today on, in schedule order. Click an appointment to open it.', 'muted')]),
+          pageHeader(
+            [heading('Upcoming appointments'), text('Booked and confirmed appointments from today on, in schedule order. Click an appointment to open it.', 'muted')], [
             button('Appointments', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'calendar-check'),
-          ], 'between'),
+          ]),
           ...containerNotices(),
           stats([
             stat('Upcoming', `{{ ${upcoming}.length }}`, 'calendar-days', loading('appointments')),
@@ -228,10 +227,10 @@ function typesPage() {
         access: pageAccess('Summarise the appointments booked per type'),
         data: appointmentSources,
         tree: page([
-          row([
-            column([heading('Appointment types'), text('Every type with its duration, buffer and bookings. Click a type to open it.', 'muted')]),
+          pageHeader(
+            [heading('Appointment types'), text('Every type with its duration, buffer and bookings. Click a type to open it.', 'muted')], [
             button('Appointments', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'calendar-check'),
-          ], 'between'),
+          ]),
           ...containerNotices(),
           stats(statuses.map(value => stat(statusLabel(value), countOf(`r.status === '${value}'`), 'calendar-check', loading('appointments'))), 3),
           card('By type', [table(typeRows, [['code', 'Type'], ['name', 'Name'], ['minutes', 'Minutes', 'end'], ['buffer', 'Buffer', 'end'],
@@ -245,5 +244,5 @@ function typesPage() {
 
 export function buildPages() {
   const documents = [homePage(), upcomingPage(), typesPage(), ...recordKinds.map(recordForm), settingsForm()]
-  return Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)]))
+  return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

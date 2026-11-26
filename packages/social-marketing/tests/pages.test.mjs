@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { parse } from 'yaml'
 import { describe, expect, it } from 'vitest'
+import { stagePanels } from '../../../tools/file-apps/test-helpers.mjs'
 import {
   createScriptFileAccess, createScriptName, featureOverlay, manifest, postScriptFileAccess, postScriptName,
   postScriptPath, productionOverlay, scriptConsents,
@@ -188,7 +189,7 @@ describe('Social Marketing report pages', () => {
     const [calendarTable] = spec.tree[0].children.find(node => node.type === 'canvas.card').children
     expect(template(calendarTable.props.rows, { ...data, rows: evaluate(spec.data.rows.expr, data) }).map(row => row.code))
       .toEqual(['SOP-3', 'SOP-2'])
-    const panels = spec.tree[0].children.find(node => node.type === 'canvas.tabs').children
+    const panels = stagePanels(spec.tree[0].children.find(node => node.type === 'canvas.tabs'))
     expect(panels.map(panel => panel.slot)).toEqual(['draft', 'scheduled', 'published', 'cancelled'])
   })
 

@@ -1,10 +1,11 @@
 // Generates the Invoicing Canvas documents: one bound form per record kind, the settings form, the launch page and
 // the receivables page. Issuing and posting (totals, journals, document copies, immutability) are done by the
 // posting script the forms run; the forms only lock what the script has issued or posted.
+import { views } from './views.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, documentsPanel, folder, formControl, grid, heading,
-  humanize, iconName, jsonFile, linkButton, openFile, options, page, panel, projectRegistration, recordButtons, row, scriptAction,
-  sectionCards, stat, stats, status, table, tabs, text, toneExpression,
+  humanize, iconName, jsonFile, appOperationsSource, appCallSettled, withAppCall, linkButton, openFile, options, page, panel, projectRegistration, recordButtons, row, scriptAction,
+  sectionCards, stat, stats, status, table, tabs, text, toneExpression, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle, customerLines, documentPreview, pdfSteps,
 } from '../../../tools/file-apps/canvas.mjs'
 import { accounting, containers, crm, installRoot, mimeTypes, recordKinds, schemaId, settingsPath } from './contracts.mjs'
 import { dueWidgetFile, entities, postScriptPath, settingsSections } from './app.mjs'
@@ -44,6 +45,21 @@ const estimate = {
   net: `(form.values.lines || []).reduce((s, l) => s + ${lineNet}, 0)`,
   tax: `(form.values.lines || []).reduce((s, l) => s + Math.round(${lineNet} * ${lineRate} / 100), 0)`,
 }
+
+// What issuing or posting will write to the ledger, shown in the confirmation: the same lines the script posts.
+const accountName = key => `((((data.accounts || []).find(a => a.path === (data.settings && data.settings.${key})) || {}).data || {}).name || 'the ${key.replace(/Account$/, '')} account (choose it in settings)')`
+const cents = value => `(${value} / 100).toFixed(2)`
+const journalPreview = (reverse) => {
+  const net = cents(estimate.net)
+  const tax = cents(estimate.tax)
+  const gross = cents(`(${estimate.net} + ${estimate.tax})`)
+  const [debit, credit] = reverse ? ['Credit', 'Debit'] : ['Debit', 'Credit']
+  return `{{ [{ label: '${debit} ' + ${accountName('receivableAccount')}, value: ${gross} }, { label: '${credit} ' + ${accountName('incomeAccount')}, value: ${net} }].concat(${estimate.tax} ? [{ label: '${credit} ' + ${accountName('taxAccount')}, value: ${tax} }] : []) }}`
+}
+
+/** A button whose disabled state explains itself. */
+const withReason = (node, reason) => ({ ...node, props: { ...node.props, reason } })
+
 function totalsStats() {
   const cents = value => `(${value} / 100).toFixed(2)`
   const shown = (key, estimated) => `{{ form.values.totals ? form.values.totals.${key} : ${cents(estimated)} }}`
@@ -62,6 +78,13 @@ const address = field => `((e.data.address || {}).${field} || '')`
 const copyCustomer = `(data.companies || []).concat(data.contacts || []).filter(e => e.kind === 'file' && e.data && e.path === form.values.customerRef).map(e => ({ name: e.data.name || [e.data.givenName, e.data.familyName].filter(Boolean).join(' '), legalName: ${fromCrm('legalName')}, email: ${fromCrm('email')}, phone: ${fromCrm('phone')}, taxIdentifier: ${fromCrm('taxIdentifier')}, address: { lines: (e.data.address || {}).lines || [], city: ${address('city')}, region: ${address('region')}, postalCode: ${address('postalCode')}, country: ${address('country')} } }))[0] || form.values.customer`
 
 /** Kind-specific data, access, actions, header buttons and tabs of a record form. */
+/**
+ * Accounting posts the record's journal through its API (`post-journal`), from what the posting script returned; the
+ * script then completes the record with the posted journal (`complete`). The record's code keys the call.
+ */
+const posting = complete => ({ app: 'accounting', operation: 'post-journal', required: true, label: 'Accounting', script: postScriptPath, recordOperation: complete,
+  parameter: 'journal', field: 'journalRequest', key: "'journal-' + form.values.code" })
+
 function recordExtras(kind) {
   if (kind === 'invoice') {
     const outstanding = `${units('form.values.totals.gross')} - ${issuedCredits('ctx.file.path')} - ${allocatedPayments('ctx.file.path')}`
@@ -71,8 +94,11 @@ function recordExtras(kind) {
         { path: containers.credits.path, reason: 'Show the credit notes against this invoice' },
         { path: containers.payments.path, reason: 'Show the payments allocated to this invoice' },
         { path: settingsPath, reason: 'Estimate tax with the default rate' },
+        accountsAccess('Name the accounts the invoice posts to'),
       ],
       data: {
+        ...appOperationsSource,
+        ...accountSources,
         companies: folder(crm.customers, crm.companyMime),
         contacts: folder(crm.customers, crm.contactMime),
         customeroptions: { kind: 'computed', expr: `${options('companies', "e.data.name || ''")}.concat(${options('contacts', "[e.data.givenName, e.data.familyName].filter(Boolean).join(' ')")})` },
@@ -89,6 +115,7 @@ function recordExtras(kind) {
       ],
       buttons: [
         button('Copy details', 'copy-customer', { visible: `${draft} && !!form.values.customerRef`, disabled: `form.saving || ${archived}` }, 'outline', 'copy'),
+        button('Save PDF', 'savepdf', { visible: draft, disabled: idle }, 'outline', 'file-down'),
         button('Issue', 'issue', { visible: `${draft} && !(${archived})`, disabled: `${idle} || form.invalid` }, undefined, 'send'),
       ],
       links: [
@@ -98,7 +125,8 @@ function recordExtras(kind) {
       ],
       actions: {
         'copy-customer': { steps: [{ 'patch-form': { values: { customer: `{{ ${copyCustomer} }}` } } }] },
-        issue: scriptAction(postScriptPath, 'issue-invoice', { confirm: { title: 'Issue invoice', message: 'Issue this invoice and post it to the ledger? Issued invoices cannot be edited; correct them with a credit note.' } }),
+        savepdf: { steps: pdfSteps(invoiceTemplate('invoice')) },
+        issue: withIssuedCopy('invoice', withAppCall(scriptAction(postScriptPath, 'issue-invoice', { confirm: { title: 'Issue invoice', details: journalPreview(false), message: 'Issue this invoice and post it to the ledger? Issued invoices cannot be edited; correct them with a credit note.' } }), posting('complete-invoice'))),
       },
       tabs: [
         { value: 'settlement', label: 'Credits and payments', icon: 'banknote' },
@@ -117,17 +145,21 @@ function recordExtras(kind) {
   }
   if (kind === 'credit') {
     return {
-      access: [{ path: containers.invoices.path, reason: 'Choose the issued invoice to credit' }, { path: settingsPath, reason: 'Estimate tax with the default rate' }],
-      data: { ...invoiceSources, settings: jsonFile(settingsPath) },
+      access: [{ path: containers.invoices.path, reason: 'Choose the issued invoice to credit' }, { path: settingsPath, reason: 'Estimate tax with the default rate' }, accountsAccess('Name the accounts the credit note posts to')],
+      data: { ...invoiceSources, ...accountSources, ...appOperationsSource, settings: jsonFile(settingsPath) },
       notices: totalsStats(),
-      buttons: [button('Issue', 'issue', { visible: `${draft} && !(${archived})`, disabled: `${idle} || form.invalid` }, undefined, 'send')],
+      buttons: [
+        button('Save PDF', 'savepdf', { visible: draft, disabled: idle }, 'outline', 'file-down'),
+        button('Issue', 'issue', { visible: `${draft} && !(${archived})`, disabled: `${idle} || form.invalid` }, undefined, 'send'),
+      ],
       links: [
         linkButton('Invoice', 'form.values.invoice', 'file-text'),
         linkButton('Document', 'form.values.document && form.values.document.path', 'file-minus'),
         linkButton('Journal', 'form.values.journal && form.values.journal.path', 'notebook-pen'),
       ],
       actions: {
-        issue: scriptAction(postScriptPath, 'issue-credit', { confirm: { title: 'Issue credit note', message: 'Issue this credit note against its invoice and post it to the ledger? Issued credit notes cannot be edited.' } }),
+        savepdf: { steps: pdfSteps(invoiceTemplate('credit')) },
+        issue: withIssuedCopy('credit', withAppCall(scriptAction(postScriptPath, 'issue-credit', { confirm: { title: 'Issue credit note', details: journalPreview(true), message: 'Issue this credit note against its invoice and post it to the ledger? Issued credit notes cannot be edited.' } }), posting('complete-credit'))),
       },
       tabs: [{ value: 'documents', label: 'Documents', icon: 'paperclip' }],
       panels: [documentsPanel('The issued credit note copy and any supporting documents.')],
@@ -136,9 +168,15 @@ function recordExtras(kind) {
   const reversible = "form.values.status === 'posted'"
   const visibleWhenReversible = { visible: reversible }
   return {
-    access: [accountsAccess('Choose the bank account'), { path: containers.invoices.path, reason: 'Choose the invoices a payment settles' }],
+    access: [
+      accountsAccess('Choose the bank account'), { path: containers.invoices.path, reason: 'Choose the invoices a payment settles' },
+      { path: containers.credits.path, reason: 'Work out what each invoice still owes' }, { path: containers.payments.path, reason: 'Work out what each invoice still owes' },
+    ],
     data: {
-      ...accountSources, ...invoiceSources,
+      ...appOperationsSource,
+      ...accountSources, ...invoiceSources, ...settlementSources,
+      // The payer's open invoices in this currency, oldest due date first, with what each still owes in ten-thousandths.
+      openinvoices: { kind: 'computed', expr: `(data.invoices || []).filter(e => e.kind === 'file' && e.data && e.data.status === 'issued' && e.data.totals && e.data.currency === form.values.currency && String((e.data.customer && e.data.customer.name) || '').toLowerCase() === String(form.values.payer || '').trim().toLowerCase()).map(e => ({ path: e.path, due: e.data.dueDate || '', open: ${units('e.data.totals.gross')} - ${issuedCredits('e.path')} - ${allocatedPayments('e.path')} })).filter(e => e.open > 0).sort((a, b) => (a.due < b.due ? -1 : a.due > b.due ? 1 : 0))` },
       bankaccountoptions: { kind: 'computed', expr: options('accounts', accountLabel, "e.data.accountType === 'asset'") },
     },
     state: { reversaldate: '', reversalreason: '' },
@@ -150,6 +188,8 @@ function recordExtras(kind) {
       ]),
     ],
     buttons: [
+      withReason(button('Allocate oldest first', 'allocate', { visible: `${draft} && !(${archived})`, disabled: "form.saving || !form.values.payer || !(Number(form.values.amount) > 0) || (data.openinvoices || []).length === 0" }, 'outline', 'list-ordered'),
+        "{{ !form.values.payer ? 'Enter the payer first' : (data.openinvoices || []).length === 0 ? 'The payer has no open invoices in this currency' : '' }}"),
       button('Post', 'post', { visible: `${draft} && !(${archived})`, disabled: `${idle} || form.invalid` }, undefined, 'check'),
       button('Reverse', 'reverse', { visible: reversible, disabled: idle }, 'outline', 'undo-2'),
     ],
@@ -158,13 +198,48 @@ function recordExtras(kind) {
       linkButton('Reversal', 'form.values.reversalJournal && form.values.reversalJournal.path', 'undo-2'),
     ],
     actions: {
-      post: scriptAction(postScriptPath, 'post-payment', { confirm: { title: 'Post payment', message: 'Post this payment to the ledger and settle its allocations? Posted payments cannot be edited, only reversed.' } }),
-      reverse: scriptAction(postScriptPath, 'reverse-payment', {
+      allocate: { steps: [{ 'patch-form': { values: { allocations: { $expr: `(data.openinvoices || []).reduce((acc, inv) => acc.left <= 0 ? acc : ({ left: acc.left - Math.min(acc.left, inv.open), rows: acc.rows.concat([{ invoice: inv.path, amount: ${display('Math.min(acc.left, inv.open)')} }]) }), { left: ${units('form.values.amount')}, rows: [] }).rows` } } } }] },
+      post: withAppCall(scriptAction(postScriptPath, 'post-payment', { confirm: { title: 'Post payment', details: "{{ [{ label: 'Debit ' + ((((data.accounts || []).find(a => a.path === form.values.bankAccount) || {}).data || {}).name || 'the bank account'), value: Number(form.values.amount || 0).toFixed(2) }].concat((form.values.allocations || []).map(a => ({ label: 'Settles ' + (((data.invoiceoptions || []).find(o => o.value === a.invoice) || {}).label || a.invoice), value: Number(a.amount || 0).toFixed(2) }))) }}", message: 'Post this payment to the ledger and settle its allocations? Posted payments cannot be edited, only reversed.' } }), posting('complete-payment')),
+      reverse: withAppCall(scriptAction(postScriptPath, 'reverse-payment', {
         confirm: { title: 'Reverse payment', message: 'Reverse this payment\'s journal? Its allocations no longer settle their invoices.' },
         parameters: { date: '{{ state.reversaldate }}', reason: '{{ state.reversalreason }}' },
-      }),
+      }), { app: 'accounting', operation: 'reverse-journal', required: true, label: 'Accounting', script: postScriptPath, recordOperation: 'complete-reversal',
+        parameter: 'reversal', field: 'reversalRequest', key: "'reversal-' + form.values.code" }),
     },
   }
+}
+
+// An invoice or credit note as the customer receives it. Issued records show the script's totals; drafts the same
+// estimate as the totals above the form.
+function invoiceTemplate(kind) {
+  const cents = value => `(${value} / 100).toFixed(2)`
+  const shown = (key, estimated) => `form.values.totals ? form.values.totals.${key} : ${cents(estimated)}`
+  return ({
+    title: `'${kind === 'invoice' ? 'Tax invoice' : 'Credit note'} ' + (form.values.code || '')`,
+    subtitle: 'form.values.reference',
+    party: customerLines, partyLabel: 'Bill to',
+    meta: kind === 'invoice'
+      ? [['Issued', "format(form.values.issueDate, 'date')"], ['Due', "format(form.values.dueDate, 'date')"], ['Currency', 'form.values.currency']]
+      : [['Issued', "format(form.values.issueDate || form.values.date, 'date')"], ['Currency', 'form.values.currency']],
+    lines: `(form.values.lines || []).map(l => ({ item: l.description || '', quantity: l.quantity, price: Number(l.unitPrice || 0).toFixed(2), tax: (${lineRate}) + '%', amount: (${lineNet} / 100).toFixed(2) }))`,
+    columns: [{ key: 'item', label: 'Item' }, { key: 'quantity', label: 'Qty', align: 'right' }, { key: 'price', label: 'Price', align: 'right' }, { key: 'tax', label: 'Tax', align: 'right' }, { key: 'amount', label: 'Amount', align: 'right' }],
+    totals: [
+      ['Net', shown('net', estimate.net)],
+      ['Tax', shown('tax', estimate.tax)],
+      ["'Total ' + (form.values.currency || '')", shown('gross', `(${estimate.net} + ${estimate.tax})`), true],
+    ],
+    footer: 'form.values.notes',
+  })
+}
+
+/** After issuing, the issued copy is saved as a PDF in the record's documents (never replaced). */
+function withIssuedCopy(kind, action) {
+  // Only once the record is issued: Accounting posted its journal and the script marked it (or it already was).
+  const issued = appCallSettled('journalRequest')
+  return { ...action, steps: [...action.steps, ...pdfSteps(invoiceTemplate(kind), { immutable: true }).map(step => {
+    const [type] = Object.keys(step)
+    return { [type]: { ...step[type], if: issued } }
+  })] }
 }
 
 function recordForm(kind) {
@@ -172,26 +247,25 @@ function recordForm(kind) {
   const extras = recordExtras(kind)
   const locked = `!${draft}`
   const readOnly = `${archived} || (${locked})`
-  const header = row([
-    column([
-      row([
-        heading(`{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`),
+  const header = recordHeader(
+    `{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`,
+    [
         badge(humanize(entity.status), toneExpression(entity.status, statusTones), { visible: `!!form.values.${entity.status}` }),
         badge('Archived', 'warning', { visible: archived }, 'archive'),
-      ]),
-      text(`${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`, 'muted'),
-    ]),
-    row([...extras.buttons, recordButtons(locked)]),
-  ], 'between')
+    ],
+    `${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`,
+    [...extras.buttons, recordButtons(locked)],
+  )
   const overview = [
     ...(extras.links.length ? [row(extras.links)] : []),
     ...extras.notices,
     grid(sectionCards(entity.sections, readOnly)),
+    ...(kind === 'invoice' || kind === 'credit' ? [documentPreview(invoiceTemplate(kind))] : []),
   ]
   const tree = [
     header,
-    ...status('record'),
-    badge(`This ${entity.singular.toLowerCase()} is archived. Restore it to edit.`, 'warning', { visible: archived }, 'archive'),
+    ...status('record'), ...lifecycle(entity),
+    archivedAlert(entity.singular),
     ...(extras.tabs
       ? [tabs([{ value: 'overview', label: 'Overview', icon: iconName(entity.icon) }, ...extras.tabs], [panel('overview', overview), ...extras.panels])]
       : overview),
@@ -218,13 +292,13 @@ function settingsForm() {
       access: [accountsAccess('Choose the accounts invoices, credit notes and payments post to'), schemaAccess],
       data: accountSources,
       tree: [
-        row([
-          column([heading('Invoicing settings'), text('Seller details, payment terms, tax and posting accounts. The currency is the Accounting base currency; number prefixes are app settings, managed with the installed app.', 'muted')]),
+        pageHeader(
+          [heading('Invoicing settings'), text('Seller details, payment terms, tax and posting accounts. The currency is the Accounting base currency; number prefixes are app settings, managed with the installed app.', 'muted')], [
           row([
             button('Reset', [{ 'reset-form': {} }], { disabled: 'form.saving || !form.dirty' }, 'ghost'),
             button('Save', [{ save: {} }, { toast: { message: 'Saved', variant: 'success' } }], { disabled: 'form.saving || !form.dirty || form.invalid' }, undefined, 'save'),
           ]),
-        ], 'between'),
+        ]),
         ...status('record'),
         ...status('accounts', `The Accounting chart of accounts (${accounting.accounts}) could not be read. Install Accounting to post invoices.`),
         grid(settingsSections.map(section => card(section.title, [grid(section.fields.map(field => formControl(field, null)))], section.description)), 1),
@@ -260,13 +334,13 @@ function homePage() {
         access: Object.values(containers).map(container => ({ path: container.path, reason: `List ${container.path.slice(1).split('-').join(' ')}` })),
         data: receivableSources,
         tree: page([
-          row([
-            column([heading('Invoicing'), text('Invoices, credit notes and payments are files in your workspace. Draft them in their folders, then issue or post them from their forms to the Accounting ledger.', 'muted')]),
+          pageHeader(
+            [heading('Invoicing'), text('Invoices, credit notes and payments are files in your workspace. Draft them in their folders, then issue or post them from their forms to the Accounting ledger.', 'muted')], [
             row([
               button('Receivables', [openFile(`${installRoot}/canvas/receivables.page.yaml`)], undefined, 'outline', 'hourglass'),
               button('Settings', [openFile(settingsPath, 'edit')], undefined, 'ghost', 'settings'),
             ]),
-          ], 'between'),
+          ]),
           stats([
             stat('Draft invoices', count('invoices', "e.data.status === 'draft'"), 'file-pen', loading('invoices')),
             stat('Unpaid invoices', '{{ (data.receivables || []).filter(r => r.outstanding > 0).length }}', 'file-text', loading('invoices')),
@@ -305,10 +379,10 @@ function receivablesPage() {
         data: receivableSources,
         state: { showsettled: false },
         tree: page([
-          row([
-            column([heading('Receivables'), text('Issued invoices less issued credit notes and posted payment allocations.', 'muted')]),
+          pageHeader(
+            [heading('Receivables'), text('Issued invoices less issued credit notes and posted payment allocations.', 'muted')], [
             button('Invoicing', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'file-text'),
-          ], 'between'),
+          ]),
           ...Object.keys(containers).map(name => status(name)[0]),
           stats([
             stat('Outstanding', sumOf('r.outstanding > 0'), 'hourglass', loading('payments')),
@@ -356,5 +430,5 @@ function dueWidget() {
 
 export function buildPages() {
   const documents = [homePage(), receivablesPage(), dueWidget(), ...recordKinds.map(recordForm), settingsForm()]
-  return Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)]))
+  return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

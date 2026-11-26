@@ -15,13 +15,10 @@ file-access:
     reason: "Default the currency when a quotation leaves it empty"
   - path: "/products"
     mode: read
-    reason: "Check that quoted products exist and are active"
+    reason: "Check that quoted products exist and are active (Products)"
   - path: "/quotations"
     mode: write
     reason: "Mark quotations confirmed with their computed totals"
   - path: "/sales-orders"
     mode: write
     reason: "Create the sales order a confirmed quotation becomes"
-  - path: "/invoices"
-    mode: write
-    reason: "Draft an invoice for a confirmed quotation when Invoicing is installed"

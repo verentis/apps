@@ -20,8 +20,8 @@ describe('Inventory create script', () => {
     const result = propose(input('move', { siblings: ['MOV-0002'], name: 'Restock' }), settings(), uuid)
     expect(result.name).toBe('MOV-0003')
     expect(result.content).toMatchObject({ code: 'MOV-0003', reference: 'Restock', date: '2026-03-04', status: 'draft' })
-    expect(propose(input('product', { parentPath: '/products' }), settings({ 'product-code-prefix': 'P', 'code-digits': 2 }), uuid).content)
-      .toMatchObject({ code: 'P01', unit: 'ea' })
+    expect(propose(input('move', { name: 'X' }), settings({ 'move-code-prefix': 'M', 'code-digits': 2 }), uuid).content)
+      .toMatchObject({ code: 'M01' })
   })
 
   it('defaults new adjustments to today and the default warehouse from the Inventory settings', () => {

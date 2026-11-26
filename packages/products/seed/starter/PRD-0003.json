@@ -1,0 +1,18 @@
+{
+  "$schema": "https://schemas.verentis.io/products/v1/product.schema.json",
+  "schemaVersion": 1,
+  "kind": "product",
+  "id": "7a1b2c3d-4e5f-4a6b-8c9d-0e1f2a3b4c04",
+  "state": "active",
+  "createdAt": "2026-01-01T00:00:00Z",
+  "updatedAt": "2026-01-01T00:00:00Z",
+  "code": "PRD-0003",
+  "type": "goods",
+  "description": "",
+  "name": "Copier paper A4",
+  "sku": "PAPER-A4",
+  "unit": "box",
+  "category": "Supplies",
+  "listPrice": "6.50",
+  "reorderPoint": "20"
+}

@@ -98,6 +98,8 @@ export const schemas = {
     totals,
     journal: fileReference,
     document: fileReference,
+    // Which app asked for this draft (an operation call): its record and code. A repeat call returns this invoice.
+    source: object({ app: optional(100), path: optional(1000), code: optional(100) }, []),
   }, ['code', 'issueDate', 'dueDate', 'currency', 'customer', 'lines', 'notes', 'status'], [
     whenStatus(['issued'], [...issued, 'seller']),
   ]),

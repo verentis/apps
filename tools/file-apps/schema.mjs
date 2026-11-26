@@ -25,6 +25,35 @@ export function array(items, minItems = 0, maxItems = 1000) {
 }
 
 /** A reference to another record: its absolute workspace path, plus the stable node id when known. */
+/**
+ * One item of an on-record checklist: ticked with a time, optionally timed (seconds spent, and when a running
+ * timer started). Labels come from the template the form offers.
+ */
+export const checklistItem = object({
+  id: { type: 'string', maxLength: 64 },
+  label: { type: 'string', maxLength: 300 },
+  done: { type: 'boolean' },
+  doneAt: { type: 'string', maxLength: 40 },
+  required: { type: 'boolean' },
+  note: { type: 'string', maxLength: 1000 },
+  seconds: { type: 'integer', minimum: 0, maximum: 31536000 },
+  startedAt: { type: 'string', maxLength: 40 },
+}, ['label'])
+
+/**
+ * A photo kept on a record: shrunk to a JPEG (or PNG/WebP) data URL by the capture control, so it travels with the
+ * record. Up to about 300 KB each.
+ */
+export const photo = object({
+  src: { type: 'string', maxLength: 400000, pattern: '^data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$' },
+  takenAt: { type: 'string', maxLength: 40 },
+  name: { type: 'string', maxLength: 200 },
+  note: { type: 'string', maxLength: 500 },
+}, ['src'])
+
+/** A drawn signature: a small SVG document as text. */
+export const signature = { type: 'string', maxLength: 200000, pattern: '^(<svg [\\s\\S]*</svg>)?$' }
+
 export const fileReference = object({
   path: { type: 'string', pattern: '^/', maxLength: 4096 },
   nodeId: uuid,

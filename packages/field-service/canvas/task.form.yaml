@@ -77,6 +77,9 @@
         "kind": "document",
         "consistency": "conditional"
       },
+      "appops": {
+        "kind": "app-operations"
+      },
       "companies": {
         "kind": "folder",
         "path": "/customers",
@@ -108,6 +111,12 @@
           }
         },
         "children": [
+          {
+            "type": "canvas.validation-summary",
+            "props": {
+              "title": "Fix these before saving"
+            }
+          },
           {
             "type": "canvas.stack",
             "layout": {
@@ -172,7 +181,7 @@
                   {
                     "type": "canvas.text",
                     "props": {
-                      "text": "Field task {{ form.values.code || '' }} · {{ ctx.file.path }}",
+                      "text": "Field task {{ form.values.code || '' }}",
                       "tone": "muted"
                     }
                   }
@@ -247,6 +256,22 @@
                     },
                     "rules": {
                       "visible": "['new', 'scheduled', 'on-site'].includes(form.values.stage) && !(form.values.state === 'archived')",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Draft invoice",
+                      "variant": "outline",
+                      "icon": "file-text",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "draft-invoice"
+                    },
+                    "rules": {
+                      "visible": "form.values.stage === 'done' && !form.values.invoice && (data.appops || []).some(o => o.app === 'invoicing' && o.operation === 'create-draft-invoice' && o.available)",
                       "disabled": "form.saving || form.dirty"
                     }
                   },
@@ -344,22 +369,43 @@
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "{{ data.$record.error }}"
-            },
-            "rules": {
-              "visible": "data.$record.status === 'error'"
+              "for": "record",
+              "compact": true
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.status-steps",
             "props": {
-              "text": "Loading…",
-              "tone": "muted"
+              "value": "{{ form.values.stage }}",
+              "steps": [
+                {
+                  "value": "new",
+                  "label": "New"
+                },
+                {
+                  "value": "scheduled",
+                  "label": "Scheduled"
+                },
+                {
+                  "value": "on-site",
+                  "label": "On Site"
+                },
+                {
+                  "value": "done",
+                  "label": "Done"
+                }
+              ],
+              "branches": [
+                {
+                  "value": "cancelled",
+                  "label": "Cancelled"
+                }
+              ]
             },
             "rules": {
-              "visible": "data.$record.status === 'loading'"
+              "visible": "!!form.values.stage"
             }
           },
           {
@@ -439,7 +485,8 @@
                           "label": "CRM customer",
                           "value": "{{ form.values.customerRef }}",
                           "description": "Optional. Choose a CRM customer, then Copy name.",
-                          "options": "{{ data.customeroptions }}"
+                          "options": "{{ data.customeroptions }}",
+                          "searchable": true
                         },
                         "rules": {
                           "disabled": "(form.values.state === 'archived' || (['done', 'cancelled'].includes(form.values.stage)))"
@@ -539,6 +586,29 @@
                         "rules": {
                           "disabled": "(form.values.state === 'archived' || (['done', 'cancelled'].includes(form.values.stage)))"
                         }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Latitude",
+                          "value": "{{ form.values.latitude }}",
+                          "description": "For the map. Copy it from a map app; the address is never looked up online.",
+                          "placeholder": "-33.9249"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (['done', 'cancelled'].includes(form.values.stage)))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Longitude",
+                          "value": "{{ form.values.longitude }}",
+                          "placeholder": "18.4241"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (['done', 'cancelled'].includes(form.values.stage)))"
+                        }
                       }
                     ]
                   }
@@ -580,7 +650,8 @@
                               "value": "inspection",
                               "label": "Inspection"
                             }
-                          ]
+                          ],
+                          "display": "segmented"
                         },
                         "rules": {
                           "disabled": "(form.values.state === 'archived' || (['done', 'cancelled'].includes(form.values.stage)))"
@@ -665,6 +736,100 @@
               {
                 "type": "canvas.card",
                 "props": {
+                  "title": "On site",
+                  "description": "Tick each step as it is done. The customer signs when the work is finished."
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.checklist",
+                        "props": {
+                          "label": "Checklist",
+                          "value": "{{ form.values.checklist }}",
+                          "items": [
+                            "Check the site is safe to work",
+                            "Do the work",
+                            "Test it with the customer",
+                            {
+                              "label": "Take photos of the finished work",
+                              "required": false
+                            },
+                            "Tidy up"
+                          ],
+                          "size": "touch"
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (['done', 'cancelled'].includes(form.values.stage)))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.capture",
+                        "props": {
+                          "label": "Photos of the work",
+                          "value": "{{ form.values.photos }}",
+                          "max": 8,
+                          "size": 1024,
+                          "quality": 0.75
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (['done', 'cancelled'].includes(form.values.stage)))"
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        }
+                      },
+                      {
+                        "type": "canvas.form.signature",
+                        "props": {
+                          "label": "Customer signature",
+                          "value": "{{ form.values.signature }}",
+                          "signer": "{{ form.values.signedBy || form.values.customerName }}"
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (['done', 'cancelled'].includes(form.values.stage)))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Signed by",
+                          "value": "{{ form.values.signedBy }}",
+                          "placeholder": "Name of the person signing"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (['done', 'cancelled'].includes(form.values.stage)))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "canvas.card",
+                "props": {
                   "title": "Materials"
                 },
                 "children": [
@@ -681,22 +846,37 @@
                     },
                     "children": [
                       {
-                        "type": "canvas.form.array",
+                        "type": "canvas.form.line-items",
                         "props": {
                           "label": "Materials used",
                           "value": "{{ form.values.materials }}",
-                          "fields": [
+                          "columns": [
                             {
                               "key": "description",
-                              "label": "Description"
+                              "label": "Description",
+                              "type": "text"
                             },
                             {
                               "key": "quantity",
-                              "label": "Qty"
+                              "label": "Qty",
+                              "type": "text",
+                              "align": "right",
+                              "sum": true
                             },
                             {
                               "key": "unitPrice",
-                              "label": "Unit price"
+                              "label": "Unit price",
+                              "type": "text",
+                              "align": "right"
+                            },
+                            {
+                              "key": "lineTotal",
+                              "label": "Line total",
+                              "type": "computed",
+                              "expr": "Number(row.quantity || 0) * Number(row.unitPrice || 0)",
+                              "decimals": 2,
+                              "sum": true,
+                              "align": "right"
                             }
                           ],
                           "defaultRow": {
@@ -704,11 +884,10 @@
                             "quantity": "1",
                             "unitPrice": ""
                           },
-                          "rowIds": false,
+                          "storeComputed": false,
                           "minimum": 0,
                           "maximum": 200,
-                          "addLabel": "Add material",
-                          "removeLabel": "Remove row"
+                          "addLabel": "Add material"
                         },
                         "layout": {
                           "tablet": {
@@ -895,9 +1074,27 @@
         ],
         "steps": [
           {
+            "set-state": {
+              "key": "lastresult",
+              "value": null
+            }
+          },
+          {
+            "set-state": {
+              "key": "appcall",
+              "value": null
+            }
+          },
+          {
+            "set-state": {
+              "key": "recorded",
+              "value": null
+            }
+          },
+          {
             "confirm": {
               "title": "Complete task",
-              "message": "Complete this task? The materials total is computed, an invoice may be drafted and the task is locked."
+              "message": "Complete this task? The materials total is computed, the task is locked and Invoicing drafts the invoice when it is installed."
             }
           },
           {
@@ -912,13 +1109,111 @@
             }
           },
           {
+            "call-app": {
+              "if": "(data.appops || []).some(o => o.app === 'invoicing' && o.operation === 'create-draft-invoice' && o.available) && !!state.lastresult && !!state.lastresult.invoiceRequest",
+              "app": "invoicing",
+              "operation": "create-draft-invoice",
+              "input": {
+                "$expr": "state.lastresult.invoiceRequest"
+              },
+              "idempotency-key": "{{ ('task-' + form.values.code) + '-' + Date.now() }}",
+              "assign": "appcall"
+            }
+          },
+          {
+            "run-script": {
+              "if": "(data.appops || []).some(o => o.app === 'invoicing' && o.operation === 'create-draft-invoice' && o.available) && !!state.lastresult && !!state.lastresult.invoiceRequest && !!state.appcall && !!state.appcall.path",
+              "file": "/applications/field-service/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "record-invoice",
+                "path": "{{ ctx.file.path }}",
+                "invoice": "{{ state.appcall.path }}"
+              },
+              "assign": "recorded"
+            }
+          },
+          {
             "refresh-source": {
               "source": "record"
             }
           },
           {
             "toast": {
-              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "message": "{{ (state.recorded && state.recorded.message) || (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "draft-invoice": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "set-state": {
+              "key": "lastresult",
+              "value": null
+            }
+          },
+          {
+            "set-state": {
+              "key": "appcall",
+              "value": null
+            }
+          },
+          {
+            "set-state": {
+              "key": "recorded",
+              "value": null
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/field-service/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "complete",
+                "path": "{{ ctx.file.path }}"
+              },
+              "assign": "lastresult"
+            }
+          },
+          {
+            "call-app": {
+              "if": "(data.appops || []).some(o => o.app === 'invoicing' && o.operation === 'create-draft-invoice' && o.available) && !!state.lastresult && !!state.lastresult.invoiceRequest",
+              "app": "invoicing",
+              "operation": "create-draft-invoice",
+              "input": {
+                "$expr": "state.lastresult.invoiceRequest"
+              },
+              "idempotency-key": "{{ ('task-' + form.values.code) + '-' + Date.now() }}",
+              "assign": "appcall"
+            }
+          },
+          {
+            "run-script": {
+              "if": "(data.appops || []).some(o => o.app === 'invoicing' && o.operation === 'create-draft-invoice' && o.available) && !!state.lastresult && !!state.lastresult.invoiceRequest && !!state.appcall && !!state.appcall.path",
+              "file": "/applications/field-service/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "record-invoice",
+                "path": "{{ ctx.file.path }}",
+                "invoice": "{{ state.appcall.path }}"
+              },
+              "assign": "recorded"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.recorded && state.recorded.message) || (state.lastresult && state.lastresult.message) || 'Done' }}",
               "variant": "success"
             }
           }

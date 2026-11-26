@@ -1,10 +1,11 @@
 // Generates the Field Service Canvas documents: the bound task form, the settings form, the launch page, the
 // task list by stage and the technician day schedule. Stage transitions (schedule, start, complete, cancel),
 // the materials total and the optional invoice draft are done by the action script the task form runs.
+import { views } from './views.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
-  humanize, iconName, options, openFile, page, panel, projectRegistration, recordButtons, row, scriptAction,
-  sectionCards, stat, stats, status, table, tabs, text, toneExpression,
+  humanize, iconName, options, openFile, page, panel, projectRegistration, recordButtons, row, scriptAction, appOperationsSource, offers, withInvoice,
+  sectionCards, stat, stats, status, table, tabs, text, toneExpression, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { containers, crm, installRoot, mimeTypes, openStages, recordKinds, schemaId, settingsPath, stages } from './contracts.mjs'
 import { entities, postScriptPath, settingsSections } from './app.mjs'
@@ -34,7 +35,7 @@ function taskForm() {
         badge(humanize(entity.status), toneExpression(entity.status, stageTones), { visible: `!!form.values.${entity.status}` }),
         badge('Archived', 'warning', { visible: archived }, 'archive'),
       ]),
-      text(`${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`, 'muted'),
+      text(`${entity.singular} {{ form.values.code || '' }}`, 'muted'),
     ]),
     row([
       button('Schedule', 'schedule', { visible: `form.values.stage === 'new' && !(${archived})`,
@@ -43,6 +44,8 @@ function taskForm() {
       button('Complete', 'complete', { visible: `form.values.stage === 'on-site' && !(${archived})`,
         disabled: `${idle} || !String(form.values.hours || '').trim()` }, undefined, 'check'),
       button('Cancel task', 'cancel', { visible: `${stageLiteral(openStages)}.includes(form.values.stage) && !(${archived})`, disabled: idle }, 'outline', 'x'),
+      // Done but no invoice yet (Invoicing arrived later, or drafting failed): ask Invoicing again.
+      button('Draft invoice', 'draft-invoice', { visible: `form.values.stage === 'done' && !form.values.invoice && ${offers('invoicing', 'create-draft-invoice')}`, disabled: idle }, 'outline', 'file-text'),
       button('Copy name', 'copy-customer', { visible: `!(${locked}) && !!form.values.customerRef`, disabled: `form.saving || ${archived}` }, 'ghost', 'copy'),
       recordButtons(locked),
     ]),
@@ -58,13 +61,14 @@ function taskForm() {
         schemaAccess,
       ],
       data: {
+        ...appOperationsSource,
         companies: folder(crm.customers, crm.companyMime),
         contacts: folder(crm.customers, crm.contactMime),
         customeroptions: { kind: 'computed', expr: `${options('companies', "e.data.name || ''")}.concat(${options('contacts', "[e.data.givenName, e.data.familyName].filter(Boolean).join(' ')")})` },
       },
       tree: [
         header,
-        ...status('record'),
+        ...status('record'), ...lifecycle(entity),
         badge('This task is archived. Restore it to edit.', 'warning', { visible: archived }, 'archive'),
         { ...text('This task is done and can no longer be edited. Its materials total was computed when it was completed.', 'muted'),
           rules: { visible: "form.values.stage === 'done'" } },
@@ -81,9 +85,10 @@ function taskForm() {
         start: scriptAction(postScriptPath, 'start', {
           confirm: { title: 'Start task', message: 'Mark the technician on site?' },
         }),
-        complete: scriptAction(postScriptPath, 'complete', {
-          confirm: { title: 'Complete task', message: 'Complete this task? The materials total is computed, an invoice may be drafted and the task is locked.' },
-        }),
+        complete: withInvoice(scriptAction(postScriptPath, 'complete', {
+          confirm: { title: 'Complete task', message: 'Complete this task? The materials total is computed, the task is locked and Invoicing drafts the invoice when it is installed.' },
+        }), taskInvoice),
+        'draft-invoice': withInvoice(scriptAction(postScriptPath, 'complete', {}), taskInvoice),
         cancel: scriptAction(postScriptPath, 'cancel', {
           confirm: { title: 'Cancel task', message: 'Cancel this task? Cancelled tasks are locked and cannot be edited.' },
         }),
@@ -101,13 +106,13 @@ function settingsForm() {
       access: [schemaAccess],
       data: {},
       tree: [
-        row([
-          column([heading('Field Service settings'), text('Defaults new tasks start with. Code prefixes are app settings, managed with the installed app.', 'muted')]),
+        pageHeader(
+          [heading('Field Service settings'), text('Defaults new tasks start with. Code prefixes are app settings, managed with the installed app.', 'muted')], [
           row([
             button('Reset', [{ 'reset-form': {} }], { disabled: 'form.saving || !form.dirty' }, 'ghost'),
             button('Save', [{ save: {} }, { toast: { message: 'Saved', variant: 'success' } }], { disabled: 'form.saving || !form.dirty || form.invalid' }, undefined, 'save'),
           ]),
-        ], 'between'),
+        ]),
         ...status('record'),
         grid(settingsSections.map(section => card(section.title, [grid(section.fields.map(field => formControl(field, null)))], section.description)), 1),
       ],
@@ -121,7 +126,7 @@ const loading = source => `{{ data.$${source}.status === 'loading' }}`
 const openStage = value => `${stageLiteral(openStages)}.includes(${value})`
 
 // Every active task flattened for the pages: stage, schedule, technician and the time window.
-const taskRows = `(data.tasks || []).filter(e => ${active}).map(e => ({ path: e.path, code: e.data.code || e.name, customer: e.data.customerName || '', address: e.data.address || '', type: e.data.type || '', stage: e.data.stage || '', technician: e.data.technician || '', date: e.data.scheduledDate || '', window: [e.data.windowStart, e.data.windowEnd].filter(Boolean).join('–'), windowStart: e.data.windowStart || '', hours: e.data.hours || '', today: !!e.data.scheduledDate && e.data.scheduledDate === Date().slice(0, 10) }))`
+const taskRows = `(data.tasks || []).filter(e => ${active}).map(e => ({ path: e.path, code: e.data.code || e.name, customer: e.data.customerName || '', address: e.data.address || '', latitude: e.data.latitude || '', longitude: e.data.longitude || '', type: e.data.type || '', stage: e.data.stage || '', technician: e.data.technician || '', date: e.data.scheduledDate || '', window: [e.data.windowStart, e.data.windowEnd].filter(Boolean).join('–'), windowStart: e.data.windowStart || '', hours: e.data.hours || '', today: !!e.data.scheduledDate && e.data.scheduledDate === Date().slice(0, 10) }))`
 const taskSources = {
   tasks: folder(containers.tasks.path, mimeTypes.task),
   rows: { kind: 'computed', expr: taskRows },
@@ -144,14 +149,14 @@ function homePage() {
         access: pageAccess('Count tasks and show the task list'),
         data: taskSources,
         tree: page([
-          row([
-            column([heading('Field Service'), text('Field tasks are files in your workspace. Draft tasks in /field-tasks, schedule a technician, work them on site, then complete them from their forms.', 'muted')]),
+          pageHeader(
+            [heading('Field Service'), text('Field tasks are files in your workspace. Draft tasks in /field-tasks, schedule a technician, work them on site, then complete them from their forms.', 'muted')], [
             row([
               button('Tasks', [openFile(`${installRoot}/canvas/tasks.page.yaml`)], undefined, 'outline', 'wrench'),
               button('Day schedule', [openFile(`${installRoot}/canvas/schedule.page.yaml`)], undefined, 'outline', 'calendar'),
               button('Settings', [openFile(settingsPath, 'edit')], undefined, 'ghost', 'settings'),
             ]),
-          ], 'between'),
+          ]),
           stats([
             stat('Open tasks', countOf(openStage('r.stage')), 'wrench', loading('tasks')),
             stat('Today', countOf(`r.today && ${openStage('r.stage')}`), 'calendar', loading('tasks')),
@@ -181,10 +186,10 @@ function tasksPage() {
         access: pageAccess('List tasks by stage'),
         data: taskSources,
         tree: page([
-          row([
-            column([heading('Tasks by stage'), text('Every active field task, grouped by its stage. Click a row to open the task.', 'muted')]),
+          pageHeader(
+            [heading('Tasks by stage'), text('Every active field task, grouped by its stage. Click a row to open the task.', 'muted')], [
             button('Field Service', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'wrench'),
-          ], 'between'),
+          ]),
           ...containerNotice(),
           stats(stages.map(stage => stat(stageLabel(stage), countOf(`r.stage === '${stage}'`), 'wrench', loading('tasks'))), 5),
           tabs(stages.map(stage => ({ value: stage, label: stageLabel(stage), icon: 'wrench' })),
@@ -208,10 +213,10 @@ function schedulePage() {
         access: pageAccess('List today\'s tasks per technician'),
         data: taskSources,
         tree: page([
-          row([
-            column([heading('Day schedule'), text('Today\'s open tasks, ordered by technician and time window. Click a row to open the task.', 'muted')]),
+          pageHeader(
+            [heading('Day schedule'), text('Today\'s open tasks, ordered by technician and time window. Click a row to open the task.', 'muted')], [
             button('Field Service', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'wrench'),
-          ], 'between'),
+          ]),
           ...containerNotice(),
           stats([
             stat('Tasks today', `{{ ${todayRows}.length }}`, 'calendar', loading('tasks')),
@@ -228,7 +233,10 @@ function schedulePage() {
   }
 }
 
+/** Invoicing drafts a completed task's invoice; the task's code keys the call. */
+const taskInvoice = { script: postScriptPath, key: "'task-' + form.values.code" }
+
 export function buildPages() {
   const documents = [homePage(), tasksPage(), schedulePage(), ...recordKinds.map(() => taskForm()), settingsForm()]
-  return Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)]))
+  return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

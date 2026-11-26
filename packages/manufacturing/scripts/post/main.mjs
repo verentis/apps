@@ -3,15 +3,13 @@
 // positive quantities), computes the exact component demand, then writes with the file access its installer
 // consented to (manifest `file-access`).
 //
-// Integrity model: emitted stock moves get deterministic names (`/stock-moves/MO-0001-C1`, `/stock-moves/
-// MO-0001-OUT`) and are created create-only, so a retried completion never writes twice; orders are updated
-// conditionally (If-Match), so a concurrent edit fails instead of being overwritten. The steps are not one
-// transaction: if a run stops between emitting the moves and updating the order, running the same operation
-// again completes it.
-import { randomUUID } from 'node:crypto'
+// Completing returns what Inventory needs to record the production; the form asks Inventory through the platform
+// (Inventory's `record-production` returns the same moves when asked again) and `record-moves` stores the links.
+// Manufacturing never writes Inventory's files. Orders are updated conditionally (If-Match), so a concurrent edit
+// fails instead of being overwritten.
 import { divideHalfUp, fail, formatMinor, nameOf, nowIso, readRecord, saveRecord, statusOf, toMinor } from './ledger.mjs'
 
-export const operations = ['confirm-mo', 'start-mo', 'complete-mo']
+export const operations = ['confirm-mo', 'start-mo', 'complete-mo', 'record-moves']
 
 export const manufacturing = {
   boms: '/bills-of-materials',
@@ -19,13 +17,6 @@ export const manufacturing = {
   mime: kind => `application/vnd.verentis.manufacturing.${kind}+json`,
 }
 
-/** Inventory (optional): when its /stock-moves container exists, completing an order emits stock moves into it. */
-export const inventory = {
-  moves: '/stock-moves',
-  settingsPath: '/settings/inventory.json',
-  moveMime: 'application/vnd.verentis.inventory.move+json',
-  moveSchema: 'https://schemas.verentis.io/inventory/v1/move.schema.json',
-}
 
 /** Quantities are exact decimal strings with at most four decimal places, handled as BigInt ten-thousandths. */
 const QTY_DIGITS = 4
@@ -117,96 +108,55 @@ export async function startOrder(files, path, { now }) {
   return { message: `Started ${label(record)}`, path }
 }
 
-/** The Inventory default warehouse emitted moves go through; missing settings leave the warehouses empty. */
-async function defaultWarehouse(files) {
-  try {
-    const settings = await files.readJson(inventory.settingsPath)
-    return typeof settings?.defaultWarehouse === 'string' ? settings.defaultWarehouse : ''
-  } catch (error) {
-    if (statusOf(error) === 404) return ''
-    throw error
-  }
-}
-
 /**
- * Creates an emitted stock move create-only under its deterministic name. If an earlier, interrupted attempt
- * already wrote it (same `source` pointing at the same order), the existing move is kept: retrying never
- * writes twice.
+ * What Inventory needs to record the completed order (its `record-production` operation): the component demand
+ * consumed and the output produced. The order form asks Inventory through the platform; Manufacturing never writes
+ * Inventory's files.
  */
-async function createMove(files, path, move) {
-  try {
-    await files.write(path, JSON.stringify(move, null, 2), { contentType: inventory.moveMime, ifNoneMatch: '*' })
-    return
-  } catch (error) {
-    if (statusOf(error) !== 412) throw error
-  }
-  const existing = await files.readJson(path)
-  if (existing?.kind !== 'move' || existing.source?.path !== move.source.path) {
-    fail(`${path} already exists and belongs to something else. Rename it and try again.`)
-  }
-  const shape = value => JSON.stringify([value.product, value.quantity, value.fromWarehouse, value.toWarehouse])
-  if (shape(existing) !== shape(move)) {
-    fail(`${path} was written by an earlier attempt with different details. Check it against ${move.source.path} before trying again.`)
+export function productionRequest(record, path) {
+  const date = record.scheduledDate && sameDate.test(record.scheduledDate) ? record.scheduledDate : ''
+  return {
+    source: { path, code: record.code || nameOf(path) },
+    ...(date ? { date } : {}),
+    consumed: (record.demand ?? []).map(line => ({ product: line.product, quantity: line.quantity })),
+    produced: { product: record.product || '', quantity: record.quantity },
   }
 }
 
-/** The consumption moves for the demand plus the production move for the output, in Inventory's move format. */
-export function emittedMoves(record, path, { now, uuid, warehouse }) {
-  const date = record.scheduledDate && sameDate.test(record.scheduledDate) ? record.scheduledDate : now.slice(0, 10)
-  const move = (name, fields) => ({
-    path: `${inventory.moves}/${name}`,
-    move: {
-      $schema: inventory.moveSchema, schemaVersion: 1, kind: 'move', id: uuid(), state: 'active',
-      createdAt: now, updatedAt: now, code: name,
-      fromWarehouse: '', fromLocation: '', toWarehouse: '', toLocation: '', date,
-      status: 'done', postedAt: now, source: { path }, ...fields,
-    },
-  })
-  const name = record.code || nameOf(path)
-  return [
-    ...(record.demand ?? []).map((line, index) => move(`${name}-C${index + 1}`, {
-      product: line.product, quantity: line.quantity, fromWarehouse: warehouse,
-      reference: `Consumed by manufacturing order ${name}`,
-    })),
-    move(`${name}-OUT`, {
-      product: record.product || '', quantity: record.quantity, toWarehouse: warehouse,
-      reference: `Produced by manufacturing order ${name}`,
-    }),
-  ]
+/** Records the stock moves Inventory wrote for a completed order (the paths its operation returned). */
+export async function recordMoves(files, path, movePaths, { now }) {
+  const order = await readRecord(files, checkPath(path, manufacturing.orders), 'order')
+  const { record } = order
+  if (record.status !== 'done') fail(`${label(record)} is not done.`)
+  const paths = Array.isArray(movePaths) ? movePaths : []
+  if (!paths.length || paths.some(item => typeof item !== 'string' || !item.startsWith('/stock-moves/'))) fail('Inventory returned no stock moves.')
+  Object.assign(record, { moves: paths.map(item => ({ path: item })), updatedAt: now })
+  await saveRecord(files, order, manufacturing.mime('order'))
+  return { message: `Recorded ${paths.length} stock move${paths.length === 1 ? '' : 's'} for ${label(record)}`, path }
 }
 
-export async function completeOrder(files, path, { now, uuid }) {
+export async function completeOrder(files, path, { now }) {
   const order = await readRecord(files, checkPath(path, manufacturing.orders), 'order')
   const { record } = order
   checkActive(record)
-  if (record.status === 'done') return { message: `${label(record)} is already done`, path }
+  if (record.status === 'done') {
+    return { message: `${label(record)} is already done`, path, ...(record.moves?.length ? {} : { productionRequest: productionRequest(record, path) }) }
+  }
   if (record.status === 'cancelled') fail(`${label(record)} is cancelled.`)
   if (record.status !== 'in-progress') fail(`${label(record)} is ${record.status || 'draft'}. Start it before completing.`)
-  // Inventory is an optional dependency: moves are only emitted when its /stock-moves container exists.
-  let moves = []
-  if (await files.stat(inventory.moves)) {
-    const warehouse = await defaultWarehouse(files)
-    const emitted = emittedMoves(record, path, { now, uuid, warehouse })
-    for (const { path: movePath, move } of emitted) await createMove(files, movePath, move)
-    moves = emitted.map(({ path: movePath }) => ({ path: movePath }))
-  }
-  Object.assign(record, {
-    status: 'done', completedAt: now, updatedAt: now,
-    ...(moves.length ? { moves } : {}),
-  })
+  Object.assign(record, { status: 'done', completedAt: now, updatedAt: now })
   await saveRecord(files, order, manufacturing.mime('order'))
-  return {
-    message: `Completed ${label(record)}${moves.length ? ` and emitted ${moves.length} stock move${moves.length === 1 ? '' : 's'}` : ''}`,
-    path,
-  }
+  // The form asks Inventory (when installed) to record the stock moves from this, then records their links.
+  return { message: `Completed ${label(record)}`, path, productionRequest: productionRequest(record, path) }
 }
 
-export async function run(parameters, files, { now = nowIso(), uuid = randomUUID } = {}) {
+export async function run(parameters, files, { now = nowIso() } = {}) {
   const { operation, path } = parameters ?? {}
-  const options = { now, uuid }
+  const options = { now }
   if (operation === 'confirm-mo') return confirmOrder(files, path, options)
   if (operation === 'start-mo') return startOrder(files, path, options)
   if (operation === 'complete-mo') return completeOrder(files, path, options)
+  if (operation === 'record-moves') return recordMoves(files, path, parameters.moves, options)
   return fail(`Unsupported operation ${JSON.stringify(operation ?? '')}. Expected one of ${operations.join(', ')}.`)
 }
 

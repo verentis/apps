@@ -11,8 +11,6 @@ move that brings the stock to the counted quantity.
 Records are named by a generated code, without a file extension, directly in their container:
 
 ```text
-/products                                 application/vnd.verentis.inventory.products (seeded)
-  PRD-0001                                …inventory.product+json
 /warehouses                               application/vnd.verentis.inventory.warehouses (seeded)
   WH-0001                                 …inventory.warehouse+json
 /stock-moves                              application/vnd.verentis.inventory.moves (seeded)
@@ -26,16 +24,22 @@ Records are named by a generated code, without a file extension, directly in the
 
 The record's content is JSON. The MIME type, not an extension, says what the node is. The containers are
 content-less typed nodes. Install seeds them once (`mode: seed`) together with a sample warehouse
-(`WH-0001` with locations Stock, Input and Output), three products and a few opening stock moves;
+(`WH-0001` with locations Stock, Input and Output) and a few opening stock moves of Products' sample products;
 uninstall keeps them. No Canvas document is bound to the container types, so they open in the file
 browser. Inside a plain folder named like a container (for example `catalog` or `moves`), New still
 offers its records.
+
+## Products
+
+Products owns the catalogue (`/products`, `application/vnd.verentis.products.product+json`); installing Inventory
+installs it. Inventory reads product files (name, SKU, unit, reorder point) and changes them only through Products'
+API: the stock levels page sets a reorder point with `update-product`. A product's stock moves show on its form in
+Products.
 
 ## Records
 
 | Kind | Code setting (default) | Notes |
 | --- | --- | --- |
-| `product` | `product-code-prefix` (`PRD-`) | Name, SKU, unit, category and an optional reorder point (decimal string) |
 | `warehouse` | `warehouse-code-prefix` (`WH-`) | Name and a list of named locations; moves into a warehouse with locations must use one of them |
 | `move` | `move-code-prefix` (`MOV-`) | Product reference, quantity, from/to warehouse and location, date, reference; `status: draft \| done` with `postedAt` once done |
 | `adjustment` | `adjustment-code-prefix` (`ADJ-`) | Product, warehouse, location, counted quantity, date; `status: draft \| applied` with `appliedAt` and the corrective `move` once applied |

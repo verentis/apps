@@ -38,67 +38,120 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Knowledge",
+          "icon": "book-open",
+          "active": "spaces.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Spaces",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "spaces.page.yaml",
+              "label": "Space tree",
+              "icon": "folder-tree"
+            },
+            {
+              "id": "recent.page.yaml",
+              "label": "Recent",
+              "icon": "history"
+            },
+            {
+              "id": "tags.page.yaml",
+              "label": "Tags",
+              "icon": "tags"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/knowledge/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/knowledge.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Spaces",
+              "note": "Every active article grouped by its space. Nested articles are indented beneath their parent. Click a row to open it."
+            },
+            "children": []
+          },
           {
             "type": "canvas.stack",
             "layout": {
               "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
+                "gap": 2
               }
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Spaces"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Every active article grouped by its space. Nested articles are indented beneath their parent. Click a row to open it.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Articles"
+                }
               },
               {
-                "type": "canvas.button",
+                "type": "canvas.text",
                 "props": {
-                  "label": "Knowledge",
-                  "variant": "ghost",
-                  "icon": "book-open",
-                  "size": "sm"
+                  "text": "Articles nested under their parent article, per space.",
+                  "tone": "muted"
+                }
+              },
+              {
+                "type": "canvas.tree",
+                "props": {
+                  "rows": "{{ (data.articles || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, title: e.data.title || e.data.code, parent: e.data.parent || '', status: e.data.status, space: ((((data.spaces || []).find(s => s.path === e.data.space) || {}).data || {}).name) || 'No space' })) }}",
+                  "idKey": "path",
+                  "parentKey": "parent",
+                  "label": "title",
+                  "groupBy": "space",
+                  "depth": 1,
+                  "badge": {
+                    "key": "status",
+                    "labels": {
+                      "published": "Published",
+                      "draft": "Draft",
+                      "archived": "Archived"
+                    },
+                    "tones": {
+                      "published": "success",
+                      "draft": "neutral",
+                      "archived": "warning"
+                    }
+                  }
                 },
                 "on": {
-                  "click": [
+                  "open": [
                     {
                       "open-file": {
-                        "path": "/applications/knowledge/canvas/home.page.yaml"
+                        "path": "{{ event.row.path }}",
+                        "mode": "edit",
+                        "open": "side"
                       }
                     }
                   ]
@@ -107,21 +160,19 @@
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /knowledge-spaces folder could not be read. Reinstall Knowledge to recreate it."
-            },
-            "rules": {
-              "visible": "data.$spaces.status === 'error'"
+              "for": "spaces",
+              "compact": true,
+              "description": "The /knowledge-spaces folder could not be read. Reinstall Knowledge to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /articles folder could not be read. Reinstall Knowledge to recreate it."
-            },
-            "rules": {
-              "visible": "data.$articles.status === 'error'"
+              "for": "articles",
+              "compact": true,
+              "description": "The /articles folder could not be read. Reinstall Knowledge to recreate it."
             }
           },
           {
@@ -164,6 +215,10 @@
                     }
                   ],
                   "emptyText": "No spaces yet",
+                  "search": true,
+                  "sortable": true,
+                  "pageSize": 25,
+                  "narrow": "list",
                   "clickable": true
                 },
                 "on": {
@@ -171,7 +226,8 @@
                     {
                       "open-file": {
                         "path": "{{ event.path }}",
-                        "mode": "edit"
+                        "mode": "edit",
+                        "open": "side"
                       }
                     }
                   ]
@@ -216,6 +272,10 @@
                     }
                   ],
                   "emptyText": "No articles yet",
+                  "search": true,
+                  "sortable": true,
+                  "pageSize": 25,
+                  "narrow": "list",
                   "clickable": true
                 },
                 "on": {
@@ -223,10 +283,51 @@
                     {
                       "open-file": {
                         "path": "{{ event.path }}",
-                        "mode": "edit"
+                        "mode": "edit",
+                        "open": "side"
                       }
                     }
                   ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "gap": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Articles per space"
+                }
+              },
+              {
+                "type": "canvas.chart",
+                "props": {
+                  "rows": "{{ (data.rows || []).map(r => r.space || 'No space').filter((name, index, all) => all.indexOf(name) === index).map(name => ({ label: name, published: (data.rows || []).filter(r => (r.space || 'No space') === name && r.status === 'published').length, draft: (data.rows || []).filter(r => (r.space || 'No space') === name && r.status === 'draft').length })) }}",
+                  "showLegend": true,
+                  "emptyText": "Nothing to chart yet",
+                  "kind": "stacked-hbar",
+                  "x": "label",
+                  "y": [
+                    "published",
+                    "draft"
+                  ],
+                  "labels": {
+                    "published": "Published",
+                    "draft": "Draft"
+                  },
+                  "palette": {
+                    "published": "success",
+                    "draft": "muted"
+                  },
+                  "format": "integer"
                 }
               }
             ]

@@ -1,129 +1,191 @@
-api-version: canvas.verentis.io/v1
-kind: Page
-metadata:
-  id: invoicing-due-widget
-  name: Invoices due
-  description: Open and overdue invoices for the workspace dashboard.
-  icon: alarm-clock
-spec:
-  access:
-  - path: /invoices
-    reason: Show open and overdue invoices
-  - path: /credit-notes
-    reason: Show open and overdue invoices
-  - path: /payments
-    reason: Show open and overdue invoices
-  data:
-    invoices:
-      kind: folder
-      path: /invoices
-      contents: true
-      mime-pattern: application/vnd.verentis.invoicing.invoice+json
-    credits:
-      kind: folder
-      path: /credit-notes
-      contents: true
-      mime-pattern: application/vnd.verentis.invoicing.credit+json
-    payments:
-      kind: folder
-      path: /payments
-      contents: true
-      mime-pattern: application/vnd.verentis.invoicing.payment+json
-    receivables:
-      kind: computed
-      expr: '(data.invoices || []).filter(e => e.kind === ''file'' && e.data && e.data.state !== ''archived''
-        && e.data.status === ''issued'' && e.data.totals).map(e => ({ path: e.path, code: e.data.code
-        || e.name, customer: (e.data.customer && e.data.customer.name) || '''', issueDate: e.data.issueDate,
-        dueDate: e.data.dueDate, gross: Math.round(Number(e.data.totals.gross || 0) * 10000), credited:
-        (data.credits || []).filter(c => c.kind === ''file'' && c.data && c.data.status === ''issued''
-        && c.data.invoice === e.path).reduce((s, c) => s + Math.round(Number(c.data.totals.gross || 0)
-        * 10000), 0), paid: (data.payments || []).filter(p => p.kind === ''file'' && p.data && p.data.status
-        === ''posted'').reduce((s, p) => s + (p.data.allocations || []).filter(a => a.invoice === e.path).reduce((t,
-        a) => t + Math.round(Number(a.amount || 0) * 10000), 0), 0) })).map(r => ({ path: r.path, code:
-        r.code, customer: r.customer, issueDate: r.issueDate, dueDate: r.dueDate, gross: r.gross, credited:
-        r.credited, paid: r.paid, outstanding: r.gross - r.credited - r.paid, overdue: r.gross - r.credited
-        - r.paid > 0 && r.dueDate < Date().slice(0, 10) }))'
-  tree:
-  - type: canvas.stack
-    layout:
-      base:
-        gap: 2
-    children:
-    - type: canvas.stack
-      layout:
-        base:
-          direction: row
-          wrap: true
-          gap: 2
-          align: center
-          justify: between
-      children:
-      - type: canvas.stack
-        layout:
-          base:
-            gap: 1
-        children:
-        - type: canvas.heading
-          props:
-            level: 3
-            text: Invoices due
-        - type: canvas.text
-          props:
-            text: '{{ (data.receivables || []).filter(r => r.outstanding > 0).length }} open · {{ (data.receivables
-              || []).filter(r => r.outstanding > 0).filter(r => r.overdue).length }} overdue'
-            tone: muted
-      - type: canvas.button
-        props:
-          label: Receivables
-          variant: ghost
-          icon: hourglass
-          size: sm
-        'on':
-          click:
-          - open-file:
-              path: /applications/invoicing/canvas/receivables.page.yaml
-    - type: canvas.text
-      props:
-        text: '{{ data.$invoices.error }}'
-      rules:
-        visible: data.$invoices.status === 'error'
-    - type: canvas.text
-      props:
-        text: '{{ data.$credits.error }}'
-      rules:
-        visible: data.$credits.status === 'error'
-    - type: canvas.text
-      props:
-        text: '{{ data.$payments.error }}'
-      rules:
-        visible: data.$payments.status === 'error'
-    - type: canvas.text
-      props:
-        text: Loading…
-        tone: muted
-      rules:
-        visible: data.$payments.status === 'loading'
-    - type: canvas.table
-      props:
-        rows: '{{ (data.receivables || []).filter(r => r.outstanding > 0).sort((a, b) => (a.dueDate <
-          b.dueDate ? -1 : a.dueDate > b.dueDate ? 1 : 0)).map(r => ({ path: r.path, code: r.code, customer:
-          r.customer, amount: [(((data.invoices || []).find(e => e.path === r.path) || {}).data || {}).currency
-          || '''', (r.outstanding / 10000).toFixed(2)].filter(Boolean).join('' ''), due: r.overdue ? r.dueDate
-          + '' · overdue'' : r.dueDate })) }}'
-        columns:
-        - key: code
-          label: Invoice
-        - key: customer
-          label: Customer
-        - key: amount
-          label: Outstanding
-          align: right
-        - key: due
-          label: Due
-        emptyText: Nothing outstanding
-        clickable: true
-      'on':
-        row-click:
-        - open-file:
-            path: '{{ event.path }}'
-            mode: edit
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "invoicing-due-widget",
+    "name": "Invoices due",
+    "description": "Open and overdue invoices for the workspace dashboard.",
+    "icon": "alarm-clock"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/invoices",
+        "reason": "Show open and overdue invoices"
+      },
+      {
+        "path": "/credit-notes",
+        "reason": "Show open and overdue invoices"
+      },
+      {
+        "path": "/payments",
+        "reason": "Show open and overdue invoices"
+      }
+    ],
+    "data": {
+      "invoices": {
+        "kind": "folder",
+        "path": "/invoices",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.invoicing.invoice+json"
+      },
+      "credits": {
+        "kind": "folder",
+        "path": "/credit-notes",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.invoicing.credit+json"
+      },
+      "payments": {
+        "kind": "folder",
+        "path": "/payments",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.invoicing.payment+json"
+      },
+      "receivables": {
+        "kind": "computed",
+        "expr": "(data.invoices || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && e.data.status === 'issued' && e.data.totals).map(e => ({ path: e.path, code: e.data.code || e.name, customer: (e.data.customer && e.data.customer.name) || '', issueDate: e.data.issueDate, dueDate: e.data.dueDate, gross: Math.round(Number(e.data.totals.gross || 0) * 10000), credited: (data.credits || []).filter(c => c.kind === 'file' && c.data && c.data.status === 'issued' && c.data.invoice === e.path).reduce((s, c) => s + Math.round(Number(c.data.totals.gross || 0) * 10000), 0), paid: (data.payments || []).filter(p => p.kind === 'file' && p.data && p.data.status === 'posted').reduce((s, p) => s + (p.data.allocations || []).filter(a => a.invoice === e.path).reduce((t, a) => t + Math.round(Number(a.amount || 0) * 10000), 0), 0) })).map(r => ({ path: r.path, code: r.code, customer: r.customer, issueDate: r.issueDate, dueDate: r.dueDate, gross: r.gross, credited: r.credited, paid: r.paid, outstanding: r.gross - r.credited - r.paid, overdue: r.gross - r.credited - r.paid > 0 && r.dueDate < Date().slice(0, 10) }))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "gap": 2
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 3,
+                      "text": "Invoices due"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "{{ (data.receivables || []).filter(r => r.outstanding > 0).length }} open · {{ (data.receivables || []).filter(r => r.outstanding > 0).filter(r => r.overdue).length }} overdue",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Receivables",
+                  "variant": "ghost",
+                  "icon": "hourglass",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/applications/invoicing/canvas/receivables.page.yaml"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "invoices",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "credits",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "payments",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$payments.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.receivables || []).filter(r => r.outstanding > 0).sort((a, b) => (a.dueDate < b.dueDate ? -1 : a.dueDate > b.dueDate ? 1 : 0)).map(r => ({ path: r.path, code: r.code, customer: r.customer, amount: [(((data.invoices || []).find(e => e.path === r.path) || {}).data || {}).currency || '', (r.outstanding / 10000).toFixed(2)].filter(Boolean).join(' '), due: r.overdue ? r.dueDate + ' · overdue' : r.dueDate })) }}",
+              "columns": [
+                {
+                  "key": "code",
+                  "label": "Invoice"
+                },
+                {
+                  "key": "customer",
+                  "label": "Customer"
+                },
+                {
+                  "key": "amount",
+                  "label": "Outstanding",
+                  "align": "right"
+                },
+                {
+                  "key": "due",
+                  "label": "Due"
+                }
+              ],
+              "emptyText": "Nothing outstanding",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

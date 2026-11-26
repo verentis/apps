@@ -62,6 +62,11 @@
         "reason": "Offer Employees records on requests (when Employees is installed)"
       },
       {
+        "path": "/leave-requests",
+        "mode": "read",
+        "reason": "Show who else is off on these dates and the days already taken"
+      },
+      {
         "path": "/applications/time-off/",
         "mode": "read",
         "reason": "Read the Time Off schemas and run the request action script"
@@ -75,6 +80,10 @@
       {
         "path": "/employees",
         "reason": "Offer Employees records on requests (when Employees is installed)"
+      },
+      {
+        "path": "/leave-requests",
+        "reason": "Show who else is off on these dates and the days already taken"
       },
       {
         "path": "/applications/time-off/",
@@ -105,6 +114,24 @@
       "employeeoptions": {
         "kind": "computed",
         "expr": "(data.staff || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status !== 'terminated')).map(e => ({ label: (e.data.code || e.name) + ' · ' + (e.data.name || ''), value: e.path }))"
+      },
+      "others": {
+        "kind": "folder",
+        "path": "/leave-requests",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.time-off.request+json"
+      },
+      "clashes": {
+        "kind": "computed",
+        "expr": "(data.others || []).filter(e => e.kind === 'file' && e.data && e.path !== ctx.file.path && ['submitted', 'approved'].includes(e.data.status) && !!form.values.startDate && !!e.data.startDate && e.data.employeeName !== form.values.employeeName && e.data.startDate <= (form.values.endDate || form.values.startDate) && (e.data.endDate || e.data.startDate) >= form.values.startDate).map(e => ({ path: e.path, name: e.data.employeeName || e.name, from: e.data.startDate, to: e.data.endDate || e.data.startDate, status: e.data.status }))"
+      },
+      "allocated": {
+        "kind": "computed",
+        "expr": "Number(((((data.types || []).find(t => t.kind === 'file' && t.data && t.path === form.values.type) || {}).data || {})).daysPerYear || 0)"
+      },
+      "taken": {
+        "kind": "computed",
+        "expr": "(data.others || []).filter(e => e.kind === 'file' && e.data && e.path !== ctx.file.path && e.data.status === 'approved' && e.data.employeeName === form.values.employeeName && e.data.type === form.values.type && String(e.data.startDate || '').slice(0, 4) === String(form.values.startDate || '').slice(0, 4)).reduce((sum, e) => sum + Number(e.data.days || 0), 0)"
       }
     },
     "state": {
@@ -126,74 +153,117 @@
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.validation-summary",
+            "props": {
+              "title": "Fix these before saving"
+            }
+          },
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "{{ form.values.employeeName || 'New leave request' }}",
+              "note": "Leave request {{ form.values.code || '' }}"
             },
             "children": [
               {
                 "type": "canvas.stack",
                 "layout": {
                   "base": {
-                    "gap": 1
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
                   }
                 },
                 "children": [
                   {
-                    "type": "canvas.stack",
-                    "layout": {
-                      "base": {
-                        "direction": "row",
-                        "wrap": true,
-                        "gap": 2,
-                        "align": "center"
-                      }
+                    "type": "canvas.dashboard.badge",
+                    "props": {
+                      "text": "{{ String(form.values.status || '').split('-').join(' ') }}",
+                      "tone": "{{ [\"approved\"].includes(form.values.status) ? 'success' : [\"draft\"].includes(form.values.status) ? 'warning' : [\"refused\"].includes(form.values.status) ? 'danger' : 'neutral' }}"
                     },
-                    "children": [
-                      {
-                        "type": "canvas.heading",
-                        "props": {
-                          "level": 2,
-                          "text": "{{ form.values.employeeName || 'New leave request' }}"
-                        }
-                      },
-                      {
-                        "type": "canvas.dashboard.badge",
-                        "props": {
-                          "text": "{{ String(form.values.status || '').split('-').join(' ') }}",
-                          "tone": "{{ [\"approved\"].includes(form.values.status) ? 'success' : [\"draft\"].includes(form.values.status) ? 'warning' : [\"refused\"].includes(form.values.status) ? 'danger' : 'neutral' }}"
-                        },
-                        "rules": {
-                          "visible": "!!form.values.status"
-                        }
-                      },
-                      {
-                        "type": "canvas.dashboard.badge",
-                        "props": {
-                          "text": "Archived",
-                          "tone": "warning",
-                          "icon": "archive"
-                        },
-                        "rules": {
-                          "visible": "form.values.state === 'archived'"
-                        }
-                      }
-                    ]
+                    "rules": {
+                      "visible": "!!form.values.status"
+                    }
                   },
                   {
-                    "type": "canvas.text",
+                    "type": "canvas.dashboard.badge",
                     "props": {
-                      "text": "Leave request {{ form.values.code || '' }} · {{ ctx.file.path }}",
-                      "tone": "muted"
+                      "text": "Archived",
+                      "tone": "warning",
+                      "icon": "archive"
+                    },
+                    "rules": {
+                      "visible": "form.values.state === 'archived'"
                     }
                   }
                 ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Submit",
+                  "icon": "send",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "submit"
+                },
+                "rules": {
+                  "visible": "(!form.values.status || form.values.status === 'draft') && !(form.values.state === 'archived')",
+                  "disabled": "form.saving || form.dirty || form.invalid"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Approve",
+                  "icon": "check",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "approve"
+                },
+                "rules": {
+                  "visible": "form.values.status === 'submitted'",
+                  "disabled": "form.saving || form.dirty"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Refuse",
+                  "variant": "outline",
+                  "icon": "x",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "refuse"
+                },
+                "rules": {
+                  "visible": "form.values.status === 'submitted'",
+                  "disabled": "form.saving || form.dirty"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Copy name",
+                  "variant": "ghost",
+                  "icon": "copy",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "copy-employee"
+                },
+                "rules": {
+                  "visible": "(!form.values.status || form.values.status === 'draft') && !!form.values.employeeRef",
+                  "disabled": "form.saving || form.values.state === 'archived'"
+                },
+                "slot": "actions"
               },
               {
                 "type": "canvas.stack",
@@ -209,170 +279,92 @@
                   {
                     "type": "canvas.button",
                     "props": {
-                      "label": "Submit",
-                      "icon": "send",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": "submit"
-                    },
-                    "rules": {
-                      "visible": "(!form.values.status || form.values.status === 'draft') && !(form.values.state === 'archived')",
-                      "disabled": "form.saving || form.dirty || form.invalid"
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Approve",
-                      "icon": "check",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": "approve"
-                    },
-                    "rules": {
-                      "visible": "form.values.status === 'submitted'",
-                      "disabled": "form.saving || form.dirty"
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Refuse",
-                      "variant": "outline",
-                      "icon": "x",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": "refuse"
-                    },
-                    "rules": {
-                      "visible": "form.values.status === 'submitted'",
-                      "disabled": "form.saving || form.dirty"
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Copy name",
+                      "label": "Archive",
                       "variant": "ghost",
-                      "icon": "copy",
+                      "icon": "archive",
                       "size": "sm"
                     },
                     "on": {
-                      "click": "copy-employee"
+                      "click": "archive"
                     },
                     "rules": {
-                      "visible": "(!form.values.status || form.values.status === 'draft') && !!form.values.employeeRef",
-                      "disabled": "form.saving || form.values.state === 'archived'"
+                      "visible": "!(form.values.state === 'archived') && !(!(!form.values.status || form.values.status === 'draft'))",
+                      "disabled": "form.saving || form.dirty"
                     }
                   },
                   {
-                    "type": "canvas.stack",
-                    "layout": {
-                      "base": {
-                        "direction": "row",
-                        "wrap": true,
-                        "gap": 2,
-                        "align": "center"
-                      }
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Restore",
+                      "variant": "outline",
+                      "icon": "archive-restore",
+                      "size": "sm"
                     },
-                    "children": [
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Archive",
-                          "variant": "ghost",
-                          "icon": "archive",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "archive"
-                        },
-                        "rules": {
-                          "visible": "!(form.values.state === 'archived') && !(!(!form.values.status || form.values.status === 'draft'))",
-                          "disabled": "form.saving || form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Restore",
-                          "variant": "outline",
-                          "icon": "archive-restore",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "restore"
-                        },
-                        "rules": {
-                          "visible": "form.values.state === 'archived'",
-                          "disabled": "form.saving || form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Reset",
-                          "variant": "ghost",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "reset"
-                        },
-                        "rules": {
-                          "disabled": "form.saving || !form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Save",
-                          "icon": "save",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "save"
-                        },
-                        "rules": {
-                          "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft'))"
-                        }
-                      }
-                    ]
+                    "on": {
+                      "click": "restore"
+                    },
+                    "rules": {
+                      "visible": "form.values.state === 'archived'",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Reset",
+                      "variant": "ghost",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "reset"
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Save",
+                      "icon": "save",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "save"
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft'))"
+                    }
                   }
-                ]
+                ],
+                "slot": "actions"
               }
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "{{ data.$record.error }}"
-            },
-            "rules": {
-              "visible": "data.$record.status === 'error'"
+              "for": "record",
+              "compact": true
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.alert",
             "props": {
-              "text": "Loading…",
-              "tone": "muted"
-            },
-            "rules": {
-              "visible": "data.$record.status === 'loading'"
-            }
-          },
-          {
-            "type": "canvas.dashboard.badge",
-            "props": {
-              "text": "This leave request is archived. Restore it to edit.",
               "tone": "warning",
-              "icon": "archive"
+              "title": "This leave request is archived",
+              "text": "Restore it to edit.",
+              "icon": "archive",
+              "action": {
+                "label": "Restore",
+                "id": "restore"
+              }
             },
             "rules": {
               "visible": "form.values.state === 'archived'"
+            },
+            "on": {
+              "action": "restore"
             }
           },
           {
@@ -383,6 +375,27 @@
             },
             "rules": {
               "visible": "form.values.status === 'refused'"
+            }
+          },
+          {
+            "type": "canvas.alert",
+            "rules": {
+              "visible": "(data.clashes || []).length > 0 && form.values.status !== 'refused' && form.values.status !== 'cancelled'"
+            },
+            "props": {
+              "tone": "warning",
+              "title": "Others are off on these dates",
+              "text": "{{ (data.clashes || []).map(c => c.name + ' (' + c.from + (c.to !== c.from ? ' to ' + c.to : '') + (c.status === 'submitted' ? ', waiting' : '') + ')').join(', ') }}"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "{{ data.taken }} of {{ data.allocated }} days of this leave type taken this year; {{ data.allocated - data.taken }} left before this request.",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "!!form.values.type && !!form.values.employeeName && data.allocated > 0"
             }
           },
           {
@@ -478,7 +491,8 @@
                           "label": "Employee record",
                           "value": "{{ form.values.employeeRef }}",
                           "description": "Optional. Choose an Employees record, then Copy name.",
-                          "options": "{{ data.employeeoptions }}"
+                          "options": "{{ data.employeeoptions }}",
+                          "searchable": true
                         },
                         "rules": {
                           "disabled": "(form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft')))"
@@ -512,7 +526,8 @@
                           "label": "Leave type",
                           "value": "{{ form.values.type }}",
                           "required": true,
-                          "options": "{{ data.typeoptions }}"
+                          "options": "{{ data.typeoptions }}",
+                          "searchable": true
                         },
                         "rules": {
                           "disabled": "(form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft')))"

@@ -34,126 +34,71 @@
       "rows": {
         "kind": "computed",
         "expr": "(data.requests || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, equipmentPath: e.data.equipment || '', equipment: ((((data.equipment || []).find(q => q.kind === 'file' && q.data && q.path === e.data.equipment) || {}).data || {}).name) || '', type: e.data.type || '', priority: e.data.priority || '', stage: e.data.stage || 'new', scheduledDate: e.data.scheduledDate || '', durationHours: e.data.durationHours || '' }))"
+      },
+      "listmaintenancerequests": {
+        "kind": "folder",
+        "path": "/maintenance-requests",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.maintenance.request+json"
+      },
+      "listequipment": {
+        "kind": "folder",
+        "path": "/equipment",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.maintenance.equipment+json"
       }
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Maintenance",
+          "icon": "wrench",
+          "active": "home.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "requests.page.yaml",
+              "label": "Requests",
+              "icon": "kanban",
+              "count": "{{ (data.rows || []).filter(r => !['done', 'cancelled'].includes(r.stage)).length }}"
+            },
+            {
+              "id": "equipment.page.yaml",
+              "label": "Equipment",
+              "icon": "wrench"
+            },
+            {
+              "id": "preventive.page.yaml",
+              "label": "Calendar",
+              "icon": "calendar"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/maintenance/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Maintenance",
+              "note": "Equipment and maintenance requests are files in your workspace. Draft a request in /maintenance-requests, then start, complete or scrap it from its form."
             },
-            "children": [
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Maintenance"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Equipment and maintenance requests are files in your workspace. Draft a request in /maintenance-requests, then start, complete or scrap it from its form.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "direction": "row",
-                    "wrap": true,
-                    "gap": 2,
-                    "align": "center"
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Maintenance requests",
-                      "variant": "outline",
-                      "icon": "hammer",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/maintenance/canvas/requests.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Equipment",
-                      "variant": "outline",
-                      "icon": "wrench",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/maintenance/canvas/equipment.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Preventive plan",
-                      "variant": "outline",
-                      "icon": "calendar-clock",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/maintenance/canvas/preventive.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ]
-              }
-            ]
+            "children": []
           },
           {
             "type": "canvas.grid",
@@ -206,21 +151,19 @@
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /equipment folder could not be read. Reinstall Maintenance to recreate it."
-            },
-            "rules": {
-              "visible": "data.$equipment.status === 'error'"
+              "for": "equipment",
+              "compact": true,
+              "description": "The /equipment folder could not be read. Reinstall Maintenance to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /maintenance-requests folder could not be read. Reinstall Maintenance to recreate it."
-            },
-            "rules": {
-              "visible": "data.$requests.status === 'error'"
+              "for": "requests",
+              "compact": true,
+              "description": "The /maintenance-requests folder could not be read. Reinstall Maintenance to recreate it."
             }
           },
           {
@@ -280,17 +223,19 @@
                     ]
                   },
                   {
-                    "type": "canvas.files",
+                    "type": "canvas.empty-state",
                     "props": {
-                      "path": "/maintenance-requests/",
-                      "mimeTypes": [
-                        "application/vnd.verentis.maintenance.request+json"
-                      ],
-                      "showFolders": false,
-                      "navigable": false,
+                      "for": "listmaintenancerequests",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listmaintenancerequests || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
                       "columns": [
                         {
-                          "key": "name",
+                          "key": "data.code",
                           "label": "Request"
                         },
                         {
@@ -299,18 +244,44 @@
                         },
                         {
                           "key": "data.priority",
-                          "label": "Priority"
+                          "label": "Priority",
+                          "format": "badge"
                         },
                         {
                           "key": "data.stage",
-                          "label": "Stage"
+                          "label": "Stage",
+                          "format": "badge"
                         },
                         {
                           "key": "data.scheduledDate",
-                          "label": "Scheduled"
+                          "label": "Scheduled",
+                          "format": "date"
                         }
                       ],
+                      "facets": [
+                        "data.stage"
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
                       "emptyText": "No requests yet. Use New in /maintenance-requests."
+                    },
+                    "rules": {
+                      "visible": "data.$listmaintenancerequests.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
                     }
                   }
                 ],
@@ -356,17 +327,19 @@
                     ]
                   },
                   {
-                    "type": "canvas.files",
+                    "type": "canvas.empty-state",
                     "props": {
-                      "path": "/equipment/",
-                      "mimeTypes": [
-                        "application/vnd.verentis.maintenance.equipment+json"
-                      ],
-                      "showFolders": false,
-                      "navigable": false,
+                      "for": "listequipment",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listequipment || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
                       "columns": [
                         {
-                          "key": "name",
+                          "key": "data.code",
                           "label": "Code"
                         },
                         {
@@ -383,10 +356,34 @@
                         },
                         {
                           "key": "data.status",
-                          "label": "Status"
+                          "label": "Status",
+                          "format": "badge"
                         }
                       ],
+                      "facets": [
+                        "data.status"
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
                       "emptyText": "No equipment yet. Use New in /equipment."
+                    },
+                    "rules": {
+                      "visible": "data.$listequipment.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
                     }
                   }
                 ],

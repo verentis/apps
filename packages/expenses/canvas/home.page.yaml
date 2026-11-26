@@ -34,127 +34,79 @@
       "rows": {
         "kind": "computed",
         "expr": "(data.reports || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, employee: e.data.employeeName || '', date: e.data.date || '', lineCount: (e.data.lines || []).length, total: e.data.total ? Math.round(Number(e.data.total || 0) * 10000) : (e.data.lines || []).reduce((s, l) => s + Math.round(Number(l.amount || 0) * 10000), 0), status: e.data.status || 'draft', approver: e.data.approver || '' }))"
+      },
+      "listexpensereports": {
+        "kind": "folder",
+        "path": "/expense-reports",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.expenses.report+json"
+      },
+      "listexpensecategories": {
+        "kind": "folder",
+        "path": "/expense-categories",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.expenses.category+json"
       }
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Expenses",
+          "icon": "receipt",
+          "active": "home.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "My reports",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "reports.page.yaml",
+              "label": "All reports",
+              "icon": "kanban",
+              "count": "{{ (data.rows || []).filter(r => r.status === 'submitted').length }}"
+            },
+            {
+              "id": "by-category.page.yaml",
+              "label": "Categories",
+              "icon": "tags"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/expenses/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/expenses.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Expenses",
+              "note": "Expense categories and employee expense reports are files in your workspace. Draft reports in their folder, then submit, approve and post them from their forms to the Accounting ledger."
             },
-            "children": [
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Expenses"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Expense categories and employee expense reports are files in your workspace. Draft reports in their folder, then submit, approve and post them from their forms to the Accounting ledger.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "direction": "row",
-                    "wrap": true,
-                    "gap": 2,
-                    "align": "center"
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Reports",
-                      "variant": "outline",
-                      "icon": "receipt",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/expenses/canvas/reports.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "By category",
-                      "variant": "outline",
-                      "icon": "tags",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/expenses/canvas/by-category.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Settings",
-                      "variant": "ghost",
-                      "icon": "settings",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/settings/expenses.json",
-                            "mode": "edit"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ]
-              }
-            ]
+            "children": []
           },
           {
             "type": "canvas.grid",
@@ -207,21 +159,19 @@
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /expense-categories folder could not be read. Reinstall Expenses to recreate it."
-            },
-            "rules": {
-              "visible": "data.$categories.status === 'error'"
+              "for": "categories",
+              "compact": true,
+              "description": "The /expense-categories folder could not be read. Reinstall Expenses to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /expense-reports folder could not be read. Reinstall Expenses to recreate it."
-            },
-            "rules": {
-              "visible": "data.$reports.status === 'error'"
+              "for": "reports",
+              "compact": true,
+              "description": "The /expense-reports folder could not be read. Reinstall Expenses to recreate it."
             }
           },
           {
@@ -281,17 +231,19 @@
                     ]
                   },
                   {
-                    "type": "canvas.files",
+                    "type": "canvas.empty-state",
                     "props": {
-                      "path": "/expense-reports/",
-                      "mimeTypes": [
-                        "application/vnd.verentis.expenses.report+json"
-                      ],
-                      "showFolders": false,
-                      "navigable": false,
+                      "for": "listexpensereports",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listexpensereports || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
                       "columns": [
                         {
-                          "key": "name",
+                          "key": "data.code",
                           "label": "Number"
                         },
                         {
@@ -300,19 +252,43 @@
                         },
                         {
                           "key": "data.date",
-                          "label": "Date"
+                          "label": "Date",
+                          "format": "date"
                         },
                         {
                           "key": "data.total",
-                          "label": "Total",
-                          "align": "end"
+                          "label": "Total"
                         },
                         {
                           "key": "data.status",
-                          "label": "Status"
+                          "label": "Status",
+                          "format": "badge"
                         }
                       ],
+                      "facets": [
+                        "data.status"
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
                       "emptyText": "No expense reports yet. Use New in /expense-reports."
+                    },
+                    "rules": {
+                      "visible": "data.$listexpensereports.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
                     }
                   }
                 ],
@@ -358,17 +334,19 @@
                     ]
                   },
                   {
-                    "type": "canvas.files",
+                    "type": "canvas.empty-state",
                     "props": {
-                      "path": "/expense-categories/",
-                      "mimeTypes": [
-                        "application/vnd.verentis.expenses.category+json"
-                      ],
-                      "showFolders": false,
-                      "navigable": false,
+                      "for": "listexpensecategories",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listexpensecategories || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
                       "columns": [
                         {
-                          "key": "name",
+                          "key": "data.code",
                           "label": "Number"
                         },
                         {
@@ -380,7 +358,27 @@
                           "label": "Expense account"
                         }
                       ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
                       "emptyText": "No expense categories yet. Use New in /expense-categories."
+                    },
+                    "rules": {
+                      "visible": "data.$listexpensecategories.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
                     }
                   }
                 ],

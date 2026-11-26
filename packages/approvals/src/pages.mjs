@@ -2,10 +2,11 @@
 // the requests list, the to-decide list and the per-type summary. Submitting, approving, refusing and cancelling
 // (required fields, thresholds, immutability) are done by the decision script the request form runs; the forms
 // only lock what the script has moved beyond draft.
+import { views } from './views.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   humanize, iconName, options, openFile, page, panel, projectRegistration, recordButtons, row, scriptAction,
-  stat, stats, status, table, tabs, text, toneExpression,
+  stat, stats, status, table, tabs, text, toneExpression, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { containers, installRoot, mimeTypes, recordKinds, schemaId, settingsPath } from './contracts.mjs'
 import { entities, postScriptPath, settingsSections } from './app.mjs'
@@ -34,7 +35,11 @@ const sectionCards = (sections, readOnly) =>
 
 // The request's own type record, joined inline from the types folder source.
 const ownType = "(((data.types || []).find(e => e.path === form.values.type) || {}).data || {})"
-const approveCount = values => `new Set((${values}.approvals || []).filter(a => a.decision === 'approve').map(a => a.approver)).size`
+// Distinct approvers who approved. Canvas expressions have no `new`, so duplicates are dropped by first index.
+const approveCount = values => `(${values}.approvals || []).filter(a => a.decision === 'approve').map(a => a.approver).filter((name, index, all) => all.indexOf(name) === index).length`
+
+/** True when the platform shared the user's roles and none of them grants `approve`. */
+const mayNotDecide = "(!!ctx.user && Array.isArray(ctx.user.roles) && !ctx.can('approve'))"
 
 /** Kind-specific data, access, actions, header buttons and notices of a record form. */
 function recordExtras(kind) {
@@ -46,11 +51,28 @@ function recordExtras(kind) {
     access: [{ path: containers.types.path, reason: 'Offer the approval types and show each request\'s threshold' }],
     data: typeSources,
     state: { approver: '', comment: '' },
+    // Who may decide: a workspace role granted `approve` (role keys or names, as the platform shares them). When the
+    // platform shares no roles (the app was installed without the profile consent), anyone may decide, as before.
+    roles: { approve: ['system:owner', 'system:admin', 'Owner', 'Admin', 'Approver', 'Approvers'] },
     notices: [
       text(`Approvals {{ ${approveCount('form.values')} }} of {{ ${ownType}.requiredApprovers || '?' }} required`, 'muted'),
       { ...text('Decided {{ form.values.decidedAt }}', 'muted'), rules: { visible: '!!form.values.decidedAt' } },
+      // The decision trail: when it was asked, each approver's decision with their comment, and the outcome.
+      card('Decision trail', [{
+        type: 'canvas.timeline',
+        props: {
+          emptyText: 'Not submitted yet',
+          sources: [
+            { type: 'submitted', label: 'Submitted', icon: 'send', date: 'at', title: 'title', subtitle: 'by', rows: { $expr: "form.values.submittedAt ? [{ at: form.values.submittedAt, title: 'Submitted for approval', by: form.values.requester || '' }] : []" } },
+            { type: 'decision', label: 'Decisions', icon: 'user-check', date: 'date', title: 'title', subtitle: 'comment',
+              badge: { key: 'decision', labels: { approve: 'Approved', refuse: 'Refused' }, tones: { approve: 'success', refuse: 'danger' } },
+              rows: { $expr: "(form.values.approvals || []).map(a => ({ date: a.date, title: a.approver || 'Unknown approver', comment: a.comment || '', decision: a.decision }))" } },
+            { type: 'outcome', label: 'Outcome', icon: 'flag', date: 'at', title: 'title', rows: { $expr: "form.values.decidedAt ? [{ at: form.values.decidedAt, title: form.values.status === 'approved' ? 'Approved' : form.values.status === 'refused' ? 'Refused' : 'Decided' }] : form.values.cancelledAt ? [{ at: form.values.cancelledAt, title: 'Cancelled' }] : []" } },
+          ],
+        },
+      }]),
       grid([
-        { type: 'canvas.form.input', props: { label: 'Approver', placeholder: 'Who decides?', value: '{{ state.approver }}' }, rules: visibleWhenSubmitted },
+        { type: 'canvas.form.input', props: { label: 'Approver', placeholder: "{{ (ctx.user && ctx.user.name) || 'Who decides?' }}", value: '{{ state.approver }}' }, rules: visibleWhenSubmitted },
         { type: 'canvas.form.input', props: { label: 'Comment', placeholder: 'Required when refusing', value: '{{ state.comment }}' }, rules: visibleWhenSubmitted },
       ]),
       table("{{ (form.values.approvals || []).map(a => ({ approver: a.approver, decision: a.decision, date: a.date, comment: a.comment })) }}",
@@ -58,8 +80,8 @@ function recordExtras(kind) {
     ],
     buttons: [
       button('Submit', 'submit', { visible: `${draft} && !(${archived})`, disabled: `${idle} || form.invalid` }, undefined, 'send'),
-      button('Approve', 'approve', { visible: submitted, disabled: idle }, undefined, 'check'),
-      button('Refuse', 'refuse', { visible: submitted, disabled: idle }, 'outline', 'x'),
+      button('Approve', 'approve', { visible: submitted, disabled: `${idle} || ${mayNotDecide}` }, undefined, 'check'),
+      button('Refuse', 'refuse', { visible: submitted, disabled: `${idle} || ${mayNotDecide}` }, 'outline', 'x'),
       button('Cancel request', 'cancel', { visible: `${cancellable} && !(${archived})`, disabled: idle }, 'ghost', 'ban'),
     ],
     actions: {
@@ -68,11 +90,11 @@ function recordExtras(kind) {
       }),
       approve: scriptAction(postScriptPath, 'approve', {
         confirm: { title: 'Approve request', message: 'Record your approval? When enough distinct approvers have approved, the request is approved and locked.' },
-        parameters: { approver: '{{ state.approver }}', comment: '{{ state.comment }}' },
+        parameters: { approver: "{{ state.approver || (ctx.user && ctx.user.name) || '' }}", comment: '{{ state.comment }}' },
       }),
       refuse: scriptAction(postScriptPath, 'refuse', {
         confirm: { title: 'Refuse request', message: 'Refuse this request? One refusal decides it. Give the reason in the Comment field.' },
-        parameters: { approver: '{{ state.approver }}', comment: '{{ state.comment }}' },
+        parameters: { approver: "{{ state.approver || (ctx.user && ctx.user.name) || '' }}", comment: '{{ state.comment }}' },
       }),
       cancel: scriptAction(postScriptPath, 'cancel', {
         confirm: { title: 'Cancel request', message: 'Cancel this request? Only the requester should cancel; cancelled requests stay in the workspace.' },
@@ -86,21 +108,19 @@ function recordForm(kind) {
   const entity = entities[kind]
   const extras = recordExtras(kind)
   const readOnly = `${archived} || (${extras.locked})`
-  const header = row([
-    column([
-      row([
-        heading(`{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`),
+  const header = recordHeader(
+    `{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`,
+    [
         badge(humanize(entity.status), toneExpression(entity.status, statusTones), { visible: `!!form.values.${entity.status}` }),
         badge('Archived', 'warning', { visible: archived }, 'archive'),
-      ]),
-      text(`${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`, 'muted'),
-    ]),
-    row([...extras.buttons, recordButtons(extras.locked)]),
-  ], 'between')
+    ],
+    `${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`,
+    [...extras.buttons, recordButtons(extras.locked)],
+  )
   const tree = [
     header,
-    ...status('record'),
-    badge(`This ${entity.singular.toLowerCase()} is archived. Restore it to edit.`, 'warning', { visible: archived }, 'archive'),
+    ...status('record'), ...lifecycle(entity),
+    archivedAlert(entity.singular),
     ...extras.notices,
     grid(sectionCards(entity.sections, readOnly)),
   ]
@@ -111,7 +131,7 @@ function recordForm(kind) {
       description: `View and edit an Approvals ${entity.singular.toLowerCase()}.`, icon: iconName(entity.icon),
       mime: mimeTypes[kind], schemaId: schemaId(kind), schemaSource: `${installRoot}/schemas/${kind}.schema.json`,
       access: [...extras.access, schemaAccess],
-      data: extras.data, state: extras.state, tree,
+      data: extras.data, state: extras.state, roles: extras.roles, tree,
       actions: { ...baseActions, ...extras.actions },
     }),
   }
@@ -126,13 +146,13 @@ function settingsForm() {
       access: [schemaAccess],
       data: {},
       tree: [
-        row([
-          column([heading('Approvals settings'), text('New requests are prefilled with the default requester. Number prefixes are app settings, managed with the installed app.', 'muted')]),
+        pageHeader(
+          [heading('Approvals settings'), text('New requests are prefilled with the default requester. Number prefixes are app settings, managed with the installed app.', 'muted')], [
           row([
             button('Reset', [{ 'reset-form': {} }], { disabled: 'form.saving || !form.dirty' }, 'ghost'),
             button('Save', [{ save: {} }, { toast: { message: 'Saved', variant: 'success' } }], { disabled: 'form.saving || !form.dirty || form.invalid' }, undefined, 'save'),
           ]),
-        ], 'between'),
+        ]),
         ...status('record'),
         grid(settingsSections.map(section => card(section.title, [grid(section.fields.map(field => formControl(field, null)))], section.description)), 1),
       ],
@@ -169,15 +189,15 @@ function homePage() {
         access: containerAccess('List approval requests and types'),
         data: requestSources,
         tree: page([
-          row([
-            column([heading('Approvals'), text('Approval types and requests are files in your workspace. Draft a request in its folder, then submit it; approvers decide from its form until the type\'s threshold approves it, one refusal refuses it.', 'muted')]),
+          pageHeader(
+            [heading('Approvals'), text('Approval types and requests are files in your workspace. Draft a request in its folder, then submit it; approvers decide from its form until the type\'s threshold approves it, one refusal refuses it.', 'muted')], [
             row([
               button('Requests', [openFile(`${installRoot}/canvas/requests.page.yaml`)], undefined, 'outline', 'file-check'),
               button('To decide', [openFile(`${installRoot}/canvas/pending.page.yaml`)], undefined, 'outline', 'hourglass'),
               button('By type', [openFile(`${installRoot}/canvas/by-type.page.yaml`)], undefined, 'outline', 'list-checks'),
               button('Settings', [openFile(settingsPath, 'edit')], undefined, 'ghost', 'settings'),
             ]),
-          ], 'between'),
+          ]),
           stats([
             stat('Draft requests', count('requests', "(e.data.status || 'draft') === 'draft'"), 'file-pen', loading('requests')),
             stat('Awaiting decision', count('requests', "e.data.status === 'submitted'"), 'hourglass', loading('requests')),
@@ -213,10 +233,10 @@ function requestsPage() {
         data: requestSources,
         state: { showall: false },
         tree: page([
-          row([
-            column([heading('Approval requests'), text('Open requests by status; decided and cancelled ones sit behind the switch.', 'muted')]),
+          pageHeader(
+            [heading('Approval requests'), text('Open requests by status; decided and cancelled ones sit behind the switch.', 'muted')], [
             button('Approvals', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'file-check'),
-          ], 'between'),
+          ]),
           status('requests')[0],
           stats([
             stat('Draft', count('requests', "(e.data.status || 'draft') === 'draft'"), 'file-pen', loading('requests')),
@@ -245,10 +265,10 @@ function pendingPage() {
         data: requestSources,
         state: { me: '' },
         tree: page([
-          row([
-            column([heading('To decide'), text('Submitted requests awaiting approval. Give your name to hide the ones you already decided.', 'muted')]),
+          pageHeader(
+            [heading('To decide'), text('Submitted requests awaiting approval. Give your name to hide the ones you already decided.', 'muted')], [
             button('Approvals', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'file-check'),
-          ], 'between'),
+          ]),
           status('requests')[0],
           { type: 'canvas.form.input', props: { label: 'Your name', placeholder: 'Hide requests you already decided', value: '{{ state.me }}' } },
           table(rows, [['code', 'Request'], ['title', 'Title'], ['requester', 'Requester'], ['typeName', 'Type'], ['amount', 'Amount', 'end'],
@@ -273,10 +293,10 @@ function byTypePage() {
         data: { ...requestSources, summary: { kind: 'computed', expr: summary } },
         state: { showempty: false },
         tree: page([
-          row([
-            column([heading('Approvals by type'), text('Every approval type with its threshold and its requests, counted by status.', 'muted')]),
+          pageHeader(
+            [heading('Approvals by type'), text('Every approval type with its threshold and its requests, counted by status.', 'muted')], [
             button('Approvals', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'file-check'),
-          ], 'between'),
+          ]),
           ...['requests', 'types'].map(name => status(name)[0]),
           stats([
             stat('Approval types', count('types'), 'list-checks', loading('types')),
@@ -294,5 +314,5 @@ function byTypePage() {
 
 export function buildPages() {
   const documents = [homePage(), requestsPage(), pendingPage(), byTypePage(), ...recordKinds.map(recordForm), settingsForm()]
-  return Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)]))
+  return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

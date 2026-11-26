@@ -1,0 +1,10 @@
+# Expenses' API contract: it offers no operations yet; Accounting posts its journals through Accounting's API.
+api-version: verentis.io/v1
+kind: Api
+metadata:
+  id: expenses
+spec:
+  uses:
+    - app: accounting
+      operation: post-journal
+      reason: Post approved expense reports to the ledger

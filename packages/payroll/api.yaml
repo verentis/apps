@@ -1,0 +1,10 @@
+# Payroll's API contract: it offers no operations yet; Accounting posts its journals through Accounting's API.
+api-version: verentis.io/v1
+kind: Api
+metadata:
+  id: payroll
+spec:
+  uses:
+    - app: accounting
+      operation: post-journal
+      reason: Post approved pay runs to the ledger

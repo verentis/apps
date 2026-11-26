@@ -103,74 +103,67 @@
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.validation-summary",
+            "props": {
+              "title": "Fix these before saving"
+            }
+          },
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "{{ form.values.respondentName || 'New response' }}",
+              "note": "Response {{ form.values.code || '' }}"
             },
             "children": [
               {
                 "type": "canvas.stack",
                 "layout": {
                   "base": {
-                    "gap": 1
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
                   }
                 },
                 "children": [
                   {
-                    "type": "canvas.stack",
-                    "layout": {
-                      "base": {
-                        "direction": "row",
-                        "wrap": true,
-                        "gap": 2,
-                        "align": "center"
-                      }
+                    "type": "canvas.dashboard.badge",
+                    "props": {
+                      "text": "{{ String(form.values.status || '').split('-').join(' ') }}",
+                      "tone": "{{ [\"submitted\"].includes(form.values.status) ? 'success' : 'neutral' }}"
                     },
-                    "children": [
-                      {
-                        "type": "canvas.heading",
-                        "props": {
-                          "level": 2,
-                          "text": "{{ form.values.respondentName || 'New response' }}"
-                        }
-                      },
-                      {
-                        "type": "canvas.dashboard.badge",
-                        "props": {
-                          "text": "{{ String(form.values.status || '').split('-').join(' ') }}",
-                          "tone": "{{ [\"submitted\"].includes(form.values.status) ? 'success' : 'neutral' }}"
-                        },
-                        "rules": {
-                          "visible": "!!form.values.status"
-                        }
-                      },
-                      {
-                        "type": "canvas.dashboard.badge",
-                        "props": {
-                          "text": "Archived",
-                          "tone": "warning",
-                          "icon": "archive"
-                        },
-                        "rules": {
-                          "visible": "form.values.state === 'archived'"
-                        }
-                      }
-                    ]
+                    "rules": {
+                      "visible": "!!form.values.status"
+                    }
                   },
                   {
-                    "type": "canvas.text",
+                    "type": "canvas.dashboard.badge",
                     "props": {
-                      "text": "Response {{ form.values.code || '' }} · {{ ctx.file.path }}",
-                      "tone": "muted"
+                      "text": "Archived",
+                      "tone": "warning",
+                      "icon": "archive"
+                    },
+                    "rules": {
+                      "visible": "form.values.state === 'archived'"
                     }
                   }
                 ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Submit",
+                  "icon": "send",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "submit"
+                },
+                "rules": {
+                  "visible": "form.values.status === 'draft' && !(form.values.state === 'archived')",
+                  "disabled": "form.saving || form.dirty || !form.values.survey"
+                },
+                "slot": "actions"
               },
               {
                 "type": "canvas.stack",
@@ -186,123 +179,111 @@
                   {
                     "type": "canvas.button",
                     "props": {
-                      "label": "Submit",
-                      "icon": "send",
+                      "label": "Archive",
+                      "variant": "ghost",
+                      "icon": "archive",
                       "size": "sm"
                     },
                     "on": {
-                      "click": "submit"
+                      "click": "archive"
                     },
                     "rules": {
-                      "visible": "form.values.status === 'draft' && !(form.values.state === 'archived')",
-                      "disabled": "form.saving || form.dirty || !form.values.survey"
+                      "visible": "!(form.values.state === 'archived') && !(form.values.status === 'submitted')",
+                      "disabled": "form.saving || form.dirty"
                     }
                   },
                   {
-                    "type": "canvas.stack",
-                    "layout": {
-                      "base": {
-                        "direction": "row",
-                        "wrap": true,
-                        "gap": 2,
-                        "align": "center"
-                      }
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Restore",
+                      "variant": "outline",
+                      "icon": "archive-restore",
+                      "size": "sm"
                     },
-                    "children": [
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Archive",
-                          "variant": "ghost",
-                          "icon": "archive",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "archive"
-                        },
-                        "rules": {
-                          "visible": "!(form.values.state === 'archived') && !(form.values.status === 'submitted')",
-                          "disabled": "form.saving || form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Restore",
-                          "variant": "outline",
-                          "icon": "archive-restore",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "restore"
-                        },
-                        "rules": {
-                          "visible": "form.values.state === 'archived'",
-                          "disabled": "form.saving || form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Reset",
-                          "variant": "ghost",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "reset"
-                        },
-                        "rules": {
-                          "disabled": "form.saving || !form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Save",
-                          "icon": "save",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "save"
-                        },
-                        "rules": {
-                          "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (form.values.status === 'submitted')"
-                        }
-                      }
-                    ]
+                    "on": {
+                      "click": "restore"
+                    },
+                    "rules": {
+                      "visible": "form.values.state === 'archived'",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Reset",
+                      "variant": "ghost",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "reset"
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Save",
+                      "icon": "save",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "save"
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (form.values.status === 'submitted')"
+                    }
                   }
-                ]
+                ],
+                "slot": "actions"
               }
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "{{ data.$record.error }}"
-            },
-            "rules": {
-              "visible": "data.$record.status === 'error'"
+              "for": "record",
+              "compact": true
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.status-steps",
             "props": {
-              "text": "Loading…",
-              "tone": "muted"
+              "value": "{{ form.values.status }}",
+              "steps": [
+                {
+                  "value": "draft",
+                  "label": "Draft"
+                },
+                {
+                  "value": "submitted",
+                  "label": "Submitted"
+                }
+              ]
             },
             "rules": {
-              "visible": "data.$record.status === 'loading'"
+              "visible": "!!form.values.status"
             }
           },
           {
-            "type": "canvas.dashboard.badge",
+            "type": "canvas.alert",
             "props": {
-              "text": "This response is archived. Restore it to edit.",
               "tone": "warning",
-              "icon": "archive"
+              "title": "This response is archived",
+              "text": "Restore it to edit.",
+              "icon": "archive",
+              "action": {
+                "label": "Restore",
+                "id": "restore"
+              }
             },
             "rules": {
               "visible": "form.values.state === 'archived'"
+            },
+            "on": {
+              "action": "restore"
             }
           },
           {
@@ -313,6 +294,40 @@
             },
             "rules": {
               "visible": "form.values.status === 'submitted'"
+            }
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Answer the survey",
+              "description": "Answer here, or edit the rows below."
+            },
+            "children": [
+              {
+                "type": "canvas.form.dynamic",
+                "props": {
+                  "value": "{{ (form.values.answers || []).reduce((all, a) => withPath(all, 'q' + a.sequence, a.values && a.values.length ? a.values : a.value), {}) }}",
+                  "fields": {
+                    "$expr": "((((data.surveys || []).find(e => e.path === form.values.survey) || {}).data || {}).questions || []).slice().sort((a, b) => a.sequence - b.sequence).map(q => ({ key: 'q' + q.sequence, label: q.sequence + '. ' + (q.text || 'Untitled question'), required: !!q.required, type: q.kind === 'single-choice' ? 'select' : q.kind === 'multi-choice' ? 'multi' : q.kind === 'rating' ? 'rating' : 'textarea', options: q.choices || [], min: 1, max: 5 }))"
+                  }
+                },
+                "on": {
+                  "update": [
+                    {
+                      "patch-form": {
+                        "values": {
+                          "answers": {
+                            "$expr": "((((data.surveys || []).find(e => e.path === form.values.survey) || {}).data || {}).questions || []).slice().sort((a, b) => a.sequence - b.sequence).map(q => ({ key: 'q' + q.sequence, label: q.sequence + '. ' + (q.text || 'Untitled question'), required: !!q.required, type: q.kind === 'single-choice' ? 'select' : q.kind === 'multi-choice' ? 'multi' : q.kind === 'rating' ? 'rating' : 'textarea', options: q.choices || [], min: 1, max: 5 })).filter(f => event[f.key] !== undefined && event[f.key] !== null && event[f.key] !== '' && !(Array.isArray(event[f.key]) && event[f.key].length === 0)).map(f => ({ sequence: Number(f.key.slice(1)), value: Array.isArray(event[f.key]) ? '' : String(event[f.key]), values: Array.isArray(event[f.key]) ? event[f.key] : [] }))"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ],
+            "rules": {
+              "visible": "!!form.values.survey && !(form.values.status === 'submitted')"
             }
           },
           {
@@ -351,7 +366,8 @@
                           "label": "Survey",
                           "value": "{{ form.values.survey }}",
                           "description": "The survey this response answers.",
-                          "options": "{{ data.surveyoptions }}"
+                          "options": "{{ data.surveyoptions }}",
+                          "searchable": true
                         },
                         "layout": {
                           "tablet": {
@@ -398,7 +414,8 @@
                               "value": "submitted",
                               "label": "Submitted"
                             }
-                          ]
+                          ],
+                          "display": "segmented"
                         },
                         "rules": {
                           "disabled": "(form.values.state === 'archived' || (form.values.status === 'submitted'))"
@@ -439,25 +456,25 @@
                     },
                     "children": [
                       {
-                        "type": "canvas.form.array",
+                        "type": "canvas.form.line-items",
                         "props": {
                           "label": "Answers",
                           "value": "{{ form.values.answers }}",
-                          "fields": [
+                          "columns": [
                             {
                               "key": "sequence",
                               "label": "Question sequence",
-                              "type": "number",
-                              "required": true
+                              "type": "text"
                             },
                             {
                               "key": "value",
-                              "label": "Value"
+                              "label": "Value",
+                              "type": "text"
                             },
                             {
                               "key": "values",
                               "label": "Values",
-                              "type": "text-list"
+                              "type": "text"
                             }
                           ],
                           "defaultRow": {
@@ -465,11 +482,10 @@
                             "value": "",
                             "values": []
                           },
-                          "rowIds": false,
+                          "storeComputed": false,
                           "minimum": 0,
                           "maximum": 100,
-                          "addLabel": "Add answer",
-                          "removeLabel": "Remove row"
+                          "addLabel": "Add answer"
                         },
                         "layout": {
                           "tablet": {

@@ -153,6 +153,12 @@
         },
         "children": [
           {
+            "type": "canvas.validation-summary",
+            "props": {
+              "title": "Fix these before saving"
+            }
+          },
+          {
             "type": "canvas.heading",
             "props": {
               "level": 2,
@@ -166,22 +172,10 @@
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "{{ data.$record.error }}"
-            },
-            "rules": {
-              "visible": "data.$record.status === 'error'"
-            }
-          },
-          {
-            "type": "canvas.text",
-            "props": {
-              "text": "Loading…",
-              "tone": "muted"
-            },
-            "rules": {
-              "visible": "data.$record.status === 'loading'"
+              "for": "record",
+              "compact": true
             }
           },
           {
@@ -260,6 +254,71 @@
           {
             "type": "canvas.card",
             "props": {
+              "title": "Agreement"
+            },
+            "children": [
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "The points as the client will read them, numbered as they stand. Click a point to load it into the editor below.",
+                  "tone": "muted"
+                }
+              },
+              {
+                "type": "canvas.outline",
+                "props": {
+                  "readOnly": true,
+                  "selectable": true,
+                  "selected": "{{ state.pointId }}",
+                  "value": "{{ (form.values.points || []).map(p => ({ id: p.id, level: 0, text: p.origin === 'firm' ? (p.variation || (p.precedent && p.precedent.wording) || '') : (p.wording || '') })) }}",
+                  "variables": "{{ (form.values.points || []).map(p => String(p.bindings || '')).join('\\n').split('\\n').filter(line => line.indexOf('=') > 0).reduce((all, line) => withPath(all, line.slice(0, line.indexOf('=')).trim(), line.slice(line.indexOf('=') + 1).trim()), {}) }}"
+                },
+                "on": {
+                  "select": [
+                    {
+                      "set-state": {
+                        "key": "pointId",
+                        "value": "{{ event.id }}"
+                      }
+                    },
+                    {
+                      "set-state": {
+                        "key": "wording",
+                        "value": "{{ ((form.values.points || []).find(p => p.id === event.id) || {}).origin === 'firm' ? (((form.values.points || []).find(p => p.id === event.id) || {}).variation || '') : (((form.values.points || []).find(p => p.id === event.id) || {}).wording || '') }}"
+                      }
+                    },
+                    {
+                      "set-state": {
+                        "key": "bindings",
+                        "value": "{{ ((form.values.points || []).find(p => p.id === event.id) || {}).bindings || '' }}"
+                      }
+                    },
+                    {
+                      "set-state": {
+                        "key": "note",
+                        "value": "{{ ((form.values.points || []).find(p => p.id === event.id) || {}).note || '' }}"
+                      }
+                    },
+                    {
+                      "set-state": {
+                        "key": "position",
+                        "value": "{{ event.index + 1 }}"
+                      }
+                    },
+                    {
+                      "set-state": {
+                        "key": "result",
+                        "value": {}
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.card",
+            "props": {
               "title": "Points and sources"
             },
             "children": [
@@ -320,6 +379,10 @@
                     }
                   ],
                   "emptyText": "No points yet.",
+                  "search": true,
+                  "sortable": true,
+                  "pageSize": 25,
+                  "narrow": "list",
                   "clickable": true
                 },
                 "on": {
@@ -527,22 +590,11 @@
                 }
               },
               {
-                "type": "canvas.text",
+                "type": "canvas.empty-state",
                 "props": {
-                  "text": "Install a country pack to attach citations; authoring remains available."
-                },
-                "rules": {
-                  "visible": "data.$packs.status === 'error'"
-                }
-              },
-              {
-                "type": "canvas.text",
-                "props": {
-                  "text": "Loading…",
-                  "tone": "muted"
-                },
-                "rules": {
-                  "visible": "data.$packs.status === 'loading'"
+                  "for": "packs",
+                  "compact": true,
+                  "description": "Install a country pack to attach citations; authoring remains available."
                 }
               },
               {

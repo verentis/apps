@@ -24,6 +24,12 @@
       "ecorows": {
         "kind": "computed",
         "expr": "(data.ecos || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, title: e.data.title || '', type: e.data.type || '', priority: e.data.priority || '', effectiveDate: e.data.effectiveDate || '', stage: e.data.stage || 'draft' }))"
+      },
+      "listengineeringchangeorders": {
+        "kind": "folder",
+        "path": "/engineering-change-orders",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.plm.eco+json"
       }
     },
     "state": {
@@ -31,86 +37,187 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "PLM",
+          "icon": "file-cog",
+          "active": "home.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Board",
+              "icon": "kanban"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/plm/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "PLM",
+              "note": "Engineering change orders are files in your workspace. Draft one in its folder, submit it for review, then approve and apply it (or reject it with a reason) from its form."
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
+                "type": "canvas.button",
+                "props": {
+                  "label": "Open /engineering-change-orders",
+                  "variant": "outline",
+                  "icon": "folder-open",
+                  "size": "sm"
                 },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "PLM"
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/engineering-change-orders"
+                      }
                     }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Engineering change orders are files in your workspace. Draft one in its folder, submit it for review, then approve and apply it (or reject it with a reason) from its form.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "direction": "row",
-                    "wrap": true,
-                    "gap": 2,
-                    "align": "center"
-                  }
+                  ]
                 },
-                "children": [
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Open /engineering-change-orders",
-                      "variant": "outline",
-                      "icon": "folder-open",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/engineering-change-orders"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ]
+                "slot": "actions"
               }
             ]
+          },
+          {
+            "type": "canvas.board",
+            "props": {
+              "rows": "{{ data.ecorows || [] }}",
+              "groupBy": "stage",
+              "columns": [
+                {
+                  "value": "draft",
+                  "label": "Draft",
+                  "locked": true
+                },
+                {
+                  "value": "in-review",
+                  "label": "In review"
+                },
+                {
+                  "value": "approved",
+                  "label": "Approved"
+                },
+                {
+                  "value": "applied",
+                  "label": "Applied"
+                },
+                {
+                  "value": "rejected",
+                  "label": "Rejected"
+                }
+              ],
+              "card": {
+                "title": "title",
+                "code": "code",
+                "meta": [
+                  "type",
+                  "effectiveDate"
+                ],
+                "badge": "priority"
+              },
+              "readOnly": false,
+              "rowKey": "path",
+              "emptyText": "Nothing here",
+              "lockedWhen": "[\"applied\"].includes(row.stage)"
+            },
+            "on": {
+              "open": [
+                {
+                  "open-file": {
+                    "path": "{{ event.row.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ],
+              "move": [
+                {
+                  "confirm": {
+                    "if": "event.to === 'applied'",
+                    "title": "Move to Applied?",
+                    "message": "{{ event.row.code }} moves to Applied. The change is applied to the bill of materials.",
+                    "confirm-label": "Move to Applied"
+                  }
+                },
+                {
+                  "run-script": {
+                    "if": "event.to === 'in-review'",
+                    "file": "/applications/plm/scripts/post",
+                    "timeout": 120,
+                    "parameters": {
+                      "operation": "submit-review",
+                      "path": "{{ event.path }}"
+                    },
+                    "assign": "lastmove"
+                  }
+                },
+                {
+                  "run-script": {
+                    "if": "event.to === 'approved'",
+                    "file": "/applications/plm/scripts/post",
+                    "timeout": 120,
+                    "parameters": {
+                      "operation": "approve",
+                      "path": "{{ event.path }}"
+                    },
+                    "assign": "lastmove"
+                  }
+                },
+                {
+                  "run-script": {
+                    "if": "event.to === 'rejected'",
+                    "file": "/applications/plm/scripts/post",
+                    "timeout": 120,
+                    "parameters": {
+                      "operation": "reject",
+                      "path": "{{ event.path }}"
+                    },
+                    "assign": "lastmove"
+                  }
+                },
+                {
+                  "run-script": {
+                    "if": "event.to === 'applied'",
+                    "file": "/applications/plm/scripts/post",
+                    "timeout": 120,
+                    "parameters": {
+                      "operation": "apply",
+                      "path": "{{ event.path }}"
+                    },
+                    "assign": "lastmove"
+                  }
+                },
+                {
+                  "refresh-source": {
+                    "source": "ecos"
+                  }
+                },
+                {
+                  "refresh-source": {
+                    "source": "listengineeringchangeorders"
+                  }
+                },
+                {
+                  "toast": {
+                    "message": "{{ [\"in-review\",\"approved\",\"rejected\",\"applied\"].includes(event.to) ? ((state.lastmove && state.lastmove.message) || 'Done') : 'Moved to ' + ({\"draft\":\"Draft\",\"in-review\":\"In review\",\"approved\":\"Approved\",\"applied\":\"Applied\",\"rejected\":\"Rejected\"}[event.to] || event.to) }}",
+                    "variant": "success"
+                  }
+                }
+              ]
+            }
           },
           {
             "type": "canvas.grid",
@@ -172,22 +279,11 @@
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /engineering-change-orders folder could not be read. Reinstall PLM to recreate it."
-            },
-            "rules": {
-              "visible": "data.$ecos.status === 'error'"
-            }
-          },
-          {
-            "type": "canvas.text",
-            "props": {
-              "text": "Loading…",
-              "tone": "muted"
-            },
-            "rules": {
-              "visible": "data.$ecos.status === 'loading'"
+              "for": "ecos",
+              "compact": true,
+              "description": "The /engineering-change-orders folder could not be read. Reinstall PLM to recreate it."
             }
           },
           {
@@ -228,6 +324,10 @@
                 }
               ],
               "emptyText": "No open engineering change orders. Use New in /engineering-change-orders.",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
               "clickable": true
             },
             "on": {
@@ -235,7 +335,8 @@
                 {
                   "open-file": {
                     "path": "{{ event.path }}",
-                    "mode": "edit"
+                    "mode": "edit",
+                    "open": "side"
                   }
                 }
               ]
@@ -248,17 +349,19 @@
             },
             "children": [
               {
-                "type": "canvas.files",
+                "type": "canvas.empty-state",
                 "props": {
-                  "path": "/engineering-change-orders/",
-                  "mimeTypes": [
-                    "application/vnd.verentis.plm.eco+json"
-                  ],
-                  "showFolders": false,
-                  "navigable": false,
+                  "for": "listengineeringchangeorders",
+                  "compact": true
+                }
+              },
+              {
+                "type": "canvas.table",
+                "props": {
+                  "rows": "{{ (data.listengineeringchangeorders || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
                   "columns": [
                     {
-                      "key": "name",
+                      "key": "data.code",
                       "label": "Code"
                     },
                     {
@@ -267,10 +370,34 @@
                     },
                     {
                       "key": "data.stage",
-                      "label": "Stage"
+                      "label": "Stage",
+                      "format": "badge"
                     }
                   ],
+                  "facets": [
+                    "data.stage"
+                  ],
+                  "search": true,
+                  "sortable": true,
+                  "pageSize": 25,
+                  "narrow": "list",
+                  "clickable": true,
+                  "rowKey": "path",
                   "emptyText": "No engineering change orders yet. Use New in /engineering-change-orders."
+                },
+                "rules": {
+                  "visible": "data.$listengineeringchangeorders.status === 'ready'"
+                },
+                "on": {
+                  "row-click": [
+                    {
+                      "open-file": {
+                        "path": "{{ event.path }}",
+                        "mode": "edit",
+                        "open": "side"
+                      }
+                    }
+                  ]
                 }
               }
             ]

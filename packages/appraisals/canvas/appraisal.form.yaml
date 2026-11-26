@@ -103,74 +103,101 @@
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.validation-summary",
+            "props": {
+              "title": "Fix these before saving"
+            }
+          },
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "{{ form.values.employeeName || 'New appraisal' }}",
+              "note": "Appraisal {{ form.values.code || '' }}"
             },
             "children": [
               {
                 "type": "canvas.stack",
                 "layout": {
                   "base": {
-                    "gap": 1
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
                   }
                 },
                 "children": [
                   {
-                    "type": "canvas.stack",
-                    "layout": {
-                      "base": {
-                        "direction": "row",
-                        "wrap": true,
-                        "gap": 2,
-                        "align": "center"
-                      }
+                    "type": "canvas.dashboard.badge",
+                    "props": {
+                      "text": "{{ String(form.values.status || '').split('-').join(' ') }}",
+                      "tone": "{{ [\"done\"].includes(form.values.status) ? 'success' : [\"scheduled\"].includes(form.values.status) ? 'warning' : [\"cancelled\"].includes(form.values.status) ? 'danger' : 'neutral' }}"
                     },
-                    "children": [
-                      {
-                        "type": "canvas.heading",
-                        "props": {
-                          "level": 2,
-                          "text": "{{ form.values.employeeName || 'New appraisal' }}"
-                        }
-                      },
-                      {
-                        "type": "canvas.dashboard.badge",
-                        "props": {
-                          "text": "{{ String(form.values.status || '').split('-').join(' ') }}",
-                          "tone": "{{ [\"done\"].includes(form.values.status) ? 'success' : [\"scheduled\"].includes(form.values.status) ? 'warning' : [\"cancelled\"].includes(form.values.status) ? 'danger' : 'neutral' }}"
-                        },
-                        "rules": {
-                          "visible": "!!form.values.status"
-                        }
-                      },
-                      {
-                        "type": "canvas.dashboard.badge",
-                        "props": {
-                          "text": "Archived",
-                          "tone": "warning",
-                          "icon": "archive"
-                        },
-                        "rules": {
-                          "visible": "form.values.state === 'archived'"
-                        }
-                      }
-                    ]
+                    "rules": {
+                      "visible": "!!form.values.status"
+                    }
                   },
                   {
-                    "type": "canvas.text",
+                    "type": "canvas.dashboard.badge",
                     "props": {
-                      "text": "Appraisal {{ form.values.code || '' }} · {{ ctx.file.path }}",
-                      "tone": "muted"
+                      "text": "Archived",
+                      "tone": "warning",
+                      "icon": "archive"
+                    },
+                    "rules": {
+                      "visible": "form.values.state === 'archived'"
                     }
                   }
                 ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Schedule",
+                  "variant": "outline",
+                  "icon": "calendar",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "schedule"
+                },
+                "rules": {
+                  "visible": "form.values.status === 'draft' && !(form.values.state === 'archived')",
+                  "disabled": "form.saving || form.dirty"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Complete",
+                  "icon": "check",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "complete"
+                },
+                "rules": {
+                  "visible": "form.values.status === 'scheduled' && !(form.values.state === 'archived')",
+                  "disabled": "form.saving || form.dirty || !(form.values.ratings || []).length"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Copy name",
+                  "variant": "ghost",
+                  "icon": "copy",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "copy-employee"
+                },
+                "rules": {
+                  "visible": "!(form.values.status === 'done') && !!form.values.employeeRef",
+                  "disabled": "form.saving || form.values.state === 'archived'"
+                },
+                "slot": "actions"
               },
               {
                 "type": "canvas.stack",
@@ -186,155 +213,121 @@
                   {
                     "type": "canvas.button",
                     "props": {
-                      "label": "Schedule",
-                      "variant": "outline",
-                      "icon": "calendar",
+                      "label": "Archive",
+                      "variant": "ghost",
+                      "icon": "archive",
                       "size": "sm"
                     },
                     "on": {
-                      "click": "schedule"
+                      "click": "archive"
                     },
                     "rules": {
-                      "visible": "form.values.status === 'draft' && !(form.values.state === 'archived')",
+                      "visible": "!(form.values.state === 'archived') && !(form.values.status === 'done')",
                       "disabled": "form.saving || form.dirty"
                     }
                   },
                   {
                     "type": "canvas.button",
                     "props": {
-                      "label": "Complete",
-                      "icon": "check",
+                      "label": "Restore",
+                      "variant": "outline",
+                      "icon": "archive-restore",
                       "size": "sm"
                     },
                     "on": {
-                      "click": "complete"
+                      "click": "restore"
                     },
                     "rules": {
-                      "visible": "form.values.status === 'scheduled' && !(form.values.state === 'archived')",
-                      "disabled": "form.saving || form.dirty || !(form.values.ratings || []).length"
+                      "visible": "form.values.state === 'archived'",
+                      "disabled": "form.saving || form.dirty"
                     }
                   },
                   {
                     "type": "canvas.button",
                     "props": {
-                      "label": "Copy name",
+                      "label": "Reset",
                       "variant": "ghost",
-                      "icon": "copy",
                       "size": "sm"
                     },
                     "on": {
-                      "click": "copy-employee"
+                      "click": "reset"
                     },
                     "rules": {
-                      "visible": "!(form.values.status === 'done') && !!form.values.employeeRef",
-                      "disabled": "form.saving || form.values.state === 'archived'"
+                      "disabled": "form.saving || !form.dirty"
                     }
                   },
                   {
-                    "type": "canvas.stack",
-                    "layout": {
-                      "base": {
-                        "direction": "row",
-                        "wrap": true,
-                        "gap": 2,
-                        "align": "center"
-                      }
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Save",
+                      "icon": "save",
+                      "size": "sm"
                     },
-                    "children": [
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Archive",
-                          "variant": "ghost",
-                          "icon": "archive",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "archive"
-                        },
-                        "rules": {
-                          "visible": "!(form.values.state === 'archived') && !(form.values.status === 'done')",
-                          "disabled": "form.saving || form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Restore",
-                          "variant": "outline",
-                          "icon": "archive-restore",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "restore"
-                        },
-                        "rules": {
-                          "visible": "form.values.state === 'archived'",
-                          "disabled": "form.saving || form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Reset",
-                          "variant": "ghost",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "reset"
-                        },
-                        "rules": {
-                          "disabled": "form.saving || !form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Save",
-                          "icon": "save",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "save"
-                        },
-                        "rules": {
-                          "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (form.values.status === 'done')"
-                        }
-                      }
-                    ]
+                    "on": {
+                      "click": "save"
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (form.values.status === 'done')"
+                    }
                   }
-                ]
+                ],
+                "slot": "actions"
               }
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "{{ data.$record.error }}"
-            },
-            "rules": {
-              "visible": "data.$record.status === 'error'"
+              "for": "record",
+              "compact": true
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.status-steps",
             "props": {
-              "text": "Loading…",
-              "tone": "muted"
+              "value": "{{ form.values.status }}",
+              "steps": [
+                {
+                  "value": "draft",
+                  "label": "Draft"
+                },
+                {
+                  "value": "scheduled",
+                  "label": "Scheduled"
+                },
+                {
+                  "value": "done",
+                  "label": "Done"
+                }
+              ],
+              "branches": [
+                {
+                  "value": "cancelled",
+                  "label": "Cancelled"
+                }
+              ]
             },
             "rules": {
-              "visible": "data.$record.status === 'loading'"
+              "visible": "!!form.values.status"
             }
           },
           {
-            "type": "canvas.dashboard.badge",
+            "type": "canvas.alert",
             "props": {
-              "text": "This appraisal is archived. Restore it to edit.",
               "tone": "warning",
-              "icon": "archive"
+              "title": "This appraisal is archived",
+              "text": "Restore it to edit.",
+              "icon": "archive",
+              "action": {
+                "label": "Restore",
+                "id": "restore"
+              }
             },
             "rules": {
               "visible": "form.values.state === 'archived'"
+            },
+            "on": {
+              "action": "restore"
             }
           },
           {
@@ -404,7 +397,8 @@
                           "label": "Employee record",
                           "value": "{{ form.values.employeeRef }}",
                           "description": "Optional. Choose an Employees record, then Copy name.",
-                          "options": "{{ data.employeeoptions }}"
+                          "options": "{{ data.employeeoptions }}",
+                          "searchable": true
                         },
                         "rules": {
                           "disabled": "(form.values.state === 'archived' || (form.values.status === 'done'))"
@@ -454,7 +448,8 @@
                               "value": "cancelled",
                               "label": "Cancelled"
                             }
-                          ]
+                          ],
+                          "display": "segmented"
                         },
                         "rules": {
                           "disabled": "(form.values.state === 'archived' || (form.values.status === 'done'))"
@@ -494,21 +489,20 @@
                     },
                     "children": [
                       {
-                        "type": "canvas.form.array",
+                        "type": "canvas.form.line-items",
                         "props": {
                           "label": "Ratings",
                           "value": "{{ form.values.ratings }}",
-                          "fields": [
+                          "columns": [
                             {
                               "key": "criteria",
                               "label": "Criteria",
-                              "required": true
+                              "type": "text"
                             },
                             {
                               "key": "score",
                               "label": "Score (1–5)",
                               "type": "select",
-                              "required": true,
                               "options": [
                                 {
                                   "value": "1",
@@ -537,11 +531,10 @@
                             "criteria": "",
                             "score": "3"
                           },
-                          "rowIds": false,
+                          "storeComputed": false,
                           "minimum": 0,
                           "maximum": 50,
-                          "addLabel": "Add criteria",
-                          "removeLabel": "Remove row"
+                          "addLabel": "Add criteria"
                         },
                         "layout": {
                           "tablet": {

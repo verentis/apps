@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { parse } from 'yaml'
 import { describe, expect, it } from 'vitest'
+import { stagePanels } from '../../../tools/file-apps/test-helpers.mjs'
 import {
   createScriptFileAccess, createScriptName, featureOverlay, manifest, postScriptFileAccess, postScriptName,
   postScriptPath, productionOverlay, scriptConsents,
@@ -179,7 +180,7 @@ describe('Helpdesk report pages', () => {
     expect(template(tableNode.props.rows, data).map(row => [row.code, row.state])).toEqual([
       ['TKT-1', 'Overdue'], ['TKT-2', 'On track'],
     ])
-    expect(tableNode.on['row-click']).toEqual([{ 'open-file': { path: '{{ event.path }}', mode: 'edit' } }])
+    expect(tableNode.on['row-click']).toEqual([{ 'open-file': { path: '{{ event.path }}', mode: 'edit', open: 'side' } }])
   })
 
   it('sums open and overdue tickets per team and assignee in the workload summary', () => {
@@ -199,7 +200,7 @@ describe('Helpdesk report pages', () => {
 
   it('groups tickets by stage on the tickets page', () => {
     const page = documents['tickets.page.yaml']
-    const panels = page.spec.tree[0].children.find(node => node.type === 'canvas.tabs').children
+    const panels = stagePanels(page.spec.tree[0].children.find(node => node.type === 'canvas.tabs'))
     expect(panels.map(panel => panel.slot)).toEqual(['new', 'in-progress', 'waiting', 'solved', 'closed'])
     const waiting = panels.find(panel => panel.slot === 'in-progress').children[0]
     expect(template(waiting.props.rows, data).map(row => row.code)).toEqual(['TKT-2'])

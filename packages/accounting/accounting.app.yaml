@@ -1,394 +1,805 @@
-api-version: verentis.io/v1
-kind: Application
-metadata:
-  id: accounting
-  name: Accounting
-  description: "Keep a double-entry ledger and see where your business stands."
-  icon: ./icons/app.svg
-  version: 0.2.6
-  author: Verentis
-marketplace:
-  logo: "./icons/app.svg"
-  hero: {"source": "./marketplace/hero.svg", "alt": "Accounting cover"}
-  images: [{"source": "./marketplace/overview.png", "alt": "Accounting overview in Canvas", "caption": "Accounting overview"}, {"source": "./marketplace/detail.png", "alt": "Financial reports in Canvas", "caption": "Financial reports"}]
-  readme: "./marketplace/README.md"
-  keywords:
-    - accounting
-    - ledger
-    - double-entry
-    - journals
-    - chart of accounts
-    - expenses
-    - trial balance
-    - profit and loss
-    - balance sheet
-spec:
-  install-root: /applications/accounting
-  entry: https://canvas.apps.localtest.me
-  scope: global
-  entry-points:
-    - id: home
-      display-name: Accounting
-      route: /render?document=.%2Fcanvas%2Fhome.page.yaml
-      order: 10
-    - id: reports
-      display-name: Financial reports
-      route: /render?document=.%2Fcanvas%2Freports.page.yaml
-      order: 20
-  launch:
-    enabled: true
-    entry-point: home
-    pinnable: true
-  widgets:
-    - id: balances
-      display-name: Balances
-      description: Asset, liability and equity balances from posted journals
-      route: /render?document=.%2Fcanvas%2Fbalances.widget.page.yaml
-      default-size:
-        w: 4
-        h: 4
-      min-size:
-        w: 3
-        h: 3
-  permissions:
-    - file.read
-    - file.write
-    - execution.run
-  scopes:
-    - accounting.default
-  settings:
-    - key: account-code-prefix
-      display-name: Account code prefix
-      type: string
-      default: ACC-
-      description: Prefix of generated account codes, e.g. ACC-0001.
-    - key: period-code-prefix
-      display-name: Period code prefix
-      type: string
-      default: PER-
-      description: Prefix of generated period codes, e.g. PER-0001.
-    - key: journal-code-prefix
-      display-name: Journal code prefix
-      type: string
-      default: JRN-
-      description: Prefix of generated journal codes, e.g. JRN-0001.
-    - key: expense-code-prefix
-      display-name: Expense code prefix
-      type: string
-      default: EXP-
-      description: Prefix of generated expense codes, e.g. EXP-0001.
-    - key: code-digits
-      display-name: Code digits
-      type: number
-      default: 4
-      description: Minimum number of digits in generated codes (zero-padded).
-  dependencies:
-    - package: verentis/canvas
-      version: latest
-    - package: verentis/nodejs
-      version: latest
-  engine: verentis/nodejs
-  scripts:
-    - scripts/create
-    - scripts/post
-  install:
-    - from: canvas/*.form.yaml
-      to: /applications/accounting/canvas/
-      mode: managed
-      mime: application/vnd.verentis.canvas.form+yaml
-    - from: canvas/*.page.yaml
-      to: /applications/accounting/canvas/
-      mode: managed
-      mime: application/vnd.verentis.canvas.page+yaml
-    - from: schemas/*.schema.json
-      to: /applications/accounting/schemas/
-      mode: managed
-      mime: application/schema+json
-    - from: templates/*.json
-      to: /applications/accounting/templates/
-      mode: managed
-      mime: application/json
-    - from: seed/accounts
-      to: /chart-of-accounts
-      mode: seed
-      mime: application/vnd.verentis.accounting.accounts
-    - from: seed/periods
-      to: /periods
-      mode: seed
-      mime: application/vnd.verentis.accounting.periods
-    - from: seed/journals
-      to: /journals
-      mode: seed
-      mime: application/vnd.verentis.accounting.journals
-    - from: seed/expenses
-      to: /expenses
-      mode: seed
-      mime: application/vnd.verentis.accounting.expenses
-    - from: seed/chart/ACC-0001.json
-      to: /chart-of-accounts/ACC-0001
-      mode: seed
-      mime: application/vnd.verentis.accounting.account+json
-    - from: seed/chart/ACC-0002.json
-      to: /chart-of-accounts/ACC-0002
-      mode: seed
-      mime: application/vnd.verentis.accounting.account+json
-    - from: seed/chart/ACC-0003.json
-      to: /chart-of-accounts/ACC-0003
-      mode: seed
-      mime: application/vnd.verentis.accounting.account+json
-    - from: seed/chart/ACC-0004.json
-      to: /chart-of-accounts/ACC-0004
-      mode: seed
-      mime: application/vnd.verentis.accounting.account+json
-    - from: seed/chart/ACC-0005.json
-      to: /chart-of-accounts/ACC-0005
-      mode: seed
-      mime: application/vnd.verentis.accounting.account+json
-    - from: seed/chart/ACC-0006.json
-      to: /chart-of-accounts/ACC-0006
-      mode: seed
-      mime: application/vnd.verentis.accounting.account+json
-    - from: seed/settings.json
-      to: /settings/accounting.json
-      mode: seed
-      mime: application/vnd.verentis.accounting.settings+json
-  creatables:
-    - id: account
-      display-name: Account
-      description: A new account
-      icon: lucide:book-open
-      mime: application/vnd.verentis.accounting.account+json
-      parents:
-        - application/vnd.verentis.accounting.accounts
-      folder-names:
-        - chart-of-accounts
-        - accounts
-        - ledger
-        - accounting
-      script: ./scripts/create
-      template: ./templates/account.json
-    - id: period
-      display-name: Period
-      description: A new period
-      icon: lucide:calendar-range
-      mime: application/vnd.verentis.accounting.period+json
-      parents:
-        - application/vnd.verentis.accounting.periods
-      folder-names:
-        - periods
-        - accounting
-      script: ./scripts/create
-      template: ./templates/period.json
-    - id: journal
-      display-name: Journal
-      description: A new journal
-      icon: lucide:notebook-pen
-      mime: application/vnd.verentis.accounting.journal+json
-      parents:
-        - application/vnd.verentis.accounting.journals
-      folder-names:
-        - journals
-        - ledger
-        - accounting
-      script: ./scripts/create
-      template: ./templates/journal.json
-    - id: expense
-      display-name: Expense
-      description: A new expense
-      icon: lucide:receipt
-      mime: application/vnd.verentis.accounting.expense+json
-      parents:
-        - application/vnd.verentis.accounting.expenses
-      folder-names:
-        - expenses
-        - accounting
-      script: ./scripts/create
-      template: ./templates/expense.json
-  sandbox:
-    allow-scripts: true
-    allow-same-origin: true
-    allow-forms: true
-    allow-popups: false
-  file-access:
-    - path: /chart-of-accounts
-      mode: read
-      reason: List the chart of accounts
-      origin:
-        kind: document
-        id: canvas/home.page.yaml
-    - path: /journals
-      mode: read
-      reason: List journals
-      origin:
-        kind: document
-        id: canvas/home.page.yaml
-    - path: /expenses
-      mode: read
-      reason: List expenses
-      origin:
-        kind: document
-        id: canvas/home.page.yaml
-    - path: /periods
-      mode: read
-      reason: List accounting periods
-      origin:
-        kind: document
-        id: canvas/home.page.yaml
-    - path: /chart-of-accounts
-      mode: read
-      reason: Report on the chart of accounts
-      origin:
-        kind: document
-        id: canvas/reports.page.yaml
-    - path: /journals
-      mode: read
-      reason: Sum the posted journals
-      origin:
-        kind: document
-        id: canvas/reports.page.yaml
-    - path: /chart-of-accounts
-      mode: read
-      reason: Show the balance-sheet accounts
-      origin:
-        kind: document
-        id: canvas/balances.widget.page.yaml
-    - path: /journals
-      mode: read
-      reason: Sum the posted journals
-      origin:
-        kind: document
-        id: canvas/balances.widget.page.yaml
-    - path: /journals
-      mode: read
-      reason: Show the postings to this account
-      origin:
-        kind: document
-        id: accounting-account
-    - path: /applications/accounting/
-      mode: read
-      reason: Read the Accounting schemas and run the posting script
-      origin:
-        kind: document
-        id: accounting-account
-    - path: /applications/accounting/
-      mode: read
-      reason: Read the Accounting schemas and run the posting script
-      origin:
-        kind: document
-        id: accounting-period
-    - path: /chart-of-accounts
-      mode: read
-      reason: Choose the accounts of journal lines
-      origin:
-        kind: document
-        id: accounting-journal
-    - path: /applications/accounting/
-      mode: read
-      reason: Read the Accounting schemas and run the posting script
-      origin:
-        kind: document
-        id: accounting-journal
-    - path: /chart-of-accounts
-      mode: read
-      reason: Choose the expense and payment accounts
-      origin:
-        kind: document
-        id: accounting-expense
-    - path: /settings/accounting.json
-      mode: read
-      reason: Offer the tax codes
-      origin:
-        kind: document
-        id: accounting-expense
-    - path: /applications/accounting/
-      mode: read
-      reason: Read the Accounting schemas and run the posting script
-      origin:
-        kind: document
-        id: accounting-expense
-    - path: /chart-of-accounts
-      mode: read
-      reason: Choose the account each tax code posts to
-      origin:
-        kind: document
-        id: accounting-settings
-    - path: /applications/accounting/
-      mode: read
-      reason: Read the Accounting schemas and run the posting script
-      origin:
-        kind: document
-        id: accounting-settings
-    - path: /chart-of-accounts
-      mode: write
-      reason: Create accounts with the next code
-      origin:
-        kind: script
-        id: accounting-create
-    - path: /periods
-      mode: write
-      reason: Create periods with the next code
-      origin:
-        kind: script
-        id: accounting-create
-    - path: /journals
-      mode: write
-      reason: Create journals with the next code
-      origin:
-        kind: script
-        id: accounting-create
-    - path: /expenses
-      mode: write
-      reason: Create expenses with the next code
-      origin:
-        kind: script
-        id: accounting-create
-    - path: /settings/accounting.json
-      mode: read
-      reason: Default new journals and expenses to the base currency
-      origin:
-        kind: script
-        id: accounting-create
-    - path: /settings/accounting.json
-      mode: read
-      reason: Read the base currency, precision and tax codes
-      origin:
-        kind: script
-        id: accounting-post
-    - path: /chart-of-accounts
-      mode: read
-      reason: Check that posted accounts exist and are active
-      origin:
-        kind: script
-        id: accounting-post
-    - path: /periods
-      mode: read
-      reason: Find the open period a posting date falls in
-      origin:
-        kind: script
-        id: accounting-post
-    - path: /journals
-      mode: write
-      reason: Post journals, write expense journals and reversals
-      origin:
-        kind: script
-        id: accounting-post
-    - path: /expenses
-      mode: write
-      reason: Mark expenses posted or reversed
-      origin:
-        kind: script
-        id: accounting-post
-packaging:
-  publisher: verentis
-  files:
-    - canvas/**
-    - schemas/**
-    - templates/**
-    - seed/**
-    - scripts/**
-    - README.md
-  templates:
-    - canvas/*.yaml
-  variables:
-    canvas-origin: https://canvas.apps.localtest.me
-  encryption: none
+{
+  "api-version": "verentis.io/v1",
+  "kind": "Application",
+  "metadata": {
+    "id": "accounting",
+    "name": "Accounting",
+    "description": "Keep a double-entry ledger and see where your business stands.",
+    "icon": "./icons/app.svg",
+    "version": "0.2.6",
+    "author": "Verentis"
+  },
+  "marketplace": {
+    "logo": "./icons/app.svg",
+    "hero": {
+      "source": "./marketplace/hero.svg",
+      "alt": "Accounting cover"
+    },
+    "images": [
+      {
+        "source": "./marketplace/overview.png",
+        "alt": "Accounting overview in Canvas",
+        "caption": "Accounting overview"
+      },
+      {
+        "source": "./marketplace/detail.png",
+        "alt": "Financial reports in Canvas",
+        "caption": "Financial reports"
+      }
+    ],
+    "readme": "./marketplace/README.md",
+    "keywords": [
+      "accounting",
+      "ledger",
+      "double-entry",
+      "journals",
+      "chart of accounts",
+      "expenses",
+      "trial balance",
+      "profit and loss",
+      "balance sheet"
+    ]
+  },
+  "spec": {
+    "install-root": "/applications/accounting",
+    "entry": "https://canvas.apps.localtest.me",
+    "scope": "global",
+    "entry-points": [
+      {
+        "id": "home",
+        "display-name": "Accounting",
+        "route": "/render?document=.%2Fcanvas%2Fhome.page.yaml",
+        "order": 10
+      },
+      {
+        "id": "reports",
+        "display-name": "Financial reports",
+        "route": "/render?document=.%2Fcanvas%2Freports.page.yaml",
+        "order": 20
+      }
+    ],
+    "launch": {
+      "enabled": true,
+      "entry-point": "home",
+      "pinnable": true
+    },
+    "widgets": [
+      {
+        "id": "balances",
+        "display-name": "Balances",
+        "description": "Asset, liability and equity balances from posted journals",
+        "route": "/render?document=.%2Fcanvas%2Fbalances.widget.page.yaml",
+        "default-size": {
+          "w": 4,
+          "h": 4
+        },
+        "min-size": {
+          "w": 3,
+          "h": 3
+        }
+      }
+    ],
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run"
+    ],
+    "scopes": [
+      "accounting.default"
+    ],
+    "settings": [
+      {
+        "key": "account-code-prefix",
+        "display-name": "Account code prefix",
+        "type": "string",
+        "default": "ACC-",
+        "description": "Prefix of generated account codes, e.g. ACC-0001."
+      },
+      {
+        "key": "period-code-prefix",
+        "display-name": "Period code prefix",
+        "type": "string",
+        "default": "PER-",
+        "description": "Prefix of generated period codes, e.g. PER-0001."
+      },
+      {
+        "key": "journal-code-prefix",
+        "display-name": "Journal code prefix",
+        "type": "string",
+        "default": "JRN-",
+        "description": "Prefix of generated journal codes, e.g. JRN-0001."
+      },
+      {
+        "key": "expense-code-prefix",
+        "display-name": "Expense code prefix",
+        "type": "string",
+        "default": "EXP-",
+        "description": "Prefix of generated expense codes, e.g. EXP-0001."
+      },
+      {
+        "key": "code-digits",
+        "display-name": "Code digits",
+        "type": "number",
+        "default": 4,
+        "description": "Minimum number of digits in generated codes (zero-padded)."
+      }
+    ],
+    "dependencies": [
+      {
+        "package": "verentis/canvas",
+        "version": "latest"
+      },
+      {
+        "package": "verentis/nodejs",
+        "version": "latest"
+      }
+    ],
+    "engine": "verentis/nodejs",
+    "scripts": [
+      "scripts/create",
+      "scripts/post",
+      "scripts/api"
+    ],
+    "install": [
+      {
+        "from": "canvas/*.form.yaml",
+        "to": "/applications/accounting/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.form+yaml"
+      },
+      {
+        "from": "canvas/*.page.yaml",
+        "to": "/applications/accounting/canvas/",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.page+yaml"
+      },
+      {
+        "from": "schemas/*.schema.json",
+        "to": "/applications/accounting/schemas/",
+        "mode": "managed",
+        "mime": "application/schema+json"
+      },
+      {
+        "from": "templates/*.json",
+        "to": "/applications/accounting/templates/",
+        "mode": "managed",
+        "mime": "application/json"
+      },
+      {
+        "from": "seed/accounts",
+        "to": "/chart-of-accounts",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.accounting.accounts"
+      },
+      {
+        "from": "seed/periods",
+        "to": "/periods",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.accounting.periods"
+      },
+      {
+        "from": "seed/journals",
+        "to": "/journals",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.accounting.journals"
+      },
+      {
+        "from": "seed/expenses",
+        "to": "/expenses",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.accounting.expenses"
+      },
+      {
+        "from": "seed/chart/ACC-0001.json",
+        "to": "/chart-of-accounts/ACC-0001",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.accounting.account+json"
+      },
+      {
+        "from": "seed/chart/ACC-0002.json",
+        "to": "/chart-of-accounts/ACC-0002",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.accounting.account+json"
+      },
+      {
+        "from": "seed/chart/ACC-0003.json",
+        "to": "/chart-of-accounts/ACC-0003",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.accounting.account+json"
+      },
+      {
+        "from": "seed/chart/ACC-0004.json",
+        "to": "/chart-of-accounts/ACC-0004",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.accounting.account+json"
+      },
+      {
+        "from": "seed/chart/ACC-0005.json",
+        "to": "/chart-of-accounts/ACC-0005",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.accounting.account+json"
+      },
+      {
+        "from": "seed/chart/ACC-0006.json",
+        "to": "/chart-of-accounts/ACC-0006",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.accounting.account+json"
+      },
+      {
+        "from": "seed/settings.json",
+        "to": "/settings/accounting.json",
+        "mode": "seed",
+        "mime": "application/vnd.verentis.accounting.settings+json"
+      }
+    ],
+    "creatables": [
+      {
+        "id": "account",
+        "display-name": "Account",
+        "description": "A new account",
+        "icon": "lucide:book-open",
+        "mime": "application/vnd.verentis.accounting.account+json",
+        "parents": [
+          "application/vnd.verentis.accounting.accounts"
+        ],
+        "folder-names": [
+          "chart-of-accounts",
+          "accounts",
+          "ledger",
+          "accounting"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/account.json"
+      },
+      {
+        "id": "period",
+        "display-name": "Period",
+        "description": "A new period",
+        "icon": "lucide:calendar-range",
+        "mime": "application/vnd.verentis.accounting.period+json",
+        "parents": [
+          "application/vnd.verentis.accounting.periods"
+        ],
+        "folder-names": [
+          "periods",
+          "accounting"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/period.json"
+      },
+      {
+        "id": "journal",
+        "display-name": "Journal",
+        "description": "A new journal",
+        "icon": "lucide:notebook-pen",
+        "mime": "application/vnd.verentis.accounting.journal+json",
+        "parents": [
+          "application/vnd.verentis.accounting.journals"
+        ],
+        "folder-names": [
+          "journals",
+          "ledger",
+          "accounting"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/journal.json"
+      },
+      {
+        "id": "expense",
+        "display-name": "Expense",
+        "description": "A new expense",
+        "icon": "lucide:receipt",
+        "mime": "application/vnd.verentis.accounting.expense+json",
+        "parents": [
+          "application/vnd.verentis.accounting.expenses"
+        ],
+        "folder-names": [
+          "expenses",
+          "accounting"
+        ],
+        "script": "./scripts/create",
+        "template": "./templates/expense.json"
+      }
+    ],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-forms": true,
+      "allow-popups": false
+    },
+    "file-access": [
+      {
+        "path": "/chart-of-accounts",
+        "mode": "read",
+        "reason": "List the chart of accounts",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/journals",
+        "mode": "read",
+        "reason": "List journals",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/expenses",
+        "mode": "read",
+        "reason": "List expenses",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/periods",
+        "mode": "read",
+        "reason": "List accounting periods",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/home.page.yaml"
+        }
+      },
+      {
+        "path": "/chart-of-accounts",
+        "mode": "read",
+        "reason": "Report on the chart of accounts",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/reports.page.yaml"
+        }
+      },
+      {
+        "path": "/journals",
+        "mode": "read",
+        "reason": "Sum the posted journals",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/reports.page.yaml"
+        }
+      },
+      {
+        "path": "/chart-of-accounts",
+        "mode": "read",
+        "reason": "Show the balance-sheet accounts",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/balances.widget.page.yaml"
+        }
+      },
+      {
+        "path": "/journals",
+        "mode": "read",
+        "reason": "Sum the posted journals",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/balances.widget.page.yaml"
+        }
+      },
+      {
+        "path": "/journals",
+        "mode": "read",
+        "reason": "Show the postings to this account",
+        "origin": {
+          "kind": "document",
+          "id": "accounting-account"
+        }
+      },
+      {
+        "path": "/applications/accounting/",
+        "mode": "read",
+        "reason": "Read the Accounting schemas and run the posting script",
+        "origin": {
+          "kind": "document",
+          "id": "accounting-account"
+        }
+      },
+      {
+        "path": "/journals",
+        "mode": "read",
+        "reason": "Check for draft journals in this period",
+        "origin": {
+          "kind": "document",
+          "id": "accounting-period"
+        }
+      },
+      {
+        "path": "/expenses",
+        "mode": "read",
+        "reason": "Check for draft expenses in this period",
+        "origin": {
+          "kind": "document",
+          "id": "accounting-period"
+        }
+      },
+      {
+        "path": "/periods",
+        "mode": "read",
+        "reason": "Check that earlier periods are closed",
+        "origin": {
+          "kind": "document",
+          "id": "accounting-period"
+        }
+      },
+      {
+        "path": "/applications/accounting/",
+        "mode": "read",
+        "reason": "Read the Accounting schemas and run the posting script",
+        "origin": {
+          "kind": "document",
+          "id": "accounting-period"
+        }
+      },
+      {
+        "path": "/chart-of-accounts",
+        "mode": "read",
+        "reason": "Choose the accounts of journal lines",
+        "origin": {
+          "kind": "document",
+          "id": "accounting-journal"
+        }
+      },
+      {
+        "path": "/applications/accounting/",
+        "mode": "read",
+        "reason": "Read the Accounting schemas and run the posting script",
+        "origin": {
+          "kind": "document",
+          "id": "accounting-journal"
+        }
+      },
+      {
+        "path": "/chart-of-accounts",
+        "mode": "read",
+        "reason": "Choose the expense and payment accounts",
+        "origin": {
+          "kind": "document",
+          "id": "accounting-expense"
+        }
+      },
+      {
+        "path": "/settings/accounting.json",
+        "mode": "read",
+        "reason": "Offer the tax codes",
+        "origin": {
+          "kind": "document",
+          "id": "accounting-expense"
+        }
+      },
+      {
+        "path": "/applications/accounting/",
+        "mode": "read",
+        "reason": "Read the Accounting schemas and run the posting script",
+        "origin": {
+          "kind": "document",
+          "id": "accounting-expense"
+        }
+      },
+      {
+        "path": "/chart-of-accounts",
+        "mode": "read",
+        "reason": "Choose the account each tax code posts to",
+        "origin": {
+          "kind": "document",
+          "id": "accounting-settings"
+        }
+      },
+      {
+        "path": "/applications/accounting/",
+        "mode": "read",
+        "reason": "Read the Accounting schemas and run the posting script",
+        "origin": {
+          "kind": "document",
+          "id": "accounting-settings"
+        }
+      },
+      {
+        "path": "/chart-of-accounts",
+        "mode": "write",
+        "reason": "Create accounts with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "accounting-create"
+        }
+      },
+      {
+        "path": "/periods",
+        "mode": "write",
+        "reason": "Create periods with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "accounting-create"
+        }
+      },
+      {
+        "path": "/journals",
+        "mode": "write",
+        "reason": "Create journals with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "accounting-create"
+        }
+      },
+      {
+        "path": "/expenses",
+        "mode": "write",
+        "reason": "Create expenses with the next code",
+        "origin": {
+          "kind": "script",
+          "id": "accounting-create"
+        }
+      },
+      {
+        "path": "/settings/accounting.json",
+        "mode": "read",
+        "reason": "Default new journals and expenses to the base currency",
+        "origin": {
+          "kind": "script",
+          "id": "accounting-create"
+        }
+      },
+      {
+        "path": "/settings/accounting.json",
+        "mode": "read",
+        "reason": "Read the base currency, precision and tax codes",
+        "origin": {
+          "kind": "script",
+          "id": "accounting-post"
+        }
+      },
+      {
+        "path": "/chart-of-accounts",
+        "mode": "read",
+        "reason": "Check that posted accounts exist and are active",
+        "origin": {
+          "kind": "script",
+          "id": "accounting-post"
+        }
+      },
+      {
+        "path": "/periods",
+        "mode": "read",
+        "reason": "Find the open period a posting date falls in",
+        "origin": {
+          "kind": "script",
+          "id": "accounting-post"
+        }
+      },
+      {
+        "path": "/journals",
+        "mode": "write",
+        "reason": "Post journals, write expense journals and reversals",
+        "origin": {
+          "kind": "script",
+          "id": "accounting-post"
+        }
+      },
+      {
+        "path": "/expenses",
+        "mode": "write",
+        "reason": "Mark expenses posted or reversed",
+        "origin": {
+          "kind": "script",
+          "id": "accounting-post"
+        }
+      },
+      {
+        "path": "/settings/accounting.json",
+        "mode": "read",
+        "reason": "Check the base currency and precision of journals other apps post",
+        "origin": {
+          "kind": "script",
+          "id": "accounting-api"
+        }
+      },
+      {
+        "path": "/chart-of-accounts",
+        "mode": "read",
+        "reason": "Check that posted accounts exist and are active",
+        "origin": {
+          "kind": "script",
+          "id": "accounting-api"
+        }
+      },
+      {
+        "path": "/periods",
+        "mode": "read",
+        "reason": "Find the open period a posting date falls in",
+        "origin": {
+          "kind": "script",
+          "id": "accounting-api"
+        }
+      },
+      {
+        "path": "/journals",
+        "mode": "write",
+        "reason": "Post and reverse journals other apps ask for",
+        "origin": {
+          "kind": "script",
+          "id": "accounting-api"
+        }
+      }
+    ],
+    "api": {
+      "operations": [
+        {
+          "key": "post-journal",
+          "title": "Post a journal",
+          "description": "Posts a balanced journal for another app's record (an issued invoice, a posted expense report, a payroll run), named after the record. Posting the same record again with the same lines returns the journal already posted.",
+          "effect": "write",
+          "timeout-seconds": 60,
+          "input-schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "source",
+              "date",
+              "description",
+              "currency",
+              "lines"
+            ],
+            "properties": {
+              "source": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "path",
+                  "code"
+                ],
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1000
+                  },
+                  "code": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9-]{0,63}$"
+                  }
+                }
+              },
+              "date": {
+                "type": "string",
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 1000
+              },
+              "currency": {
+                "type": "string",
+                "pattern": "^[A-Z]{3}$"
+              },
+              "lines": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 1000,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "account",
+                    "direction",
+                    "amount"
+                  ],
+                  "properties": {
+                    "account": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 1000
+                    },
+                    "direction": {
+                      "enum": [
+                        "debit",
+                        "credit"
+                      ]
+                    },
+                    "amount": {
+                      "type": "string",
+                      "pattern": "^(0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?$"
+                    },
+                    "description": {
+                      "type": "string",
+                      "maxLength": 1000
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "output-schema": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "period": {
+                "type": "string"
+              },
+              "created": {
+                "type": "boolean"
+              }
+            }
+          },
+          "implementation": {
+            "type": "script",
+            "script": "scripts/api"
+          }
+        },
+        {
+          "key": "reverse-journal",
+          "title": "Reverse a journal",
+          "description": "Reverses a journal the calling app posted, dated in an open period. Accounting refuses journals another app posted.",
+          "effect": "write",
+          "timeout-seconds": 60,
+          "input-schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "journal"
+            ],
+            "properties": {
+              "journal": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1000
+              },
+              "date": {
+                "type": "string",
+                "pattern": "^([0-9]{4}-[0-9]{2}-[0-9]{2})?$"
+              },
+              "reason": {
+                "type": "string",
+                "maxLength": 1000
+              },
+              "source": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "maxLength": 1000
+                  }
+                }
+              }
+            }
+          },
+          "output-schema": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              }
+            }
+          },
+          "implementation": {
+            "type": "script",
+            "script": "scripts/api"
+          }
+        }
+      ]
+    }
+  },
+  "packaging": {
+    "publisher": "verentis",
+    "files": [
+      "canvas/**",
+      "schemas/**",
+      "templates/**",
+      "seed/**",
+      "scripts/**",
+      "README.md"
+    ],
+    "templates": [
+      "canvas/*.yaml"
+    ],
+    "variables": {
+      "canvas-origin": "https://canvas.apps.localtest.me"
+    },
+    "encryption": "none"
+  }
+}

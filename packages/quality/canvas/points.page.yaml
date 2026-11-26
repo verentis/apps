@@ -52,130 +52,140 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Quality",
+          "icon": "badge-check",
+          "active": "points.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "checks.page.yaml",
+              "label": "Checks",
+              "icon": "clipboard-check",
+              "count": "{{ (data.checkrows || []).filter(c => c.result === 'pending').length }}"
+            },
+            {
+              "id": "alerts.page.yaml",
+              "label": "Alerts",
+              "icon": "triangle-alert",
+              "count": "{{ (data.alertrows || []).filter(a => a.stage !== 'resolved').length }}",
+              "tone": "danger"
+            },
+            {
+              "id": "points.page.yaml",
+              "label": "Control points",
+              "icon": "crosshair"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/quality/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Control points",
+              "note": "What is checked, how and how often. Inactive points cannot record checks."
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
+                "type": "canvas.button",
+                "props": {
+                  "label": "Open /quality-control-points",
+                  "variant": "outline",
+                  "icon": "folder-open",
+                  "size": "sm"
                 },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Control points"
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/quality-control-points"
+                      }
                     }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "What is checked, how and how often. Inactive points cannot record checks.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "direction": "row",
-                    "wrap": true,
-                    "gap": 2,
-                    "align": "center"
-                  }
+                  ]
                 },
-                "children": [
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Open /quality-control-points",
-                      "variant": "outline",
-                      "icon": "folder-open",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/quality-control-points"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Quality",
-                      "variant": "ghost",
-                      "icon": "badge-check",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/quality/canvas/home.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ]
+                "slot": "actions"
               }
             ]
           },
           {
-            "type": "canvas.text",
-            "props": {
-              "text": "The /quality-control-points folder could not be read. Reinstall Quality to recreate it."
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "gap": 2
+              }
             },
-            "rules": {
-              "visible": "data.$points.status === 'error'"
+            "children": [
+              {
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Pass rate per control point"
+                }
+              },
+              {
+                "type": "canvas.chart",
+                "props": {
+                  "rows": "{{ (data.checkrows || []).filter(c => c.result === 'pass' || c.result === 'fail').map(c => c.point || 'No point').filter((name, index, all) => all.indexOf(name) === index).map(name => ({ label: name, pass: (data.checkrows || []).filter(c => c.result === 'pass' || c.result === 'fail').filter(c => (c.point || 'No point') === name && c.result === 'pass').length, fail: (data.checkrows || []).filter(c => c.result === 'pass' || c.result === 'fail').filter(c => (c.point || 'No point') === name && c.result === 'fail').length })) }}",
+                  "showLegend": true,
+                  "emptyText": "Nothing to chart yet",
+                  "kind": "stacked-hbar",
+                  "x": "label",
+                  "y": [
+                    "pass",
+                    "fail"
+                  ],
+                  "labels": {
+                    "pass": "Passed",
+                    "fail": "Failed"
+                  },
+                  "palette": {
+                    "pass": "success",
+                    "fail": "danger"
+                  },
+                  "format": "integer"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "points",
+              "compact": true,
+              "description": "The /quality-control-points folder could not be read. Reinstall Quality to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /quality-checks folder could not be read. Reinstall Quality to recreate it."
-            },
-            "rules": {
-              "visible": "data.$checks.status === 'error'"
+              "for": "checks",
+              "compact": true,
+              "description": "The /quality-checks folder could not be read. Reinstall Quality to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /quality-alerts folder could not be read. Reinstall Quality to recreate it."
-            },
-            "rules": {
-              "visible": "data.$alerts.status === 'error'"
+              "for": "alerts",
+              "compact": true,
+              "description": "The /quality-alerts folder could not be read. Reinstall Quality to recreate it."
             }
           },
           {
@@ -260,6 +270,10 @@
                 }
               ],
               "emptyText": "No control points yet. Use New in /quality-control-points.",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
               "clickable": true
             },
             "on": {
@@ -267,7 +281,8 @@
                 {
                   "open-file": {
                     "path": "{{ event.path }}",
-                    "mode": "edit"
+                    "mode": "edit",
+                    "open": "side"
                   }
                 }
               ]

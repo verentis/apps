@@ -15,7 +15,8 @@
       },
       {
         "path": "/shifts",
-        "reason": "List shifts by status with their role names"
+        "reason": "List shifts by status with their role names; change records from this page",
+        "mode": "write"
       }
     ],
     "data": {
@@ -38,67 +39,123 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Planning",
+          "icon": "calendar-days",
+          "active": "shifts.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "week.page.yaml",
+              "label": "Week",
+              "icon": "calendar"
+            },
+            {
+              "id": "shifts.page.yaml",
+              "label": "Shifts",
+              "icon": "list",
+              "count": "{{ (data.rows || []).filter(r => r.status === 'draft').length }}"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/planning/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/planning.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Shifts by status",
+              "note": "Every active shift, grouped by its status. Click a row to open the shift."
+            },
+            "children": []
+          },
           {
             "type": "canvas.stack",
             "layout": {
               "base": {
                 "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
+                "justify": "end"
               }
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Shifts by status"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Every active shift, grouped by its status. Click a row to open the shift.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
                 "type": "canvas.button",
                 "props": {
-                  "label": "Planning",
-                  "variant": "ghost",
-                  "icon": "calendar-days",
-                  "size": "sm"
+                  "label": "Publish week",
+                  "icon": "send",
+                  "disabled": {
+                    "$expr": "(data.rows || []).filter(r => r.status === 'draft' && !!r.date && r.date >= Date().slice(0, 10) && r.date <= Date(Date.now() + 6 * 86400000).slice(0, 10)).length === 0"
+                  },
+                  "reason": "No draft shifts in the next seven days"
                 },
                 "on": {
                   "click": [
                     {
-                      "open-file": {
-                        "path": "/applications/planning/canvas/home.page.yaml"
+                      "preflight": {
+                        "title": "Publish the week",
+                        "assign": "publishable",
+                        "partial": true,
+                        "label": "{{ item.employee }} · {{ format(item.date, 'date') }} {{ item.time }}",
+                        "items": "{{ (data.rows || []).filter(r => r.status === 'draft' && !!r.date && r.date >= Date().slice(0, 10) && r.date <= Date(Date.now() + 6 * 86400000).slice(0, 10)) }}",
+                        "check": "!item.start || !item.end ? { fail: 'Has no start or end time' } : (data.rows || []).find(o => o.path !== item.path && o.status !== 'cancelled' && o.employee === item.employee && o.date === item.date && o.start < item.end && item.start < o.end) ? { fail: 'Overlaps ' + (data.rows || []).find(o => o.path !== item.path && o.status !== 'cancelled' && o.employee === item.employee && o.date === item.date && o.start < item.end && item.start < o.end).code + ' (' + (data.rows || []).find(o => o.path !== item.path && o.status !== 'cancelled' && o.employee === item.employee && o.date === item.date && o.start < item.end && item.start < o.end).time + ')' } : !item.role ? { warn: 'Has no role' } : true"
+                      }
+                    },
+                    {
+                      "for-each": {
+                        "items": "{{ state.publishable.apply }}",
+                        "as": "shift",
+                        "assign": "published",
+                        "steps": [
+                          {
+                            "run-script": {
+                              "file": "/applications/planning/scripts/post",
+                              "timeout": 60,
+                              "parameters": {
+                                "operation": "publish",
+                                "path": "{{ shift.path }}"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "refresh-source": {
+                        "source": "shifts"
+                      }
+                    },
+                    {
+                      "toast": {
+                        "message": "{{ 'Published ' + state.published.count + ' shifts' + (state.publishable.skipped && state.publishable.skipped.length ? '; ' + state.publishable.skipped.length + ' left as drafts' : '') }}",
+                        "variant": "success"
                       }
                     }
                   ]
@@ -107,21 +164,87 @@
             ]
           },
           {
-            "type": "canvas.text",
-            "props": {
-              "text": "The /shifts folder could not be read. Reinstall Planning to recreate it."
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "gap": 2
+              }
             },
-            "rules": {
-              "visible": "data.$shifts.status === 'error'"
+            "children": [
+              {
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Today"
+                }
+              },
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "People across the hours of today. Drag a draft shift to move it, or its right edge to change when it ends.",
+                  "tone": "muted"
+                }
+              },
+              {
+                "type": "canvas.gantt",
+                "props": {
+                  "rows": "{{ (data.rows || []).filter(r => !!r.date && r.status !== 'cancelled').filter(r => r.date === Date().slice(0, 10) && !!r.start).map(r => ({ path: r.path, title: [r.role, r.time].filter(part => part).join(' · '), employee: r.employee || 'Unassigned', role: r.role || 'No role', status: r.status, start: r.date + 'T' + r.start, end: r.date + 'T' + (r.end || r.start) })) }}",
+                  "laneKey": "employee",
+                  "colorBy": "role",
+                  "scale": "hour",
+                  "hours": [
+                    6,
+                    22
+                  ],
+                  "conflicts": true,
+                  "lockedWhen": "row.status !== 'draft'",
+                  "emptyText": "No shifts today."
+                },
+                "on": {
+                  "open": [
+                    {
+                      "open-file": {
+                        "path": "{{ event.row.path }}",
+                        "mode": "edit",
+                        "open": "side"
+                      }
+                    }
+                  ],
+                  "reschedule": [
+                    {
+                      "patch-record": {
+                        "path": "{{ event.path }}",
+                        "values": {
+                          "startTime": "{{ event.start.slice(11, 16) }}",
+                          "endTime": "{{ event.end.slice(11, 16) }}",
+                          "updatedAt": "{{ Date() }}"
+                        }
+                      }
+                    },
+                    {
+                      "refresh-source": {
+                        "source": "shifts"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "shifts",
+              "compact": true,
+              "description": "The /shifts folder could not be read. Reinstall Planning to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /shift-roles folder could not be read. Reinstall Planning to recreate it."
-            },
-            "rules": {
-              "visible": "data.$roles.status === 'error'"
+              "for": "roles",
+              "compact": true,
+              "description": "The /shift-roles folder could not be read. Reinstall Planning to recreate it."
             }
           },
           {
@@ -226,6 +349,10 @@
                         }
                       ],
                       "emptyText": "No draft shifts",
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
                       "clickable": true
                     },
                     "on": {
@@ -233,7 +360,8 @@
                         {
                           "open-file": {
                             "path": "{{ event.path }}",
-                            "mode": "edit"
+                            "mode": "edit",
+                            "open": "side"
                           }
                         }
                       ]
@@ -281,6 +409,10 @@
                         }
                       ],
                       "emptyText": "No published shifts",
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
                       "clickable": true
                     },
                     "on": {
@@ -288,7 +420,8 @@
                         {
                           "open-file": {
                             "path": "{{ event.path }}",
-                            "mode": "edit"
+                            "mode": "edit",
+                            "open": "side"
                           }
                         }
                       ]
@@ -336,6 +469,10 @@
                         }
                       ],
                       "emptyText": "No confirmed shifts",
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
                       "clickable": true
                     },
                     "on": {
@@ -343,7 +480,8 @@
                         {
                           "open-file": {
                             "path": "{{ event.path }}",
-                            "mode": "edit"
+                            "mode": "edit",
+                            "open": "side"
                           }
                         }
                       ]
@@ -351,6 +489,46 @@
                   }
                 ],
                 "slot": "confirmed"
+              }
+            ]
+          },
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "gap": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Shifts per person"
+                }
+              },
+              {
+                "type": "canvas.chart",
+                "props": {
+                  "rows": "{{ (data.rows || []).filter(r => !!r.date && r.status !== 'cancelled').map(r => r.employee || 'Unassigned').filter((name, index, all) => all.indexOf(name) === index).map(name => ({ label: name, draft: (data.rows || []).filter(r => !!r.date && r.status !== 'cancelled').filter(r => (r.employee || 'Unassigned') === name && r.status === 'draft').length, published: (data.rows || []).filter(r => !!r.date && r.status !== 'cancelled').filter(r => (r.employee || 'Unassigned') === name && r.status !== 'draft').length })) }}",
+                  "showLegend": true,
+                  "emptyText": "Nothing to chart yet",
+                  "kind": "stacked-hbar",
+                  "x": "label",
+                  "y": [
+                    "draft",
+                    "published"
+                  ],
+                  "labels": {
+                    "draft": "Draft",
+                    "published": "Published"
+                  },
+                  "palette": {
+                    "draft": "warning",
+                    "published": "chart-1"
+                  },
+                  "format": "integer"
+                }
               }
             ]
           }

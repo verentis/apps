@@ -23,11 +23,18 @@ export const invoicing = {
 
 const vendor = kind => `application/vnd.verentis.sales.${kind}+json`
 
+/**
+ * Products (required) owns the product catalogue: Sales reads its product files and adds products only through its
+ * API (`create-product`).
+ */
+export const products = {
+  path: '/products',
+  mime: 'application/vnd.verentis.products.product+json',
+}
+
 export const mimeTypes = {
-  products: 'application/vnd.verentis.sales.products',
   quotations: 'application/vnd.verentis.sales.quotations',
   orders: 'application/vnd.verentis.sales.orders',
-  product: vendor('product'),
   quotation: vendor('quotation'),
   order: vendor('order'),
   settings: vendor('settings'),
@@ -35,17 +42,15 @@ export const mimeTypes = {
 
 // Containers are content-less typed nodes that hold records as children; the file browser lists them.
 export const containers = {
-  products: { path: '/products', mime: mimeTypes.products, holds: ['product'] },
   quotations: { path: '/quotations', mime: mimeTypes.quotations, holds: ['quotation'] },
   orders: { path: '/sales-orders', mime: mimeTypes.orders, holds: ['order'] },
 }
 
 /** Records are named by a generated code (`QUO-0001`) and stored without an extension in their container. */
-export const recordKinds = ['product', 'quotation', 'order']
-export const containerOf = { product: 'products', quotation: 'quotations', order: 'orders' }
+export const recordKinds = ['quotation', 'order']
+export const containerOf = { quotation: 'quotations', order: 'orders' }
 
 export const codeSettings = {
-  product: { key: 'product-code-prefix', default: 'PROD-', label: 'Product code prefix' },
   quotation: { key: 'quotation-code-prefix', default: 'QUO-', label: 'Quotation number prefix' },
   order: { key: 'order-code-prefix', default: 'SO-', label: 'Sales order number prefix' },
 }
@@ -80,13 +85,6 @@ export const totals = object({ subtotal: money, discount: money, total: money })
 
 // Draft records may be incomplete on disk (a generated record opens straight into its form); confirming checks them.
 export const schemas = {
-  product: recordSchema('product', 'product', {
-    code,
-    name: optional(200),
-    unit: optional(32),
-    listPrice: money,
-    description: optional(1000),
-  }, ['code', 'name', 'unit', 'listPrice', 'description']),
   quotation: recordSchema('quotation', 'quotation', {
     code,
     date: optionalDate,
@@ -129,7 +127,6 @@ const emptyLine = { product: '', description: '', quantity: '1', unitPrice: '', 
  * the generated `code` and fills empty dates, currency and notes from the settings.
  */
 export const templates = {
-  product: recordTemplate('product', { name: '{{ name }}', unit: 'each', listPrice: '', description: '' }),
   quotation: recordTemplate('quotation', {
     date: '', currency: '', reference: '{{ name }}', customerRef: '', customer: emptyParty,
     lines: [emptyLine], notes: '', status: 'draft',
@@ -142,7 +139,6 @@ export const templates = {
 const defaultCurrency = { file: settingsPath, pointer: 'currency' }
 /** Defaults the create script fills into empty template fields. */
 export const createDefaults = {
-  product: {},
   quotation: { date: 'today', currency: defaultCurrency, notes: { file: settingsPath, pointer: 'notes' } },
   order: { date: 'today', currency: defaultCurrency },
 }

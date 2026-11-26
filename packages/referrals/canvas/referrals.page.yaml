@@ -11,7 +11,8 @@
     "access": [
       {
         "path": "/referrals",
-        "reason": "List referrals by status"
+        "reason": "List referrals by status; move records between columns",
+        "mode": "write"
       }
     ],
     "data": {
@@ -28,81 +29,69 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Referrals",
+          "icon": "gift",
+          "active": "referrals.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "My referrals",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "referrals.page.yaml",
+              "label": "All referrals",
+              "icon": "kanban"
+            },
+            {
+              "id": "leaderboard.page.yaml",
+              "label": "Leaderboard",
+              "icon": "trophy"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/referrals/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/referrals.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Referrals by status",
+              "note": "Every active referral, grouped by its status. Click a row to open the referral."
             },
-            "children": [
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Referrals by status"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Every active referral, grouped by its status. Click a row to open the referral.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.button",
-                "props": {
-                  "label": "Referrals",
-                  "variant": "ghost",
-                  "icon": "gift",
-                  "size": "sm"
-                },
-                "on": {
-                  "click": [
-                    {
-                      "open-file": {
-                        "path": "/applications/referrals/canvas/home.page.yaml"
-                      }
-                    }
-                  ]
-                }
-              }
-            ]
+            "children": []
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /referrals folder could not be read. Reinstall Referrals to recreate it."
-            },
-            "rules": {
-              "visible": "data.$referrals.status === 'error'"
+              "for": "referrals",
+              "compact": true,
+              "description": "The /referrals folder could not be read. Reinstall Referrals to recreate it."
             }
           },
           {
@@ -158,26 +147,18 @@
           {
             "type": "canvas.tabs",
             "props": {
+              "variant": "pill",
+              "persist": true,
               "items": [
                 {
-                  "value": "submitted",
-                  "label": "Submitted",
-                  "icon": "gift"
+                  "value": "board",
+                  "label": "Board",
+                  "icon": "kanban"
                 },
                 {
-                  "value": "in-process",
-                  "label": "In Process",
-                  "icon": "gift"
-                },
-                {
-                  "value": "hired",
-                  "label": "Hired",
-                  "icon": "gift"
-                },
-                {
-                  "value": "not-hired",
-                  "label": "Not Hired",
-                  "icon": "gift"
+                  "value": "list",
+                  "label": "List",
+                  "icon": "list"
                 }
               ]
             },
@@ -191,48 +172,119 @@
                 },
                 "children": [
                   {
-                    "type": "canvas.table",
+                    "type": "canvas.board",
                     "props": {
-                      "rows": "{{ (data.rows || []).filter(r => r.status === 'submitted') }}",
+                      "rows": "{{ (data.rows || []) }}",
+                      "groupBy": "status",
+                      "readOnly": false,
+                      "rowKey": "path",
                       "columns": [
                         {
-                          "key": "code",
-                          "label": "Referral"
+                          "value": "submitted",
+                          "label": "Submitted"
                         },
                         {
-                          "key": "referrer",
-                          "label": "Referrer"
+                          "value": "in-process",
+                          "label": "In Process"
                         },
                         {
-                          "key": "candidate",
-                          "label": "Candidate"
+                          "value": "hired",
+                          "label": "Hired"
                         },
                         {
-                          "key": "decidedAt",
-                          "label": "Decided"
-                        },
-                        {
-                          "key": "points",
-                          "label": "Points",
-                          "align": "end"
+                          "value": "not-hired",
+                          "label": "Not Hired"
                         }
                       ],
-                      "emptyText": "No submitted referrals",
-                      "clickable": true
+                      "card": {
+                        "title": "referrer",
+                        "code": "code",
+                        "meta": [
+                          "candidate",
+                          "decidedAt",
+                          "points"
+                        ]
+                      },
+                      "emptyText": "Nothing here",
+                      "lockedWhen": "[\"hired\",\"not-hired\"].includes(row.status)"
                     },
                     "on": {
-                      "row-click": [
+                      "open": [
                         {
                           "open-file": {
+                            "path": "{{ event.row.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ],
+                      "move": [
+                        {
+                          "confirm": {
+                            "if": "event.to === 'hired'",
+                            "title": "Move to Hired?",
+                            "message": "{{ event.row.code }} moves to Hired. The referrer is awarded their points.",
+                            "confirm-label": "Move to Hired"
+                          }
+                        },
+                        {
+                          "confirm": {
+                            "if": "event.to === 'not-hired'",
+                            "title": "Move to Not Hired?",
+                            "message": "{{ event.row.code }} moves to Not Hired. It cannot be moved back from the board.",
+                            "confirm-label": "Move to Not Hired"
+                          }
+                        },
+                        {
+                          "run-script": {
+                            "if": "event.to === 'hired'",
+                            "file": "/applications/referrals/scripts/post",
+                            "timeout": 120,
+                            "parameters": {
+                              "operation": "mark-hired",
+                              "path": "{{ event.path }}"
+                            },
+                            "assign": "lastmove"
+                          }
+                        },
+                        {
+                          "run-script": {
+                            "if": "event.to === 'not-hired'",
+                            "file": "/applications/referrals/scripts/post",
+                            "timeout": 120,
+                            "parameters": {
+                              "operation": "mark-not-hired",
+                              "path": "{{ event.path }}"
+                            },
+                            "assign": "lastmove"
+                          }
+                        },
+                        {
+                          "patch-record": {
+                            "if": "![\"hired\",\"not-hired\"].includes(event.to)",
                             "path": "{{ event.path }}",
-                            "mode": "edit"
+                            "values": {
+                              "status": "{{ event.to }}",
+                              "updatedAt": "{{ Date() }}"
+                            }
+                          }
+                        },
+                        {
+                          "refresh-source": {
+                            "source": "referrals"
+                          }
+                        },
+                        {
+                          "toast": {
+                            "message": "{{ [\"hired\",\"not-hired\"].includes(event.to) ? ((state.lastmove && state.lastmove.message) || 'Done') : 'Moved to ' + ({\"submitted\":\"Submitted\",\"in-process\":\"In Process\",\"hired\":\"Hired\",\"not-hired\":\"Not Hired\"}[event.to] || event.to) }}",
+                            "variant": "success"
                           }
                         }
                       ]
                     }
                   }
                 ],
-                "slot": "submitted"
+                "slot": "board"
               },
               {
                 "type": "canvas.stack",
@@ -245,7 +297,7 @@
                   {
                     "type": "canvas.table",
                     "props": {
-                      "rows": "{{ (data.rows || []).filter(r => r.status === 'in-process') }}",
+                      "rows": "{{ (data.rows || []) }}",
                       "columns": [
                         {
                           "key": "code",
@@ -267,128 +319,67 @@
                           "key": "points",
                           "label": "Points",
                           "align": "end"
+                        },
+                        {
+                          "key": "status",
+                          "label": "Stage",
+                          "format": "badge",
+                          "labels": {
+                            "submitted": "Submitted",
+                            "in-process": "In Process",
+                            "hired": "Hired",
+                            "not-hired": "Not Hired"
+                          }
                         }
                       ],
-                      "emptyText": "No in process referrals",
-                      "clickable": true
+                      "views": [
+                        {
+                          "value": "all",
+                          "label": "All"
+                        },
+                        {
+                          "value": "submitted",
+                          "label": "Submitted",
+                          "where": "row.status === 'submitted'"
+                        },
+                        {
+                          "value": "in-process",
+                          "label": "In Process",
+                          "where": "row.status === 'in-process'"
+                        },
+                        {
+                          "value": "hired",
+                          "label": "Hired",
+                          "where": "row.status === 'hired'"
+                        },
+                        {
+                          "value": "not-hired",
+                          "label": "Not Hired",
+                          "where": "row.status === 'not-hired'"
+                        }
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
+                      "emptyText": "Nothing here"
                     },
                     "on": {
                       "row-click": [
                         {
                           "open-file": {
                             "path": "{{ event.path }}",
-                            "mode": "edit"
+                            "mode": "edit",
+                            "open": "side"
                           }
                         }
                       ]
                     }
                   }
                 ],
-                "slot": "in-process"
-              },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 4
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.table",
-                    "props": {
-                      "rows": "{{ (data.rows || []).filter(r => r.status === 'hired') }}",
-                      "columns": [
-                        {
-                          "key": "code",
-                          "label": "Referral"
-                        },
-                        {
-                          "key": "referrer",
-                          "label": "Referrer"
-                        },
-                        {
-                          "key": "candidate",
-                          "label": "Candidate"
-                        },
-                        {
-                          "key": "decidedAt",
-                          "label": "Decided"
-                        },
-                        {
-                          "key": "points",
-                          "label": "Points",
-                          "align": "end"
-                        }
-                      ],
-                      "emptyText": "No hired referrals",
-                      "clickable": true
-                    },
-                    "on": {
-                      "row-click": [
-                        {
-                          "open-file": {
-                            "path": "{{ event.path }}",
-                            "mode": "edit"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ],
-                "slot": "hired"
-              },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 4
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.table",
-                    "props": {
-                      "rows": "{{ (data.rows || []).filter(r => r.status === 'not-hired') }}",
-                      "columns": [
-                        {
-                          "key": "code",
-                          "label": "Referral"
-                        },
-                        {
-                          "key": "referrer",
-                          "label": "Referrer"
-                        },
-                        {
-                          "key": "candidate",
-                          "label": "Candidate"
-                        },
-                        {
-                          "key": "decidedAt",
-                          "label": "Decided"
-                        },
-                        {
-                          "key": "points",
-                          "label": "Points",
-                          "align": "end"
-                        }
-                      ],
-                      "emptyText": "No not hired referrals",
-                      "clickable": true
-                    },
-                    "on": {
-                      "row-click": [
-                        {
-                          "open-file": {
-                            "path": "{{ event.path }}",
-                            "mode": "edit"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ],
-                "slot": "not-hired"
+                "slot": "list"
               }
             ]
           }

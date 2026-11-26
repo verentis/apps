@@ -1,0 +1,78 @@
+# Accounting's API: the ledger operations other apps call through the platform. Accounting checks its own rules (open
+# period, active accounts, balanced lines, base currency) and writes /journals with its own file access; Invoicing,
+# Expenses and Payroll never write the ledger themselves.
+api-version: verentis.io/v1
+kind: Api
+metadata:
+  id: accounting
+spec:
+  operations:
+    - key: post-journal
+      title: Post a journal
+      description: >-
+        Posts a balanced journal for another app's record (an issued invoice, a posted expense report, a payroll run),
+        named after the record. Posting the same record again with the same lines returns the journal already posted.
+      effect: write
+      timeout-seconds: 60
+      input-schema:
+        type: object
+        additionalProperties: false
+        required: [source, date, description, currency, lines]
+        properties:
+          source:
+            type: object
+            additionalProperties: false
+            required: [path, code]
+            properties:
+              path: { type: string, minLength: 1, maxLength: 1000 }
+              code: { type: string, pattern: "^[A-Za-z0-9][A-Za-z0-9-]{0,63}$" }
+          date: { type: string, pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" }
+          description: { type: string, maxLength: 1000 }
+          currency: { type: string, pattern: "^[A-Z]{3}$" }
+          lines:
+            type: array
+            minItems: 2
+            maxItems: 1000
+            items:
+              type: object
+              additionalProperties: false
+              required: [account, direction, amount]
+              properties:
+                account: { type: string, minLength: 1, maxLength: 1000 }
+                direction: { enum: [debit, credit] }
+                amount: { type: string, pattern: "^(0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?$" }
+                description: { type: string, maxLength: 1000 }
+      output-schema:
+        type: object
+        properties:
+          path: { type: string }
+          period: { type: string }
+          created: { type: boolean }
+      implementation:
+        type: script
+        script: scripts/api
+    - key: reverse-journal
+      title: Reverse a journal
+      description: Reverses a journal the calling app posted, dated in an open period. Accounting refuses journals another app posted.
+      effect: write
+      timeout-seconds: 60
+      input-schema:
+        type: object
+        additionalProperties: false
+        required: [journal]
+        properties:
+          journal: { type: string, minLength: 1, maxLength: 1000 }
+          date: { type: string, pattern: "^([0-9]{4}-[0-9]{2}-[0-9]{2})?$" }
+          reason: { type: string, maxLength: 1000 }
+          source:
+            type: object
+            additionalProperties: false
+            properties:
+              path: { type: string, maxLength: 1000 }
+      output-schema:
+        type: object
+        properties:
+          path: { type: string }
+      implementation:
+        type: script
+        script: scripts/api

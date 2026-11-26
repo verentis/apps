@@ -7,13 +7,12 @@
 // retried operation never posts twice; records are updated conditionally (If-Match), so a concurrent edit fails
 // instead of being overwritten. The steps are not one transaction: if a run stops between writing the journal and
 // updating the report, running the same operation again completes it.
-import { randomUUID } from 'node:crypto'
 import {
-  accounting, createJournal, fail, formatMinor, journalLine, ledgerSettings, nameOf, nowIso, openPeriodFor,
-  postedJournal, readAccounts, readRecord, readSettings, saveRecord, toMinor,
+  journalRequest, postedJournalFor, fail, formatMinor, journalLine, ledgerSettings, nameOf, nowIso, openPeriodFor,
+  readAccounts, readRecord, readSettings, saveRecord, toMinor,
 } from './ledger.mjs'
 
-export const operations = ['submit-report', 'approve-report', 'refuse-report', 'post-report']
+export const operations = ['submit-report', 'approve-report', 'refuse-report', 'post-report', 'complete-report']
 export const expenses = {
   settingsPath: '/settings/expenses.json',
   categories: '/expense-categories',
@@ -110,7 +109,7 @@ async function categoryAccounts(files, lines) {
   return accounts
 }
 
-export async function postReport(files, path, { now, uuid }) {
+export async function postReport(files, path, { now, journal }) {
   const report = await readReport(files, path)
   const { record } = report
   if (record.status === 'posted') return { message: `${label(record)} is already posted`, path: record.journal?.path ?? path }
@@ -133,12 +132,10 @@ export async function postReport(files, path, { now, uuid }) {
     journalLine(config.reimbursementAccount, 'credit', total, digits, memo),
   ]
   await readAccounts(files, lines.map(item => item.account))
-  const period = await openPeriodFor(files, record.date)
-  const journalPath = `${accounting.journals}/${nameOf(path)}`
-  await createJournal(files, journalPath, postedJournal({
-    code: nameOf(journalPath), date: record.date, description: `Expense report ${memo}`, currency: ledger.baseCurrency,
-    period: period.path, lines, source: path, now, id: uuid(),
-  }), 'source')
+  await openPeriodFor(files, record.date)
+  // Accounting posts the journal through its API (the form asks it); `complete-report` then marks the report posted.
+  if (!journal) return { message: `Posting ${label(record)} to the ledger`, journalRequest: journalRequest(path, record.date, `Expense report ${memo}`, ledger.baseCurrency, lines) }
+  const journalPath = await postedJournalFor(files, path, journal)
   Object.assign(record, {
     total: formatMinor(total, digits), status: 'posted', postedAt: now, journal: { path: journalPath }, updatedAt: now,
   })
@@ -146,10 +143,10 @@ export async function postReport(files, path, { now, uuid }) {
   return { message: `Posted ${label(record)} (${record.total})`, path: journalPath }
 }
 
-export async function run(parameters, files, { now = nowIso(), uuid = randomUUID } = {}) {
+export async function run(parameters, files, { now = nowIso() } = {}) {
   const { operation, path, approver, reason } = parameters ?? {}
   const options = {
-    now, uuid,
+    now,
     approver: typeof approver === 'string' ? approver.trim().slice(0, 200) : '',
     reason: typeof reason === 'string' ? reason.trim().slice(0, 1000) : '',
   }
@@ -157,6 +154,7 @@ export async function run(parameters, files, { now = nowIso(), uuid = randomUUID
   if (operation === 'approve-report') return approveReport(files, path, options)
   if (operation === 'refuse-report') return refuseReport(files, path, options)
   if (operation === 'post-report') return postReport(files, path, options)
+  if (operation === 'complete-report') return postReport(files, path, { ...options, journal: parameters.journal })
   return fail(`Unsupported operation ${JSON.stringify(operation ?? '')}. Expected one of ${operations.join(', ')}.`)
 }
 

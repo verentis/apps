@@ -1,19 +1,18 @@
 // Issues Invoicing invoices and credit notes and posts payments to the Accounting ledger. Canvas forms run this
-// script (run-script) against a saved record; it computes the totals, validates against the ledger, writes the
-// journal and a document copy, then marks the record issued or posted with the file access its installer consented
-// to (manifest `file-access`).
+// script (run-script) against a saved record; it computes the totals and checks them against the ledger, returns the
+// journal for Accounting to post through its API (`post-journal`; Invoicing never writes /journals), then, given the
+// posted journal, writes the document copy and marks the record issued or posted.
 //
-// Integrity model: journals get deterministic names (`/journals/INV-0001`, `<journal>-R`) and are created
-// create-only, so a retried operation never posts twice; records are updated conditionally (If-Match), so a
-// concurrent edit fails instead of being overwritten. The steps are not one transaction: if a run stops between
-// writing the journal and updating the record, running the same operation again completes it.
-import { randomUUID } from 'node:crypto'
+// Integrity model: Accounting names a journal after its record (`/journals/INV-0001`) and returns the same journal
+// when asked again; the record is only marked once its journal is posted, and is updated conditionally (If-Match), so
+// a concurrent edit fails instead of being overwritten. A run interrupted after posting completes on retry.
 import {
-  accounting, createJournal, divideHalfUp, fail, formatMinor, journalLine, ledgerSettings, nameOf, nowIso, openPeriodFor,
-  parseDecimal, postedJournal, readAccounts, readFolder, readRecord, readSettings, reverseJournal, saveRecord, toMinor,
+  accounting, divideHalfUp, fail, formatMinor, journalLine, ledgerSettings, nameOf, nowIso, openPeriodFor,
+  parseDecimal, readAccounts, readFolder, readRecord, readSettings, saveRecord, toMinor, journalRequest,
+  postedJournalFor,
 } from './ledger.mjs'
 
-export const operations = ['issue-invoice', 'issue-credit', 'post-payment', 'reverse-payment']
+export const operations = ['issue-invoice', 'complete-invoice', 'issue-credit', 'complete-credit', 'post-payment', 'complete-payment', 'reverse-payment', 'complete-reversal']
 export const invoicing = {
   settingsPath: '/settings/invoicing.json',
   invoices: '/invoices',
@@ -135,7 +134,14 @@ async function writeDocument(files, recordPath, code, markdown) {
   return path
 }
 
-export async function issueInvoice(files, path, { now, uuid }) {
+/** The reversal Accounting posted for a journal. */
+async function checkReversal(files, journalPath, reversalPath) {
+  const reversal = await readRecord(files, reversalPath, 'journal')
+  if (reversal.record.reversalOf?.path !== journalPath) fail(`${nameOf(reversalPath)} does not reverse ${nameOf(journalPath)}.`)
+  return reversalPath
+}
+
+export async function issueInvoice(files, path, { now, journal }) {
   const invoice = await readRecord(files, checkPath(path, invoicing.invoices), 'invoice')
   const { record } = invoice
   checkActive(record)
@@ -155,11 +161,10 @@ export async function issueInvoice(files, path, { now, uuid }) {
     ...(totals.tax ? [journalLine(config.taxAccount, 'credit', totals.tax, digits, memo)] : []),
   ]
   await readAccounts(files, lines.map(item => item.account))
-  const period = await openPeriodFor(files, record.issueDate)
-  const journalPath = `${accounting.journals}/${nameOf(path)}`
-  await createJournal(files, journalPath, postedJournal({
-    code: nameOf(journalPath), date: record.issueDate, description: `Invoice ${memo}`, currency, period: period.path, lines, source: path, now, id: uuid(),
-  }), 'source')
+  await openPeriodFor(files, record.issueDate)
+  // Accounting posts the journal through its API (the form asks it); `complete-invoice` then marks the invoice issued.
+  if (!journal) return { message: `Posting ${label(record)} to the ledger`, journalRequest: journalRequest(path, record.issueDate, `Invoice ${memo}`, currency, lines) }
+  const journalPath = await postedJournalFor(files, path, journal)
   Object.assign(record, { currency, seller: config.seller ?? {}, lines: totals.lines, totals: formatTotals(totals, digits) })
   const document = await writeDocument(files, path, record.code, documentMarkdown('Invoice', record, record.seller, record.customer,
     `Issued ${record.issueDate} · Due ${record.dueDate}${record.reference ? ` · Reference ${record.reference}` : ''}`))
@@ -168,7 +173,7 @@ export async function issueInvoice(files, path, { now, uuid }) {
   return { message: `Issued ${label(record)}`, path: document }
 }
 
-export async function issueCredit(files, path, { now, uuid }) {
+export async function issueCredit(files, path, { now, journal }) {
   const credit = await readRecord(files, checkPath(path, invoicing.credits), 'credit')
   const { record } = credit
   checkActive(record)
@@ -194,11 +199,9 @@ export async function issueCredit(files, path, { now, uuid }) {
     journalLine(config.receivableAccount, 'credit', totals.gross, digits, memo),
   ]
   await readAccounts(files, lines.map(item => item.account))
-  const period = await openPeriodFor(files, record.date)
-  const journalPath = `${accounting.journals}/${nameOf(path)}`
-  await createJournal(files, journalPath, postedJournal({
-    code: nameOf(journalPath), date: record.date, description: `Credit note ${memo}`, currency, period: period.path, lines, source: path, now, id: uuid(),
-  }), 'source')
+  await openPeriodFor(files, record.date)
+  if (!journal) return { message: `Posting ${label(record)} to the ledger`, journalRequest: journalRequest(path, record.date, `Credit note ${memo}`, currency, lines) }
+  const journalPath = await postedJournalFor(files, path, journal)
   Object.assign(record, { currency, customer, lines: totals.lines, totals: formatTotals(totals, digits) })
   const document = await writeDocument(files, path, record.code, documentMarkdown('Credit note', record, invoice.record.seller, customer,
     `Issued ${record.date} · Against invoice ${invoice.record.code} · ${record.reason.trim()}`))
@@ -207,7 +210,7 @@ export async function issueCredit(files, path, { now, uuid }) {
   return { message: `Issued ${label(record)} against ${label(invoice.record)}`, path: document }
 }
 
-export async function postPayment(files, path, { now, uuid }) {
+export async function postPayment(files, path, { now, journal }) {
   const payment = await readRecord(files, checkPath(path, invoicing.payments), 'payment')
   const { record } = payment
   checkActive(record)
@@ -238,11 +241,9 @@ export async function postPayment(files, path, { now, uuid }) {
     journalLine(config.receivableAccount, 'credit', amount, digits, memo),
   ]
   await readAccounts(files, lines.map(item => item.account))
-  const period = await openPeriodFor(files, record.date)
-  const journalPath = `${accounting.journals}/${nameOf(path)}`
-  await createJournal(files, journalPath, postedJournal({
-    code: nameOf(journalPath), date: record.date, description: `Payment ${memo}`, currency, period: period.path, lines, source: path, now, id: uuid(),
-  }), 'source')
+  await openPeriodFor(files, record.date)
+  if (!journal) return { message: `Posting ${label(record)} to the ledger`, journalRequest: journalRequest(path, record.date, `Payment ${memo}`, currency, lines) }
+  const journalPath = await postedJournalFor(files, path, journal)
   Object.assign(record, {
     currency, amount: formatMinor(amount, digits), allocations, status: 'posted', postedAt: now, journal: { path: journalPath }, updatedAt: now,
   })
@@ -251,24 +252,36 @@ export async function postPayment(files, path, { now, uuid }) {
   return { message: `Posted ${label(record)}${unallocated ? ` (${formatMinor(unallocated, digits)} unallocated)` : ''}`, path: journalPath }
 }
 
-export async function reversePayment(files, path, { date, reason, now, uuid }) {
+export async function reversePayment(files, path, { date, reason, now, reversal: reversalPath }) {
   const payment = await readRecord(files, checkPath(path, invoicing.payments), 'payment')
   const { record } = payment
   if (record.status === 'reversed') return { message: `${label(record)} is already reversed`, path: record.reversalJournal?.path ?? path }
   if (record.status !== 'posted' || !record.journal?.path) fail(`${label(record)} is not posted.`)
-  const reversal = await reverseJournal(files, record.journal.path, { date: datePattern.test(date ?? '') ? date : now.slice(0, 10), reason, now, uuid })
+  // Accounting reverses the journal through its API (the form asks it); `complete-reversal` then marks the payment.
+  if (!reversalPath) {
+    return { message: `Reversing ${label(record)}`, reversalRequest: {
+      journal: record.journal.path, date: datePattern.test(date ?? '') ? date : now.slice(0, 10), reason: reason ?? '', source: { path } } }
+  }
+  const reversal = await checkReversal(files, record.journal.path, reversalPath)
   Object.assign(record, { status: 'reversed', reversalJournal: { path: reversal }, reversedAt: now, updatedAt: now })
   await saveRecord(files, payment, invoicing.mime('payment'))
   return { message: `Reversed ${label(record)} with ${nameOf(reversal)}`, path: reversal }
 }
 
-export async function run(parameters, files, { now = nowIso(), uuid = randomUUID } = {}) {
+export async function run(parameters, files, { now = nowIso() } = {}) {
   const { operation, path, date, reason } = parameters ?? {}
-  const options = { now, uuid, date, reason: typeof reason === 'string' ? reason.trim().slice(0, 500) : '' }
+  const options = { now, date, reason: typeof reason === 'string' ? reason.trim().slice(0, 500) : '' }
+  // Each posting runs twice: first it returns the journal for Accounting to post (through its API), then, given the
+  // journal Accounting posted (`journal` / `reversal`), it marks the record.
+  const posted = { ...options, journal: parameters.journal, reversal: parameters.reversal }
   if (operation === 'issue-invoice') return issueInvoice(files, path, options)
+  if (operation === 'complete-invoice') return issueInvoice(files, path, posted)
   if (operation === 'issue-credit') return issueCredit(files, path, options)
+  if (operation === 'complete-credit') return issueCredit(files, path, posted)
   if (operation === 'post-payment') return postPayment(files, path, options)
+  if (operation === 'complete-payment') return postPayment(files, path, posted)
   if (operation === 'reverse-payment') return reversePayment(files, path, options)
+  if (operation === 'complete-reversal') return reversePayment(files, path, posted)
   return fail(`Unsupported operation ${JSON.stringify(operation ?? '')}. Expected one of ${operations.join(', ')}.`)
 }
 

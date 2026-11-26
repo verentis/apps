@@ -1,22 +1,26 @@
 // File-based Manufacturing record contracts. Every record is one JSON file whose vendor MIME names its kind.
 import {
-  array, code, fileReference, fillTemplate, money, object, optional, optionalDate, pathOrEmpty,
-  schemas as schemaKit, timestamp, whenStatus,
+  array, checklistItem, code, fileReference, fillTemplate, money, object, optional, optionalDate, pathOrEmpty, schemas as schemaKit, timestamp, whenStatus,
 } from '../../../tools/file-apps/schema.mjs'
 
 export const installRoot = '/applications/manufacturing'
 export const schemaBase = 'https://schemas.verentis.io/manufacturing/v1'
 
 /**
- * Inventory (optional) keeps products and stock moves here; BoM components and outputs reference its products,
- * and completing a manufacturing order emits consumption and production moves in Inventory's move vendor MIME
+ * Products (optional) keeps the product catalogue; BoM components and outputs reference its products.
+ */
+export const products = {
+  path: '/products',
+  mime: 'application/vnd.verentis.products.product+json',
+}
+
+/**
+ * Inventory (optional) keeps stock moves here; completing a manufacturing order emits consumption and production moves in Inventory's move vendor MIME
  * format when the /stock-moves container exists.
  */
 export const inventory = {
-  products: '/products',
   moves: '/stock-moves',
   settingsPath: '/settings/inventory.json',
-  productMime: 'application/vnd.verentis.inventory.product+json',
   moveMime: 'application/vnd.verentis.inventory.move+json',
   moveSchema: 'https://schemas.verentis.io/inventory/v1/move.schema.json',
 }
@@ -95,6 +99,8 @@ export const schemas = {
     completedAt: timestamp,
     cancelledAt: timestamp,
     moves: array(fileReference, 0, 250),
+    // The shop floor ticks and times the BoM's operations on the order.
+    operations: array(checklistItem, 0, 100),
   }, ['code', 'bom', 'quantity', 'scheduledDate', 'demand', 'status'], [
     whenStatus(['confirmed', 'in-progress', 'done'], ['confirmedAt', 'product', 'productName']),
     whenStatus(['in-progress', 'done'], ['startedAt']),
@@ -113,7 +119,7 @@ export const templates = {
     components: [{ product: '', name: '', quantity: '1' }], routing: [], notes: '',
   }),
   order: recordTemplate('order', {
-    bom: '', product: '', productName: '', quantity: '1', scheduledDate: '', demand: [], status: 'draft',
+    bom: '', product: '', productName: '', quantity: '1', scheduledDate: '', demand: [], status: 'draft', operations: [],
   }),
 }
 

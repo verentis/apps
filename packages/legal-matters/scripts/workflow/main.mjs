@@ -22,11 +22,11 @@ export async function run(engine) {
     check(p.parentPath === matters && (p.branch ?? 'main') === 'main' && p.creatable === 'matter', 'Create only inside /legal-matters on main.')
     const id = randomUUID(), code = `MAT-${id}`, path = `${matters}/${code}`
     // Do not grant callers a write-any-JSON primitive via their supplied template, name or destination.
-    const record = { ...structuredClone(initial), id, code, revision:id, createdAt: now, updatedAt: now, title: 'Synthetic intake' }
+    const record = { ...structuredClone(initial), id, code, revision:id, createdAt: now, updatedAt: now, title: 'New matter' }
     await files.write(path, JSON.stringify(record), { contentType: mime, ifNoneMatch: '*' })
     return { path }
   }
-  check(['save','screen','decide','prepare','discard','approve'].includes(p?.operation), 'Unsupported Legal Matters operation.')
+  check(['save','screen','decide','prepare','discard','approve','record-invoice'].includes(p?.operation), 'Unsupported Legal Matters operation.')
   const current = await load(files, p.path)
   check(p.revision && p.revision === current.record.revision,'Matter changed since it was opened. Reload before continuing.')
   if (p.operation === 'save') {
@@ -39,8 +39,8 @@ export async function run(engine) {
       m[key] = p.values[key]
     }
     await save(files,current,now)
-    return {message:'Saved synthetic matter.'}
+    return {message:'Saved matter.'}
   }
-  return ['screen','decide'].includes(p.operation) ? intake(files, current, p.operation, now) : billing(files, current, p.operation, now)
+  return ['screen','decide'].includes(p.operation) ? intake(files, current, p.operation, now) : billing(files, current, p.operation, now, p.invoice)
 }
 export default async function workflow(engine) { await engine.output.result(await run(engine)) }

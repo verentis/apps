@@ -9,7 +9,6 @@ export const initial = {
   "updatedAt": "{{ now }}",
   "code": "",
   "revision": "{{ id }}",
-  "pilot": "synthetic-only",
   "title": "{{ name }}",
   "status": "intake",
   "parties": [],

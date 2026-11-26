@@ -12,7 +12,7 @@ const packageOnly = [
   'crm', 'accounting', 'invoicing', 'contract-studio', 'legal-matters', 'legal-research', 'namibia-law', 'south-africa-law',
   'appointments', 'appraisals', 'approvals', 'documents', 'employees', 'events', 'expenses',
   'field-service', 'fleet', 'helpdesk', 'inventory', 'knowledge', 'maintenance', 'manufacturing',
-  'payroll', 'planning', 'plm', 'project', 'purchase', 'quality', 'recruitment', 'referrals',
+  'payroll', 'planning', 'plm', 'products', 'project', 'purchase', 'quality', 'recruitment', 'referrals',
   'rental', 'sales', 'social-marketing', 'spreadsheet-bi', 'surveys', 'time-off', 'timesheets',
 ]
 const packages = readdirSync(new URL('packages/', repo), { withFileTypes: true })

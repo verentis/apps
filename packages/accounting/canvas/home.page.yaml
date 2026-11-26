@@ -1,341 +1,648 @@
-api-version: canvas.verentis.io/v1
-kind: Page
-metadata:
-  id: accounting-home
-  name: Accounting
-  description: Accounting overview.
-  icon: book-open
-spec:
-  access:
-  - path: /chart-of-accounts
-    reason: List the chart of accounts
-  - path: /journals
-    reason: List journals
-  - path: /expenses
-    reason: List expenses
-  - path: /periods
-    reason: List accounting periods
-  data:
-    accounts:
-      kind: folder
-      path: /chart-of-accounts
-      contents: true
-      mime-pattern: application/vnd.verentis.accounting.account+json
-    journals:
-      kind: folder
-      path: /journals
-      contents: true
-      mime-pattern: application/vnd.verentis.accounting.journal+json
-    expenses:
-      kind: folder
-      path: /expenses
-      contents: true
-      mime-pattern: application/vnd.verentis.accounting.expense+json
-    periods:
-      kind: folder
-      path: /periods
-      contents: true
-      mime-pattern: application/vnd.verentis.accounting.period+json
-  tree:
-  - type: canvas.stack
-    layout:
-      base:
-        padding: 6
-        gap: 4
-        maxWidth: 72rem
-        margin:
-          x: auto
-    children:
-    - type: canvas.stack
-      layout:
-        base:
-          direction: row
-          wrap: true
-          gap: 2
-          align: center
-          justify: between
-      children:
-      - type: canvas.stack
-        layout:
-          base:
-            gap: 1
-        children:
-        - type: canvas.heading
-          props:
-            level: 2
-            text: Accounting
-        - type: canvas.text
-          props:
-            text: A double-entry ledger as files in your workspace. Draft journals and expenses in their
-              folders, then post them from their forms.
-            tone: muted
-      - type: canvas.stack
-        layout:
-          base:
-            direction: row
-            wrap: true
-            gap: 2
-            align: center
-        children:
-        - type: canvas.button
-          props:
-            label: Reports
-            variant: outline
-            icon: chart-column
-            size: sm
-          'on':
-            click:
-            - open-file:
-                path: /applications/accounting/canvas/reports.page.yaml
-        - type: canvas.button
-          props:
-            label: Settings
-            variant: ghost
-            icon: settings
-            size: sm
-          'on':
-            click:
-            - open-file:
-                path: /settings/accounting.json
-                mode: edit
-    - type: canvas.grid
-      layout:
-        base:
-          columns: 2
-          gap: 4
-        desktop:
-          columns: 4
-      children:
-      - type: canvas.dashboard.stat
-        props:
-          label: Accounts
-          value: '{{ (data.accounts || []).filter(e => e.kind === ''file'' && e.data && e.data.state !==
-            ''archived'' && (true)).length }}'
-          icon: book-open
-          loading: '{{ data.$accounts.status === ''loading'' }}'
-      - type: canvas.dashboard.stat
-        props:
-          label: Open periods
-          value: '{{ (data.periods || []).filter(e => e.kind === ''file'' && e.data && e.data.state !==
-            ''archived'' && (e.data.status === ''open'')).length }}'
-          icon: calendar-range
-          loading: '{{ data.$periods.status === ''loading'' }}'
-      - type: canvas.dashboard.stat
-        props:
-          label: Draft journals
-          value: '{{ (data.journals || []).filter(e => e.kind === ''file'' && e.data && e.data.state !==
-            ''archived'' && (e.data.status === ''draft'')).length }}'
-          icon: notebook-pen
-          loading: '{{ data.$journals.status === ''loading'' }}'
-      - type: canvas.dashboard.stat
-        props:
-          label: Draft expenses
-          value: '{{ (data.expenses || []).filter(e => e.kind === ''file'' && e.data && e.data.state !==
-            ''archived'' && (e.data.status === ''draft'')).length }}'
-          icon: receipt
-          loading: '{{ data.$expenses.status === ''loading'' }}'
-    - type: canvas.text
-      props:
-        text: The /chart-of-accounts folder could not be read. Reinstall Accounting to recreate it.
-      rules:
-        visible: data.$accounts.status === 'error'
-    - type: canvas.text
-      props:
-        text: The /periods folder could not be read. Reinstall Accounting to recreate it.
-      rules:
-        visible: data.$periods.status === 'error'
-    - type: canvas.text
-      props:
-        text: The /journals folder could not be read. Reinstall Accounting to recreate it.
-      rules:
-        visible: data.$journals.status === 'error'
-    - type: canvas.text
-      props:
-        text: The /expenses folder could not be read. Reinstall Accounting to recreate it.
-      rules:
-        visible: data.$expenses.status === 'error'
-    - type: canvas.tabs
-      props:
-        items:
-        - value: journals
-          label: Journals
-          icon: notebook-pen
-        - value: expenses
-          label: Expenses
-          icon: receipt
-        - value: accounts
-          label: Chart of accounts
-          icon: book-open
-        - value: periods
-          label: Periods
-          icon: calendar-range
-      children:
-      - type: canvas.stack
-        layout:
-          base:
-            gap: 4
-        children:
-        - type: canvas.stack
-          layout:
-            base:
-              direction: row
-              wrap: true
-              gap: 2
-              align: center
-          children:
-          - type: canvas.button
-            props:
-              label: Open /journals
-              variant: outline
-              icon: folder-open
-              size: sm
-            'on':
-              click:
-              - open-file:
-                  path: /journals
-        - type: canvas.files
-          props:
-            path: /journals/
-            mimeTypes:
-            - application/vnd.verentis.accounting.journal+json
-            showFolders: false
-            navigable: false
-            columns:
-            - key: name
-              label: Code
-            - key: data.date
-              label: Date
-            - key: data.description
-              label: Description
-            - key: data.status
-              label: Status
-            emptyText: No journals yet. Use New in /journals.
-        slot: journals
-      - type: canvas.stack
-        layout:
-          base:
-            gap: 4
-        children:
-        - type: canvas.stack
-          layout:
-            base:
-              direction: row
-              wrap: true
-              gap: 2
-              align: center
-          children:
-          - type: canvas.button
-            props:
-              label: Open /expenses
-              variant: outline
-              icon: folder-open
-              size: sm
-            'on':
-              click:
-              - open-file:
-                  path: /expenses
-        - type: canvas.files
-          props:
-            path: /expenses/
-            mimeTypes:
-            - application/vnd.verentis.accounting.expense+json
-            showFolders: false
-            navigable: false
-            columns:
-            - key: name
-              label: Code
-            - key: data.date
-              label: Date
-            - key: data.description
-              label: Description
-            - key: data.netAmount
-              label: Net
-              align: end
-            - key: data.status
-              label: Status
-            emptyText: No expenses yet. Use New in /expenses.
-        slot: expenses
-      - type: canvas.stack
-        layout:
-          base:
-            gap: 4
-        children:
-        - type: canvas.stack
-          layout:
-            base:
-              direction: row
-              wrap: true
-              gap: 2
-              align: center
-          children:
-          - type: canvas.button
-            props:
-              label: Open /chart-of-accounts
-              variant: outline
-              icon: folder-open
-              size: sm
-            'on':
-              click:
-              - open-file:
-                  path: /chart-of-accounts
-        - type: canvas.files
-          props:
-            path: /chart-of-accounts/
-            mimeTypes:
-            - application/vnd.verentis.accounting.account+json
-            showFolders: false
-            navigable: false
-            columns:
-            - key: name
-              label: Code
-            - key: data.number
-              label: Number
-            - key: data.name
-              label: Name
-            - key: data.accountType
-              label: Type
-            emptyText: No chart of accounts yet. Use New in /chart-of-accounts.
-        slot: accounts
-      - type: canvas.stack
-        layout:
-          base:
-            gap: 4
-        children:
-        - type: canvas.stack
-          layout:
-            base:
-              direction: row
-              wrap: true
-              gap: 2
-              align: center
-          children:
-          - type: canvas.button
-            props:
-              label: Open /periods
-              variant: outline
-              icon: folder-open
-              size: sm
-            'on':
-              click:
-              - open-file:
-                  path: /periods
-        - type: canvas.files
-          props:
-            path: /periods/
-            mimeTypes:
-            - application/vnd.verentis.accounting.period+json
-            showFolders: false
-            navigable: false
-            columns:
-            - key: name
-              label: Code
-            - key: data.name
-              label: Name
-            - key: data.startDate
-              label: Start
-            - key: data.endDate
-              label: End
-            - key: data.status
-              label: Status
-            emptyText: No accounting periods yet. Use New in /periods.
-        slot: periods
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "accounting-home",
+    "name": "Accounting",
+    "description": "Accounting overview.",
+    "icon": "book-open"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/chart-of-accounts",
+        "reason": "List the chart of accounts"
+      },
+      {
+        "path": "/journals",
+        "reason": "List journals"
+      },
+      {
+        "path": "/expenses",
+        "reason": "List expenses"
+      },
+      {
+        "path": "/periods",
+        "reason": "List accounting periods"
+      }
+    ],
+    "data": {
+      "accounts": {
+        "kind": "folder",
+        "path": "/chart-of-accounts",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.accounting.account+json"
+      },
+      "journals": {
+        "kind": "folder",
+        "path": "/journals",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.accounting.journal+json"
+      },
+      "expenses": {
+        "kind": "folder",
+        "path": "/expenses",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.accounting.expense+json"
+      },
+      "periods": {
+        "kind": "folder",
+        "path": "/periods",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.accounting.period+json"
+      },
+      "listjournals": {
+        "kind": "folder",
+        "path": "/journals",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.accounting.journal+json"
+      },
+      "listexpenses": {
+        "kind": "folder",
+        "path": "/expenses",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.accounting.expense+json"
+      },
+      "listchartofaccounts": {
+        "kind": "folder",
+        "path": "/chart-of-accounts",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.accounting.account+json"
+      },
+      "listperiods": {
+        "kind": "folder",
+        "path": "/periods",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.accounting.period+json"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Accounting",
+          "icon": "book-open",
+          "active": "home.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "reports.page.yaml",
+              "label": "Reports",
+              "icon": "chart-column"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
+            }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/accounting/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/accounting.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
+        },
+        "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Accounting",
+              "note": "A double-entry ledger as files in your workspace. Draft journals and expenses in their folders, then post them from their forms."
+            },
+            "children": []
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 4
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Accounts",
+                  "value": "{{ (data.accounts || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).length }}",
+                  "icon": "book-open",
+                  "loading": "{{ data.$accounts.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Open periods",
+                  "value": "{{ (data.periods || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status === 'open')).length }}",
+                  "icon": "calendar-range",
+                  "loading": "{{ data.$periods.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Draft journals",
+                  "value": "{{ (data.journals || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status === 'draft')).length }}",
+                  "icon": "notebook-pen",
+                  "loading": "{{ data.$journals.status === 'loading' }}"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Draft expenses",
+                  "value": "{{ (data.expenses || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status === 'draft')).length }}",
+                  "icon": "receipt",
+                  "loading": "{{ data.$expenses.status === 'loading' }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "accounts",
+              "compact": true,
+              "description": "The /chart-of-accounts folder could not be read. Reinstall Accounting to recreate it."
+            }
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "periods",
+              "compact": true,
+              "description": "The /periods folder could not be read. Reinstall Accounting to recreate it."
+            }
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "journals",
+              "compact": true,
+              "description": "The /journals folder could not be read. Reinstall Accounting to recreate it."
+            }
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "expenses",
+              "compact": true,
+              "description": "The /expenses folder could not be read. Reinstall Accounting to recreate it."
+            }
+          },
+          {
+            "type": "canvas.tabs",
+            "props": {
+              "items": [
+                {
+                  "value": "journals",
+                  "label": "Journals",
+                  "icon": "notebook-pen"
+                },
+                {
+                  "value": "expenses",
+                  "label": "Expenses",
+                  "icon": "receipt"
+                },
+                {
+                  "value": "accounts",
+                  "label": "Chart of accounts",
+                  "icon": "book-open"
+                },
+                {
+                  "value": "periods",
+                  "label": "Periods",
+                  "icon": "calendar-range"
+                }
+              ]
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Open /journals",
+                          "variant": "outline",
+                          "icon": "folder-open",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "open-file": {
+                                "path": "/journals"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.empty-state",
+                    "props": {
+                      "for": "listjournals",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listjournals || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
+                      "columns": [
+                        {
+                          "key": "data.code",
+                          "label": "Code"
+                        },
+                        {
+                          "key": "data.date",
+                          "label": "Date",
+                          "format": "date"
+                        },
+                        {
+                          "key": "data.description",
+                          "label": "Description"
+                        },
+                        {
+                          "key": "data.status",
+                          "label": "Status",
+                          "format": "badge"
+                        }
+                      ],
+                      "facets": [
+                        "data.status"
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
+                      "emptyText": "No journals yet. Use New in /journals."
+                    },
+                    "rules": {
+                      "visible": "data.$listjournals.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "journals"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Open /expenses",
+                          "variant": "outline",
+                          "icon": "folder-open",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "open-file": {
+                                "path": "/expenses"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.empty-state",
+                    "props": {
+                      "for": "listexpenses",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listexpenses || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
+                      "columns": [
+                        {
+                          "key": "data.code",
+                          "label": "Code"
+                        },
+                        {
+                          "key": "data.date",
+                          "label": "Date",
+                          "format": "date"
+                        },
+                        {
+                          "key": "data.description",
+                          "label": "Description"
+                        },
+                        {
+                          "key": "data.netAmount",
+                          "label": "Net"
+                        },
+                        {
+                          "key": "data.status",
+                          "label": "Status",
+                          "format": "badge"
+                        }
+                      ],
+                      "facets": [
+                        "data.status"
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
+                      "emptyText": "No expenses yet. Use New in /expenses."
+                    },
+                    "rules": {
+                      "visible": "data.$listexpenses.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "expenses"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Open /chart-of-accounts",
+                          "variant": "outline",
+                          "icon": "folder-open",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "open-file": {
+                                "path": "/chart-of-accounts"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.empty-state",
+                    "props": {
+                      "for": "listchartofaccounts",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listchartofaccounts || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
+                      "columns": [
+                        {
+                          "key": "data.code",
+                          "label": "Code"
+                        },
+                        {
+                          "key": "data.number",
+                          "label": "Number"
+                        },
+                        {
+                          "key": "data.name",
+                          "label": "Name"
+                        },
+                        {
+                          "key": "data.accountType",
+                          "label": "Type"
+                        }
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
+                      "emptyText": "No chart of accounts yet. Use New in /chart-of-accounts."
+                    },
+                    "rules": {
+                      "visible": "data.$listchartofaccounts.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "accounts"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Open /periods",
+                          "variant": "outline",
+                          "icon": "folder-open",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "open-file": {
+                                "path": "/periods"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.empty-state",
+                    "props": {
+                      "for": "listperiods",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listperiods || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
+                      "columns": [
+                        {
+                          "key": "data.code",
+                          "label": "Code"
+                        },
+                        {
+                          "key": "data.name",
+                          "label": "Name"
+                        },
+                        {
+                          "key": "data.startDate",
+                          "label": "Start",
+                          "format": "date"
+                        },
+                        {
+                          "key": "data.endDate",
+                          "label": "End",
+                          "format": "date"
+                        },
+                        {
+                          "key": "data.status",
+                          "label": "Status",
+                          "format": "badge"
+                        }
+                      ],
+                      "facets": [
+                        "data.status"
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
+                      "emptyText": "No accounting periods yet. Use New in /periods."
+                    },
+                    "rules": {
+                      "visible": "data.$listperiods.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "periods"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -48,7 +48,8 @@
       "format": "uuid"
     },
     "pilot": {
-      "const": "synthetic-only"
+      "type": "string",
+      "maxLength": 40
     },
     "title": {
       "type": "string",
@@ -346,7 +347,6 @@
     "updatedAt",
     "code",
     "revision",
-    "pilot",
     "title",
     "status",
     "parties",

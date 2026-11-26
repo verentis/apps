@@ -203,8 +203,8 @@
       },
       {
         "path": "/surveys",
-        "mode": "read",
-        "reason": "List surveys by status with their response counts",
+        "mode": "write",
+        "reason": "List surveys by status with their response counts; move records between columns",
         "origin": {
           "kind": "document",
           "id": "canvas/surveys.page.yaml"

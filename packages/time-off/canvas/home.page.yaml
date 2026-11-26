@@ -34,125 +34,131 @@
       "rows": {
         "kind": "computed",
         "expr": "(data.requests || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, employee: e.data.employeeName || '', typePath: e.data.type || '', type: ((((data.types || []).find(t => t.kind === 'file' && t.data && t.path === e.data.type) || {}).data || {})).name || '', startDate: e.data.startDate || '', endDate: e.data.endDate || '', days: Math.round(Number(e.data.days || 0) * 10000), status: e.data.status || 'draft', approver: e.data.approver || '' }))"
+      },
+      "listleaverequests": {
+        "kind": "folder",
+        "path": "/leave-requests",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.time-off.request+json"
+      },
+      "listleavetypes": {
+        "kind": "folder",
+        "path": "/leave-types",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.time-off.type+json"
       }
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Time Off",
+          "icon": "calendar-off",
+          "active": "home.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "requests.page.yaml",
+              "label": "Requests",
+              "icon": "kanban",
+              "count": "{{ (data.rows || []).filter(r => r.status === 'submitted').length }}"
+            },
+            {
+              "id": "allocations.page.yaml",
+              "label": "Balances",
+              "icon": "scale"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/time-off/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/time-off.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Time Off",
+              "note": "Leave types and leave requests are files in your workspace. Draft requests in /leave-requests, then submit, approve or refuse them from their forms."
+            },
+            "children": []
+          },
           {
             "type": "canvas.stack",
             "layout": {
               "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
+                "gap": 2
               }
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Time Off"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Leave types and leave requests are files in your workspace. Draft requests in /leave-requests, then submit, approve or refuse them from their forms.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Team calendar"
+                }
               },
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "direction": "row",
-                    "wrap": true,
-                    "gap": 2,
-                    "align": "center"
-                  }
+                "type": "canvas.text",
+                "props": {
+                  "text": "Who is off when, one row per person. Requests still waiting for a decision are coloured apart.",
+                  "tone": "muted"
+                }
+              },
+              {
+                "type": "canvas.calendar",
+                "props": {
+                  "rows": "{{ (data.rows || []).filter(r => !!r.startDate && !['refused', 'cancelled'].includes(r.status)).map(r => ({ path: r.path, title: [r.employee, r.type].filter(part => part).join(' · '), employee: r.employee || 'Unassigned', status: r.status, at: r.startDate, until: r.endDate || r.startDate })) }}",
+                  "views": [
+                    "resource",
+                    "month",
+                    "agenda"
+                  ],
+                  "showLegend": true,
+                  "emptyText": "Nothing scheduled",
+                  "start": "at",
+                  "end": "until",
+                  "title": "title",
+                  "colorBy": "status",
+                  "view": "resource",
+                  "resourceKey": "employee"
                 },
-                "children": [
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Requests",
-                      "variant": "outline",
-                      "icon": "calendar-off",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/time-off/canvas/requests.page.yaml"
-                          }
-                        }
-                      ]
+                "on": {
+                  "open": [
+                    {
+                      "open-file": {
+                        "path": "{{ event.row.path }}",
+                        "mode": "edit",
+                        "open": "side"
+                      }
                     }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Allocations",
-                      "variant": "outline",
-                      "icon": "chart-pie",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/time-off/canvas/allocations.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Settings",
-                      "variant": "ghost",
-                      "icon": "settings",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/settings/time-off.json",
-                            "mode": "edit"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ]
+                  ]
+                }
               }
             ]
           },
@@ -207,21 +213,19 @@
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /leave-types folder could not be read. Reinstall Time Off to recreate it."
-            },
-            "rules": {
-              "visible": "data.$types.status === 'error'"
+              "for": "types",
+              "compact": true,
+              "description": "The /leave-types folder could not be read. Reinstall Time Off to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /leave-requests folder could not be read. Reinstall Time Off to recreate it."
-            },
-            "rules": {
-              "visible": "data.$requests.status === 'error'"
+              "for": "requests",
+              "compact": true,
+              "description": "The /leave-requests folder could not be read. Reinstall Time Off to recreate it."
             }
           },
           {
@@ -281,17 +285,19 @@
                     ]
                   },
                   {
-                    "type": "canvas.files",
+                    "type": "canvas.empty-state",
                     "props": {
-                      "path": "/leave-requests/",
-                      "mimeTypes": [
-                        "application/vnd.verentis.time-off.request+json"
-                      ],
-                      "showFolders": false,
-                      "navigable": false,
+                      "for": "listleaverequests",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listleaverequests || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
                       "columns": [
                         {
-                          "key": "name",
+                          "key": "data.code",
                           "label": "Request"
                         },
                         {
@@ -300,11 +306,13 @@
                         },
                         {
                           "key": "data.startDate",
-                          "label": "First day"
+                          "label": "First day",
+                          "format": "date"
                         },
                         {
                           "key": "data.endDate",
-                          "label": "Last day"
+                          "label": "Last day",
+                          "format": "date"
                         },
                         {
                           "key": "data.days",
@@ -312,10 +320,34 @@
                         },
                         {
                           "key": "data.status",
-                          "label": "Status"
+                          "label": "Status",
+                          "format": "badge"
                         }
                       ],
+                      "facets": [
+                        "data.status"
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
                       "emptyText": "No leave requests yet. Use New in /leave-requests."
+                    },
+                    "rules": {
+                      "visible": "data.$listleaverequests.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
                     }
                   }
                 ],
@@ -361,17 +393,19 @@
                     ]
                   },
                   {
-                    "type": "canvas.files",
+                    "type": "canvas.empty-state",
                     "props": {
-                      "path": "/leave-types/",
-                      "mimeTypes": [
-                        "application/vnd.verentis.time-off.type+json"
-                      ],
-                      "showFolders": false,
-                      "navigable": false,
+                      "for": "listleavetypes",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listleavetypes || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
                       "columns": [
                         {
-                          "key": "name",
+                          "key": "data.code",
                           "label": "Type"
                         },
                         {
@@ -383,7 +417,27 @@
                           "label": "Days per year"
                         }
                       ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
                       "emptyText": "No leave types yet. Use New in /leave-types."
+                    },
+                    "rules": {
+                      "visible": "data.$listleavetypes.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
                     }
                   }
                 ],

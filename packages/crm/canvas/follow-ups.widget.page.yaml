@@ -1,111 +1,164 @@
-api-version: canvas.verentis.io/v1
-kind: Page
-metadata:
-  id: crm-follow-ups-widget
-  name: Follow-ups
-  description: Open cases and deals closing soon, for the workspace dashboard.
-  icon: bell-ring
-spec:
-  access:
-  - path: /deals
-    reason: Show open deals that are due to close
-  - path: /cases
-    reason: Show open cases
-  data:
-    deals:
-      kind: folder
-      path: /deals
-      contents: true
-      mime-pattern: application/vnd.verentis.crm.deal+json
-    cases:
-      kind: folder
-      path: /cases
-      contents: true
-      mime-pattern: application/vnd.verentis.crm.case+json
-    followups:
-      kind: computed
-      expr: '(data.cases || []).filter(e => e.kind === ''file'' && e.data && e.data.state !== ''archived''
-        && ![''resolved'', ''closed''].includes(e.data.status)).map(e => ({ kind: ''case'', path: e.path,
-        code: e.data.code || e.name, title: e.data.subject || '''', due: String(e.data.priority || ''normal'')
-        + '' priority'', rank: ({ urgent: 1, high: 2, normal: 4, low: 5 }[e.data.priority] ?? 4), date:
-        e.data.createdAt || '''' })).concat((data.deals || []).filter(e => e.kind === ''file'' && e.data
-        && e.data.state !== ''archived'' && e.data.outcome === ''open'' && !!e.data.expectedCloseDate
-        && e.data.expectedCloseDate <= Date(Date.now() + 14 * 86400000).slice(0, 10)).map(e => ({ kind:
-        ''deal'', path: e.path, code: e.data.code || e.name, title: e.data.title || '''', due: e.data.expectedCloseDate
-        < Date().slice(0, 10) ? ''closes '' + e.data.expectedCloseDate + '' · overdue'' : ''closes ''
-        + e.data.expectedCloseDate, rank: e.data.expectedCloseDate < Date().slice(0, 10) ? 0 : 3, date:
-        e.data.expectedCloseDate }))).sort((a, b) => a.rank - b.rank || (a.date < b.date ? -1 : a.date
-        > b.date ? 1 : 0))'
-  tree:
-  - type: canvas.stack
-    layout:
-      base:
-        gap: 2
-    children:
-    - type: canvas.stack
-      layout:
-        base:
-          direction: row
-          wrap: true
-          gap: 2
-          align: center
-          justify: between
-      children:
-      - type: canvas.stack
-        layout:
-          base:
-            gap: 1
-        children:
-        - type: canvas.heading
-          props:
-            level: 3
-            text: Follow-ups
-        - type: canvas.text
-          props:
-            text: '{{ (data.followups || []).filter(f => f.kind === ''case'').length }} open cases · {{
-              (data.followups || []).filter(f => f.kind === ''deal'').length }} deals closing'
-            tone: muted
-      - type: canvas.button
-        props:
-          label: CRM
-          variant: ghost
-          icon: contact
-          size: sm
-        'on':
-          click:
-          - open-file:
-              path: /applications/crm/canvas/home.page.yaml
-    - type: canvas.text
-      props:
-        text: '{{ data.$deals.error }}'
-      rules:
-        visible: data.$deals.status === 'error'
-    - type: canvas.text
-      props:
-        text: '{{ data.$cases.error }}'
-      rules:
-        visible: data.$cases.status === 'error'
-    - type: canvas.text
-      props:
-        text: Loading…
-        tone: muted
-      rules:
-        visible: data.$deals.status === 'loading' || data.$cases.status === 'loading'
-    - type: canvas.table
-      props:
-        rows: '{{ (data.followups || []).map(f => ({ path: f.path, code: f.code, title: f.title, due:
-          f.due })) }}'
-        columns:
-        - key: code
-          label: Ref
-        - key: title
-          label: Follow up
-        - key: due
-          label: Due
-        emptyText: Nothing to follow up
-        clickable: true
-      'on':
-        row-click:
-        - open-file:
-            path: '{{ event.path }}'
-            mode: edit
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "crm-follow-ups-widget",
+    "name": "Follow-ups",
+    "description": "Open cases and deals closing soon, for the workspace dashboard.",
+    "icon": "bell-ring"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/deals",
+        "reason": "Show open deals that are due to close"
+      },
+      {
+        "path": "/cases",
+        "reason": "Show open cases"
+      }
+    ],
+    "data": {
+      "deals": {
+        "kind": "folder",
+        "path": "/deals",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.crm.deal+json"
+      },
+      "cases": {
+        "kind": "folder",
+        "path": "/cases",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.crm.case+json"
+      },
+      "followups": {
+        "kind": "computed",
+        "expr": "(data.cases || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && !['resolved', 'closed'].includes(e.data.status)).map(e => ({ kind: 'case', path: e.path, code: e.data.code || e.name, title: e.data.subject || '', due: String(e.data.priority || 'normal') + ' priority', rank: ({ urgent: 1, high: 2, normal: 4, low: 5 }[e.data.priority] ?? 4), date: e.data.createdAt || '' })).concat((data.deals || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && e.data.outcome === 'open' && !!e.data.expectedCloseDate && e.data.expectedCloseDate <= Date(Date.now() + 14 * 86400000).slice(0, 10)).map(e => ({ kind: 'deal', path: e.path, code: e.data.code || e.name, title: e.data.title || '', due: e.data.expectedCloseDate < Date().slice(0, 10) ? 'closes ' + e.data.expectedCloseDate + ' · overdue' : 'closes ' + e.data.expectedCloseDate, rank: e.data.expectedCloseDate < Date().slice(0, 10) ? 0 : 3, date: e.data.expectedCloseDate }))).sort((a, b) => a.rank - b.rank || (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "gap": 2
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center",
+                "justify": "between"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 1
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.heading",
+                    "props": {
+                      "level": 3,
+                      "text": "Follow-ups"
+                    }
+                  },
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "{{ (data.followups || []).filter(f => f.kind === 'case').length }} open cases · {{ (data.followups || []).filter(f => f.kind === 'deal').length }} deals closing",
+                      "tone": "muted"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "CRM",
+                  "variant": "ghost",
+                  "icon": "contact",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/applications/crm/canvas/home.page.yaml"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "deals",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "cases",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$deals.status === 'loading' || data.$cases.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.followups || []).map(f => ({ path: f.path, code: f.code, title: f.title, due: f.due })) }}",
+              "columns": [
+                {
+                  "key": "code",
+                  "label": "Ref"
+                },
+                {
+                  "key": "title",
+                  "label": "Follow up"
+                },
+                {
+                  "key": "due",
+                  "label": "Due"
+                }
+              ],
+              "emptyText": "Nothing to follow up",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

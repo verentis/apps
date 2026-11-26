@@ -52,99 +52,80 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Quality",
+          "icon": "badge-check",
+          "active": "checks.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "checks.page.yaml",
+              "label": "Checks",
+              "icon": "clipboard-check",
+              "count": "{{ (data.checkrows || []).filter(c => c.result === 'pending').length }}"
+            },
+            {
+              "id": "alerts.page.yaml",
+              "label": "Alerts",
+              "icon": "triangle-alert",
+              "count": "{{ (data.alertrows || []).filter(a => a.stage !== 'resolved').length }}",
+              "tone": "danger"
+            },
+            {
+              "id": "points.page.yaml",
+              "label": "Control points",
+              "icon": "crosshair"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/quality/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Checks by result",
+              "note": "Every active quality check, grouped by its result. Click a row to open the check."
             },
-            "children": [
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Checks by result"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Every active quality check, grouped by its result. Click a row to open the check.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.button",
-                "props": {
-                  "label": "Quality",
-                  "variant": "ghost",
-                  "icon": "badge-check",
-                  "size": "sm"
-                },
-                "on": {
-                  "click": [
-                    {
-                      "open-file": {
-                        "path": "/applications/quality/canvas/home.page.yaml"
-                      }
-                    }
-                  ]
-                }
-              }
-            ]
+            "children": []
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /quality-control-points folder could not be read. Reinstall Quality to recreate it."
-            },
-            "rules": {
-              "visible": "data.$points.status === 'error'"
+              "for": "points",
+              "compact": true,
+              "description": "The /quality-control-points folder could not be read. Reinstall Quality to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /quality-checks folder could not be read. Reinstall Quality to recreate it."
-            },
-            "rules": {
-              "visible": "data.$checks.status === 'error'"
+              "for": "checks",
+              "compact": true,
+              "description": "The /quality-checks folder could not be read. Reinstall Quality to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /quality-alerts folder could not be read. Reinstall Quality to recreate it."
-            },
-            "rules": {
-              "visible": "data.$alerts.status === 'error'"
+              "for": "alerts",
+              "compact": true,
+              "description": "The /quality-alerts folder could not be read. Reinstall Quality to recreate it."
             }
           },
           {
@@ -191,21 +172,18 @@
           {
             "type": "canvas.tabs",
             "props": {
+              "variant": "pill",
+              "persist": true,
               "items": [
                 {
-                  "value": "pending",
-                  "label": "Pending",
-                  "icon": "clipboard-check"
+                  "value": "board",
+                  "label": "Board",
+                  "icon": "kanban"
                 },
                 {
-                  "value": "pass",
-                  "label": "Pass",
-                  "icon": "clipboard-check"
-                },
-                {
-                  "value": "fail",
-                  "label": "Fail",
-                  "icon": "clipboard-check"
+                  "value": "list",
+                  "label": "List",
+                  "icon": "list"
                 }
               ]
             },
@@ -219,52 +197,118 @@
                 },
                 "children": [
                   {
-                    "type": "canvas.table",
+                    "type": "canvas.board",
                     "props": {
-                      "rows": "{{ (data.checkrows || []).filter(r => r.result === 'pending') }}",
+                      "rows": "{{ (data.checkrows || []) }}",
+                      "groupBy": "result",
+                      "readOnly": false,
+                      "rowKey": "path",
                       "columns": [
                         {
-                          "key": "code",
-                          "label": "Check"
+                          "value": "pending",
+                          "label": "Pending",
+                          "locked": true
                         },
                         {
-                          "key": "point",
-                          "label": "Control point"
+                          "value": "pass",
+                          "label": "Pass"
                         },
                         {
-                          "key": "date",
-                          "label": "Date"
-                        },
-                        {
-                          "key": "reference",
-                          "label": "Reference"
-                        },
-                        {
-                          "key": "measuredValue",
-                          "label": "Measured",
-                          "align": "end"
-                        },
-                        {
-                          "key": "result",
-                          "label": "Result"
+                          "value": "fail",
+                          "label": "Fail"
                         }
                       ],
-                      "emptyText": "No pending checks",
-                      "clickable": true
+                      "card": {
+                        "title": "point",
+                        "code": "code",
+                        "meta": [
+                          "date",
+                          "reference",
+                          "measuredValue"
+                        ]
+                      },
+                      "emptyText": "Nothing here",
+                      "lockedWhen": "[\"pass\",\"fail\"].includes(row.result)"
                     },
                     "on": {
-                      "row-click": [
+                      "open": [
                         {
                           "open-file": {
-                            "path": "{{ event.path }}",
-                            "mode": "edit"
+                            "path": "{{ event.row.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ],
+                      "move": [
+                        {
+                          "confirm": {
+                            "if": "event.to === 'pass'",
+                            "title": "Move to Pass?",
+                            "message": "{{ event.row.code }} moves to Pass. It cannot be moved back from the board.",
+                            "confirm-label": "Move to Pass"
+                          }
+                        },
+                        {
+                          "confirm": {
+                            "if": "event.to === 'fail'",
+                            "title": "Move to Fail?",
+                            "message": "{{ event.row.code }} moves to Fail. A failed check raises a quality alert.",
+                            "confirm-label": "Move to Fail"
+                          }
+                        },
+                        {
+                          "run-script": {
+                            "if": "event.to === 'pass'",
+                            "file": "/applications/quality/scripts/post",
+                            "timeout": 120,
+                            "parameters": {
+                              "operation": "record-check",
+                              "path": "{{ event.path }}",
+                              "result": "pass"
+                            },
+                            "assign": "lastmove"
+                          }
+                        },
+                        {
+                          "run-script": {
+                            "if": "event.to === 'fail'",
+                            "file": "/applications/quality/scripts/post",
+                            "timeout": 120,
+                            "parameters": {
+                              "operation": "record-check",
+                              "path": "{{ event.path }}",
+                              "result": "fail"
+                            },
+                            "assign": "lastmove"
+                          }
+                        },
+                        {
+                          "refresh-source": {
+                            "source": "points"
+                          }
+                        },
+                        {
+                          "refresh-source": {
+                            "source": "checks"
+                          }
+                        },
+                        {
+                          "refresh-source": {
+                            "source": "alerts"
+                          }
+                        },
+                        {
+                          "toast": {
+                            "message": "{{ [\"pass\",\"fail\"].includes(event.to) ? ((state.lastmove && state.lastmove.message) || 'Done') : 'Moved to ' + ({\"pending\":\"Pending\",\"pass\":\"Pass\",\"fail\":\"Fail\"}[event.to] || event.to) }}",
+                            "variant": "success"
                           }
                         }
                       ]
                     }
                   }
                 ],
-                "slot": "pending"
+                "slot": "board"
               },
               {
                 "type": "canvas.stack",
@@ -277,7 +321,7 @@
                   {
                     "type": "canvas.table",
                     "props": {
-                      "rows": "{{ (data.checkrows || []).filter(r => r.result === 'pass') }}",
+                      "rows": "{{ (data.checkrows || []) }}",
                       "columns": [
                         {
                           "key": "code",
@@ -303,80 +347,61 @@
                         {
                           "key": "result",
                           "label": "Result"
-                        }
-                      ],
-                      "emptyText": "No pass checks",
-                      "clickable": true
-                    },
-                    "on": {
-                      "row-click": [
-                        {
-                          "open-file": {
-                            "path": "{{ event.path }}",
-                            "mode": "edit"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ],
-                "slot": "pass"
-              },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 4
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.table",
-                    "props": {
-                      "rows": "{{ (data.checkrows || []).filter(r => r.result === 'fail') }}",
-                      "columns": [
-                        {
-                          "key": "code",
-                          "label": "Check"
-                        },
-                        {
-                          "key": "point",
-                          "label": "Control point"
-                        },
-                        {
-                          "key": "date",
-                          "label": "Date"
-                        },
-                        {
-                          "key": "reference",
-                          "label": "Reference"
-                        },
-                        {
-                          "key": "measuredValue",
-                          "label": "Measured",
-                          "align": "end"
                         },
                         {
                           "key": "result",
-                          "label": "Result"
+                          "label": "Stage",
+                          "format": "badge",
+                          "labels": {
+                            "pending": "Pending",
+                            "pass": "Pass",
+                            "fail": "Fail"
+                          }
                         }
                       ],
-                      "emptyText": "No fail checks",
-                      "clickable": true
+                      "views": [
+                        {
+                          "value": "all",
+                          "label": "All"
+                        },
+                        {
+                          "value": "pending",
+                          "label": "Pending",
+                          "where": "row.result === 'pending'"
+                        },
+                        {
+                          "value": "pass",
+                          "label": "Pass",
+                          "where": "row.result === 'pass'"
+                        },
+                        {
+                          "value": "fail",
+                          "label": "Fail",
+                          "where": "row.result === 'fail'"
+                        }
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
+                      "emptyText": "Nothing here"
                     },
                     "on": {
                       "row-click": [
                         {
                           "open-file": {
                             "path": "{{ event.path }}",
-                            "mode": "edit"
+                            "mode": "edit",
+                            "open": "side"
                           }
                         }
                       ]
                     }
                   }
                 ],
-                "slot": "fail"
+                "slot": "list"
               }
             ]
           }

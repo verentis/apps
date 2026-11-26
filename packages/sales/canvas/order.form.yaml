@@ -55,6 +55,11 @@
         "reason": "Link back to the quotation this order came from"
       },
       {
+        "path": "/products",
+        "mode": "read",
+        "reason": "Name the product on each order line"
+      },
+      {
         "path": "/applications/sales/",
         "mode": "read",
         "reason": "Read the Sales schemas and run the confirm script"
@@ -64,6 +69,10 @@
       {
         "path": "/quotations",
         "reason": "Link back to the quotation this order came from"
+      },
+      {
+        "path": "/products",
+        "reason": "Name the product on each order line"
       },
       {
         "path": "/applications/sales/",
@@ -84,6 +93,16 @@
       "quotationoptions": {
         "kind": "computed",
         "expr": "(data.quotations || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + (((e.data.customer && e.data.customer.name) || '') + ' · ' + (e.data.date || '')), value: e.path }))"
+      },
+      "products": {
+        "kind": "folder",
+        "path": "/products",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.products.product+json"
+      },
+      "productoptions": {
+        "kind": "computed",
+        "expr": "(data.products || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + (e.data.name || ''), value: e.path }))"
       }
     },
     "tree": [
@@ -101,71 +120,48 @@
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.validation-summary",
+            "props": {
+              "title": "Fix these before saving"
+            }
+          },
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "{{ form.values.customer.name || 'New sales order' }}",
+              "note": "Sales order {{ form.values.code || '' }}"
             },
             "children": [
               {
                 "type": "canvas.stack",
                 "layout": {
                   "base": {
-                    "gap": 1
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
                   }
                 },
                 "children": [
                   {
-                    "type": "canvas.stack",
-                    "layout": {
-                      "base": {
-                        "direction": "row",
-                        "wrap": true,
-                        "gap": 2,
-                        "align": "center"
-                      }
+                    "type": "canvas.dashboard.badge",
+                    "props": {
+                      "text": "{{ String(form.values.deliveryStatus || '').split('-').join(' ') }}",
+                      "tone": "{{ [\"confirmed\",\"delivered\"].includes(form.values.deliveryStatus) ? 'success' : [\"draft\",\"pending\"].includes(form.values.deliveryStatus) ? 'warning' : [\"cancelled\"].includes(form.values.deliveryStatus) ? 'danger' : 'neutral' }}"
                     },
-                    "children": [
-                      {
-                        "type": "canvas.heading",
-                        "props": {
-                          "level": 2,
-                          "text": "{{ form.values.customer.name || 'New sales order' }}"
-                        }
-                      },
-                      {
-                        "type": "canvas.dashboard.badge",
-                        "props": {
-                          "text": "{{ String(form.values.deliveryStatus || '').split('-').join(' ') }}",
-                          "tone": "{{ [\"confirmed\",\"delivered\"].includes(form.values.deliveryStatus) ? 'success' : [\"draft\",\"pending\"].includes(form.values.deliveryStatus) ? 'warning' : [\"cancelled\"].includes(form.values.deliveryStatus) ? 'danger' : 'neutral' }}"
-                        },
-                        "rules": {
-                          "visible": "!!form.values.deliveryStatus"
-                        }
-                      },
-                      {
-                        "type": "canvas.dashboard.badge",
-                        "props": {
-                          "text": "Archived",
-                          "tone": "warning",
-                          "icon": "archive"
-                        },
-                        "rules": {
-                          "visible": "form.values.state === 'archived'"
-                        }
-                      }
-                    ]
+                    "rules": {
+                      "visible": "!!form.values.deliveryStatus"
+                    }
                   },
                   {
-                    "type": "canvas.text",
+                    "type": "canvas.dashboard.badge",
                     "props": {
-                      "text": "Sales order {{ form.values.code || '' }} · {{ ctx.file.path }}",
-                      "tone": "muted"
+                      "text": "Archived",
+                      "tone": "warning",
+                      "icon": "archive"
+                    },
+                    "rules": {
+                      "visible": "form.values.state === 'archived'"
                     }
                   }
                 ]
@@ -182,99 +178,98 @@
                 },
                 "children": [
                   {
-                    "type": "canvas.stack",
-                    "layout": {
-                      "base": {
-                        "direction": "row",
-                        "wrap": true,
-                        "gap": 2,
-                        "align": "center"
-                      }
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Archive",
+                      "variant": "ghost",
+                      "icon": "archive",
+                      "size": "sm"
                     },
-                    "children": [
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Archive",
-                          "variant": "ghost",
-                          "icon": "archive",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "archive"
-                        },
-                        "rules": {
-                          "visible": "!(form.values.state === 'archived') && !(false)",
-                          "disabled": "form.saving || form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Restore",
-                          "variant": "outline",
-                          "icon": "archive-restore",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "restore"
-                        },
-                        "rules": {
-                          "visible": "form.values.state === 'archived'",
-                          "disabled": "form.saving || form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Reset",
-                          "variant": "ghost",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "reset"
-                        },
-                        "rules": {
-                          "disabled": "form.saving || !form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Save",
-                          "icon": "save",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "save"
-                        },
-                        "rules": {
-                          "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (false)"
-                        }
-                      }
-                    ]
+                    "on": {
+                      "click": "archive"
+                    },
+                    "rules": {
+                      "visible": "!(form.values.state === 'archived') && !(false)",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Restore",
+                      "variant": "outline",
+                      "icon": "archive-restore",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "restore"
+                    },
+                    "rules": {
+                      "visible": "form.values.state === 'archived'",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Reset",
+                      "variant": "ghost",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "reset"
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Save",
+                      "icon": "save",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "save"
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (false)"
+                    }
                   }
-                ]
+                ],
+                "slot": "actions"
               }
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "{{ data.$record.error }}"
-            },
-            "rules": {
-              "visible": "data.$record.status === 'error'"
+              "for": "record",
+              "compact": true
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.status-steps",
             "props": {
-              "text": "Loading…",
-              "tone": "muted"
+              "value": "{{ form.values.deliveryStatus }}",
+              "steps": [
+                {
+                  "value": "pending",
+                  "label": "Pending"
+                },
+                {
+                  "value": "partial",
+                  "label": "Partial"
+                },
+                {
+                  "value": "delivered",
+                  "label": "Delivered"
+                }
+              ]
             },
             "rules": {
-              "visible": "data.$record.status === 'loading'"
+              "visible": "!!form.values.deliveryStatus"
             }
           },
           {
@@ -435,7 +430,8 @@
                               "value": "delivered",
                               "label": "Delivered"
                             }
-                          ]
+                          ],
+                          "display": "segmented"
                         },
                         "rules": {
                           "disabled": "(form.values.state === 'archived' || (false))"
@@ -446,7 +442,8 @@
                         "props": {
                           "label": "Quotation",
                           "value": "{{ form.values.quotation }}",
-                          "options": "{{ data.quotationoptions }}"
+                          "options": "{{ data.quotationoptions }}",
+                          "searchable": true
                         },
                         "rules": {
                           "disabled": "(form.values.state === 'archived' || (false))"
@@ -523,10 +520,11 @@
                         }
                       },
                       {
-                        "type": "canvas.form.input",
+                        "type": "canvas.form.phone",
                         "props": {
                           "label": "Phone",
-                          "value": "{{ form.values.customer.phone }}"
+                          "value": "{{ form.values.customer.phone }}",
+                          "defaultCode": "{{ ({ ZA: '+27', NA: '+264', BW: '+267', ZW: '+263', MZ: '+258', LS: '+266', SZ: '+268', KE: '+254', NG: '+234', GB: '+44', IE: '+353', NL: '+31', DE: '+49', FR: '+33', US: '+1', CA: '+1', AU: '+61', NZ: '+64' })[form.values.customer && form.values.customer.address && form.values.customer.address.country] || '' }}"
                         },
                         "rules": {
                           "disabled": "(form.values.state === 'archived' || (false))"
@@ -543,56 +541,15 @@
                         }
                       },
                       {
-                        "type": "canvas.form.text-list",
+                        "type": "canvas.form.address",
                         "props": {
-                          "label": "Street",
-                          "value": "{{ form.values.customer.address.lines }}"
+                          "label": "Address",
+                          "value": "{{ form.values.customer.address }}"
                         },
                         "layout": {
                           "tablet": {
                             "colSpan": 2
                           }
-                        },
-                        "rules": {
-                          "disabled": "(form.values.state === 'archived' || (false))"
-                        }
-                      },
-                      {
-                        "type": "canvas.form.input",
-                        "props": {
-                          "label": "City",
-                          "value": "{{ form.values.customer.address.city }}"
-                        },
-                        "rules": {
-                          "disabled": "(form.values.state === 'archived' || (false))"
-                        }
-                      },
-                      {
-                        "type": "canvas.form.input",
-                        "props": {
-                          "label": "Region",
-                          "value": "{{ form.values.customer.address.region }}"
-                        },
-                        "rules": {
-                          "disabled": "(form.values.state === 'archived' || (false))"
-                        }
-                      },
-                      {
-                        "type": "canvas.form.input",
-                        "props": {
-                          "label": "Postal code",
-                          "value": "{{ form.values.customer.address.postalCode }}"
-                        },
-                        "rules": {
-                          "disabled": "(form.values.state === 'archived' || (false))"
-                        }
-                      },
-                      {
-                        "type": "canvas.form.input",
-                        "props": {
-                          "label": "Country code",
-                          "value": "{{ form.values.customer.address.country }}",
-                          "placeholder": "ZA"
                         },
                         "rules": {
                           "disabled": "(form.values.state === 'archived' || (false))"
@@ -622,11 +579,11 @@
                     },
                     "children": [
                       {
-                        "type": "canvas.form.array",
+                        "type": "canvas.form.line-items",
                         "props": {
                           "label": "Lines",
                           "value": "{{ form.values.lines }}",
-                          "fields": [
+                          "columns": [
                             {
                               "key": "product",
                               "label": "Product",
@@ -636,21 +593,34 @@
                             {
                               "key": "description",
                               "label": "Description",
-                              "required": true
+                              "type": "text"
                             },
                             {
                               "key": "quantity",
                               "label": "Quantity",
-                              "required": true
+                              "type": "text",
+                              "align": "right",
+                              "sum": true
                             },
                             {
                               "key": "unitPrice",
                               "label": "Unit price",
-                              "required": true
+                              "type": "text",
+                              "align": "right"
                             },
                             {
                               "key": "discount",
-                              "label": "Discount %"
+                              "label": "Discount %",
+                              "type": "text"
+                            },
+                            {
+                              "key": "lineTotal",
+                              "label": "Line total",
+                              "type": "computed",
+                              "expr": "Number(row.quantity || 0) * Number(row.unitPrice || 0) * (1 - Number(row.discount || 0) / 100)",
+                              "decimals": 2,
+                              "sum": true,
+                              "align": "right"
                             }
                           ],
                           "defaultRow": {
@@ -660,11 +630,10 @@
                             "unitPrice": "",
                             "discount": ""
                           },
-                          "rowIds": false,
+                          "storeComputed": false,
                           "minimum": 1,
                           "maximum": 500,
-                          "addLabel": "Add line",
-                          "removeLabel": "Remove row"
+                          "addLabel": "Add line"
                         },
                         "layout": {
                           "tablet": {
@@ -678,6 +647,64 @@
                     ]
                   }
                 ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "Preview",
+              "description": "How this looks printed or saved as PDF.",
+              "collapsible": true,
+              "defaultOpen": false
+            },
+            "children": [
+              {
+                "type": "canvas.document",
+                "props": {
+                  "title": "{{ 'Sales order ' + (form.values.code || '') }}",
+                  "subtitle": "{{ form.values.reference || form.values.quotation || \"\" }}",
+                  "parties": {
+                    "$expr": "[{ label: 'Order for', lines: ([form.values.customer && form.values.customer.name, form.values.customer && form.values.customer.legalName !== form.values.customer.name ? form.values.customer.legalName : ''].concat((form.values.customer && form.values.customer.address && form.values.customer.address.lines) || []).concat([form.values.customer && form.values.customer.address ? [form.values.customer.address.city, form.values.customer.address.postalCode].filter(part => part).join(' ') : '', form.values.customer && form.values.customer.address && form.values.customer.address.country, form.values.customer && form.values.customer.taxIdentifier ? 'Tax number ' + form.values.customer.taxIdentifier : '']).filter(line => line)).filter(line => line) }]"
+                  },
+                  "meta": {
+                    "$expr": "[{ label: 'Date', value: format(form.values.date, 'date') }, { label: 'Currency', value: form.values.currency }, { label: 'Delivery', value: humanize(form.values.deliveryStatus || \"pending\") }]"
+                  },
+                  "lines": {
+                    "$expr": "(form.values.lines || []).map(l => ({ item: l.description || ((data.productoptions || []).find(o => o.value === l.product) || {}).label || '', quantity: l.quantity, price: Number(l.unitPrice || 0).toFixed(2), discount: l.discount ? l.discount + '%' : '', amount: (Number(l.quantity || 0) * Number(l.unitPrice || 0) * (1 - Number(l.discount || 0) / 100)).toFixed(2) }))"
+                  },
+                  "columns": [
+                    {
+                      "key": "item",
+                      "label": "Item"
+                    },
+                    {
+                      "key": "quantity",
+                      "label": "Qty",
+                      "align": "right"
+                    },
+                    {
+                      "key": "price",
+                      "label": "Price",
+                      "align": "right"
+                    },
+                    {
+                      "key": "discount",
+                      "label": "Discount",
+                      "align": "right"
+                    },
+                    {
+                      "key": "amount",
+                      "label": "Amount",
+                      "align": "right"
+                    }
+                  ],
+                  "totals": {
+                    "$expr": "[{ label: 'Subtotal', value: form.values.totals ? form.values.totals.subtotal : (form.values.lines || []).reduce((s, l) => s + Number(l.quantity || 0) * Number(l.unitPrice || 0), 0).toFixed(2) }, { label: 'Discount', value: form.values.totals ? form.values.totals.discount : (form.values.lines || []).reduce((s, l) => s + Number(l.quantity || 0) * Number(l.unitPrice || 0) * Number(l.discount || 0) / 100, 0).toFixed(2) }, { label: 'Total ' + (form.values.currency || ''), value: form.values.totals ? form.values.totals.total : (form.values.lines || []).reduce((s, l) => s + Number(l.quantity || 0) * Number(l.unitPrice || 0) * (1 - Number(l.discount || 0) / 100), 0).toFixed(2), strong: true }]"
+                  },
+                  "footer": "{{ form.values.notes }}",
+                  "stamp": "{{ ['draft', 'cancelled'].includes(\"confirmed\") ? (\"confirmed\" === 'draft' ? 'Draft' : 'Cancelled') : '' }}"
+                }
               }
             ]
           }

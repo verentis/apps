@@ -15,7 +15,8 @@
       },
       {
         "path": "/rental-bookings",
-        "reason": "Subtract overlapping confirmed and picked-up bookings"
+        "reason": "Subtract overlapping confirmed and picked-up bookings; change records from this page",
+        "mode": "write"
       }
     ],
     "data": {
@@ -38,67 +39,125 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Rental",
+          "icon": "key",
+          "active": "availability.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "bookings.page.yaml",
+              "label": "Bookings",
+              "icon": "list"
+            },
+            {
+              "id": "availability.page.yaml",
+              "label": "Availability",
+              "icon": "calendar-range"
+            },
+            {
+              "id": "revenue.page.yaml",
+              "label": "Revenue",
+              "icon": "chart-column"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/rental/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/rental.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Availability",
+              "note": "Per product: units owned, out on confirmed and picked-up bookings covering today, and what is left to rent."
+            },
+            "children": []
+          },
           {
             "type": "canvas.stack",
             "layout": {
               "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
+                "gap": 2
               }
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Availability"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Per product: units owned, out on confirmed and picked-up bookings covering today, and what is left to rent.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Bookings"
+                }
               },
               {
-                "type": "canvas.button",
+                "type": "canvas.text",
                 "props": {
-                  "label": "Rental",
-                  "variant": "ghost",
-                  "icon": "key",
-                  "size": "sm"
+                  "text": "Bookings per product, from pick-up to return. Drag a draft booking to change its dates.",
+                  "tone": "muted"
+                }
+              },
+              {
+                "type": "canvas.gantt",
+                "props": {
+                  "rows": "{{ (data.bookings || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && !!e.data.startDate && e.data.status !== 'cancelled').map(e => ({ path: e.path, title: [e.data.code, e.data.customerName].filter(part => part).join(' · '), status: e.data.status, start: e.data.startDate, end: e.data.endDate || e.data.startDate, product: ((((data.products || []).find(p => p.path === e.data.product) || {}).data || {}).name) || 'No product' })) }}",
+                  "laneKey": "product",
+                  "lanes": "{{ (data.products || []).filter(p => p.kind === 'file' && p.data && p.data.state !== 'archived').map(p => p.data.name || p.data.code) }}",
+                  "colorBy": "status",
+                  "days": 21,
+                  "conflicts": false,
+                  "lockedWhen": "row.status !== 'draft'"
                 },
                 "on": {
-                  "click": [
+                  "open": [
                     {
                       "open-file": {
-                        "path": "/applications/rental/canvas/home.page.yaml"
+                        "path": "{{ event.row.path }}",
+                        "mode": "edit",
+                        "open": "side"
+                      }
+                    }
+                  ],
+                  "reschedule": [
+                    {
+                      "patch-record": {
+                        "path": "{{ event.path }}",
+                        "values": {
+                          "startDate": "{{ event.start }}",
+                          "endDate": "{{ event.end }}",
+                          "updatedAt": "{{ Date() }}"
+                        }
+                      }
+                    },
+                    {
+                      "refresh-source": {
+                        "source": "bookings"
                       }
                     }
                   ]
@@ -107,41 +166,57 @@
             ]
           },
           {
-            "type": "canvas.text",
-            "props": {
-              "text": "{{ data.$products.error }}"
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "gap": 2
+              }
             },
-            "rules": {
-              "visible": "data.$products.status === 'error'"
+            "children": [
+              {
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Units out and available"
+                }
+              },
+              {
+                "type": "canvas.chart",
+                "props": {
+                  "rows": "{{ (data.availability || []).map(p => ({ label: p.name || p.code, out: p.out || 0, available: Math.max(0, p.available || 0) })) }}",
+                  "showLegend": true,
+                  "emptyText": "Nothing to chart yet",
+                  "kind": "stacked-hbar",
+                  "x": "label",
+                  "y": [
+                    "out",
+                    "available"
+                  ],
+                  "labels": {
+                    "out": "Out",
+                    "available": "Available"
+                  },
+                  "palette": {
+                    "out": "warning",
+                    "available": "success"
+                  },
+                  "format": "integer"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "products",
+              "compact": true
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "Loading…",
-              "tone": "muted"
-            },
-            "rules": {
-              "visible": "data.$products.status === 'loading'"
-            }
-          },
-          {
-            "type": "canvas.text",
-            "props": {
-              "text": "{{ data.$bookings.error }}"
-            },
-            "rules": {
-              "visible": "data.$bookings.status === 'error'"
-            }
-          },
-          {
-            "type": "canvas.text",
-            "props": {
-              "text": "Loading…",
-              "tone": "muted"
-            },
-            "rules": {
-              "visible": "data.$bookings.status === 'loading'"
+              "for": "bookings",
+              "compact": true
             }
           },
           {
@@ -233,6 +308,10 @@
                 }
               ],
               "emptyText": "No rental products yet",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
               "clickable": true
             },
             "on": {
@@ -240,7 +319,8 @@
                 {
                   "open-file": {
                     "path": "{{ event.path }}",
-                    "mode": "edit"
+                    "mode": "edit",
+                    "open": "side"
                   }
                 }
               ]

@@ -40,127 +40,84 @@
         "path": "/service-logs",
         "contents": true,
         "mime-pattern": "application/vnd.verentis.fleet.service+json"
+      },
+      "listvehicles": {
+        "kind": "folder",
+        "path": "/vehicles",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.fleet.vehicle+json"
+      },
+      "listfleetcontracts": {
+        "kind": "folder",
+        "path": "/fleet-contracts",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.fleet.contract+json"
+      },
+      "listservicelogs": {
+        "kind": "folder",
+        "path": "/service-logs",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.fleet.service+json"
       }
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Fleet",
+          "icon": "car",
+          "active": "home.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Vehicles",
+              "icon": "car"
+            },
+            {
+              "id": "contracts.page.yaml",
+              "label": "Contracts",
+              "icon": "file-signature"
+            },
+            {
+              "id": "costs.page.yaml",
+              "label": "Costs",
+              "icon": "chart-column"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/fleet/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/fleet.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Fleet",
+              "note": "Vehicles, fleet contracts and service logs as files in your workspace. Draft service logs in their folder, then log them from their forms; retire vehicles from theirs."
             },
-            "children": [
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Fleet"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Vehicles, fleet contracts and service logs as files in your workspace. Draft service logs in their folder, then log them from their forms; retire vehicles from theirs.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "direction": "row",
-                    "wrap": true,
-                    "gap": 2,
-                    "align": "center"
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Contracts",
-                      "variant": "outline",
-                      "icon": "file-signature",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/fleet/canvas/contracts.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Costs",
-                      "variant": "outline",
-                      "icon": "chart-column",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/fleet/canvas/costs.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Settings",
-                      "variant": "ghost",
-                      "icon": "settings",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/settings/fleet.json",
-                            "mode": "edit"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ]
-              }
-            ]
+            "children": []
           },
           {
             "type": "canvas.grid",
@@ -213,30 +170,27 @@
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /vehicles folder could not be read. Reinstall Fleet to recreate it."
-            },
-            "rules": {
-              "visible": "data.$vehicles.status === 'error'"
+              "for": "vehicles",
+              "compact": true,
+              "description": "The /vehicles folder could not be read. Reinstall Fleet to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /fleet-contracts folder could not be read. Reinstall Fleet to recreate it."
-            },
-            "rules": {
-              "visible": "data.$contracts.status === 'error'"
+              "for": "contracts",
+              "compact": true,
+              "description": "The /fleet-contracts folder could not be read. Reinstall Fleet to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /service-logs folder could not be read. Reinstall Fleet to recreate it."
-            },
-            "rules": {
-              "visible": "data.$services.status === 'error'"
+              "for": "services",
+              "compact": true,
+              "description": "The /service-logs folder could not be read. Reinstall Fleet to recreate it."
             }
           },
           {
@@ -301,17 +255,19 @@
                     ]
                   },
                   {
-                    "type": "canvas.files",
+                    "type": "canvas.empty-state",
                     "props": {
-                      "path": "/vehicles/",
-                      "mimeTypes": [
-                        "application/vnd.verentis.fleet.vehicle+json"
-                      ],
-                      "showFolders": false,
-                      "navigable": false,
+                      "for": "listvehicles",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listvehicles || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
                       "columns": [
                         {
-                          "key": "name",
+                          "key": "data.code",
                           "label": "Code"
                         },
                         {
@@ -332,15 +288,38 @@
                         },
                         {
                           "key": "data.odometerKm",
-                          "label": "Odometer (km)",
-                          "align": "end"
+                          "label": "Odometer (km)"
                         },
                         {
                           "key": "data.status",
-                          "label": "Status"
+                          "label": "Status",
+                          "format": "badge"
                         }
                       ],
+                      "facets": [
+                        "data.status"
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
                       "emptyText": "No vehicles yet. Use New in /vehicles."
+                    },
+                    "rules": {
+                      "visible": "data.$listvehicles.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
                     }
                   }
                 ],
@@ -386,17 +365,19 @@
                     ]
                   },
                   {
-                    "type": "canvas.files",
+                    "type": "canvas.empty-state",
                     "props": {
-                      "path": "/fleet-contracts/",
-                      "mimeTypes": [
-                        "application/vnd.verentis.fleet.contract+json"
-                      ],
-                      "showFolders": false,
-                      "navigable": false,
+                      "for": "listfleetcontracts",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listfleetcontracts || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
                       "columns": [
                         {
-                          "key": "name",
+                          "key": "data.code",
                           "label": "Code"
                         },
                         {
@@ -409,19 +390,43 @@
                         },
                         {
                           "key": "data.endDate",
-                          "label": "Ends"
+                          "label": "Ends",
+                          "format": "date"
                         },
                         {
                           "key": "data.monthlyCost",
-                          "label": "Monthly cost",
-                          "align": "end"
+                          "label": "Monthly cost"
                         },
                         {
                           "key": "data.status",
-                          "label": "Status"
+                          "label": "Status",
+                          "format": "badge"
                         }
                       ],
+                      "facets": [
+                        "data.status"
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
                       "emptyText": "No contracts yet. Use New in /fleet-contracts."
+                    },
+                    "rules": {
+                      "visible": "data.$listfleetcontracts.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
                     }
                   }
                 ],
@@ -467,22 +472,25 @@
                     ]
                   },
                   {
-                    "type": "canvas.files",
+                    "type": "canvas.empty-state",
                     "props": {
-                      "path": "/service-logs/",
-                      "mimeTypes": [
-                        "application/vnd.verentis.fleet.service+json"
-                      ],
-                      "showFolders": false,
-                      "navigable": false,
+                      "for": "listservicelogs",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listservicelogs || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
                       "columns": [
                         {
-                          "key": "name",
+                          "key": "data.code",
                           "label": "Code"
                         },
                         {
                           "key": "data.date",
-                          "label": "Date"
+                          "label": "Date",
+                          "format": "date"
                         },
                         {
                           "key": "data.type",
@@ -490,20 +498,42 @@
                         },
                         {
                           "key": "data.odometerKm",
-                          "label": "Odometer (km)",
-                          "align": "end"
+                          "label": "Odometer (km)"
                         },
                         {
                           "key": "data.cost",
-                          "label": "Cost",
-                          "align": "end"
+                          "label": "Cost"
                         },
                         {
                           "key": "data.status",
-                          "label": "Status"
+                          "label": "Status",
+                          "format": "badge"
                         }
                       ],
+                      "facets": [
+                        "data.status"
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
                       "emptyText": "No service logs yet. Use New in /service-logs."
+                    },
+                    "rules": {
+                      "visible": "data.$listservicelogs.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
                     }
                   }
                 ],

@@ -37,95 +37,122 @@
       },
       "results": {
         "kind": "computed",
-        "expr": "(data.surveys || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => { var subs = (data.responses || []).filter(r => r.kind === 'file' && r.data && r.data.state !== 'archived' && r.data.status === 'submitted' && r.data.survey === e.path).map(r => r.data); return (e.data.questions || []).map(q => { var answers = subs.map(r => (r.answers || []).filter(a => a.sequence === q.sequence)[0]).filter(a => !!a); if (q.kind === 'rating') { var ratings = answers.map(a => Number(a.value)).filter(v => v >= 1 && v <= 5); return [{ path: e.path, survey: e.data.code || e.name, question: q.text || '', metric: 'Average rating', value: ratings.length ? (ratings.reduce((t, v) => t + v, 0) / ratings.length).toFixed(1) : '' }] } if (q.kind === 'single-choice') { return (q.choices || []).map(c => ({ path: e.path, survey: e.data.code || e.name, question: q.text || '', metric: c, value: answers.filter(a => a.value === c).length })) } if (q.kind === 'multi-choice') { return (q.choices || []).map(c => ({ path: e.path, survey: e.data.code || e.name, question: q.text || '', metric: c, value: answers.filter(a => (a.values || []).indexOf(c) >= 0).length })) } return [{ path: e.path, survey: e.data.code || e.name, question: q.text || '', metric: 'Answered', value: answers.filter(a => String(a.value || '').trim()).length }] }).reduce((all, rows) => all.concat(rows), []) }).reduce((all, rows) => all.concat(rows), [])"
+        "expr": "(data.surveys || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => (e.data.questions || []).map(q => q.kind === 'rating' ? [({ path: e.path, survey: e.data.code || e.name, question: q.text || '', metric: 'Average rating', value: (data.responses || []).filter(r => r.kind === 'file' && r.data && r.data.state !== 'archived' && r.data.status === 'submitted' && r.data.survey === e.path).map(r => (r.data.answers || []).filter(a => a.sequence === q.sequence)[0]).filter(a => !!a).map(a => Number(a.value)).filter(v => v >= 1 && v <= 5).length ? ((data.responses || []).filter(r => r.kind === 'file' && r.data && r.data.state !== 'archived' && r.data.status === 'submitted' && r.data.survey === e.path).map(r => (r.data.answers || []).filter(a => a.sequence === q.sequence)[0]).filter(a => !!a).map(a => Number(a.value)).filter(v => v >= 1 && v <= 5).reduce((t, v) => t + v, 0) / (data.responses || []).filter(r => r.kind === 'file' && r.data && r.data.state !== 'archived' && r.data.status === 'submitted' && r.data.survey === e.path).map(r => (r.data.answers || []).filter(a => a.sequence === q.sequence)[0]).filter(a => !!a).map(a => Number(a.value)).filter(v => v >= 1 && v <= 5).length).toFixed(1) : '' })] : q.kind === 'single-choice' ? (q.choices || []).map(c => ({ path: e.path, survey: e.data.code || e.name, question: q.text || '', metric: c, value: (data.responses || []).filter(r => r.kind === 'file' && r.data && r.data.state !== 'archived' && r.data.status === 'submitted' && r.data.survey === e.path).map(r => (r.data.answers || []).filter(a => a.sequence === q.sequence)[0]).filter(a => !!a).filter(a => a.value === c).length })) : q.kind === 'multi-choice' ? (q.choices || []).map(c => ({ path: e.path, survey: e.data.code || e.name, question: q.text || '', metric: c, value: (data.responses || []).filter(r => r.kind === 'file' && r.data && r.data.state !== 'archived' && r.data.status === 'submitted' && r.data.survey === e.path).map(r => (r.data.answers || []).filter(a => a.sequence === q.sequence)[0]).filter(a => !!a).filter(a => (a.values || []).indexOf(c) >= 0).length })) : [({ path: e.path, survey: e.data.code || e.name, question: q.text || '', metric: 'Answered', value: (data.responses || []).filter(r => r.kind === 'file' && r.data && r.data.state !== 'archived' && r.data.status === 'submitted' && r.data.survey === e.path).map(r => (r.data.answers || []).filter(a => a.sequence === q.sequence)[0]).filter(a => !!a).filter(a => String(a.value || '').trim()).length })]).reduce((all, rows) => all.concat(rows), [])).reduce((all, rows) => all.concat(rows), [])"
       }
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Surveys",
+          "icon": "clipboard-list",
+          "active": "results.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "surveys.page.yaml",
+              "label": "Surveys",
+              "icon": "kanban"
+            },
+            {
+              "id": "results.page.yaml",
+              "label": "Results",
+              "icon": "chart-column"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/surveys/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/surveys.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Results",
+              "note": "Per-choice tallies, average ratings (1-5) and answered counts, computed from the submitted responses. Click a row to open the survey."
+            },
+            "children": []
+          },
           {
             "type": "canvas.stack",
             "layout": {
               "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
+                "gap": 2
               }
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Results"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Per-choice tallies, average ratings (1-5) and answered counts, computed from the submitted responses. Click a row to open the survey.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Responses per survey"
+                }
               },
               {
-                "type": "canvas.button",
+                "type": "canvas.chart",
                 "props": {
-                  "label": "Surveys",
-                  "variant": "ghost",
-                  "icon": "clipboard-list",
-                  "size": "sm"
-                },
-                "on": {
-                  "click": [
-                    {
-                      "open-file": {
-                        "path": "/applications/surveys/canvas/home.page.yaml"
-                      }
-                    }
-                  ]
+                  "rows": "{{ (data.rows || []).map(r => ({ path: r.path, label: r.title || r.code, submitted: r.submitted || 0, drafts: r.drafts || 0 })) }}",
+                  "showLegend": true,
+                  "emptyText": "Nothing to chart yet",
+                  "kind": "stacked-hbar",
+                  "x": "label",
+                  "y": [
+                    "submitted",
+                    "drafts"
+                  ],
+                  "labels": {
+                    "submitted": "Submitted",
+                    "drafts": "Still drafts"
+                  },
+                  "palette": {
+                    "submitted": "chart-1",
+                    "drafts": "muted"
+                  },
+                  "format": "integer"
                 }
               }
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /surveys folder could not be read. Reinstall Surveys to recreate it."
-            },
-            "rules": {
-              "visible": "data.$surveys.status === 'error'"
+              "for": "surveys",
+              "compact": true,
+              "description": "The /surveys folder could not be read. Reinstall Surveys to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /survey-responses folder could not be read. Reinstall Surveys to recreate it."
-            },
-            "rules": {
-              "visible": "data.$responses.status === 'error'"
+              "for": "responses",
+              "compact": true,
+              "description": "The /survey-responses folder could not be read. Reinstall Surveys to recreate it."
             }
           },
           {
@@ -205,6 +232,10 @@
                     }
                   ],
                   "emptyText": "No surveys yet",
+                  "search": true,
+                  "sortable": true,
+                  "pageSize": 25,
+                  "narrow": "list",
                   "clickable": true
                 },
                 "on": {
@@ -212,7 +243,8 @@
                     {
                       "open-file": {
                         "path": "{{ event.path }}",
-                        "mode": "edit"
+                        "mode": "edit",
+                        "open": "side"
                       }
                     }
                   ]
@@ -250,6 +282,10 @@
                     }
                   ],
                   "emptyText": "No submitted responses yet",
+                  "search": true,
+                  "sortable": true,
+                  "pageSize": 25,
+                  "narrow": "list",
                   "clickable": true
                 },
                 "on": {
@@ -257,7 +293,8 @@
                     {
                       "open-file": {
                         "path": "{{ event.path }}",
-                        "mode": "edit"
+                        "mode": "edit",
+                        "open": "side"
                       }
                     }
                   ]

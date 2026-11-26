@@ -2,10 +2,11 @@
 // the events-by-status list and the registrations/capacity report. Publishing, completing and cancelling events
 // and confirming, checking in and cancelling registrations (transitions, capacity, stamps, locking) are done by
 // the action script the forms run.
+import { views } from './views.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   humanize, iconName, options, openFile, page, panel, projectRegistration, recordButtons, row, scriptAction,
-  sectionCards, stat, stats, status, table, tabs, text, toneExpression,
+  sectionCards, stat, stats, status, table, tabs, text, toneExpression, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import {
   confirmableStatuses, containers, countedStatuses, eventStatuses, installRoot, mimeTypes, recordKinds,
@@ -111,21 +112,19 @@ function recordForm(kind) {
   const extras = recordExtras(kind)
   const readOnly = `${archived} || (${extras.locked})`
   const tones = kind === 'event' ? eventTones : registrationTones
-  const header = row([
-    column([
-      row([
-        heading(`{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`),
+  const header = recordHeader(
+    `{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`,
+    [
         badge(humanize(entity.status), toneExpression(entity.status, tones), { visible: `!!form.values.${entity.status}` }),
         badge('Archived', 'warning', { visible: archived }, 'archive'),
-      ]),
-      text(`${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`, 'muted'),
-    ]),
-    row([...extras.buttons, recordButtons(extras.locked)]),
-  ], 'between')
+    ],
+    `${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`,
+    [...extras.buttons, recordButtons(extras.locked)],
+  )
   const tree = [
     header,
-    ...status('record'),
-    badge(`This ${entity.singular.toLowerCase()} is archived. Restore it to edit.`, 'warning', { visible: archived }, 'archive'),
+    ...status('record'), ...lifecycle(entity),
+    archivedAlert(entity.singular),
     ...extras.notices,
     grid(sectionCards(entity.sections, readOnly)),
   ]
@@ -150,13 +149,13 @@ function settingsForm() {
       access: [schemaAccess],
       data: {},
       tree: [
-        row([
-          column([heading('Events settings'), text('The default venue for new events. Code prefixes are app settings, managed with the installed app.', 'muted')]),
+        pageHeader(
+          [heading('Events settings'), text('The default venue for new events. Code prefixes are app settings, managed with the installed app.', 'muted')], [
           row([
             button('Reset', [{ 'reset-form': {} }], { disabled: 'form.saving || !form.dirty' }, 'ghost'),
             button('Save', [{ save: {} }, { toast: { message: 'Saved', variant: 'success' } }], { disabled: 'form.saving || !form.dirty || form.invalid' }, undefined, 'save'),
           ]),
-        ], 'between'),
+        ]),
         ...status('record'),
         grid([card('Defaults', [grid(settingsFields.map(field => formControl(field, null)))])], 1),
       ],
@@ -198,14 +197,14 @@ function homePage() {
         access: pageAccess('Count events and registrations and show them'),
         data: pageSources,
         tree: page([
-          row([
-            column([heading('Events'), text('Events and registrations are files in your workspace. Draft events in /events, publish them, then confirm and check in registrations from their forms.', 'muted')]),
+          pageHeader(
+            [heading('Events'), text('Events and registrations are files in your workspace. Draft events in /events, publish them, then confirm and check in registrations from their forms.', 'muted')], [
             row([
               button('All events', [openFile(`${installRoot}/canvas/events.page.yaml`)], undefined, 'outline', 'calendar'),
               button('Registrations', [openFile(`${installRoot}/canvas/registrations.page.yaml`)], undefined, 'outline', 'user-check'),
               button('Settings', [openFile(settingsPath, 'edit')], undefined, 'ghost', 'settings'),
             ]),
-          ], 'between'),
+          ]),
           stats([
             stat('Published', countOf("r.status === 'published'"), 'megaphone', loading('events')),
             stat('Ongoing', countOf("r.status === 'ongoing'"), 'play', loading('events')),
@@ -243,10 +242,10 @@ function eventsPage() {
         access: pageAccess('List events by status with their seats taken'),
         data: pageSources,
         tree: page([
-          row([
-            column([heading('Events by status'), text('Every active event, grouped by its status. Click a row to open the event.', 'muted')]),
+          pageHeader(
+            [heading('Events by status'), text('Every active event, grouped by its status. Click a row to open the event.', 'muted')], [
             button('Events', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'calendar'),
-          ], 'between'),
+          ]),
           ...containerNotices(),
           stats(eventStatuses.map(value => stat(statusLabel(value), countOf(`r.status === '${value}'`), 'calendar', loading('events'))), 5),
           tabs(eventStatuses.map(value => ({ value, label: statusLabel(value), icon: 'calendar' })),
@@ -269,10 +268,10 @@ function registrationsPage() {
         access: pageAccess('Sum confirmed and attended seats per event against its capacity'),
         data: pageSources,
         tree: page([
-          row([
-            column([heading('Registrations'), text('Confirmed and attended seats per event, against its capacity. Click a row to open the record.', 'muted')]),
+          pageHeader(
+            [heading('Registrations'), text('Confirmed and attended seats per event, against its capacity. Click a row to open the record.', 'muted')], [
             button('Events', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'calendar'),
-          ], 'between'),
+          ]),
           ...containerNotices(),
           stats([
             stat('Registrations', '{{ (data.registrationrows || []).length }}', 'user-check', loading('registrations')),
@@ -293,5 +292,5 @@ function registrationsPage() {
 
 export function buildPages() {
   const documents = [homePage(), eventsPage(), registrationsPage(), ...recordKinds.map(recordForm), settingsForm()]
-  return Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)]))
+  return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

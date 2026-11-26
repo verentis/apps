@@ -23,7 +23,7 @@
         "kind": "folder",
         "path": "/products",
         "contents": true,
-        "mime-pattern": "application/vnd.verentis.inventory.product+json"
+        "mime-pattern": "application/vnd.verentis.products.product+json"
       },
       "moves": {
         "kind": "folder",
@@ -46,41 +46,12 @@
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Low stock",
+              "note": "{{ (data.low || []).length }} product(s) at or below their reorder point"
             },
             "children": [
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 3,
-                      "text": "Low stock"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "{{ (data.low || []).length }} product(s) at or below their reorder point",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
               {
                 "type": "canvas.button",
                 "props": {
@@ -97,26 +68,23 @@
                       }
                     }
                   ]
-                }
+                },
+                "slot": "actions"
               }
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "{{ data.$products.error }}"
-            },
-            "rules": {
-              "visible": "data.$products.status === 'error'"
+              "for": "products",
+              "compact": true
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "{{ data.$moves.error }}"
-            },
-            "rules": {
-              "visible": "data.$moves.status === 'error'"
+              "for": "moves",
+              "compact": true
             }
           },
           {
@@ -154,6 +122,10 @@
                 }
               ],
               "emptyText": "Nothing to reorder",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
               "clickable": true
             },
             "on": {
@@ -161,7 +133,8 @@
                 {
                   "open-file": {
                     "path": "{{ event.path }}",
-                    "mode": "edit"
+                    "mode": "edit",
+                    "open": "side"
                   }
                 }
               ]

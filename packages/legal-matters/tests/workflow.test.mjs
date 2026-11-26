@@ -4,13 +4,14 @@ import test from 'node:test'
 import { memoryFiles } from '../../../tools/file-apps/memory-files.mjs'
 import { lineTotals } from '../../invoicing/scripts/post/main.mjs'
 import { run } from '../scripts/workflow/main.mjs'
+import { createDraftInvoice } from '../../invoicing/scripts/api/main.mjs'
 import { pages } from '../src/pages.mjs'
 
 const workspace = randomUUID(), reg = '/legal-billing-register', project = '/projects/P-1', client = '/customers/C-1'
 const time = '/timesheets/T-1', expense = '/expense-reports/E-1'
 const charge = (source,path,release,extra={}) => ({source,path,release,writeDown:'',reason:'',recoverability:'',...extra})
 function fixture() {
-  const settings = {'pilot-mode':'isolated-synthetic','synthetic-workspace-id':workspace}
+  const settings = {}
   const files = memoryFiles({
     [reg]:{version:1,batches:[]}, [client]:{kind:'company',state:'active',name:'Example Ltd'},[project]:{kind:'project',state:'active'},
     '/settings/invoicing.json':{defaultDueDays:14, defaultTaxRate:'15'},'/settings/accounting.json':{baseCurrency:'ZAR',minorDigits:2},
@@ -31,28 +32,44 @@ function fixture() {
   }
   const open = async () => {
     const path = await intake()
-    await edit(path,{reviewBy:'Reviewer',reviewReason:'Reviewed pilot files and external sources',disposition:files.json(path).screen.count ? 'waiver-reviewed' : 'clear'})
+    await edit(path,{reviewBy:'Reviewer',reviewReason:'Reviewed other matters and external sources',disposition:files.json(path).screen.count ? 'waiver-reviewed' : 'clear'})
     await op(path,'decide')
     return path
   }
   const prepare = async (path,charges) => { await edit(path,{billingReviewer:'Billing reviewer',charges}); await op(path,'prepare') }
-  return {call,op,edit,create,intake,open,prepare,files,settings}
+  // What the matter form does on Approve: the workflow reserves and returns the request, Invoicing drafts it through
+  // its API (run here directly, as the platform would), and the workflow records the draft.
+  const approve = async path => {
+    const approved = await op(path,'approve')
+    const drafted = await createDraftInvoice(approved.invoiceRequest,{files,settings:{get:()=>undefined},caller:{app:'legal-matters'},now:new Date().toISOString()})
+    return call({path,operation:'record-invoice',revision:approved.revision,invoice:drafted.path})
+  }
+  return {call,op,edit,create,intake,open,prepare,approve,files,settings}
 }
 
-test('default, mismatched workspace, branch and unsupported modes fail before any file access', async () => {
+test('runs without any pilot setting; other branches, other folders and indirect paths fail before any file access', async () => {
   const f = fixture(), p = {operation:'create',parentPath:'/legal-matters',creatable:'matter'}
-  for (const mode of [undefined,'disabled','production','real-client']) {
-    f.settings['pilot-mode'] = mode
-    await assert.rejects(f.call(p),/Disabled/)
-  }
-  f.settings['pilot-mode']='isolated-synthetic'
-  await assert.rejects(f.call(p,{workspace:{id:randomUUID()}}),/Disabled/)
-  await assert.rejects(f.call(p,{file:{branch:'other'}}),/Disabled/)
+  for (const key of Object.keys(f.settings)) delete f.settings[key]
+  await assert.rejects(f.call(p,{file:{branch:'other'}}),/main branch only/)
   await assert.rejects(f.call({...p,parentPath:'/customers'}),/only inside/)
   await assert.rejects(f.call({operation:'decide',path:'/legal-matters/../customers/C-1'}),/direct record/)
   assert.deepEqual(f.files.writes,[])
-  assert.equal(pages['home.page.yaml'].spec.data,undefined)
+  const {path} = await f.create()
+  assert.equal(f.files.json(path).title,'New matter')
+  assert.equal(f.files.json(path).pilot,undefined)
   assert(!JSON.stringify(pages['matter.form.yaml'].spec.actions).includes('"save":{}'))
+})
+
+test('the launch page lists every matter; matters created during the pilot still load', async () => {
+  const home = pages['home.page.yaml']
+  assert.equal(home.spec.data.matters.path,'/legal-matters')
+  assert.match(JSON.stringify(home.spec.tree),/canvas\.board/)
+  const f = fixture()
+  const path = await f.intake()
+  // A matter written during the pilot carries the old marker; it still screens and saves.
+  await f.files.write(path, JSON.stringify({...f.files.json(path),pilot:'synthetic-only'}), {contentType:'application/vnd.verentis.legal-matters.matter+json'})
+  await f.op(path,'screen')
+  assert.equal(f.files.json(path).pilot,'synthetic-only')
 })
 
 test('screen includes adverse aliases and requires fresh human disposition; guarded saves reject stale editors',async()=>{
@@ -87,12 +104,15 @@ test('preview resolves exact agreed rates, write-downs and separate recoverabili
     charge('recoverable-expense',expense,'Filing expense',{recoverability:'PRIVATE engagement clause'}),charge('fixed-fee','','Agreed fixed fee')])
   const q=f.files.json(path).prebill.quote
   assert.deepEqual(q.rows.map(x=>[x.quantity,x.rate,x.net]),[['1.25','100','120.00'],['1','10.50','10.50'],['1','60','60.00']])
-  const {path:ip}=await f.op(path,'approve'), draft=f.files.json(ip)
+  const {path:ip}=await f.approve(path), draft=f.files.json(ip)
+  assert.equal(draft.source.app,'legal-matters')
   assert.equal(draft.status,'draft')
   assert.equal(draft.customerRef,client)
   assert.equal(draft.customer.name,'Example Ltd')
   assert.equal(lineTotals(draft.lines,2).net,19050n)
-  for (const term of ['PRIVATE','MAT-','/timesheets','/expense-reports','Taylor','Billing reviewer']) assert(!JSON.stringify(draft).includes(term))
+  // The source names the matter for Invoicing's own dedupe; nothing private reaches the customer-facing fields.
+  const facing = {...draft, source: undefined}
+  for (const term of ['PRIVATE','MAT-','/timesheets','/expense-reports','Taylor','Billing reviewer']) assert(!JSON.stringify(facing).includes(term))
   assert.equal(f.files.json(reg).batches.length,1)
   assert.deepEqual(f.files.json(path).invoices,[ip])
   await f.prepare(path,[charge('time',time,'Another narrative')])
@@ -117,21 +137,18 @@ test('billing rejects unrelated time, drafts, unsupported reimbursements and sta
   await f.op(path,'discard')
 })
 
-test('concurrent reviewers on different matters cannot invoice the same source; a transport failure resumes one draft',async()=>{
+test('concurrent reviewers on different matters cannot invoice the same source; a lost answer resumes the same draft',async()=>{
   const f=fixture(),a=await f.open(),b=await f.open()
   for(const p of [a,b]) await f.prepare(p,[charge('time',time,'Approved advice')])
-  const write=f.files.write.bind(f.files)
-  let lost=true
-  f.files.write=async(path,...args)=>{
-    await write(path,...args)
-    if(lost && path.startsWith('/invoices/')){lost=false; throw new Error('response lost')}
-  }
-  await Promise.allSettled([f.op(a,'approve'),f.op(b,'approve')])
+  const results=await Promise.allSettled([f.op(a,'approve'),f.op(b,'approve')])
   const batches=f.files.json(reg).batches
   assert.equal(batches.length,1)
   const winner=batches[0].matter===f.files.json(a).id?a:b, loser=winner===a?b:a
   assert.equal(f.files.json(winner).prebill.stage,'pending')
-  await f.op(winner,'approve')
+  // Invoicing drafted, but its answer never reached the form: approving again asks for the same draft.
+  const first=results.find(r=>r.status==='fulfilled' && r.value.invoiceRequest).value
+  await createDraftInvoice(first.invoiceRequest,{files:f.files,settings:{get:()=>undefined},caller:{app:'legal-matters'},now:new Date().toISOString()})
+  await f.approve(winner)
   if(f.files.json(loser).prebill) await assert.rejects(f.op(loser,'approve'),/already reserved/)
   const invoices=f.files.writes.filter(p=>p.startsWith('/invoices/'))
   assert.equal(invoices.length,1)

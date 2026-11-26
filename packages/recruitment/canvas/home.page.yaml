@@ -34,125 +34,113 @@
       "rows": {
         "kind": "computed",
         "expr": "(data.candidates || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, name: e.data.name || '', jobPath: e.data.job || '', job: ((((data.jobs || []).find(j => j.kind === 'file' && j.data && j.path === e.data.job) || {}).data || {}).title) || '', source: e.data.source || '', stage: e.data.stage || '', expectedSalary: e.data.expectedSalary || '' }))"
+      },
+      "listcandidates": {
+        "kind": "folder",
+        "path": "/candidates",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.recruitment.candidate+json"
+      },
+      "listjobpositions": {
+        "kind": "folder",
+        "path": "/job-positions",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.recruitment.job+json"
       }
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Recruitment",
+          "icon": "briefcase",
+          "active": "home.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "pipeline.page.yaml",
+              "label": "Pipeline",
+              "icon": "kanban",
+              "count": "{{ (data.rows || []).filter(r => ['new', 'screening', 'interview', 'offer'].includes(r.stage)).length }}"
+            },
+            {
+              "id": "positions.page.yaml",
+              "label": "Jobs",
+              "icon": "briefcase"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/recruitment/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/recruitment.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Recruitment",
+              "note": "Job positions and candidates are files in your workspace. Draft applications in /candidates, move them through the pipeline, then hire or refuse them from their forms."
+            },
+            "children": []
+          },
           {
             "type": "canvas.stack",
             "layout": {
               "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
+                "gap": 2
               }
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Recruitment"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Job positions and candidates are files in your workspace. Draft applications in /candidates, move them through the pipeline, then hire or refuse them from their forms.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Hiring funnel"
+                }
               },
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "direction": "row",
-                    "wrap": true,
-                    "gap": 2,
-                    "align": "center"
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Pipeline",
-                      "variant": "outline",
-                      "icon": "kanban",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/recruitment/canvas/pipeline.page.yaml"
-                          }
-                        }
-                      ]
-                    }
+                "type": "canvas.chart",
+                "props": {
+                  "rows": "{{ ['new', 'screening', 'interview', 'offer', 'hired'].map(stage => ({ label: stage, value: (data.rows || []).filter(r => r.stage === stage).length })) }}",
+                  "showLegend": true,
+                  "emptyText": "No candidates yet",
+                  "kind": "funnel",
+                  "x": "label",
+                  "y": "value",
+                  "labels": {
+                    "new": "New",
+                    "screening": "Screening",
+                    "interview": "Interview",
+                    "offer": "Offer",
+                    "hired": "Hired"
                   },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Positions",
-                      "variant": "outline",
-                      "icon": "briefcase",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/recruitment/canvas/positions.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Settings",
-                      "variant": "ghost",
-                      "icon": "settings",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/settings/recruitment.json",
-                            "mode": "edit"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ]
+                  "format": "integer"
+                }
               }
             ]
           },
@@ -207,21 +195,19 @@
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /job-positions folder could not be read. Reinstall Recruitment to recreate it."
-            },
-            "rules": {
-              "visible": "data.$jobs.status === 'error'"
+              "for": "jobs",
+              "compact": true,
+              "description": "The /job-positions folder could not be read. Reinstall Recruitment to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /candidates folder could not be read. Reinstall Recruitment to recreate it."
-            },
-            "rules": {
-              "visible": "data.$candidates.status === 'error'"
+              "for": "candidates",
+              "compact": true,
+              "description": "The /candidates folder could not be read. Reinstall Recruitment to recreate it."
             }
           },
           {
@@ -281,17 +267,19 @@
                     ]
                   },
                   {
-                    "type": "canvas.files",
+                    "type": "canvas.empty-state",
                     "props": {
-                      "path": "/candidates/",
-                      "mimeTypes": [
-                        "application/vnd.verentis.recruitment.candidate+json"
-                      ],
-                      "showFolders": false,
-                      "navigable": false,
+                      "for": "listcandidates",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listcandidates || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
                       "columns": [
                         {
-                          "key": "name",
+                          "key": "data.code",
                           "label": "Application"
                         },
                         {
@@ -304,14 +292,38 @@
                         },
                         {
                           "key": "data.stage",
-                          "label": "Stage"
+                          "label": "Stage",
+                          "format": "badge"
                         },
                         {
                           "key": "data.expectedSalary",
                           "label": "Expected salary"
                         }
                       ],
+                      "facets": [
+                        "data.stage"
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
                       "emptyText": "No candidates yet. Use New in /candidates."
+                    },
+                    "rules": {
+                      "visible": "data.$listcandidates.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
                     }
                   }
                 ],
@@ -357,17 +369,19 @@
                     ]
                   },
                   {
-                    "type": "canvas.files",
+                    "type": "canvas.empty-state",
                     "props": {
-                      "path": "/job-positions/",
-                      "mimeTypes": [
-                        "application/vnd.verentis.recruitment.job+json"
-                      ],
-                      "showFolders": false,
-                      "navigable": false,
+                      "for": "listjobpositions",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listjobpositions || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
                       "columns": [
                         {
-                          "key": "name",
+                          "key": "data.code",
                           "label": "Code"
                         },
                         {
@@ -380,14 +394,38 @@
                         },
                         {
                           "key": "data.status",
-                          "label": "Status"
+                          "label": "Status",
+                          "format": "badge"
                         },
                         {
                           "key": "data.openings",
                           "label": "Openings"
                         }
                       ],
+                      "facets": [
+                        "data.status"
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
                       "emptyText": "No job positions yet. Use New in /job-positions."
+                    },
+                    "rules": {
+                      "visible": "data.$listjobpositions.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
                     }
                   }
                 ],

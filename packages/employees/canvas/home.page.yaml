@@ -34,125 +34,116 @@
       "rows": {
         "kind": "computed",
         "expr": "(data.staff || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, name: e.data.name || '', jobTitle: e.data.jobTitle || '', departmentPath: e.data.department || '', department: ((((data.departments || []).find(d => d.kind === 'file' && d.data && d.path === e.data.department) || {}).data || {}).name) || '', manager: ((((data.staff || []).find(m => m.kind === 'file' && m.data && m.path === e.data.manager) || {}).data || {}).name) || '', startDate: e.data.startDate || '', status: e.data.status || 'active', terminationDate: e.data.terminationDate || '' }))"
+      },
+      "listemployees": {
+        "kind": "folder",
+        "path": "/employees",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.employees.employee+json"
+      },
+      "listdepartments": {
+        "kind": "folder",
+        "path": "/departments",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.employees.department+json"
       }
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Employees",
+          "icon": "user-round",
+          "active": "home.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "directory.page.yaml",
+              "label": "Directory",
+              "icon": "users"
+            },
+            {
+              "id": "departments.page.yaml",
+              "label": "Departments",
+              "icon": "network"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/employees/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/employees.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Employees",
+              "note": "Departments and employees are files in your workspace. Keep the directory in /employees, organize it by department, and terminate employees from their forms."
+            },
+            "children": []
+          },
           {
             "type": "canvas.stack",
             "layout": {
               "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
+                "gap": 2
               }
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Employees"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Departments and employees are files in your workspace. Keep the directory in /employees, organize it by department, and terminate employees from their forms.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Headcount by department"
+                }
               },
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "direction": "row",
-                    "wrap": true,
-                    "gap": 2,
-                    "align": "center"
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Directory",
-                      "variant": "outline",
-                      "icon": "users",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/employees/canvas/directory.page.yaml"
-                          }
-                        }
-                      ]
-                    }
+                "type": "canvas.chart",
+                "props": {
+                  "rows": "{{ (data.rows || []).filter(r => r.status !== 'terminated').map(r => r.department || 'No department').filter((name, index, all) => all.indexOf(name) === index).map(name => ({ label: name, active: (data.rows || []).filter(r => r.status !== 'terminated').filter(r => (r.department || 'No department') === name && r.status === 'active').length, leave: (data.rows || []).filter(r => r.status !== 'terminated').filter(r => (r.department || 'No department') === name && r.status === 'on-leave').length })) }}",
+                  "showLegend": true,
+                  "emptyText": "Nothing to chart yet",
+                  "kind": "stacked-hbar",
+                  "x": "label",
+                  "y": [
+                    "active",
+                    "leave"
+                  ],
+                  "labels": {
+                    "active": "Active",
+                    "leave": "On leave"
                   },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Departments",
-                      "variant": "outline",
-                      "icon": "building-2",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/employees/canvas/departments.page.yaml"
-                          }
-                        }
-                      ]
-                    }
+                  "palette": {
+                    "active": "chart-1",
+                    "leave": "warning"
                   },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Settings",
-                      "variant": "ghost",
-                      "icon": "settings",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/settings/employees.json",
-                            "mode": "edit"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ]
+                  "format": "integer"
+                }
               }
             ]
           },
@@ -207,21 +198,19 @@
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /departments folder could not be read. Reinstall Employees to recreate it."
-            },
-            "rules": {
-              "visible": "data.$departments.status === 'error'"
+              "for": "departments",
+              "compact": true,
+              "description": "The /departments folder could not be read. Reinstall Employees to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /employees folder could not be read. Reinstall Employees to recreate it."
-            },
-            "rules": {
-              "visible": "data.$staff.status === 'error'"
+              "for": "staff",
+              "compact": true,
+              "description": "The /employees folder could not be read. Reinstall Employees to recreate it."
             }
           },
           {
@@ -281,17 +270,19 @@
                     ]
                   },
                   {
-                    "type": "canvas.files",
+                    "type": "canvas.empty-state",
                     "props": {
-                      "path": "/employees/",
-                      "mimeTypes": [
-                        "application/vnd.verentis.employees.employee+json"
-                      ],
-                      "showFolders": false,
-                      "navigable": false,
+                      "for": "listemployees",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listemployees || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
                       "columns": [
                         {
-                          "key": "name",
+                          "key": "data.code",
                           "label": "Employee"
                         },
                         {
@@ -304,14 +295,39 @@
                         },
                         {
                           "key": "data.status",
-                          "label": "Status"
+                          "label": "Status",
+                          "format": "badge"
                         },
                         {
                           "key": "data.startDate",
-                          "label": "Start date"
+                          "label": "Start date",
+                          "format": "date"
                         }
                       ],
+                      "facets": [
+                        "data.status"
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
                       "emptyText": "No employees yet. Use New in /employees."
+                    },
+                    "rules": {
+                      "visible": "data.$listemployees.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
                     }
                   }
                 ],
@@ -357,17 +373,19 @@
                     ]
                   },
                   {
-                    "type": "canvas.files",
+                    "type": "canvas.empty-state",
                     "props": {
-                      "path": "/departments/",
-                      "mimeTypes": [
-                        "application/vnd.verentis.employees.department+json"
-                      ],
-                      "showFolders": false,
-                      "navigable": false,
+                      "for": "listdepartments",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listdepartments || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
                       "columns": [
                         {
-                          "key": "name",
+                          "key": "data.code",
                           "label": "Department"
                         },
                         {
@@ -375,7 +393,27 @@
                           "label": "Name"
                         }
                       ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
                       "emptyText": "No departments yet. Use New in /departments."
+                    },
+                    "rules": {
+                      "visible": "data.$listdepartments.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
                     }
                   }
                 ],

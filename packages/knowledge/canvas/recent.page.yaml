@@ -38,90 +38,82 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Knowledge",
+          "icon": "book-open",
+          "active": "recent.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Spaces",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "spaces.page.yaml",
+              "label": "Space tree",
+              "icon": "folder-tree"
+            },
+            {
+              "id": "recent.page.yaml",
+              "label": "Recent",
+              "icon": "history"
+            },
+            {
+              "id": "tags.page.yaml",
+              "label": "Tags",
+              "icon": "tags"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/knowledge/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/knowledge.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Recently updated",
+              "note": "The 50 most recently updated active articles. Click a row to open the article."
             },
-            "children": [
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Recently updated"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "The 50 most recently updated active articles. Click a row to open the article.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.button",
-                "props": {
-                  "label": "Knowledge",
-                  "variant": "ghost",
-                  "icon": "book-open",
-                  "size": "sm"
-                },
-                "on": {
-                  "click": [
-                    {
-                      "open-file": {
-                        "path": "/applications/knowledge/canvas/home.page.yaml"
-                      }
-                    }
-                  ]
-                }
-              }
-            ]
+            "children": []
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /knowledge-spaces folder could not be read. Reinstall Knowledge to recreate it."
-            },
-            "rules": {
-              "visible": "data.$spaces.status === 'error'"
+              "for": "spaces",
+              "compact": true,
+              "description": "The /knowledge-spaces folder could not be read. Reinstall Knowledge to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /articles folder could not be read. Reinstall Knowledge to recreate it."
-            },
-            "rules": {
-              "visible": "data.$articles.status === 'error'"
+              "for": "articles",
+              "compact": true,
+              "description": "The /articles folder could not be read. Reinstall Knowledge to recreate it."
             }
           },
           {
@@ -155,6 +147,10 @@
                 }
               ],
               "emptyText": "No articles yet",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
               "clickable": true
             },
             "on": {
@@ -162,7 +158,8 @@
                 {
                   "open-file": {
                     "path": "{{ event.path }}",
-                    "mode": "edit"
+                    "mode": "edit",
+                    "open": "side"
                   }
                 }
               ]

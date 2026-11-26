@@ -1,15 +1,14 @@
 // Moves Rental bookings through their lifecycle. The booking form runs this script (run-script) against a saved
 // record: confirming validates the dates and availability against overlapping bookings and computes the exact
 // total; picking up and returning move the units out and back (charging a late fee past the end date); returning
-// drafts an invoice in Invoicing's vendor format when Invoicing is installed; cancelling releases the units.
+// returns what Invoicing needs to draft the invoice, which the form asks Invoicing for through the platform
+// (`record-invoice` stores the link; Rental never writes Invoicing's files); cancelling releases the units.
 //
-// Integrity model: the draft invoice gets a deterministic name (`/invoices/<booking code>`) and is created
-// create-only, so a retried return never drafts twice; the booking is updated conditionally (If-Match), so a
-// concurrent edit fails instead of being overwritten.
-import { randomUUID } from 'node:crypto'
+// Integrity model: Invoicing returns the same draft when asked again for the same booking; the booking is updated
+// conditionally (If-Match), so a concurrent edit fails instead of being overwritten.
 import { fail, formatMinor, nameOf, nowIso, readFolder, readRecord, readSettings, saveRecord, statusOf, toMinor } from './ledger.mjs'
 
-export const operations = ['confirm-booking', 'pickup-booking', 'return-booking', 'cancel-booking']
+export const operations = ['confirm-booking', 'pickup-booking', 'return-booking', 'cancel-booking', 'record-invoice']
 export const rental = {
   settingsPath: '/settings/rental.json',
   products: '/rental-products',
@@ -17,11 +16,6 @@ export const rental = {
   mime: kind => `application/vnd.verentis.rental.${kind}+json`,
 }
 /** Invoicing's public file contract: present only when Invoicing is installed. */
-export const invoicing = {
-  invoices: '/invoices',
-  mime: 'application/vnd.verentis.invoicing.invoice+json',
-  schema: 'https://schemas.verentis.io/invoicing/v1/invoice.schema.json',
-}
 /** Amounts are kept in the currency's minor unit; two digits covers the supported currencies. */
 export const digits = 2
 const datePattern = /^\d{4}-\d{2}-\d{2}$/
@@ -145,51 +139,57 @@ async function pickupBooking(files, path, { now }) {
 }
 
 /**
- * Drafts an Invoicing invoice for the returned booking when Invoicing is installed (its /invoices container
- * exists): one line for the rental and one for any late fee. Absent Invoicing, missing write access and an
- * invoice drafted by an earlier attempt are all tolerated.
+ * What Invoicing needs to draft the returned booking's invoice (its `create-draft-invoice` operation): one line for
+ * the rental and one for any late fee. The booking form asks Invoicing through the platform; Rental never writes
+ * Invoicing's files.
  */
-async function draftInvoice(files, record, { days, late, fee, currency, now, uuid }) {
-  if (!await files.stat(invoicing.invoices)) return null
-  const path = `${invoicing.invoices}/${record.code}`
+export function invoiceRequest(path, record, { days, late, fee, currency }) {
   const product = nameOf(record.product || '')
-  const lines = [
-    { description: `Rental ${record.code}: ${record.quantity} × ${product}, ${days} day${days === 1 ? '' : 's'} at ${record.dailyRate}/day`,
-      quantity: '1', unitPrice: record.total, taxRate: '' },
-    ...(fee > 0n ? [{ description: `Late return: ${late} day${late === 1 ? '' : 's'} past ${record.endDate}`,
-      quantity: '1', unitPrice: record.lateFee, taxRate: '' }] : []),
-  ]
-  const invoice = {
-    $schema: invoicing.schema, schemaVersion: 1, kind: 'invoice', id: uuid(), state: 'active',
-    createdAt: now, updatedAt: now, code: record.code, issueDate: '', dueDate: '', currency,
-    reference: record.code, customerRef: record.customerRef || '',
+  return {
+    source: { path, code: record.code },
+    currency,
+    reference: record.code,
+    ...(record.customerRef ? { customerRef: record.customerRef } : {}),
     customer: { name: record.customerName || '' },
-    lines, notes: `Drafted from rental booking ${record.code}.`, status: 'draft',
+    lines: [
+      { description: `Rental ${record.code}: ${record.quantity} × ${product}, ${days} day${days === 1 ? '' : 's'} at ${record.dailyRate}/day`,
+        quantity: '1', unitPrice: record.total },
+      ...(fee > 0n ? [{ description: `Late return: ${late} day${late === 1 ? '' : 's'} past ${record.endDate}`,
+        quantity: '1', unitPrice: record.lateFee }] : []),
+    ],
+    notes: `Drafted from rental booking ${record.code}.`,
   }
-  try {
-    await files.write(path, JSON.stringify(invoice, null, 2), { contentType: invoicing.mime, ifNoneMatch: '*' })
-  } catch (error) {
-    const status = statusOf(error)
-    if (status === 403 || status === 404) return null
-    if (status !== 412) throw error
-    let existing
-    try {
-      existing = await files.readJson(path)
-    } catch {
-      existing = null
-    }
-    if (existing?.kind !== 'invoice' || existing.code !== record.code) {
-      fail(`${path} already exists and belongs to something else. Rename it and try again.`)
-    }
-  }
-  return path
 }
 
-async function returnBooking(files, path, { date, now, uuid }) {
+/** The request for a booking already returned (Invoicing arrived later, or drafting failed). */
+async function requestFor(files, path, record) {
+  const settings = await readSettings(files, rental.settingsPath, 'Rental')
+  const currency = /^[A-Z]{3}$/.test(settings.currency ?? '') ? settings.currency : ''
+  const late = lateDays(record.endDate, String(record.returnedAt ?? '').slice(0, 10) || record.endDate)
+  const fee = toMinor(record.lateFee || '0', digits, 'The late fee')
+  return invoiceRequest(path, record, { days: rentalDays(record.startDate, record.endDate), late, fee, currency })
+}
+
+/** Records the invoice Invoicing drafted for a returned booking (the path its operation returned). */
+async function recordInvoice(files, path, invoicePath, { now }) {
+  const booking = await readRecord(files, checkPath(path, rental.bookings), 'booking')
+  const { record } = booking
+  if (record.status !== 'returned') fail(`${label(record)} is not returned.`)
+  if (typeof invoicePath !== 'string' || !invoicePath.startsWith('/invoices/')) fail('Invoicing returned no invoice.')
+  if (record.invoice?.path === invoicePath) return { message: `${label(record)} already links ${nameOf(invoicePath)}`, path }
+  Object.assign(record, { invoice: { path: invoicePath }, updatedAt: now })
+  await saveRecord(files, booking, rental.mime('booking'))
+  return { message: `Drafted invoice ${nameOf(invoicePath)} for ${label(record)}`, path }
+}
+
+async function returnBooking(files, path, { date, now }) {
   const booking = await readRecord(files, checkPath(path, rental.bookings), 'booking')
   const { record } = booking
   checkActive(record)
-  if (record.status === 'returned') return { message: `${label(record)} is already returned`, path }
+  if (record.status === 'returned') {
+    return { message: `${label(record)} is already returned`, path,
+      ...(record.invoice?.path ? {} : { invoiceRequest: await requestFor(files, path, record) }) }
+  }
   if (record.status !== 'picked-up') fail(`${label(record)} is ${record.status}. Only picked-up bookings can be returned.`)
   const returnDate = typeof date === 'string' && date !== '' ? date : now.slice(0, 10)
   const late = lateDays(record.endDate, returnDate)
@@ -200,14 +200,11 @@ async function returnBooking(files, path, { date, now, uuid }) {
   const days = rentalDays(record.startDate, record.endDate)
   const currency = /^[A-Z]{3}$/.test(settings.currency ?? '') ? settings.currency : ''
   Object.assign(record, { lateFee: formatMinor(fee, digits) })
-  const invoicePath = await draftInvoice(files, record, { days, late, fee, currency, now, uuid })
-  Object.assign(record, {
-    status: 'returned', returnedAt: now,
-    ...(invoicePath ? { invoice: { path: invoicePath } } : {}), updatedAt: now,
-  })
+  Object.assign(record, { status: 'returned', returnedAt: now, updatedAt: now })
   await saveRecord(files, booking, rental.mime('booking'))
   const feeNote = fee > 0n ? ` with a ${record.lateFee} late fee (${late} day${late === 1 ? '' : 's'} late)` : ''
-  return { message: `${label(record)} returned${feeNote}${invoicePath ? `, drafted invoice ${nameOf(invoicePath)}` : ''}`, path }
+  // The form asks Invoicing (when installed) to draft the invoice from this, then records the link.
+  return { message: `${label(record)} returned${feeNote}`, path, invoiceRequest: invoiceRequest(path, record, { days, late, fee, currency }) }
 }
 
 async function cancelBooking(files, path, { now }) {
@@ -223,12 +220,13 @@ async function cancelBooking(files, path, { now }) {
   return { message: `${label(record)} cancelled`, path }
 }
 
-export async function run(parameters, files, { now = nowIso(), uuid = randomUUID } = {}) {
+export async function run(parameters, files, { now = nowIso() } = {}) {
   const { operation, path, date } = parameters ?? {}
   if (operation === 'confirm-booking') return confirmBooking(files, path, { now })
   if (operation === 'pickup-booking') return pickupBooking(files, path, { now })
-  if (operation === 'return-booking') return returnBooking(files, path, { date, now, uuid })
+  if (operation === 'return-booking') return returnBooking(files, path, { date, now })
   if (operation === 'cancel-booking') return cancelBooking(files, path, { now })
+  if (operation === 'record-invoice') return recordInvoice(files, path, parameters.invoice, { now })
   return fail(`Unsupported operation ${JSON.stringify(operation ?? '')}. Expected one of ${operations.join(', ')}.`)
 }
 

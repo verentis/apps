@@ -23,96 +23,78 @@
       },
       "rows": {
         "kind": "computed",
-        "expr": "(data.tasks || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, customer: e.data.customerName || '', address: e.data.address || '', type: e.data.type || '', stage: e.data.stage || '', technician: e.data.technician || '', date: e.data.scheduledDate || '', window: [e.data.windowStart, e.data.windowEnd].filter(Boolean).join('–'), windowStart: e.data.windowStart || '', hours: e.data.hours || '', today: !!e.data.scheduledDate && e.data.scheduledDate === Date().slice(0, 10) }))"
+        "expr": "(data.tasks || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, customer: e.data.customerName || '', address: e.data.address || '', latitude: e.data.latitude || '', longitude: e.data.longitude || '', type: e.data.type || '', stage: e.data.stage || '', technician: e.data.technician || '', date: e.data.scheduledDate || '', window: [e.data.windowStart, e.data.windowEnd].filter(Boolean).join('–'), windowStart: e.data.windowStart || '', hours: e.data.hours || '', today: !!e.data.scheduledDate && e.data.scheduledDate === Date().slice(0, 10) }))"
+      },
+      "appops": {
+        "kind": "app-operations"
       }
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Field Service",
+          "icon": "wrench",
+          "active": "tasks.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Today",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "tasks.page.yaml",
+              "label": "All tasks",
+              "icon": "kanban",
+              "count": "{{ (data.rows || []).filter(r => ['new', 'scheduled', 'on-site'].includes(r.stage)).length }}"
+            },
+            {
+              "id": "schedule.page.yaml",
+              "label": "Technicians",
+              "icon": "hard-hat"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/field-service/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/field-service.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Tasks by stage",
+              "note": "Every active field task, grouped by its stage. Click a row to open the task."
             },
-            "children": [
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Tasks by stage"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Every active field task, grouped by its stage. Click a row to open the task.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.button",
-                "props": {
-                  "label": "Field Service",
-                  "variant": "ghost",
-                  "icon": "wrench",
-                  "size": "sm"
-                },
-                "on": {
-                  "click": [
-                    {
-                      "open-file": {
-                        "path": "/applications/field-service/canvas/home.page.yaml"
-                      }
-                    }
-                  ]
-                }
-              }
-            ]
+            "children": []
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /field-tasks folder could not be read. Reinstall Field Service to recreate it."
-            },
-            "rules": {
-              "visible": "data.$tasks.status === 'error'"
-            }
-          },
-          {
-            "type": "canvas.text",
-            "props": {
-              "text": "Loading…",
-              "tone": "muted"
-            },
-            "rules": {
-              "visible": "data.$tasks.status === 'loading'"
+              "for": "tasks",
+              "compact": true,
+              "description": "The /field-tasks folder could not be read. Reinstall Field Service to recreate it."
             }
           },
           {
@@ -177,31 +159,18 @@
           {
             "type": "canvas.tabs",
             "props": {
+              "variant": "pill",
+              "persist": true,
               "items": [
                 {
-                  "value": "new",
-                  "label": "New",
-                  "icon": "wrench"
+                  "value": "board",
+                  "label": "Board",
+                  "icon": "kanban"
                 },
                 {
-                  "value": "scheduled",
-                  "label": "Scheduled",
-                  "icon": "wrench"
-                },
-                {
-                  "value": "on-site",
-                  "label": "On Site",
-                  "icon": "wrench"
-                },
-                {
-                  "value": "done",
-                  "label": "Done",
-                  "icon": "wrench"
-                },
-                {
-                  "value": "cancelled",
-                  "label": "Cancelled",
-                  "icon": "wrench"
+                  "value": "list",
+                  "label": "List",
+                  "icon": "list"
                 }
               ]
             },
@@ -215,51 +184,163 @@
                 },
                 "children": [
                   {
-                    "type": "canvas.table",
+                    "type": "canvas.board",
                     "props": {
-                      "rows": "{{ (data.rows || []).filter(r => r.stage === 'new') }}",
+                      "rows": "{{ (data.rows || []) }}",
+                      "groupBy": "stage",
+                      "readOnly": false,
+                      "rowKey": "path",
                       "columns": [
                         {
-                          "key": "code",
-                          "label": "Task"
+                          "value": "new",
+                          "label": "New",
+                          "locked": true
                         },
                         {
-                          "key": "customer",
-                          "label": "Customer"
+                          "value": "scheduled",
+                          "label": "Scheduled"
                         },
                         {
-                          "key": "type",
-                          "label": "Type"
+                          "value": "on-site",
+                          "label": "On Site"
                         },
                         {
-                          "key": "technician",
-                          "label": "Technician"
+                          "value": "done",
+                          "label": "Done"
                         },
                         {
-                          "key": "date",
-                          "label": "Date"
-                        },
-                        {
-                          "key": "window",
-                          "label": "Window"
+                          "value": "cancelled",
+                          "label": "Cancelled"
                         }
                       ],
-                      "emptyText": "No new tasks",
-                      "clickable": true
+                      "card": {
+                        "title": "customer",
+                        "code": "code",
+                        "meta": [
+                          "type",
+                          "technician",
+                          "date"
+                        ]
+                      },
+                      "emptyText": "Nothing here",
+                      "lockedWhen": "[\"done\",\"cancelled\"].includes(row.stage)"
                     },
                     "on": {
-                      "row-click": [
+                      "open": [
                         {
                           "open-file": {
-                            "path": "{{ event.path }}",
-                            "mode": "edit"
+                            "path": "{{ event.row.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ],
+                      "move": [
+                        {
+                          "confirm": {
+                            "if": "event.to === 'done'",
+                            "title": "Move to Done?",
+                            "message": "{{ event.row.code }} moves to Done. It cannot be moved back from the board.",
+                            "confirm-label": "Move to Done"
+                          }
+                        },
+                        {
+                          "confirm": {
+                            "if": "event.to === 'cancelled'",
+                            "title": "Move to Cancelled?",
+                            "message": "{{ event.row.code }} moves to Cancelled. It cannot be moved back from the board.",
+                            "confirm-label": "Move to Cancelled"
+                          }
+                        },
+                        {
+                          "run-script": {
+                            "if": "event.to === 'scheduled'",
+                            "file": "/applications/field-service/scripts/post",
+                            "timeout": 120,
+                            "parameters": {
+                              "operation": "schedule",
+                              "path": "{{ event.path }}"
+                            },
+                            "assign": "lastmove"
+                          }
+                        },
+                        {
+                          "run-script": {
+                            "if": "event.to === 'on-site'",
+                            "file": "/applications/field-service/scripts/post",
+                            "timeout": 120,
+                            "parameters": {
+                              "operation": "start",
+                              "path": "{{ event.path }}"
+                            },
+                            "assign": "lastmove"
+                          }
+                        },
+                        {
+                          "run-script": {
+                            "if": "event.to === 'done'",
+                            "file": "/applications/field-service/scripts/post",
+                            "timeout": 120,
+                            "parameters": {
+                              "operation": "complete",
+                              "path": "{{ event.path }}"
+                            },
+                            "assign": "lastmove"
+                          }
+                        },
+                        {
+                          "call-app": {
+                            "if": "event.to === 'done' && ((data.appops || []).some(o => o.app === 'invoicing' && o.operation === 'create-draft-invoice' && o.available) && !!state.lastmove && !!state.lastmove.invoiceRequest)",
+                            "app": "invoicing",
+                            "operation": "create-draft-invoice",
+                            "input": {
+                              "$expr": "state.lastmove.invoiceRequest"
+                            },
+                            "idempotency-key": "{{ ('task-' + event.row.data.code) + '-' + Date.now() }}",
+                            "assign": "appcall"
+                          }
+                        },
+                        {
+                          "run-script": {
+                            "if": "event.to === 'done' && ((data.appops || []).some(o => o.app === 'invoicing' && o.operation === 'create-draft-invoice' && o.available) && !!state.lastmove && !!state.lastmove.invoiceRequest && !!state.appcall && !!state.appcall.path)",
+                            "file": "/applications/field-service/scripts/post",
+                            "timeout": 120,
+                            "parameters": {
+                              "operation": "record-invoice",
+                              "path": "{{ event.path }}",
+                              "invoice": "{{ state.appcall.path }}"
+                            },
+                            "assign": "recorded"
+                          }
+                        },
+                        {
+                          "run-script": {
+                            "if": "event.to === 'cancelled'",
+                            "file": "/applications/field-service/scripts/post",
+                            "timeout": 120,
+                            "parameters": {
+                              "operation": "cancel",
+                              "path": "{{ event.path }}"
+                            },
+                            "assign": "lastmove"
+                          }
+                        },
+                        {
+                          "refresh-source": {
+                            "source": "tasks"
+                          }
+                        },
+                        {
+                          "toast": {
+                            "message": "{{ [\"scheduled\",\"on-site\",\"done\",\"cancelled\"].includes(event.to) ? ((state.lastmove && state.lastmove.message) || 'Done') : 'Moved to ' + ({\"new\":\"New\",\"scheduled\":\"Scheduled\",\"on-site\":\"On Site\",\"done\":\"Done\",\"cancelled\":\"Cancelled\"}[event.to] || event.to) }}",
+                            "variant": "success"
                           }
                         }
                       ]
                     }
                   }
                 ],
-                "slot": "new"
+                "slot": "board"
               },
               {
                 "type": "canvas.stack",
@@ -272,7 +353,7 @@
                   {
                     "type": "canvas.table",
                     "props": {
-                      "rows": "{{ (data.rows || []).filter(r => r.stage === 'scheduled') }}",
+                      "rows": "{{ (data.rows || []) }}",
                       "columns": [
                         {
                           "key": "code",
@@ -297,189 +378,73 @@
                         {
                           "key": "window",
                           "label": "Window"
+                        },
+                        {
+                          "key": "stage",
+                          "label": "Stage",
+                          "format": "badge",
+                          "labels": {
+                            "new": "New",
+                            "scheduled": "Scheduled",
+                            "on-site": "On Site",
+                            "done": "Done",
+                            "cancelled": "Cancelled"
+                          }
                         }
                       ],
-                      "emptyText": "No scheduled tasks",
-                      "clickable": true
+                      "views": [
+                        {
+                          "value": "all",
+                          "label": "All"
+                        },
+                        {
+                          "value": "new",
+                          "label": "New",
+                          "where": "row.stage === 'new'"
+                        },
+                        {
+                          "value": "scheduled",
+                          "label": "Scheduled",
+                          "where": "row.stage === 'scheduled'"
+                        },
+                        {
+                          "value": "on-site",
+                          "label": "On Site",
+                          "where": "row.stage === 'on-site'"
+                        },
+                        {
+                          "value": "done",
+                          "label": "Done",
+                          "where": "row.stage === 'done'"
+                        },
+                        {
+                          "value": "cancelled",
+                          "label": "Cancelled",
+                          "where": "row.stage === 'cancelled'"
+                        }
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
+                      "emptyText": "Nothing here"
                     },
                     "on": {
                       "row-click": [
                         {
                           "open-file": {
                             "path": "{{ event.path }}",
-                            "mode": "edit"
+                            "mode": "edit",
+                            "open": "side"
                           }
                         }
                       ]
                     }
                   }
                 ],
-                "slot": "scheduled"
-              },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 4
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.table",
-                    "props": {
-                      "rows": "{{ (data.rows || []).filter(r => r.stage === 'on-site') }}",
-                      "columns": [
-                        {
-                          "key": "code",
-                          "label": "Task"
-                        },
-                        {
-                          "key": "customer",
-                          "label": "Customer"
-                        },
-                        {
-                          "key": "type",
-                          "label": "Type"
-                        },
-                        {
-                          "key": "technician",
-                          "label": "Technician"
-                        },
-                        {
-                          "key": "date",
-                          "label": "Date"
-                        },
-                        {
-                          "key": "window",
-                          "label": "Window"
-                        }
-                      ],
-                      "emptyText": "No on site tasks",
-                      "clickable": true
-                    },
-                    "on": {
-                      "row-click": [
-                        {
-                          "open-file": {
-                            "path": "{{ event.path }}",
-                            "mode": "edit"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ],
-                "slot": "on-site"
-              },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 4
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.table",
-                    "props": {
-                      "rows": "{{ (data.rows || []).filter(r => r.stage === 'done') }}",
-                      "columns": [
-                        {
-                          "key": "code",
-                          "label": "Task"
-                        },
-                        {
-                          "key": "customer",
-                          "label": "Customer"
-                        },
-                        {
-                          "key": "type",
-                          "label": "Type"
-                        },
-                        {
-                          "key": "technician",
-                          "label": "Technician"
-                        },
-                        {
-                          "key": "date",
-                          "label": "Date"
-                        },
-                        {
-                          "key": "window",
-                          "label": "Window"
-                        }
-                      ],
-                      "emptyText": "No done tasks",
-                      "clickable": true
-                    },
-                    "on": {
-                      "row-click": [
-                        {
-                          "open-file": {
-                            "path": "{{ event.path }}",
-                            "mode": "edit"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ],
-                "slot": "done"
-              },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 4
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.table",
-                    "props": {
-                      "rows": "{{ (data.rows || []).filter(r => r.stage === 'cancelled') }}",
-                      "columns": [
-                        {
-                          "key": "code",
-                          "label": "Task"
-                        },
-                        {
-                          "key": "customer",
-                          "label": "Customer"
-                        },
-                        {
-                          "key": "type",
-                          "label": "Type"
-                        },
-                        {
-                          "key": "technician",
-                          "label": "Technician"
-                        },
-                        {
-                          "key": "date",
-                          "label": "Date"
-                        },
-                        {
-                          "key": "window",
-                          "label": "Window"
-                        }
-                      ],
-                      "emptyText": "No cancelled tasks",
-                      "clickable": true
-                    },
-                    "on": {
-                      "row-click": [
-                        {
-                          "open-file": {
-                            "path": "{{ event.path }}",
-                            "mode": "edit"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ],
-                "slot": "cancelled"
+                "slot": "list"
               }
             ]
           }

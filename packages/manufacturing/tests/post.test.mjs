@@ -3,6 +3,11 @@ import addFormats from 'ajv-formats'
 import { describe, expect, it } from 'vitest'
 import { templates } from '../src/contracts.mjs'
 import { schemas as inventorySchemas } from '../../inventory/src/contracts.mjs'
+import { recordProduction } from '../../inventory/scripts/api/main.mjs'
+import { readFileSync } from 'node:fs'
+import { parse } from 'yaml'
+
+const inventoryContract = parse(readFileSync(new URL('../../inventory/api.yaml', import.meta.url), 'utf8'))
 import { run } from '../scripts/post/main.mjs'
 import { memoryFiles } from '../../../tools/file-apps/memory-files.mjs'
 
@@ -114,77 +119,51 @@ describe('Manufacturing production script', () => {
     expect(await post(files, 'start-mo')).toMatchObject({ message: 'MO-0001 is already in-progress' })
   })
 
-  it('completes without Inventory: stamps completedAt and emits no moves', async () => {
-    const files = shop({ '/manufacturing-orders/MO-0001': startedOrder() })
-    expect(await post(files, 'complete-mo')).toEqual({ message: 'Completed MO-0001', path: '/manufacturing-orders/MO-0001' })
+  it('completes and returns what Inventory needs, never writing Inventory\'s files', async () => {
+    const files = shop({ '/stock-moves': '', '/manufacturing-orders/MO-0001': startedOrder() })
+    const result = await post(files, 'complete-mo')
+    expect(result).toMatchObject({ message: 'Completed MO-0001', path: '/manufacturing-orders/MO-0001' })
     expect(files.json('/manufacturing-orders/MO-0001')).toMatchObject({ status: 'done', completedAt: now })
-    expect(files.json('/manufacturing-orders/MO-0001').moves).toBeUndefined()
     expect([...files.nodes.keys()].some(path => path.startsWith('/stock-moves/'))).toBe(false)
+    const validRequest = new Ajv2020({ strict: false }).compile(inventoryContract.spec.operations[0]['input-schema'])
+    expect(validRequest(result.productionRequest), JSON.stringify(validRequest.errors)).toBe(true)
   })
 
-  it('completes with Inventory installed: emits valid consumption and production moves create-only and links them', async () => {
+  it('through Inventory\'s record-production: valid moves through the default warehouse, linked once', async () => {
     const files = shop({
       '/stock-moves': '',
       '/settings/inventory.json': { defaultWarehouse: '/warehouses/WH-0001' },
       '/manufacturing-orders/MO-0001': startedOrder(),
     })
-    expect(await post(files, 'complete-mo'))
-      .toEqual({ message: 'Completed MO-0001 and emitted 3 stock moves', path: '/manufacturing-orders/MO-0001' })
-    expect(files.json('/manufacturing-orders/MO-0001')).toMatchObject({
-      status: 'done', completedAt: now,
-      moves: [{ path: '/stock-moves/MO-0001-C1' }, { path: '/stock-moves/MO-0001-C2' }, { path: '/stock-moves/MO-0001-OUT' }],
-    })
-    expect(files.nodes.get('/stock-moves/MO-0001-C1').contentType).toBe('application/vnd.verentis.inventory.move+json')
+    const { productionRequest } = await post(files, 'complete-mo')
+    const recorded = await recordProduction(productionRequest, { files, caller: { app: 'manufacturing' }, now })
+    expect(recorded.moves).toEqual(['/stock-moves/MO-0001-C1', '/stock-moves/MO-0001-C2', '/stock-moves/MO-0001-OUT'])
+    await run({ operation: 'record-moves', path: '/manufacturing-orders/MO-0001', moves: recorded.moves }, files, options)
+    expect(files.json('/manufacturing-orders/MO-0001').moves).toEqual(recorded.moves.map(path => ({ path })))
     expect(files.json('/stock-moves/MO-0001-C1')).toMatchObject({
-      kind: 'move', status: 'done', postedAt: now, product: '/products/PRD-0002', quantity: '12',
-      fromWarehouse: '/warehouses/WH-0001', toWarehouse: '', date: '2026-03-12',
-      reference: 'Consumed by manufacturing order MO-0001', source: { path: '/manufacturing-orders/MO-0001' },
+      kind: 'move', status: 'done', product: '/products/PRD-0002', quantity: '12',
+      fromWarehouse: '/warehouses/WH-0001', toWarehouse: '', date: '2026-03-12', source: { path: '/manufacturing-orders/MO-0001' },
     })
-    expect(files.json('/stock-moves/MO-0001-OUT')).toMatchObject({
-      product: '/products/PRD-0001', quantity: '3', fromWarehouse: '', toWarehouse: '/warehouses/WH-0001',
-      reference: 'Produced by manufacturing order MO-0001',
-    })
-    // Every emitted move validates against Inventory's packaged move schema.
-    for (const name of ['MO-0001-C1', 'MO-0001-C2', 'MO-0001-OUT']) {
-      const move = files.json(`/stock-moves/${name}`)
-      const valid = validMove(move)
-      expect(validMove.errors ?? [], name).toEqual([])
+    expect(files.json('/stock-moves/MO-0001-OUT')).toMatchObject({ product: '/products/PRD-0001', quantity: '3', toWarehouse: '/warehouses/WH-0001' })
+    for (const path of recorded.moves) {
+      const valid = validMove(files.json(path))
+      expect(validMove.errors ?? [], path).toEqual([])
       expect(valid).toBe(true)
     }
-    // Idempotent: a second run reports instead of emitting again.
-    const writes = files.writes.length
-    expect(await post(files, 'complete-mo')).toMatchObject({ message: 'MO-0001 is already done' })
-    expect(files.writes.length).toBe(writes)
+    // Asking again records nothing new; a done order with moves asks for nothing.
+    const writes = files.writes.filter(path => path.startsWith('/stock-moves/')).length
+    await recordProduction(productionRequest, { files, caller: { app: 'manufacturing' }, now })
+    expect(files.writes.filter(path => path.startsWith('/stock-moves/')).length).toBe(writes)
+    expect((await post(files, 'complete-mo')).productionRequest).toBeUndefined()
   })
 
-  it('leaves the warehouses empty when the Inventory settings are missing', async () => {
-    const files = shop({ '/stock-moves': '', '/manufacturing-orders/MO-0001': startedOrder() })
-    await post(files, 'complete-mo')
-    expect(files.json('/stock-moves/MO-0001-OUT')).toMatchObject({ fromWarehouse: '', toWarehouse: '' })
-  })
-
-  it('completes an interrupted completion without emitting a second set of moves', async () => {
-    const files = shop({ '/stock-moves': '', '/manufacturing-orders/MO-0001': startedOrder() })
-    const write = files.write
-    files.write = async (path, ...rest) => {
-      if (path === '/manufacturing-orders/MO-0001') throw new Error('connection lost')
-      return write(path, ...rest)
-    }
-    await expect(post(files, 'complete-mo')).rejects.toThrow('connection lost')
-    files.write = write
-    await post(files, 'complete-mo')
-    expect(files.json('/manufacturing-orders/MO-0001')).toMatchObject({ status: 'done' })
-    expect(files.writes.filter(path => path === '/stock-moves/MO-0001-OUT')).toHaveLength(1)
-  })
-
-  it('refuses an emitted-move name taken by something else', async () => {
+  it('Inventory refuses a move name taken by something else', async () => {
     const files = shop({
-      '/stock-moves': '',
       '/stock-moves/MO-0001-C1': { kind: 'move', source: { path: '/inventory-adjustments/ADJ-0001' } },
       '/manufacturing-orders/MO-0001': startedOrder(),
     })
-    await expect(post(files, 'complete-mo')).rejects.toThrow(/belongs to something else/)
-    expect(files.json('/manufacturing-orders/MO-0001').status).toBe('in-progress')
+    const { productionRequest } = await post(files, 'complete-mo')
+    await expect(recordProduction(productionRequest, { files, caller: { app: 'manufacturing' }, now })).rejects.toThrow(/belongs to something else/)
   })
 
   it('does not overwrite an order edited while it was being confirmed', async () => {

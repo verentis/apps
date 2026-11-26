@@ -1,0 +1,10 @@
+# Field Service's API contract: it offers no operations yet; it asks Invoicing to draft a completed task's invoice.
+api-version: verentis.io/v1
+kind: Api
+metadata:
+  id: field-service
+spec:
+  uses:
+    - app: invoicing
+      operation: create-draft-invoice
+      reason: Draft the invoice of a completed task

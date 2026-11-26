@@ -2,10 +2,11 @@
 // summary page and the vendor and purchase order list pages. Confirming and receiving (validation, totals,
 // vendor bill drafts, immutability) are done by the order script the forms run; the forms only lock what the
 // script has confirmed or received.
+import { views } from './views.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   humanize, iconName, linkButton, openFile, options, page, panel, projectRegistration, recordButtons, row,
-  scriptAction, sectionCards, stat, stats, status, table, tabs, text, toneExpression,
+  appOperationsSource, offers, scriptAction, withInvoice, sectionCards, stat, stats, status, table, tabs, text, toneExpression, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { containers, installRoot, mimeTypes, recordKinds, schemaId, settingsPath } from './contracts.mjs'
 import { entities, postScriptPath, settingsSections } from './app.mjs'
@@ -39,7 +40,7 @@ function recordExtras(kind) {
   }
   return {
     access: [{ path: containers.vendors.path, reason: 'Choose the vendor to buy from' }, schemaAccess],
-    data: vendorSources,
+    data: { ...vendorSources, ...appOperationsSource },
     notices: [
       stats([
         stat('Lines', '{{ (form.values.lines || []).length }}', 'list'),
@@ -47,12 +48,31 @@ function recordExtras(kind) {
         stat('Total {{ form.values.currency }}', `{{ form.values.total || (${estimate} / 100).toFixed(2) }}`, 'receipt'),
       ], 3),
       { ...text('Estimated while drafting; confirming computes the exact total.', 'muted'), rules: { visible: '!form.values.total' } },
+      // Receiving: count each line as the goods arrive. The order is locked once confirmed, so each count is written
+      // to the order at once; Receive then records the delivery and drafts the vendor bill.
+      { ...card('Receive goods', [{
+        type: 'canvas.repeat',
+        props: { items: '{{ form.values.lines || [] }}', layout: 'list', emptyText: 'No lines' },
+        children: [{
+          type: 'canvas.form.counter',
+          props: {
+            label: "{{ item.description || 'Line ' + (index + 1) }}",
+            value: '{{ Number(item.received || 0) }}', target: '{{ Number(item.quantity || 0) }}', min: 0,
+          },
+          on: { update: [
+            { 'patch-record': { path: '{{ ctx.file.path }}', values: { lines: { $expr: "(form.values.lines || []).map((line, position) => position === index ? withPath(line, 'received', String(event)) : line)" }, updatedAt: '{{ Date() }}' } } },
+            { 'refresh-source': { source: 'record' } },
+          ] },
+        }],
+      }], 'Count what arrived against what was ordered. Lines left uncounted are taken as received in full.'), rules: { visible: "form.values.status === 'confirmed' && !form.dirty" } },
     ],
     buttons: [
       button('Mark sent', 'mark-sent', { visible: `form.values.status === 'draft' && !(${archived})`, disabled: idle }, 'outline', 'send'),
       button('Confirm', 'confirm', { visible: `${editable} && !(${archived})`, disabled: `${idle} || form.invalid` }, undefined, 'check'),
       button('Receive', 'receive', { visible: "form.values.status === 'confirmed'", disabled: idle }, undefined, 'package-check'),
       button('Cancel order', 'cancel', { visible: `${editable} && !(${archived})`, disabled: idle }, 'ghost', 'x'),
+      // Received but no vendor bill yet (Invoicing arrived later, or drafting failed): ask Invoicing again.
+      button('Draft vendor bill', 'draft-bill', { visible: `form.values.status === 'received' && !(form.values.bill && form.values.bill.path) && ${offers('invoicing', 'create-draft-invoice')}`, disabled: idle }, 'outline', 'file-text'),
     ],
     links: [
       linkButton('Vendor', 'form.values.vendor', 'building-2'),
@@ -68,9 +88,10 @@ function recordExtras(kind) {
       confirm: scriptAction(postScriptPath, 'confirm-order', {
         confirm: { title: 'Confirm order', message: 'Confirm this purchase order with its vendor? Confirmed orders cannot be edited, only received or archived.' },
       }),
-      receive: scriptAction(postScriptPath, 'receive-order', {
-        confirm: { title: 'Receive order', message: 'Mark this purchase order as received? When Invoicing is installed, a draft vendor bill is created in /invoices.' },
-      }),
+      receive: withInvoice(scriptAction(postScriptPath, 'receive-order', {
+        confirm: { title: 'Receive order', message: 'Mark this purchase order as received? When Invoicing is installed, it drafts the vendor bill.' },
+      }), orderBill),
+      'draft-bill': withInvoice(scriptAction(postScriptPath, 'receive-order', {}), orderBill),
       cancel: { steps: [
         { confirm: { title: 'Cancel order', message: 'Cancel this purchase order? Cancelled orders cannot be confirmed or received.' } },
         { 'patch-form': { values: { status: 'cancelled', cancelledAt: '{{ Date() }}', updatedAt: '{{ Date() }}' } } },
@@ -81,26 +102,27 @@ function recordExtras(kind) {
   }
 }
 
+/** Invoicing drafts a received order's vendor bill; the order's code keys the call; `record-bill` stores the link. */
+const orderBill = { script: postScriptPath, key: "'order-' + form.values.code", recordOperation: 'record-bill', parameter: 'bill' }
+
 function recordForm(kind) {
   const entity = entities[kind]
   const extras = recordExtras(kind)
   const locked = entity.status ? `!${editable}` : 'false'
   const readOnly = entity.status ? `${archived} || (${locked})` : archived
-  const header = row([
-    column([
-      row([
-        heading(`{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`),
+  const header = recordHeader(
+    `{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`,
+    [
         ...(entity.status ? [badge(humanize(entity.status), toneExpression(entity.status, statusTones), { visible: `!!form.values.${entity.status}` })] : []),
         badge('Archived', 'warning', { visible: archived }, 'archive'),
-      ]),
-      text(`${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`, 'muted'),
-    ]),
-    row([...extras.buttons, recordButtons(locked)]),
-  ], 'between')
+    ],
+    `${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`,
+    [...extras.buttons, recordButtons(locked)],
+  )
   const tree = [
     header,
-    ...status('record'),
-    badge(`This ${entity.singular.toLowerCase()} is archived. Restore it to edit.`, 'warning', { visible: archived }, 'archive'),
+    ...status('record'), ...lifecycle(entity),
+    archivedAlert(entity.singular),
     ...(extras.links.length ? [row(extras.links)] : []),
     ...extras.notices,
     grid(sectionCards(entity.sections, readOnly)),
@@ -127,13 +149,13 @@ function settingsForm() {
       access: [schemaAccess],
       data: {},
       tree: [
-        row([
-          column([heading('Purchase settings'), text('Defaults new purchase orders start with. Number prefixes are app settings, managed with the installed app.', 'muted')]),
+        pageHeader(
+          [heading('Purchase settings'), text('Defaults new purchase orders start with. Number prefixes are app settings, managed with the installed app.', 'muted')], [
           row([
             button('Reset', [{ 'reset-form': {} }], { disabled: 'form.saving || !form.dirty' }, 'ghost'),
             button('Save', [{ save: {} }, { toast: { message: 'Saved', variant: 'success' } }], { disabled: 'form.saving || !form.dirty || form.invalid' }, undefined, 'save'),
           ]),
-        ], 'between'),
+        ]),
         ...status('record'),
         grid(settingsSections.map(section => card(section.title, [grid(section.fields.map(field => formControl(field, null)))], section.description)), 1),
       ],
@@ -166,14 +188,14 @@ function homePage() {
         access: Object.values(containers).map(container => ({ path: container.path, reason: `List ${container.path.slice(1).split('-').join(' ')}` })),
         data: { ...vendorSources, ...orderSources },
         tree: page([
-          row([
-            column([heading('Purchase'), text('Vendors and purchase orders are files in your workspace. Draft an order in its folder, send it to the vendor, then confirm and receive it from its form.', 'muted')]),
+          pageHeader(
+            [heading('Purchase'), text('Vendors and purchase orders are files in your workspace. Draft an order in its folder, send it to the vendor, then confirm and receive it from its form.', 'muted')], [
             row([
               button('Vendors', [openFile(`${installRoot}/canvas/vendors.page.yaml`)], undefined, 'outline', 'building-2'),
               button('Purchase orders', [openFile(`${installRoot}/canvas/orders.page.yaml`)], undefined, 'outline', 'shopping-cart'),
               button('Settings', [openFile(settingsPath, 'edit')], undefined, 'ghost', 'settings'),
             ]),
-          ], 'between'),
+          ]),
           stats([
             stat('Vendors', count('vendors'), 'building-2', loading('vendors')),
             stat('Draft orders', count('orders', "(e.data.status || 'draft') === 'draft'"), 'file-pen', loading('orders')),
@@ -208,13 +230,13 @@ function vendorsPage() {
         access: [{ path: containers.vendors.path, reason: 'List vendors' }],
         data: vendorSources,
         tree: page([
-          row([
-            column([heading('Vendors'), text('Who you buy from, with their contact details and payment terms.', 'muted')]),
+          pageHeader(
+            [heading('Vendors'), text('Who you buy from, with their contact details and payment terms.', 'muted')], [
             row([
               button('Open /vendors', [openFile(containers.vendors.path)], undefined, 'outline', 'folder-open'),
               button('Purchase', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'shopping-cart'),
             ]),
-          ], 'between'),
+          ]),
           ...status('vendors'),
           table(rows, [['code', 'Vendor'], ['name', 'Name'], ['contact', 'Contact'], ['email', 'Email'], ['phone', 'Phone'], ['terms', 'Terms (days)', 'end']],
             'No vendors yet. Use New in /vendors.', true),
@@ -236,13 +258,13 @@ function ordersPage() {
         data: orderSources,
         state: { showclosed: false },
         tree: page([
-          row([
-            column([heading('Purchase orders'), text('RFQs and purchase orders. Confirmed orders are locked until they are received.', 'muted')]),
+          pageHeader(
+            [heading('Purchase orders'), text('RFQs and purchase orders. Confirmed orders are locked until they are received.', 'muted')], [
             row([
               button('Open /purchase-orders', [openFile(containers.orders.path)], undefined, 'outline', 'folder-open'),
               button('Purchase', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'shopping-cart'),
             ]),
-          ], 'between'),
+          ]),
           ...status('orders'),
           stats([
             stat('Draft', count('orders', "(e.data.status || 'draft') === 'draft'"), 'file-pen', loading('orders')),
@@ -261,5 +283,5 @@ function ordersPage() {
 
 export function buildPages() {
   const documents = [homePage(), vendorsPage(), ordersPage(), ...recordKinds.map(recordForm), settingsForm()]
-  return Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)]))
+  return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

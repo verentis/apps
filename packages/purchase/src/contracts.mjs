@@ -56,6 +56,8 @@ export const line = object({
   description: optional(1000),
   quantity: decimal,
   unitPrice: money,
+  // Counted on arrival, on a confirmed order. Optional: an order received without counting is received in full.
+  received: decimal,
 }, ['description', 'quantity', 'unitPrice'])
 
 // Draft records may be incomplete on disk (a generated record opens straight into its form); confirming checks them.
@@ -89,6 +91,8 @@ export const schemas = {
     receivedAt: timestamp,
     cancelledAt: timestamp,
     bill: fileReference,
+    // Which app asked for this draft (an operation call, e.g. Inventory's reorder); a repeat call returns this order.
+    source: object({ app: optional(100), path: optional(1000), code: optional(100) }, []),
   }, ['code', 'vendor', 'orderDate', 'expectedDate', 'currency', 'lines', 'notes', 'status'], [
     whenStatus(['confirmed', 'received'], ['confirmedAt', 'total', 'vendorName']),
     whenStatus(['received'], ['receivedAt']),

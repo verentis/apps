@@ -38,106 +38,116 @@
       "orderrows": {
         "kind": "computed",
         "expr": "(data.orders || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, productName: e.data.productName || '', quantity: e.data.quantity || '', scheduledDate: e.data.scheduledDate || '', status: e.data.status || 'draft', components: (e.data.demand || []).length, units: Math.round(Number(e.data.quantity || 0) * 10000) }))"
+      },
+      "listmanufacturingorders": {
+        "kind": "folder",
+        "path": "/manufacturing-orders",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.manufacturing.order+json"
+      },
+      "listbillsofmaterials": {
+        "kind": "folder",
+        "path": "/bills-of-materials",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.manufacturing.bom+json"
       }
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Manufacturing",
+          "icon": "factory",
+          "active": "home.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "boms.page.yaml",
+              "label": "Bills of materials",
+              "icon": "list-tree"
+            },
+            {
+              "id": "orders.page.yaml",
+              "label": "Orders",
+              "icon": "kanban",
+              "count": "{{ (data.orderrows || []).filter(o => o.status === 'in-progress').length }}"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/manufacturing/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            }
+          ]
         },
         "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Manufacturing",
+              "note": "Bills of materials and manufacturing orders are files in your workspace. Draft an order in its folder, then confirm, start and complete it from its form."
+            },
+            "children": []
+          },
           {
             "type": "canvas.stack",
             "layout": {
               "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
+                "gap": 2
               }
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Manufacturing"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Bills of materials and manufacturing orders are files in your workspace. Draft an order in its folder, then confirm, start and complete it from its form.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Schedule"
+                }
               },
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "direction": "row",
-                    "wrap": true,
-                    "gap": 2,
-                    "align": "center"
-                  }
+                "type": "canvas.text",
+                "props": {
+                  "text": "Manufacturing orders by scheduled date.",
+                  "tone": "muted"
+                }
+              },
+              {
+                "type": "canvas.calendar",
+                "props": {
+                  "rows": "{{ (data.orderrows || []).filter(o => !!o.scheduledDate && o.status !== 'cancelled').map(o => ({ path: o.path, title: [o.code, o.productName].filter(part => part).join(' · '), status: o.status, at: o.scheduledDate })) }}",
+                  "views": [
+                    "month",
+                    "week",
+                    "agenda"
+                  ],
+                  "showLegend": true,
+                  "emptyText": "Nothing scheduled",
+                  "start": "at",
+                  "title": "title",
+                  "colorBy": "status",
+                  "view": "month"
                 },
-                "children": [
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Manufacturing orders",
-                      "variant": "outline",
-                      "icon": "factory",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/manufacturing/canvas/orders.page.yaml"
-                          }
-                        }
-                      ]
+                "on": {
+                  "open": [
+                    {
+                      "open-file": {
+                        "path": "{{ event.row.path }}",
+                        "mode": "edit",
+                        "open": "side"
+                      }
                     }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Bills of materials",
-                      "variant": "outline",
-                      "icon": "list-tree",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/manufacturing/canvas/boms.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ]
+                  ]
+                }
               }
             ]
           },
@@ -192,21 +202,19 @@
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /bills-of-materials folder could not be read. Reinstall Manufacturing to recreate it."
-            },
-            "rules": {
-              "visible": "data.$boms.status === 'error'"
+              "for": "boms",
+              "compact": true,
+              "description": "The /bills-of-materials folder could not be read. Reinstall Manufacturing to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /manufacturing-orders folder could not be read. Reinstall Manufacturing to recreate it."
-            },
-            "rules": {
-              "visible": "data.$orders.status === 'error'"
+              "for": "orders",
+              "compact": true,
+              "description": "The /manufacturing-orders folder could not be read. Reinstall Manufacturing to recreate it."
             }
           },
           {
@@ -266,17 +274,19 @@
                     ]
                   },
                   {
-                    "type": "canvas.files",
+                    "type": "canvas.empty-state",
                     "props": {
-                      "path": "/manufacturing-orders/",
-                      "mimeTypes": [
-                        "application/vnd.verentis.manufacturing.order+json"
-                      ],
-                      "showFolders": false,
-                      "navigable": false,
+                      "for": "listmanufacturingorders",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listmanufacturingorders || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
                       "columns": [
                         {
-                          "key": "name",
+                          "key": "data.code",
                           "label": "Code"
                         },
                         {
@@ -285,19 +295,43 @@
                         },
                         {
                           "key": "data.quantity",
-                          "label": "Quantity",
-                          "align": "end"
+                          "label": "Quantity"
                         },
                         {
                           "key": "data.scheduledDate",
-                          "label": "Scheduled"
+                          "label": "Scheduled",
+                          "format": "date"
                         },
                         {
                           "key": "data.status",
-                          "label": "Status"
+                          "label": "Status",
+                          "format": "badge"
                         }
                       ],
+                      "facets": [
+                        "data.status"
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
                       "emptyText": "No manufacturing orders yet. Use New in /manufacturing-orders."
+                    },
+                    "rules": {
+                      "visible": "data.$listmanufacturingorders.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
                     }
                   }
                 ],
@@ -343,17 +377,19 @@
                     ]
                   },
                   {
-                    "type": "canvas.files",
+                    "type": "canvas.empty-state",
                     "props": {
-                      "path": "/bills-of-materials/",
-                      "mimeTypes": [
-                        "application/vnd.verentis.manufacturing.bom+json"
-                      ],
-                      "showFolders": false,
-                      "navigable": false,
+                      "for": "listbillsofmaterials",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listbillsofmaterials || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
                       "columns": [
                         {
-                          "key": "name",
+                          "key": "data.code",
                           "label": "Code"
                         },
                         {
@@ -362,11 +398,30 @@
                         },
                         {
                           "key": "data.outputQty",
-                          "label": "Output",
-                          "align": "end"
+                          "label": "Output"
                         }
                       ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
                       "emptyText": "No bills of materials yet. Use New in /bills-of-materials."
+                    },
+                    "rules": {
+                      "visible": "data.$listbillsofmaterials.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
                     }
                   }
                 ],

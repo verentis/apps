@@ -1,3 +1,4 @@
+import { apiContract } from '../../../tools/file-apps/build.mjs'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { parse } from 'yaml'
 import { describe, expect, it } from 'vitest'
@@ -20,13 +21,13 @@ const steps = document => Object.values(document.spec.actions ?? {}).flatMap(act
 describe('Accounting Canvas documents', () => {
   // The committed manifest and Canvas documents are YAML renderings of what src/build.mjs models; CI owns the
   // manifest's metadata.version.
-  it('are up to date with the generator', () => {
+  it('are up to date with the generator', async () => {
     const pages = buildPages()
     expect(Object.keys(documents).sort()).toEqual(Object.keys(pages).sort())
     for (const [name, document] of Object.entries(pages)) expect(documents[name], name).toEqual(plain(document))
     const { metadata: { version: _version, ...metadata }, ...installed } = read('accounting.app.yaml')
     const { metadata: { version: _source, ...expectedMetadata }, ...expected } = plain({
-      ...manifest, spec: { ...manifest.spec, 'file-access': [...documentFileAccess(pages), ...scriptConsents] },
+      ...manifest, spec: { ...manifest.spec, 'file-access': [...documentFileAccess(pages), ...scriptConsents], api: await apiContract(new URL('../', import.meta.url)) },
     })
     expect({ ...installed, metadata }).toEqual({ ...expected, metadata: expectedMetadata })
     expect(read('environments/feature.yaml')).toEqual(featureOverlay)
@@ -92,7 +93,7 @@ describe('Accounting manifest', () => {
   it('depends on the latest Canvas and nodejs engine', () => {
     expect(manifest.metadata.version).toBe('0.2.0')
     expect(spec.dependencies).toEqual([{ package: 'verentis/canvas', version: 'latest' }, { package: 'verentis/nodejs', version: 'latest' }])
-    expect(spec.scripts).toEqual(['scripts/create', 'scripts/post'])
+    expect(spec.scripts).toEqual(['scripts/create', 'scripts/post', 'scripts/api'])
     expect(spec.permissions).toContain('execution.run')
   })
 
@@ -182,7 +183,7 @@ describe('Accounting workspace desktop', () => {
     data.balances = evaluate(widget.spec.data.balances.expr, data)
     const [header, ...body] = widget.spec.tree[0].children
     const table = body.find(node => node.type === 'canvas.table')
-    expect(template(header.children[0].children[1].props.text, data)).toBe('Assets 100.10 · Liabilities 20.00')
+    expect(template(header.props.note, data)).toBe('Assets 100.10 · Liabilities 20.00')
     expect(template(table.props.rows, data)).toEqual([
       { path: '/chart-of-accounts/ACC-1', account: '1000 Bank', type: 'asset', balance: '100.10' },
       { path: '/chart-of-accounts/ACC-2', account: '2000 Payables', type: 'liability', balance: '20.00' },

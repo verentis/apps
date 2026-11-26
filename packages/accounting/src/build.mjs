@@ -1,21 +1,22 @@
 // Generates the Accounting package outputs: manifest, Canvas documents, JSON Schemas, templates, seeds and the
 // generated parts of the scripts. `--check` fails instead of writing when an output is stale.
-import { generate, json, scriptManifest, sharedSource } from '../../../tools/file-apps/build.mjs'
+import { apiContract, generate, json, scriptManifest, sharedSource } from '../../../tools/file-apps/build.mjs'
 import { documentFileAccess } from '../../../tools/file-apps/canvas.mjs'
 import { containers, defaultSettings, schemas, starterAccounts, templates } from './contracts.mjs'
 import {
-  createScriptConfig, createScriptFileAccess, createScriptName, manifest, postScriptFileAccess, postScriptName,
+  apiScriptFileAccess, apiScriptName, createScriptConfig, createScriptFileAccess, createScriptName, manifest, postScriptFileAccess, postScriptName,
   featureOverlay, productionOverlay, scriptConsents,
 } from './app.mjs'
 import { buildPages } from './pages.mjs'
 
 const pages = buildPages()
+const api = await apiContract(new URL('../', import.meta.url))
 
 await generate({
   root: new URL('../', import.meta.url),
   label: 'Accounting',
   outputs: {
-    'accounting.app.yaml': json({ ...manifest, spec: { ...manifest.spec, 'file-access': [...documentFileAccess(pages), ...scriptConsents] } }),
+    'accounting.app.yaml': json({ ...manifest, spec: { ...manifest.spec, 'file-access': [...documentFileAccess(pages), ...scriptConsents], ...(api ? { api } : {}) } }),
     'environments/feature.yaml': json(featureOverlay),
     'environments/production.yaml': json(productionOverlay),
     'seed/settings.json': json(defaultSettings),
@@ -32,7 +33,11 @@ await generate({
     'scripts/post/manifest.yaml': scriptManifest(postScriptName, postScriptFileAccess,
       'Posting validates against accounts and periods and writes journals and expenses conditionally.'),
     'scripts/post/ledger.mjs': await sharedSource('ledger.mjs'),
+    'scripts/api/manifest.yaml': scriptManifest(apiScriptName, apiScriptFileAccess,
+      'The ledger operations other apps call through the platform (api.yaml); journals are written create-only.'),
+    'scripts/api/runtime.mjs': await sharedSource('api/runtime.mjs'),
+    'scripts/api/ledger.mjs': await sharedSource('ledger.mjs'),
   },
-  directories: ['canvas', 'schemas', 'templates', 'seed', 'seed/chart', 'scripts', 'scripts/create', 'scripts/post'],
-  sources: ['scripts/post/main.mjs'],
+  directories: ['canvas', 'schemas', 'templates', 'seed', 'seed/chart', 'scripts', 'scripts/create', 'scripts/post', 'scripts/api'],
+  sources: ['scripts/post/main.mjs', 'scripts/api/main.mjs'],
 })

@@ -52,7 +52,7 @@
       {
         "path": "/products",
         "mode": "read",
-        "reason": "Offer Inventory products to build (when Inventory is installed)"
+        "reason": "Offer the products to build (when Products is installed)"
       },
       {
         "path": "/applications/manufacturing/",
@@ -63,7 +63,7 @@
     "access": [
       {
         "path": "/products",
-        "reason": "Offer Inventory products to build (when Inventory is installed)"
+        "reason": "Offer the products to build (when Products is installed)"
       },
       {
         "path": "/applications/manufacturing/",
@@ -79,7 +79,7 @@
         "kind": "folder",
         "path": "/products",
         "contents": true,
-        "mime-pattern": "application/vnd.verentis.inventory.product+json"
+        "mime-pattern": "application/vnd.verentis.products.product+json"
       },
       "productoptions": {
         "kind": "computed",
@@ -101,61 +101,38 @@
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.validation-summary",
+            "props": {
+              "title": "Fix these before saving"
+            }
+          },
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "{{ form.values.productName || 'New bill of materials' }}",
+              "note": "Bill of materials {{ form.values.code || '' }}"
             },
             "children": [
               {
                 "type": "canvas.stack",
                 "layout": {
                   "base": {
-                    "gap": 1
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
                   }
                 },
                 "children": [
                   {
-                    "type": "canvas.stack",
-                    "layout": {
-                      "base": {
-                        "direction": "row",
-                        "wrap": true,
-                        "gap": 2,
-                        "align": "center"
-                      }
-                    },
-                    "children": [
-                      {
-                        "type": "canvas.heading",
-                        "props": {
-                          "level": 2,
-                          "text": "{{ form.values.productName || 'New bill of materials' }}"
-                        }
-                      },
-                      {
-                        "type": "canvas.dashboard.badge",
-                        "props": {
-                          "text": "Archived",
-                          "tone": "warning",
-                          "icon": "archive"
-                        },
-                        "rules": {
-                          "visible": "form.values.state === 'archived'"
-                        }
-                      }
-                    ]
-                  },
-                  {
-                    "type": "canvas.text",
+                    "type": "canvas.dashboard.badge",
                     "props": {
-                      "text": "Bill of materials {{ form.values.code || '' }} · {{ ctx.file.path }}",
-                      "tone": "muted"
+                      "text": "Archived",
+                      "tone": "warning",
+                      "icon": "archive"
+                    },
+                    "rules": {
+                      "visible": "form.values.state === 'archived'"
                     }
                   }
                 ]
@@ -172,110 +149,94 @@
                 },
                 "children": [
                   {
-                    "type": "canvas.stack",
-                    "layout": {
-                      "base": {
-                        "direction": "row",
-                        "wrap": true,
-                        "gap": 2,
-                        "align": "center"
-                      }
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Archive",
+                      "variant": "ghost",
+                      "icon": "archive",
+                      "size": "sm"
                     },
-                    "children": [
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Archive",
-                          "variant": "ghost",
-                          "icon": "archive",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "archive"
-                        },
-                        "rules": {
-                          "visible": "!(form.values.state === 'archived') && !(false)",
-                          "disabled": "form.saving || form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Restore",
-                          "variant": "outline",
-                          "icon": "archive-restore",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "restore"
-                        },
-                        "rules": {
-                          "visible": "form.values.state === 'archived'",
-                          "disabled": "form.saving || form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Reset",
-                          "variant": "ghost",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "reset"
-                        },
-                        "rules": {
-                          "disabled": "form.saving || !form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Save",
-                          "icon": "save",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "save"
-                        },
-                        "rules": {
-                          "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (false)"
-                        }
-                      }
-                    ]
+                    "on": {
+                      "click": "archive"
+                    },
+                    "rules": {
+                      "visible": "!(form.values.state === 'archived') && !(false)",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Restore",
+                      "variant": "outline",
+                      "icon": "archive-restore",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "restore"
+                    },
+                    "rules": {
+                      "visible": "form.values.state === 'archived'",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Reset",
+                      "variant": "ghost",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "reset"
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Save",
+                      "icon": "save",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "save"
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (false)"
+                    }
                   }
-                ]
+                ],
+                "slot": "actions"
               }
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "{{ data.$record.error }}"
-            },
-            "rules": {
-              "visible": "data.$record.status === 'error'"
+              "for": "record",
+              "compact": true
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.alert",
             "props": {
-              "text": "Loading…",
-              "tone": "muted"
-            },
-            "rules": {
-              "visible": "data.$record.status === 'loading'"
-            }
-          },
-          {
-            "type": "canvas.dashboard.badge",
-            "props": {
-              "text": "This bill of materials is archived. Restore it to edit.",
               "tone": "warning",
-              "icon": "archive"
+              "title": "This bill of materials is archived",
+              "text": "Restore it to edit.",
+              "icon": "archive",
+              "action": {
+                "label": "Restore",
+                "id": "restore"
+              }
             },
             "rules": {
               "visible": "form.values.state === 'archived'"
+            },
+            "on": {
+              "action": "restore"
             }
           },
           {
@@ -351,8 +312,9 @@
                         "props": {
                           "label": "Product",
                           "value": "{{ form.values.product }}",
-                          "description": "The product this BoM builds, from Inventory when it is installed.",
-                          "options": "{{ data.productoptions }}"
+                          "description": "The product this BoM builds, from Products when it is installed.",
+                          "options": "{{ data.productoptions }}",
+                          "searchable": true
                         },
                         "layout": {
                           "tablet": {
@@ -411,25 +373,28 @@
                     },
                     "children": [
                       {
-                        "type": "canvas.form.array",
+                        "type": "canvas.form.line-items",
                         "props": {
                           "label": "Components",
                           "value": "{{ form.values.components }}",
-                          "fields": [
+                          "columns": [
                             {
                               "key": "product",
                               "label": "Product path",
-                              "placeholder": "/products/PRD-0001",
-                              "required": true
+                              "type": "text",
+                              "placeholder": "/products/PRD-0001"
                             },
                             {
                               "key": "name",
-                              "label": "Name"
+                              "label": "Name",
+                              "type": "text"
                             },
                             {
                               "key": "quantity",
                               "label": "Quantity per output",
-                              "required": true
+                              "type": "text",
+                              "align": "right",
+                              "sum": true
                             }
                           ],
                           "defaultRow": {
@@ -437,11 +402,10 @@
                             "name": "",
                             "quantity": "1"
                           },
-                          "rowIds": false,
+                          "storeComputed": false,
                           "minimum": 1,
                           "maximum": 200,
-                          "addLabel": "Add component",
-                          "removeLabel": "Remove row"
+                          "addLabel": "Add component"
                         },
                         "layout": {
                           "tablet": {
@@ -476,23 +440,25 @@
                     },
                     "children": [
                       {
-                        "type": "canvas.form.array",
+                        "type": "canvas.form.line-items",
                         "props": {
                           "label": "Operations",
                           "value": "{{ form.values.routing }}",
-                          "fields": [
+                          "columns": [
                             {
                               "key": "operation",
                               "label": "Operation",
-                              "required": true
+                              "type": "text"
                             },
                             {
                               "key": "workcenter",
-                              "label": "Workcenter"
+                              "label": "Workcenter",
+                              "type": "text"
                             },
                             {
                               "key": "minutes",
-                              "label": "Minutes"
+                              "label": "Minutes",
+                              "type": "text"
                             }
                           ],
                           "defaultRow": {
@@ -500,11 +466,10 @@
                             "workcenter": "",
                             "minutes": ""
                           },
-                          "rowIds": false,
+                          "storeComputed": false,
                           "minimum": 0,
                           "maximum": 100,
-                          "addLabel": "Add operation",
-                          "removeLabel": "Remove row"
+                          "addLabel": "Add operation"
                         },
                         "layout": {
                           "tablet": {

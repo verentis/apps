@@ -1,10 +1,11 @@
 // Generates the PLM Canvas documents: the engineering change order form and the launch page listing ECOs by
 // stage. Review rules (submit, approve with an approver, reject with a reason, apply with an effective date)
 // are enforced by the review script the form runs; the form only locks what the script has decided.
+import { views } from './views.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, grid, heading, humanize,
   iconName, linkButton, openFile, options, page, panel, projectRegistration, recordButtons, row, scriptAction,
-  sectionCards, stat, stats, status, table, text, toneExpression,
+  sectionCards, stat, stats, status, table, text, toneExpression, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { containers, installRoot, manufacturing, mimeTypes, recordKinds, schemaId, stages } from './contracts.mjs'
 import { entities, postScriptPath } from './app.mjs'
@@ -34,7 +35,7 @@ function recordForm(kind) {
         badge(humanize(entity.status), toneExpression(entity.status, statusTones), { visible: `!!form.values.${entity.status}` }),
         badge('Archived', 'warning', { visible: archived }, 'archive'),
       ]),
-      text(`${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`, 'muted'),
+      text(`${entity.singular} {{ form.values.code || '' }}`, 'muted'),
     ]),
     row([
       button('Submit for review', 'submit', { visible: `(!form.values.stage || form.values.stage === 'draft') && !(${archived})`, disabled: `${idle} || form.invalid` }, undefined, 'send'),
@@ -47,8 +48,8 @@ function recordForm(kind) {
   ], 'between')
   const tree = [
     header,
-    ...status('record'),
-    badge(`This ${entity.singular.toLowerCase()} is archived. Restore it to edit.`, 'warning', { visible: archived }, 'archive'),
+    ...status('record'), ...lifecycle(entity),
+    archivedAlert(entity.singular),
     row([linkButton('Product / BoM', 'form.values.product', 'list-tree')]),
     stats([
       stat('Stage', `{{ form.values.stage || 'draft' }}`, 'milestone'),
@@ -115,10 +116,10 @@ function homePage() {
         data: ecoSources,
         state: { showclosed: false },
         tree: page([
-          row([
-            column([heading('PLM'), text('Engineering change orders are files in your workspace. Draft one in its folder, submit it for review, then approve and apply it (or reject it with a reason) from its form.', 'muted')]),
+          pageHeader(
+            [heading('PLM'), text('Engineering change orders are files in your workspace. Draft one in its folder, submit it for review, then approve and apply it (or reject it with a reason) from its form.', 'muted')], [
             row([button('Open /engineering-change-orders', [openFile(containers.ecos.path)], undefined, 'outline', 'folder-open')]),
-          ], 'between'),
+          ]),
           stats(stages.map(stage => stat(stage.split('-').join(' ').replace(/^./, first => first.toUpperCase()),
             count('ecos', `(e.data.stage || 'draft') === '${stage}'`),
             { draft: 'file-pen', 'in-review': 'eye', approved: 'check', applied: 'check-check', rejected: 'x' }[stage], loading('ecos')))),
@@ -139,5 +140,5 @@ function homePage() {
 
 export function buildPages() {
   const documents = [homePage(), ...recordKinds.map(recordForm)]
-  return Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)]))
+  return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

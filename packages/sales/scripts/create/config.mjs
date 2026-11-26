@@ -2,13 +2,6 @@
 export default {
   "app": "Sales",
   "kinds": {
-    "product": {
-      "code": {
-        "key": "product-code-prefix",
-        "default": "PROD-"
-      },
-      "defaults": {}
-    },
     "quotation": {
       "code": {
         "key": "quotation-code-prefix",
@@ -45,7 +38,6 @@ export default {
     "default": 4
   },
   "writableRoots": [
-    "/products",
     "/quotations",
     "/sales-orders"
   ],

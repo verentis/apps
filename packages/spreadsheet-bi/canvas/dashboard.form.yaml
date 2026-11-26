@@ -53,18 +53,101 @@
         "path": "/applications/spreadsheet-bi/",
         "mode": "read",
         "reason": "Read the Spreadsheet BI schemas and run the snapshot script"
+      },
+      {
+        "path": "/customers",
+        "mode": "read",
+        "reason": "Offer the fields of /customers and preview tiles (when the owning app is installed)"
+      },
+      {
+        "path": "/invoices",
+        "mode": "read",
+        "reason": "Offer the fields of /invoices and preview tiles (when the owning app is installed)"
+      },
+      {
+        "path": "/tickets",
+        "mode": "read",
+        "reason": "Offer the fields of /tickets and preview tiles (when the owning app is installed)"
+      },
+      {
+        "path": "/journals",
+        "mode": "read",
+        "reason": "Offer the fields of /journals and preview tiles (when the owning app is installed)"
+      },
+      {
+        "path": "/expenses",
+        "mode": "read",
+        "reason": "Offer the fields of /expenses and preview tiles (when the owning app is installed)"
       }
     ],
     "access": [
       {
         "path": "/applications/spreadsheet-bi/",
         "reason": "Read the Spreadsheet BI schemas and run the snapshot script"
+      },
+      {
+        "path": "/customers",
+        "reason": "Offer the fields of /customers and preview tiles (when the owning app is installed)"
+      },
+      {
+        "path": "/invoices",
+        "reason": "Offer the fields of /invoices and preview tiles (when the owning app is installed)"
+      },
+      {
+        "path": "/tickets",
+        "reason": "Offer the fields of /tickets and preview tiles (when the owning app is installed)"
+      },
+      {
+        "path": "/journals",
+        "reason": "Offer the fields of /journals and preview tiles (when the owning app is installed)"
+      },
+      {
+        "path": "/expenses",
+        "reason": "Offer the fields of /expenses and preview tiles (when the owning app is installed)"
       }
     ],
     "data": {
       "record": {
         "kind": "document",
         "consistency": "conditional"
+      },
+      "customers": {
+        "kind": "folder",
+        "path": "/customers",
+        "contents": true
+      },
+      "invoices": {
+        "kind": "folder",
+        "path": "/invoices",
+        "contents": true
+      },
+      "tickets": {
+        "kind": "folder",
+        "path": "/tickets",
+        "contents": true
+      },
+      "journals": {
+        "kind": "folder",
+        "path": "/journals",
+        "contents": true
+      },
+      "expenses": {
+        "kind": "folder",
+        "path": "/expenses",
+        "contents": true
+      }
+    },
+    "state": {
+      "builder": false,
+      "step": "source",
+      "draft": {
+        "source": "",
+        "kind": "count",
+        "valueField": "",
+        "groupByField": "",
+        "title": "",
+        "filterField": "",
+        "filterEquals": ""
       }
     },
     "tree": [
@@ -82,64 +165,57 @@
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.validation-summary",
+            "props": {
+              "title": "Fix these before saving"
+            }
+          },
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "{{ form.values.name || 'New dashboard' }}",
+              "note": "Dashboard {{ form.values.code || '' }}"
             },
             "children": [
               {
                 "type": "canvas.stack",
                 "layout": {
                   "base": {
-                    "gap": 1
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
                   }
                 },
                 "children": [
                   {
-                    "type": "canvas.stack",
-                    "layout": {
-                      "base": {
-                        "direction": "row",
-                        "wrap": true,
-                        "gap": 2,
-                        "align": "center"
-                      }
-                    },
-                    "children": [
-                      {
-                        "type": "canvas.heading",
-                        "props": {
-                          "level": 2,
-                          "text": "{{ form.values.name || 'New dashboard' }}"
-                        }
-                      },
-                      {
-                        "type": "canvas.dashboard.badge",
-                        "props": {
-                          "text": "Archived",
-                          "tone": "warning",
-                          "icon": "archive"
-                        },
-                        "rules": {
-                          "visible": "form.values.state === 'archived'"
-                        }
-                      }
-                    ]
-                  },
-                  {
-                    "type": "canvas.text",
+                    "type": "canvas.dashboard.badge",
                     "props": {
-                      "text": "Dashboard {{ form.values.code || '' }} · {{ ctx.file.path }}",
-                      "tone": "muted"
+                      "text": "Archived",
+                      "tone": "warning",
+                      "icon": "archive"
+                    },
+                    "rules": {
+                      "visible": "form.values.state === 'archived'"
                     }
                   }
                 ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Add tile",
+                  "variant": "outline",
+                  "icon": "plus",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "open-builder"
+                },
+                "rules": {
+                  "disabled": "form.saving"
+                },
+                "slot": "actions"
               },
               {
                 "type": "canvas.stack",
@@ -153,111 +229,351 @@
                 },
                 "children": [
                   {
-                    "type": "canvas.stack",
-                    "layout": {
-                      "base": {
-                        "direction": "row",
-                        "wrap": true,
-                        "gap": 2,
-                        "align": "center"
-                      }
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Archive",
+                      "variant": "ghost",
+                      "icon": "archive",
+                      "size": "sm"
                     },
-                    "children": [
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Archive",
-                          "variant": "ghost",
-                          "icon": "archive",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "archive"
-                        },
-                        "rules": {
-                          "visible": "!(form.values.state === 'archived') && !(false)",
-                          "disabled": "form.saving || form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Restore",
-                          "variant": "outline",
-                          "icon": "archive-restore",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "restore"
-                        },
-                        "rules": {
-                          "visible": "form.values.state === 'archived'",
-                          "disabled": "form.saving || form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Reset",
-                          "variant": "ghost",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "reset"
-                        },
-                        "rules": {
-                          "disabled": "form.saving || !form.dirty"
-                        }
-                      },
-                      {
-                        "type": "canvas.button",
-                        "props": {
-                          "label": "Save",
-                          "icon": "save",
-                          "size": "sm"
-                        },
-                        "on": {
-                          "click": "save"
-                        },
-                        "rules": {
-                          "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (false)"
-                        }
-                      }
-                    ]
+                    "on": {
+                      "click": "archive"
+                    },
+                    "rules": {
+                      "visible": "!(form.values.state === 'archived') && !(false)",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Restore",
+                      "variant": "outline",
+                      "icon": "archive-restore",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "restore"
+                    },
+                    "rules": {
+                      "visible": "form.values.state === 'archived'",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Reset",
+                      "variant": "ghost",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "reset"
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Save",
+                      "icon": "save",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "save"
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (false)"
+                    }
                   }
-                ]
+                ],
+                "slot": "actions"
               }
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "{{ data.$record.error }}"
-            },
-            "rules": {
-              "visible": "data.$record.status === 'error'"
+              "for": "record",
+              "compact": true
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.alert",
             "props": {
-              "text": "Loading…",
-              "tone": "muted"
-            },
-            "rules": {
-              "visible": "data.$record.status === 'loading'"
-            }
-          },
-          {
-            "type": "canvas.dashboard.badge",
-            "props": {
-              "text": "This dashboard is archived. Restore it to edit.",
               "tone": "warning",
-              "icon": "archive"
+              "title": "This dashboard is archived",
+              "text": "Restore it to edit.",
+              "icon": "archive",
+              "action": {
+                "label": "Restore",
+                "id": "restore"
+              }
             },
             "rules": {
               "visible": "form.values.state === 'archived'"
+            },
+            "on": {
+              "action": "restore"
             }
+          },
+          {
+            "type": "canvas.dialog",
+            "props": {
+              "open": "{{ state.builder }}",
+              "title": "Add tile",
+              "description": "Pick a source, what to show, and check the preview.",
+              "placement": "side",
+              "size": "lg"
+            },
+            "on": {
+              "close": [
+                {
+                  "set-state": {
+                    "key": "builder",
+                    "value": false
+                  }
+                }
+              ]
+            },
+            "children": [
+              {
+                "type": "canvas.wizard",
+                "props": {
+                  "step": "{{ state.step }}",
+                  "finishLabel": "Add tile",
+                  "steps": {
+                    "$expr": "[{ value: 'source', label: 'Source', valid: !!state.draft.source, reason: 'Choose a source' }, { value: 'show', label: 'What to show', valid: (!(['sum', 'group-sum'].includes(state.draft.kind)) || !!state.draft.valueField) && (!(['group-count', 'group-sum'].includes(state.draft.kind)) || !!state.draft.groupByField), reason: 'Choose the fields this kind needs' }, { value: 'check', label: 'Name and check', valid: !!String(state.draft.title || '').trim(), reason: 'Give the tile a title' }]"
+                  }
+                },
+                "on": {
+                  "change": [
+                    {
+                      "set-state": {
+                        "key": "step",
+                        "value": "{{ event.step }}"
+                      }
+                    }
+                  ],
+                  "cancel": [
+                    {
+                      "set-state": {
+                        "key": "builder",
+                        "value": false
+                      }
+                    }
+                  ],
+                  "finish": [
+                    {
+                      "patch-form": {
+                        "values": {
+                          "tiles": {
+                            "$expr": "(form.values.tiles || []).concat([{ sequence: String((form.values.tiles || []).reduce((m, t) => Math.max(m, Number(t.sequence) || 0), 0) + 1), title: String(state.draft.title).trim(), source: state.draft.source, kind: state.draft.kind, valueField: state.draft.valueField, groupByField: state.draft.groupByField, filter: { field: state.draft.filterField, equals: state.draft.filterEquals } }])"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "set-state": {
+                        "key": "builder",
+                        "value": false
+                      }
+                    },
+                    {
+                      "toast": {
+                        "message": "Tile added. Save the dashboard to keep it.",
+                        "variant": "success"
+                      }
+                    }
+                  ]
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "gap": 3
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Source",
+                          "value": "{{ state.draft.source }}",
+                          "options": "{{ [\"/customers\",\"/invoices\",\"/tickets\",\"/journals\",\"/expenses\"].map(path => ({ value: path, label: path, description: (({ '/customers': data.customers, '/invoices': data.invoices, '/tickets': data.tickets, '/journals': data.journals, '/expenses': data.expenses })[path] || []).filter(e => e.kind === 'file').length + ' records' })) }}",
+                          "display": "cards"
+                        }
+                      },
+                      {
+                        "type": "canvas.text",
+                        "props": {
+                          "text": "This source has no records yet, or its app is not installed.",
+                          "tone": "muted"
+                        },
+                        "rules": {
+                          "visible": "!!state.draft.source && (({ '/customers': data.customers, '/invoices': data.invoices, '/tickets': data.tickets, '/journals': data.journals, '/expenses': data.expenses })[state.draft.source] || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').length === 0"
+                        }
+                      }
+                    ],
+                    "slot": "step:source"
+                  },
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "gap": 3
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Kind",
+                          "value": "{{ state.draft.kind }}",
+                          "options": [
+                            {
+                              "value": "count",
+                              "label": "Count"
+                            },
+                            {
+                              "value": "sum",
+                              "label": "Sum"
+                            },
+                            {
+                              "value": "group-count",
+                              "label": "Count per group"
+                            },
+                            {
+                              "value": "group-sum",
+                              "label": "Sum per group"
+                            }
+                          ],
+                          "display": "segmented"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Value to add up",
+                          "value": "{{ state.draft.valueField }}",
+                          "options": "{{ (({ '/customers': data.customers, '/invoices': data.invoices, '/tickets': data.tickets, '/journals': data.journals, '/expenses': data.expenses })[state.draft.source] || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').slice(0, 50).map(e => e.data).reduce((all, r) => all.concat(Object.keys(r).filter(k => !['$schema', 'schemaVersion', 'id', 'kind', 'state', 'createdAt', 'updatedAt'].includes(k)).reduce((ks, k) => ks.concat(r[k] && typeof r[k] === 'object' && !Array.isArray(r[k]) ? Object.keys(r[k]).map(sub => k + '.' + sub) : Array.isArray(r[k]) ? [] : [k]), [])), []).filter((k, i, all) => all.indexOf(k) === i).sort().filter(f => (({ '/customers': data.customers, '/invoices': data.invoices, '/tickets': data.tickets, '/journals': data.journals, '/expenses': data.expenses })[state.draft.source] || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').some(e => f.split('.').reduce((v, k) => (v == null ? v : v[k]), e.data) !== '' && f.split('.').reduce((v, k) => (v == null ? v : v[k]), e.data) != null && Number.isFinite(Number(f.split('.').reduce((v, k) => (v == null ? v : v[k]), e.data))))).map(f => ({ value: f, label: f })) }}",
+                          "searchable": true,
+                          "description": "Fields whose values are numbers."
+                        },
+                        "rules": {
+                          "visible": "['sum', 'group-sum'].includes(state.draft.kind)"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Group by",
+                          "value": "{{ state.draft.groupByField }}",
+                          "options": "{{ (({ '/customers': data.customers, '/invoices': data.invoices, '/tickets': data.tickets, '/journals': data.journals, '/expenses': data.expenses })[state.draft.source] || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').slice(0, 50).map(e => e.data).reduce((all, r) => all.concat(Object.keys(r).filter(k => !['$schema', 'schemaVersion', 'id', 'kind', 'state', 'createdAt', 'updatedAt'].includes(k)).reduce((ks, k) => ks.concat(r[k] && typeof r[k] === 'object' && !Array.isArray(r[k]) ? Object.keys(r[k]).map(sub => k + '.' + sub) : Array.isArray(r[k]) ? [] : [k]), [])), []).filter((k, i, all) => all.indexOf(k) === i).sort().map(f => ({ value: f, label: f })) }}",
+                          "searchable": true
+                        },
+                        "rules": {
+                          "visible": "['group-count', 'group-sum'].includes(state.draft.kind)"
+                        }
+                      }
+                    ],
+                    "slot": "step:show"
+                  },
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "gap": 3
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Title",
+                          "value": "{{ state.draft.title }}",
+                          "required": true,
+                          "placeholder": "Open invoices by customer"
+                        }
+                      },
+                      {
+                        "type": "canvas.grid",
+                        "layout": {
+                          "base": {
+                            "columns": 1,
+                            "gap": 4
+                          },
+                          "tablet": {
+                            "columns": 2
+                          }
+                        },
+                        "children": [
+                          {
+                            "type": "canvas.form.select",
+                            "props": {
+                              "label": "Only where",
+                              "value": "{{ state.draft.filterField }}",
+                              "options": "{{ [{ value: '', label: 'Every record' }].concat((({ '/customers': data.customers, '/invoices': data.invoices, '/tickets': data.tickets, '/journals': data.journals, '/expenses': data.expenses })[state.draft.source] || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').slice(0, 50).map(e => e.data).reduce((all, r) => all.concat(Object.keys(r).filter(k => !['$schema', 'schemaVersion', 'id', 'kind', 'state', 'createdAt', 'updatedAt'].includes(k)).reduce((ks, k) => ks.concat(r[k] && typeof r[k] === 'object' && !Array.isArray(r[k]) ? Object.keys(r[k]).map(sub => k + '.' + sub) : Array.isArray(r[k]) ? [] : [k]), [])), []).filter((k, i, all) => all.indexOf(k) === i).sort().map(f => ({ value: f, label: f }))) }}",
+                              "searchable": true
+                            }
+                          },
+                          {
+                            "type": "canvas.form.input",
+                            "props": {
+                              "label": "equals",
+                              "value": "{{ state.draft.filterEquals }}"
+                            },
+                            "rules": {
+                              "visible": "!!state.draft.filterField"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "canvas.heading",
+                        "props": {
+                          "level": 3,
+                          "text": "Preview"
+                        }
+                      },
+                      {
+                        "type": "canvas.dashboard.stat",
+                        "props": {
+                          "label": "{{ state.draft.title || 'Tile' }}",
+                          "value": "{{ format((state.draft.kind === 'sum' ? (({ '/customers': data.customers, '/invoices': data.invoices, '/tickets': data.tickets, '/journals': data.journals, '/expenses': data.expenses })[state.draft.source] || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').filter(e => !state.draft.filterField || String(state.draft.filterField.split('.').reduce((v, k) => (v == null ? v : v[k]), e.data)) === String(state.draft.filterEquals)).reduce((s, e) => s + (Number(state.draft.valueField.split('.').reduce((v, k) => (v == null ? v : v[k]), e.data)) || 0), 0) : (({ '/customers': data.customers, '/invoices': data.invoices, '/tickets': data.tickets, '/journals': data.journals, '/expenses': data.expenses })[state.draft.source] || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').filter(e => !state.draft.filterField || String(state.draft.filterField.split('.').reduce((v, k) => (v == null ? v : v[k]), e.data)) === String(state.draft.filterEquals)).length), 'number') }}",
+                          "hint": "{{ (({ '/customers': data.customers, '/invoices': data.invoices, '/tickets': data.tickets, '/journals': data.journals, '/expenses': data.expenses })[state.draft.source] || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').filter(e => !state.draft.filterField || String(state.draft.filterField.split('.').reduce((v, k) => (v == null ? v : v[k]), e.data)) === String(state.draft.filterEquals)).length + ' records' }}"
+                        },
+                        "rules": {
+                          "visible": "!(['group-count', 'group-sum'].includes(state.draft.kind))"
+                        }
+                      },
+                      {
+                        "type": "canvas.chart",
+                        "props": {
+                          "kind": "hbar",
+                          "rows": {
+                            "$expr": "(({ '/customers': data.customers, '/invoices': data.invoices, '/tickets': data.tickets, '/journals': data.journals, '/expenses': data.expenses })[state.draft.source] || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').filter(e => !state.draft.filterField || String(state.draft.filterField.split('.').reduce((v, k) => (v == null ? v : v[k]), e.data)) === String(state.draft.filterEquals)).map(e => String(state.draft.groupByField.split('.').reduce((v, k) => (v == null ? v : v[k]), e.data) ?? '')).filter((k, i, all) => all.indexOf(k) === i).map(k => ({ label: k || '(none)', value: (({ '/customers': data.customers, '/invoices': data.invoices, '/tickets': data.tickets, '/journals': data.journals, '/expenses': data.expenses })[state.draft.source] || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').filter(e => !state.draft.filterField || String(state.draft.filterField.split('.').reduce((v, k) => (v == null ? v : v[k]), e.data)) === String(state.draft.filterEquals)).filter(e => String(state.draft.groupByField.split('.').reduce((v, k) => (v == null ? v : v[k]), e.data) ?? '') === k).reduce((s, e) => s + (state.draft.kind === 'group-sum' ? Number(state.draft.valueField.split('.').reduce((v, k) => (v == null ? v : v[k]), e.data)) || 0 : 1), 0) }))"
+                          },
+                          "x": "label",
+                          "y": "value",
+                          "sort": "-value",
+                          "limit": 12,
+                          "format": "number",
+                          "emptyText": "Nothing to group"
+                        },
+                        "rules": {
+                          "visible": "['group-count', 'group-sum'].includes(state.draft.kind)"
+                        }
+                      }
+                    ],
+                    "slot": "step:check"
+                  }
+                ]
+              }
+            ]
           },
           {
             "type": "canvas.grid",
@@ -340,31 +656,30 @@
                     },
                     "children": [
                       {
-                        "type": "canvas.form.array",
+                        "type": "canvas.form.line-items",
                         "props": {
                           "label": "Tiles",
                           "value": "{{ form.values.tiles }}",
-                          "fields": [
+                          "columns": [
                             {
                               "key": "sequence",
                               "label": "Seq",
-                              "required": true
+                              "type": "text"
                             },
                             {
                               "key": "title",
                               "label": "Title",
-                              "required": true
+                              "type": "text"
                             },
                             {
                               "key": "source",
                               "label": "Source container",
-                              "required": true
+                              "type": "text"
                             },
                             {
                               "key": "kind",
                               "label": "Kind",
                               "type": "select",
-                              "required": true,
                               "options": [
                                 {
                                   "value": "count",
@@ -386,19 +701,23 @@
                             },
                             {
                               "key": "valueField",
-                              "label": "Value field"
+                              "label": "Value field",
+                              "type": "text"
                             },
                             {
                               "key": "groupByField",
-                              "label": "Group by"
+                              "label": "Group by",
+                              "type": "text"
                             },
                             {
                               "key": "filter.field",
-                              "label": "Filter field"
+                              "label": "Filter field",
+                              "type": "text"
                             },
                             {
                               "key": "filter.equals",
-                              "label": "Filter equals"
+                              "label": "Filter equals",
+                              "type": "text"
                             }
                           ],
                           "defaultRow": {
@@ -413,11 +732,10 @@
                               "equals": ""
                             }
                           },
-                          "rowIds": false,
+                          "storeComputed": false,
                           "minimum": 0,
                           "maximum": 100,
-                          "addLabel": "Add tile",
-                          "removeLabel": "Remove row"
+                          "addLabel": "Add tile"
                         },
                         "layout": {
                           "tablet": {
@@ -510,6 +828,36 @@
             "toast": {
               "message": "Restored",
               "variant": "success"
+            }
+          }
+        ]
+      },
+      "open-builder": {
+        "steps": [
+          {
+            "set-state": {
+              "key": "draft",
+              "value": {
+                "source": "",
+                "kind": "count",
+                "valueField": "",
+                "groupByField": "",
+                "title": "",
+                "filterField": "",
+                "filterEquals": ""
+              }
+            }
+          },
+          {
+            "set-state": {
+              "key": "step",
+              "value": "source"
+            }
+          },
+          {
+            "set-state": {
+              "key": "builder",
+              "value": true
             }
           }
         ]

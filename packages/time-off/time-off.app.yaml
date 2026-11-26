@@ -296,6 +296,15 @@
         }
       },
       {
+        "path": "/leave-requests",
+        "mode": "read",
+        "reason": "Show who else is off on these dates and the days already taken",
+        "origin": {
+          "kind": "document",
+          "id": "time-off-request"
+        }
+      },
+      {
         "path": "/applications/time-off/",
         "mode": "read",
         "reason": "Read the Time Off schemas and run the request action script",

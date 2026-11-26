@@ -2,10 +2,24 @@
 // in generated directories, and with `--check` fails instead of writing when an output is stale.
 import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
+import { parse as parseYaml } from 'yaml'
 
 export const json = value => `${JSON.stringify(value, null, 2)}\n`
 
+
 const shared = new URL('./', import.meta.url)
+
+/**
+ * The package's API contract (`api.yaml` beside `src/`) as the manifest's `spec.api`: the operations the app offers
+ * other apps and agents, and those of other apps it uses. Absent file: no contract (`undefined`).
+ */
+export async function apiContract(root) {
+  const text = await readFile(new URL('api.yaml', root), 'utf8').catch(() => null)
+  if (text === null) return undefined
+  const document = parseYaml(text)
+  if (document?.kind !== 'Api' || typeof document.spec !== 'object') throw new Error('api.yaml must be a kind: Api document with a spec')
+  return document.spec
+}
 
 /** A shared script source, stamped as generated so it is edited in tools/file-apps only. */
 export async function sharedSource(path) {

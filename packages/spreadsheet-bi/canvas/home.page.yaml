@@ -34,123 +34,62 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Spreadsheet BI",
+          "icon": "layout-dashboard",
+          "active": "home.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "viewer.page.yaml",
+              "label": "Dashboard",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "snapshots.page.yaml",
+              "label": "Snapshots",
+              "icon": "camera"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/spreadsheet-bi/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/spreadsheet-bi.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Spreadsheet BI",
+              "note": "Dashboards are saved tile definitions computed live from sibling apps' record files. Edit spreadsheets themselves with the Office integration; this app only computes and freezes values."
             },
-            "children": [
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Spreadsheet BI"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Dashboards are saved tile definitions computed live from sibling apps' record files. Edit spreadsheets themselves with the Office integration; this app only computes and freezes values.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "direction": "row",
-                    "wrap": true,
-                    "gap": 2,
-                    "align": "center"
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Viewer",
-                      "variant": "outline",
-                      "icon": "monitor",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/spreadsheet-bi/canvas/viewer.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Snapshots",
-                      "variant": "outline",
-                      "icon": "camera",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/spreadsheet-bi/canvas/snapshots.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Settings",
-                      "variant": "ghost",
-                      "icon": "settings",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/settings/spreadsheet-bi.json",
-                            "mode": "edit"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ]
-              }
-            ]
+            "children": []
           },
           {
             "type": "canvas.grid",
@@ -203,21 +142,19 @@
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /bi-dashboards folder could not be read. Reinstall Spreadsheet BI to recreate it."
-            },
-            "rules": {
-              "visible": "data.$dashboards.status === 'error'"
+              "for": "dashboards",
+              "compact": true,
+              "description": "The /bi-dashboards folder could not be read. Reinstall Spreadsheet BI to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /bi-snapshots folder could not be read. Reinstall Spreadsheet BI to recreate it."
-            },
-            "rules": {
-              "visible": "data.$snapshots.status === 'error'"
+              "for": "snapshots",
+              "compact": true,
+              "description": "The /bi-snapshots folder could not be read. Reinstall Spreadsheet BI to recreate it."
             }
           },
           {
@@ -281,6 +218,10 @@
                     }
                   ],
                   "emptyText": "No dashboards yet. Use New in /bi-dashboards.",
+                  "search": true,
+                  "sortable": true,
+                  "pageSize": 25,
+                  "narrow": "list",
                   "clickable": true
                 },
                 "on": {
@@ -288,7 +229,8 @@
                     {
                       "open-file": {
                         "path": "{{ event.path }}",
-                        "mode": "edit"
+                        "mode": "edit",
+                        "open": "side"
                       }
                     }
                   ]

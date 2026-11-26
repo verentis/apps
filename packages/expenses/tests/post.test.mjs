@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { containers, defaultSettings, starterCategories, templates } from '../src/contracts.mjs'
 import { defaultSettings as ledgerDefaults, starterAccounts, templates as ledgerTemplates } from '../../accounting/src/contracts.mjs'
 import { reportTotal, run } from '../scripts/post/main.mjs'
+import { postJournal } from '../../accounting/scripts/api/main.mjs'
 import { memoryFiles } from '../../../tools/file-apps/memory-files.mjs'
 
 const now = '2026-03-10T08:00:00Z'
@@ -30,7 +31,14 @@ const report = (values = {}) => record('report', {
   ],
   ...values,
 })
-const call = (files, operation, path = '/expense-reports/EXP-0001', extra = {}) => run({ operation, path, ...extra }, files, options)
+// Posting runs as the form runs it: the script returns the journal, Accounting posts it through its API (its real
+// operation, as the platform would run it), then the script completes the record with the posted journal.
+async function call(files, operation, path = '/expense-reports/EXP-0001', extra = {}) {
+  const first = await run({ operation, path, ...extra }, files, options)
+  if (operation !== 'post-report' || !first.journalRequest) return first
+  const posted = await postJournal(first.journalRequest, { files, caller: { app: 'expenses' }, now }, options)
+  return run({ operation: 'complete-report', path, journal: posted.path }, files, options)
+}
 const approve = (files, extra = { approver: 'Fin Manager' }) => call(files, 'approve-report', '/expense-reports/EXP-0001', extra)
 
 describe('Expenses report totals', () => {

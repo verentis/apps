@@ -38,90 +38,116 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Social Marketing",
+          "icon": "megaphone",
+          "active": "engagement.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "upcoming.page.yaml",
+              "label": "Calendar",
+              "icon": "calendar"
+            },
+            {
+              "id": "engagement.page.yaml",
+              "label": "Engagement",
+              "icon": "chart-column"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/social-marketing/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/social-marketing.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Engagement by account",
+              "note": "Published posts and their hand-recorded likes, shares and comments, summed per social account."
+            },
+            "children": []
+          },
           {
             "type": "canvas.stack",
             "layout": {
               "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
+                "gap": 2
               }
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Engagement by account"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Published posts and their hand-recorded likes, shares and comments, summed per social account.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Engagement per post"
+                }
               },
               {
-                "type": "canvas.button",
+                "type": "canvas.chart",
                 "props": {
-                  "label": "Social Marketing",
-                  "variant": "ghost",
-                  "icon": "megaphone",
-                  "size": "sm"
-                },
-                "on": {
-                  "click": [
-                    {
-                      "open-file": {
-                        "path": "/applications/social-marketing/canvas/home.page.yaml"
-                      }
-                    }
-                  ]
+                  "rows": "{{ (data.rows || []).filter(r => r.status === 'published').map(r => ({ label: r.code, likes: r.likes || 0, shares: r.shares || 0, comments: r.comments || 0 })) }}",
+                  "showLegend": true,
+                  "emptyText": "Nothing to chart yet",
+                  "kind": "stacked-bar",
+                  "x": "label",
+                  "y": [
+                    "likes",
+                    "shares",
+                    "comments"
+                  ],
+                  "labels": {
+                    "likes": "Likes",
+                    "shares": "Shares",
+                    "comments": "Comments"
+                  },
+                  "format": "integer",
+                  "limit": 20
                 }
               }
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /social-posts folder could not be read. Reinstall Social Marketing to recreate it."
-            },
-            "rules": {
-              "visible": "data.$posts.status === 'error'"
+              "for": "posts",
+              "compact": true,
+              "description": "The /social-posts folder could not be read. Reinstall Social Marketing to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /social-accounts folder could not be read. Reinstall Social Marketing to recreate it."
-            },
-            "rules": {
-              "visible": "data.$accounts.status === 'error'"
+              "for": "accounts",
+              "compact": true,
+              "description": "The /social-accounts folder could not be read. Reinstall Social Marketing to recreate it."
             }
           },
           {
@@ -223,6 +249,10 @@
                     }
                   ],
                   "emptyText": "No social accounts yet",
+                  "search": true,
+                  "sortable": true,
+                  "pageSize": 25,
+                  "narrow": "list",
                   "clickable": true
                 },
                 "on": {
@@ -230,7 +260,8 @@
                     {
                       "open-file": {
                         "path": "{{ event.path }}",
-                        "mode": "edit"
+                        "mode": "edit",
+                        "open": "side"
                       }
                     }
                   ]

@@ -1,3 +1,4 @@
+import { apiContract } from '../../../tools/file-apps/build.mjs'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { parse } from 'yaml'
 import { describe, expect, it } from 'vitest'
@@ -20,13 +21,13 @@ const steps = document => Object.values(document.spec.actions ?? {}).flatMap(act
 describe('Inventory Canvas documents', () => {
   // The committed manifest and Canvas documents are YAML renderings of what src/build.mjs models; CI owns the
   // manifest's metadata.version.
-  it('are up to date with the generator', () => {
+  it('are up to date with the generator', async () => {
     const pages = buildPages()
     expect(Object.keys(documents).sort()).toEqual(Object.keys(pages).sort())
     for (const [name, document] of Object.entries(pages)) expect(documents[name], name).toEqual(plain(document))
     const { metadata: { version: _version, ...metadata }, ...installed } = read('inventory.app.yaml')
     const { metadata: { version: _source, ...expectedMetadata }, ...expected } = plain({
-      ...manifest, spec: { ...manifest.spec, 'file-access': [...documentFileAccess(pages), ...scriptConsents] },
+      ...manifest, spec: { ...manifest.spec, 'file-access': [...documentFileAccess(pages), ...scriptConsents], api: await apiContract(new URL('../', import.meta.url)) },
     })
     expect({ ...installed, metadata }).toEqual({ ...expected, metadata: expectedMetadata })
     expect(read('environments/feature.yaml')).toEqual(featureOverlay)
@@ -82,10 +83,10 @@ describe('Inventory manifest', () => {
   const files = manifest.packaging.files.map(globToRegExp)
   const consent = read('inventory.app.yaml').spec['file-access']
 
-  it('depends on the latest Canvas and nodejs engine', () => {
+  it('depends on the latest Canvas, nodejs engine and Products', () => {
     expect(manifest.metadata.version).toBe('0.1.0')
-    expect(spec.dependencies).toEqual([{ package: 'verentis/canvas', version: 'latest' }, { package: 'verentis/nodejs', version: 'latest' }])
-    expect(spec.scripts).toEqual(['scripts/create', 'scripts/post'])
+    expect(spec.dependencies).toEqual([{ package: 'verentis/canvas', version: 'latest' }, { package: 'verentis/nodejs', version: 'latest' }, { package: 'verentis/products', version: 'latest' }])
+    expect(spec.scripts).toEqual(['scripts/create', 'scripts/post', 'scripts/api'])
     expect(spec.permissions).toContain('execution.run')
   })
 

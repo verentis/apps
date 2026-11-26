@@ -249,8 +249,8 @@
       },
       {
         "path": "/tickets",
-        "mode": "read",
-        "reason": "List tickets by stage with their team names",
+        "mode": "write",
+        "reason": "List tickets by stage with their team names; move records between columns",
         "origin": {
           "kind": "document",
           "id": "canvas/tickets.page.yaml"

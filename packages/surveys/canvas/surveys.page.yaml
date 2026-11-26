@@ -11,7 +11,8 @@
     "access": [
       {
         "path": "/surveys",
-        "reason": "List surveys by status with their response counts"
+        "reason": "List surveys by status with their response counts; move records between columns",
+        "mode": "write"
       },
       {
         "path": "/survey-responses",
@@ -38,90 +39,77 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Surveys",
+          "icon": "clipboard-list",
+          "active": "surveys.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "surveys.page.yaml",
+              "label": "Surveys",
+              "icon": "kanban"
+            },
+            {
+              "id": "results.page.yaml",
+              "label": "Results",
+              "icon": "chart-column"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/surveys/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/surveys.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Surveys by status",
+              "note": "Every active survey, grouped by its status. Click a row to open the survey."
             },
-            "children": [
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Surveys by status"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Every active survey, grouped by its status. Click a row to open the survey.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.button",
-                "props": {
-                  "label": "Surveys",
-                  "variant": "ghost",
-                  "icon": "clipboard-list",
-                  "size": "sm"
-                },
-                "on": {
-                  "click": [
-                    {
-                      "open-file": {
-                        "path": "/applications/surveys/canvas/home.page.yaml"
-                      }
-                    }
-                  ]
-                }
-              }
-            ]
+            "children": []
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /surveys folder could not be read. Reinstall Surveys to recreate it."
-            },
-            "rules": {
-              "visible": "data.$surveys.status === 'error'"
+              "for": "surveys",
+              "compact": true,
+              "description": "The /surveys folder could not be read. Reinstall Surveys to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /survey-responses folder could not be read. Reinstall Surveys to recreate it."
-            },
-            "rules": {
-              "visible": "data.$responses.status === 'error'"
+              "for": "responses",
+              "compact": true,
+              "description": "The /survey-responses folder could not be read. Reinstall Surveys to recreate it."
             }
           },
           {
@@ -168,21 +156,18 @@
           {
             "type": "canvas.tabs",
             "props": {
+              "variant": "pill",
+              "persist": true,
               "items": [
                 {
-                  "value": "draft",
-                  "label": "Draft",
-                  "icon": "clipboard-list"
+                  "value": "board",
+                  "label": "Board",
+                  "icon": "kanban"
                 },
                 {
-                  "value": "open",
-                  "label": "Open",
-                  "icon": "clipboard-list"
-                },
-                {
-                  "value": "closed",
-                  "label": "Closed",
-                  "icon": "clipboard-list"
+                  "value": "list",
+                  "label": "List",
+                  "icon": "list"
                 }
               ]
             },
@@ -196,50 +181,112 @@
                 },
                 "children": [
                   {
-                    "type": "canvas.table",
+                    "type": "canvas.board",
                     "props": {
-                      "rows": "{{ (data.rows || []).filter(r => r.status === 'draft') }}",
+                      "rows": "{{ (data.rows || []) }}",
+                      "groupBy": "status",
+                      "readOnly": false,
+                      "rowKey": "path",
                       "columns": [
                         {
-                          "key": "code",
-                          "label": "Survey"
+                          "value": "draft",
+                          "label": "Draft"
                         },
                         {
-                          "key": "title",
-                          "label": "Title"
+                          "value": "open",
+                          "label": "Open"
                         },
                         {
-                          "key": "questions",
-                          "label": "Questions",
-                          "align": "end"
-                        },
-                        {
-                          "key": "submitted",
-                          "label": "Submitted",
-                          "align": "end"
-                        },
-                        {
-                          "key": "drafts",
-                          "label": "Drafts",
-                          "align": "end"
+                          "value": "closed",
+                          "label": "Closed"
                         }
                       ],
-                      "emptyText": "No draft surveys",
-                      "clickable": true
+                      "card": {
+                        "title": "title",
+                        "code": "code",
+                        "meta": [
+                          "questions",
+                          "submitted",
+                          "drafts"
+                        ]
+                      },
+                      "emptyText": "Nothing here",
+                      "lockedWhen": "[\"closed\"].includes(row.status)"
                     },
                     "on": {
-                      "row-click": [
+                      "open": [
                         {
                           "open-file": {
+                            "path": "{{ event.row.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ],
+                      "move": [
+                        {
+                          "confirm": {
+                            "if": "event.to === 'closed'",
+                            "title": "Move to Closed?",
+                            "message": "{{ event.row.code }} moves to Closed. It cannot be moved back from the board.",
+                            "confirm-label": "Move to Closed"
+                          }
+                        },
+                        {
+                          "run-script": {
+                            "if": "event.to === 'open'",
+                            "file": "/applications/surveys/scripts/post",
+                            "timeout": 120,
+                            "parameters": {
+                              "operation": "open",
+                              "path": "{{ event.path }}"
+                            },
+                            "assign": "lastmove"
+                          }
+                        },
+                        {
+                          "run-script": {
+                            "if": "event.to === 'closed'",
+                            "file": "/applications/surveys/scripts/post",
+                            "timeout": 120,
+                            "parameters": {
+                              "operation": "close",
+                              "path": "{{ event.path }}"
+                            },
+                            "assign": "lastmove"
+                          }
+                        },
+                        {
+                          "patch-record": {
+                            "if": "![\"open\",\"closed\"].includes(event.to)",
                             "path": "{{ event.path }}",
-                            "mode": "edit"
+                            "values": {
+                              "status": "{{ event.to }}",
+                              "updatedAt": "{{ Date() }}"
+                            }
+                          }
+                        },
+                        {
+                          "refresh-source": {
+                            "source": "surveys"
+                          }
+                        },
+                        {
+                          "refresh-source": {
+                            "source": "responses"
+                          }
+                        },
+                        {
+                          "toast": {
+                            "message": "{{ [\"open\",\"closed\"].includes(event.to) ? ((state.lastmove && state.lastmove.message) || 'Done') : 'Moved to ' + ({\"draft\":\"Draft\",\"open\":\"Open\",\"closed\":\"Closed\"}[event.to] || event.to) }}",
+                            "variant": "success"
                           }
                         }
                       ]
                     }
                   }
                 ],
-                "slot": "draft"
+                "slot": "board"
               },
               {
                 "type": "canvas.stack",
@@ -252,7 +299,7 @@
                   {
                     "type": "canvas.table",
                     "props": {
-                      "rows": "{{ (data.rows || []).filter(r => r.status === 'open') }}",
+                      "rows": "{{ (data.rows || []) }}",
                       "columns": [
                         {
                           "key": "code",
@@ -276,78 +323,61 @@
                           "key": "drafts",
                           "label": "Drafts",
                           "align": "end"
+                        },
+                        {
+                          "key": "status",
+                          "label": "Stage",
+                          "format": "badge",
+                          "labels": {
+                            "draft": "Draft",
+                            "open": "Open",
+                            "closed": "Closed"
+                          }
                         }
                       ],
-                      "emptyText": "No open surveys",
-                      "clickable": true
+                      "views": [
+                        {
+                          "value": "all",
+                          "label": "All"
+                        },
+                        {
+                          "value": "draft",
+                          "label": "Draft",
+                          "where": "row.status === 'draft'"
+                        },
+                        {
+                          "value": "open",
+                          "label": "Open",
+                          "where": "row.status === 'open'"
+                        },
+                        {
+                          "value": "closed",
+                          "label": "Closed",
+                          "where": "row.status === 'closed'"
+                        }
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
+                      "emptyText": "Nothing here"
                     },
                     "on": {
                       "row-click": [
                         {
                           "open-file": {
                             "path": "{{ event.path }}",
-                            "mode": "edit"
+                            "mode": "edit",
+                            "open": "side"
                           }
                         }
                       ]
                     }
                   }
                 ],
-                "slot": "open"
-              },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 4
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.table",
-                    "props": {
-                      "rows": "{{ (data.rows || []).filter(r => r.status === 'closed') }}",
-                      "columns": [
-                        {
-                          "key": "code",
-                          "label": "Survey"
-                        },
-                        {
-                          "key": "title",
-                          "label": "Title"
-                        },
-                        {
-                          "key": "questions",
-                          "label": "Questions",
-                          "align": "end"
-                        },
-                        {
-                          "key": "submitted",
-                          "label": "Submitted",
-                          "align": "end"
-                        },
-                        {
-                          "key": "drafts",
-                          "label": "Drafts",
-                          "align": "end"
-                        }
-                      ],
-                      "emptyText": "No closed surveys",
-                      "clickable": true
-                    },
-                    "on": {
-                      "row-click": [
-                        {
-                          "open-file": {
-                            "path": "{{ event.path }}",
-                            "mode": "edit"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ],
-                "slot": "closed"
+                "slot": "list"
               }
             ]
           }

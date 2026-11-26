@@ -170,8 +170,8 @@
       },
       {
         "path": "/appraisals",
-        "mode": "read",
-        "reason": "List appraisals by status",
+        "mode": "write",
+        "reason": "List appraisals by status; move records between columns",
         "origin": {
           "kind": "document",
           "id": "canvas/appraisals.page.yaml"

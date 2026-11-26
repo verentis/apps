@@ -2,12 +2,12 @@ import Ajv2020 from 'ajv/dist/2020.js'
 import addFormats from 'ajv-formats'
 import { describe, expect, it } from 'vitest'
 import { memoryFiles } from '../../../tools/file-apps/memory-files.mjs'
-import { schemas as invoicingSchemas } from '../../invoicing/src/contracts.mjs'
+import { readFileSync } from 'node:fs'
+import { parse } from 'yaml'
 import { lateDays, rentalDays, run } from '../scripts/post/main.mjs'
 
 const ajv = new Ajv2020({ allErrors: true, strict: true })
 addFormats(ajv)
-const validInvoice = ajv.compile(invoicingSchemas.invoice)
 
 const record = (kind, values) => ({
   $schema: `https://schemas.verentis.io/rental/v1/${kind}.schema.json`, schemaVersion: 1, kind,
@@ -198,73 +198,42 @@ describe('the full lifecycle', () => {
   })
 })
 
-describe('the drafted invoice', () => {
-  const withInvoicing = () => workspace({ '/invoices': '' })
-
+describe('the invoice request', () => {
   async function returned(files, date = '2026-03-15') {
     await call(files, 'confirm-booking')
     await call(files, 'pickup-booking')
     return call(files, 'return-booking', undefined, { date })
   }
+  const contract = parse(readFileSync(new URL('../../invoicing/api.yaml', import.meta.url), 'utf8'))
+  const validRequest = new Ajv2020({ allErrors: true, strict: false })
+    .compile(contract.spec.operations.find(operation => operation.key === 'create-draft-invoice')['input-schema'])
 
-  it('is skipped entirely when Invoicing is not installed', async () => {
-    const files = workspace()
-    await returned(files)
-    expect((await files.readJson('/rental-bookings/RENT-0001')).invoice).toBeUndefined()
-    expect(await files.stat('/invoices/RENT-0001')).toBeNull()
-  })
-
-  it('satisfies Invoicing\'s published invoice contract, including the late-fee line', async () => {
-    const files = withInvoicing()
+  it('asks Invoicing for the rental and the late fee, and never writes Invoicing\'s files', async () => {
+    const files = workspace({ '/invoices': '' })
     const result = await returned(files)
-    expect(result.message).toContain('drafted invoice RENT-0001')
-    expect((await files.readJson('/rental-bookings/RENT-0001')).invoice).toEqual({ path: '/invoices/RENT-0001' })
-    expect((await files.stat('/invoices/RENT-0001')).contentType).toBe('application/vnd.verentis.invoicing.invoice+json')
-    const invoice = await files.readJson('/invoices/RENT-0001')
-    expect(validInvoice(invoice), JSON.stringify(validInvoice.errors)).toBe(true)
-    expect(invoice).toMatchObject({
-      status: 'draft', currency: 'ZAR', reference: 'RENT-0001', customer: { name: 'Thandi Nkosi' },
-      notes: 'Drafted from rental booking RENT-0001.',
+    expect(files.writes.some(path => path.startsWith('/invoices/'))).toBe(false)
+    expect(validRequest(result.invoiceRequest), JSON.stringify(validRequest.errors)).toBe(true)
+    expect(result.invoiceRequest).toMatchObject({
+      source: { path: '/rental-bookings/RENT-0001', code: 'RENT-0001' }, currency: 'ZAR', reference: 'RENT-0001',
+      customer: { name: 'Thandi Nkosi' }, notes: 'Drafted from rental booking RENT-0001.',
     })
-    expect(invoice.lines).toEqual([
-      { description: 'Rental RENT-0001: 2 × RPRD-0001, 3 days at 100.00/day', quantity: '1', unitPrice: '600.00', taxRate: '' },
-      { description: 'Late return: 3 days past 2026-03-12', quantity: '1', unitPrice: '60.00', taxRate: '' },
+    expect(result.invoiceRequest.lines).toEqual([
+      { description: 'Rental RENT-0001: 2 × RPRD-0001, 3 days at 100.00/day', quantity: '1', unitPrice: '600.00' },
+      { description: 'Late return: 3 days past 2026-03-12', quantity: '1', unitPrice: '60.00' },
     ])
   })
 
   it('omits the late-fee line for an on-time return', async () => {
-    const files = withInvoicing()
-    await returned(files, '2026-03-12')
-    expect((await files.readJson('/invoices/RENT-0001')).lines).toHaveLength(1)
+    expect((await returned(workspace(), '2026-03-12')).invoiceRequest.lines).toHaveLength(1)
   })
 
-  it('is written once even when an interrupted return is retried', async () => {
-    const files = withInvoicing()
-    await call(files, 'confirm-booking')
-    await call(files, 'pickup-booking')
-    const write = files.write.bind(files)
-    let interrupted = false
-    files.write = async (path, body, options_) => {
-      const result = await write(path, body, options_)
-      if (path.startsWith('/invoices/') && !interrupted) {
-        interrupted = true
-        throw Object.assign(new Error('boom'), { status: 500 })
-      }
-      return result
-    }
-    await expect(call(files, 'return-booking', undefined, { date: '2026-03-12' })).rejects.toThrow('boom')
-    await expect(call(files, 'return-booking', undefined, { date: '2026-03-12' })).resolves.toMatchObject({
-      message: expect.stringContaining('drafted invoice'),
-    })
-    expect(files.writes.filter(path => path === '/invoices/RENT-0001')).toHaveLength(1) // the retry hit If-None-Match and adopted the draft
-    expect((await files.readJson('/invoices/RENT-0001')).kind).toBe('invoice')
-    expect((await files.readJson('/rental-bookings/RENT-0001')).status).toBe('returned')
-  })
-
-  it('refuses to adopt a foreign file squatting on the invoice name', async () => {
-    const files = withInvoicing()
-    await files.write('/invoices/RENT-0001', JSON.stringify({ kind: 'note' }), { contentType: 'application/json' })
-    await expect(returned(files)).rejects.toThrow(/belongs to something else/)
+  it('records the invoice Invoicing drafted, and asks again for a returned booking without one', async () => {
+    const files = workspace()
+    await returned(files)
+    expect((await call(files, 'return-booking', undefined, { date: '2026-03-15' })).invoiceRequest.lines).toHaveLength(2)
+    await call(files, 'record-invoice', undefined, { invoice: '/invoices/INV-0003' })
+    expect((await files.readJson('/rental-bookings/RENT-0001')).invoice).toEqual({ path: '/invoices/INV-0003' })
+    expect((await call(files, 'return-booking', undefined, { date: '2026-03-15' })).invoiceRequest).toBeUndefined()
   })
 })
 

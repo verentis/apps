@@ -12,7 +12,7 @@ resources:
 file-access:
   - path: "/products"
     mode: read
-    reason: "Check that the moved or counted product exists and is active"
+    reason: "Check that the moved or counted product exists and is active (Products)"
   - path: "/warehouses"
     mode: read
     reason: "Check warehouses and their locations"

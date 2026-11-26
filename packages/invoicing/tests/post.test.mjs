@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { defaultSettings, templates } from '../src/contracts.mjs'
 import { defaultSettings as ledgerDefaults, starterAccounts, templates as ledgerTemplates } from '../../accounting/src/contracts.mjs'
 import { lineTotals, run } from '../scripts/post/main.mjs'
+import { postJournal, reverse as reverseJournal } from '../../accounting/scripts/api/main.mjs'
 import { memoryFiles } from '../../../tools/file-apps/memory-files.mjs'
 
 const now = '2026-03-10T08:00:00Z'
@@ -37,7 +38,22 @@ const payment = (values = {}) => record('payment', {
   code: 'PAY-0001', date: '2026-03-06', currency: 'ZAR', amount: '1000', bankAccount: '/chart-of-accounts/ACC-0001',
   allocations: [{ invoice: '/invoices/INV-0001', amount: '900' }], ...values,
 })
-const call = (files, operation, path, extra = {}) => run({ operation, path, ...extra }, files, options)
+// A posting runs as the form runs it: Invoicing's script returns the journal, Accounting posts it through its API
+// (its real operation, as the platform would run it), then Invoicing completes the record with the posted journal.
+const completes = { 'issue-invoice': 'complete-invoice', 'issue-credit': 'complete-credit', 'post-payment': 'complete-payment', 'reverse-payment': 'complete-reversal' }
+const ledger = files => ({ files, caller: { app: 'invoicing' }, now })
+async function call(files, operation, path, extra = {}) {
+  const first = await run({ operation, path, ...extra }, files, options)
+  if (first.journalRequest) {
+    const posted = await postJournal(first.journalRequest, ledger(files), options)
+    return run({ operation: completes[operation], path, journal: posted.path }, files, options)
+  }
+  if (first.reversalRequest) {
+    const reversed = await reverseJournal(first.reversalRequest, ledger(files), options)
+    return run({ operation: completes[operation], path, reversal: reversed.path }, files, options)
+  }
+  return first
+}
 const issued = async (extra = {}) => {
   const files = workspace({ '/invoices/INV-0001': invoice(), ...extra })
   await call(files, 'issue-invoice', '/invoices/INV-0001')

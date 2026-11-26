@@ -26,7 +26,6 @@ export const createScriptFileAccess = [
 /** What the task action script may touch: it moves tasks through their stages and may draft an invoice. */
 export const postScriptFileAccess = [
   { path: containers.tasks.path, mode: 'write', reason: 'Schedule, start, complete and cancel field tasks' },
-  { path: invoicing.invoices, mode: 'write', reason: 'Draft an invoice for a completed task (when Invoicing is installed)' },
 ]
 
 const text = (key, label, extra = {}) => ({ key, label, ...extra })
@@ -47,13 +46,21 @@ export const entities = {
         { key: 'scheduledDate', label: 'Scheduled date', type: 'date' },
         text('technician', 'Technician', { placeholder: 'Name or email' }),
         text('windowStart', 'Window start', { placeholder: '08:00', description: 'Time of day, HH:MM.' }),
-        text('windowEnd', 'Window end', { placeholder: '10:00', description: 'Time of day, HH:MM.' })] },
+        text('windowEnd', 'Window end', { placeholder: '10:00', description: 'Time of day, HH:MM.' }),
+        text('latitude', 'Latitude', { placeholder: '-33.9249', description: 'For the map. Copy it from a map app; the address is never looked up online.' }),
+        text('longitude', 'Longitude', { placeholder: '18.4241' })] },
       { title: 'Work', fields: [
         select('type', 'Type', labelled(taskTypes)),
         select('stage', 'Stage', labelled(stages), { description: 'Stages are set by Schedule, Start, Complete and Cancel.', readOnly: 'true' }),
         text('hours', 'Hours spent', { placeholder: '2.5', description: 'A decimal number of hours, required to complete.' }),
         text('materialsTotal', 'Materials total', { readOnly: 'true', description: 'Computed from the materials when the task is completed.' }),
         { key: 'workLog', label: 'Work log', type: 'textarea', span: 2, rows: 6 }] },
+      { title: 'On site', description: 'Tick each step as it is done. The customer signs when the work is finished.', fields: [
+        { key: 'checklist', label: 'Checklist', type: 'checklist', touch: true,
+          items: ['Check the site is safe to work', 'Do the work', 'Test it with the customer', { label: 'Take photos of the finished work', required: false }, 'Tidy up'] },
+        { key: 'photos', label: 'Photos of the work', type: 'photos', max: 8 },
+        { key: 'signature', label: 'Customer signature', type: 'signature', span: 2, signer: '{{ form.values.signedBy || form.values.customerName }}' },
+        text('signedBy', 'Signed by', { placeholder: 'Name of the person signing' })] },
       { title: 'Materials', fields: [
         { key: 'materials', label: 'Materials used', type: 'rows', span: 2, addLabel: 'Add material', maximum: 200,
           defaultRow: { description: '', quantity: '1', unitPrice: '' },

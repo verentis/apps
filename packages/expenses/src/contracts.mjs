@@ -1,7 +1,6 @@
 // File-based Expenses record contracts. Every record is one JSON file whose vendor MIME names its kind.
 import {
-  array, code, fileReference, fillTemplate, money, object, optional, optionalDate, pathOrEmpty,
-  schemas as schemaKit, timestamp, whenStatus,
+  array, code, fileReference, fillTemplate, money, object, optional, optionalDate, pathOrEmpty, photo, schemas as schemaKit, timestamp, whenStatus,
 } from '../../../tools/file-apps/schema.mjs'
 
 export const installRoot = '/applications/expenses'
@@ -69,6 +68,8 @@ export const schemas = {
     employeeRef: optional(100),
     date: optionalDate,
     lines: array(line, 0, 200),
+    // Photos of the receipts, taken with the phone or picked from the device.
+    receipts: array(photo, 0, 10),
     status: { enum: reportStatuses },
     submittedAt: timestamp,
     total: money,
@@ -98,7 +99,7 @@ const emptyLine = { category: '', description: '', amount: '', date: '' }
 export const templates = {
   category: recordTemplate('category', { name: '{{ name }}', expenseAccount: '' }),
   report: recordTemplate('report', {
-    employeeName: '{{ name }}', employeeRef: '', date: '', lines: [emptyLine], status: 'draft',
+    employeeName: '{{ name }}', employeeRef: '', date: '', lines: [emptyLine], receipts: [], status: 'draft',
   }),
 }
 

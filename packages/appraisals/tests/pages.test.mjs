@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { parse } from 'yaml'
 import { describe, expect, it } from 'vitest'
+import { stagePanels } from '../../../tools/file-apps/test-helpers.mjs'
 import {
   createScriptFileAccess, createScriptName, featureOverlay, manifest, postScriptFileAccess, postScriptName,
   postScriptPath, productionOverlay, scriptConsents,
@@ -163,11 +164,11 @@ describe('Appraisals report pages', () => {
 
   it('groups appraisals by status on the list page', () => {
     const page = documents['appraisals.page.yaml']
-    const panels = page.spec.tree[0].children.find(node => node.type === 'canvas.tabs').children
+    const panels = stagePanels(page.spec.tree[0].children.find(node => node.type === 'canvas.tabs'))
     expect(panels.map(panel => panel.slot)).toEqual(statuses)
     const scheduled = panels.find(panel => panel.slot === 'scheduled').children[0]
     expect(template(scheduled.props.rows, data).map(row => row.code)).toEqual(['APR-2'])
-    expect(scheduled.on['row-click']).toEqual([{ 'open-file': { path: '{{ event.path }}', mode: 'edit' } }])
+    expect(scheduled.on['row-click']).toEqual([{ 'open-file': { path: '{{ event.path }}', mode: 'edit', open: 'side' } }])
   })
 
   it('lists completed appraisals by overall score and averages per manager', () => {

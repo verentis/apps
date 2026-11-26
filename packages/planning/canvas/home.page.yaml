@@ -34,127 +34,79 @@
       "rows": {
         "kind": "computed",
         "expr": "(data.shifts || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, employee: e.data.employee || '', role: ((((data.roles || []).find(r => r.kind === 'file' && r.data && r.path === e.data.role) || {}).data || {}).name) || '', date: e.data.date || '', start: e.data.startTime || '', end: e.data.endTime || '', time: [e.data.startTime, e.data.endTime].filter(Boolean).join('–'), status: e.data.status || '' }))"
+      },
+      "listshifts": {
+        "kind": "folder",
+        "path": "/shifts",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.planning.shift+json"
+      },
+      "listshiftroles": {
+        "kind": "folder",
+        "path": "/shift-roles",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.planning.role+json"
       }
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Planning",
+          "icon": "calendar-days",
+          "active": "home.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "week.page.yaml",
+              "label": "Week",
+              "icon": "calendar"
+            },
+            {
+              "id": "shifts.page.yaml",
+              "label": "Shifts",
+              "icon": "list",
+              "count": "{{ (data.rows || []).filter(r => r.status === 'draft').length }}"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/planning/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/planning.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Planning",
+              "note": "Shift roles and shifts are files in your workspace. Draft shifts in /shifts, publish them overlap-checked, then confirm them from their forms."
             },
-            "children": [
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Planning"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Shift roles and shifts are files in your workspace. Draft shifts in /shifts, publish them overlap-checked, then confirm them from their forms.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "direction": "row",
-                    "wrap": true,
-                    "gap": 2,
-                    "align": "center"
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Week schedule",
-                      "variant": "outline",
-                      "icon": "calendar-days",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/planning/canvas/week.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Shifts",
-                      "variant": "outline",
-                      "icon": "list",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/planning/canvas/shifts.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Settings",
-                      "variant": "ghost",
-                      "icon": "settings",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/settings/planning.json",
-                            "mode": "edit"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ]
-              }
-            ]
+            "children": []
           },
           {
             "type": "canvas.grid",
@@ -207,21 +159,19 @@
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /shifts folder could not be read. Reinstall Planning to recreate it."
-            },
-            "rules": {
-              "visible": "data.$shifts.status === 'error'"
+              "for": "shifts",
+              "compact": true,
+              "description": "The /shifts folder could not be read. Reinstall Planning to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /shift-roles folder could not be read. Reinstall Planning to recreate it."
-            },
-            "rules": {
-              "visible": "data.$roles.status === 'error'"
+              "for": "roles",
+              "compact": true,
+              "description": "The /shift-roles folder could not be read. Reinstall Planning to recreate it."
             }
           },
           {
@@ -281,17 +231,19 @@
                     ]
                   },
                   {
-                    "type": "canvas.files",
+                    "type": "canvas.empty-state",
                     "props": {
-                      "path": "/shifts/",
-                      "mimeTypes": [
-                        "application/vnd.verentis.planning.shift+json"
-                      ],
-                      "showFolders": false,
-                      "navigable": false,
+                      "for": "listshifts",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listshifts || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
                       "columns": [
                         {
-                          "key": "name",
+                          "key": "data.code",
                           "label": "Shift"
                         },
                         {
@@ -300,7 +252,8 @@
                         },
                         {
                           "key": "data.date",
-                          "label": "Date"
+                          "label": "Date",
+                          "format": "date"
                         },
                         {
                           "key": "data.startTime",
@@ -312,10 +265,34 @@
                         },
                         {
                           "key": "data.status",
-                          "label": "Status"
+                          "label": "Status",
+                          "format": "badge"
                         }
                       ],
+                      "facets": [
+                        "data.status"
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
                       "emptyText": "No shifts yet. Use New in /shifts."
+                    },
+                    "rules": {
+                      "visible": "data.$listshifts.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
                     }
                   }
                 ],
@@ -361,17 +338,19 @@
                     ]
                   },
                   {
-                    "type": "canvas.files",
+                    "type": "canvas.empty-state",
                     "props": {
-                      "path": "/shift-roles/",
-                      "mimeTypes": [
-                        "application/vnd.verentis.planning.role+json"
-                      ],
-                      "showFolders": false,
-                      "navigable": false,
+                      "for": "listshiftroles",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listshiftroles || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
                       "columns": [
                         {
-                          "key": "name",
+                          "key": "data.code",
                           "label": "Role"
                         },
                         {
@@ -383,7 +362,27 @@
                           "label": "Color"
                         }
                       ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
                       "emptyText": "No roles yet. Use New in /shift-roles."
+                    },
+                    "rules": {
+                      "visible": "data.$listshiftroles.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
                     }
                   }
                 ],

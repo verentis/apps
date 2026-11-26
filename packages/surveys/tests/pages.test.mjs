@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { parse } from 'yaml'
 import { describe, expect, it } from 'vitest'
+import { stagePanels } from '../../../tools/file-apps/test-helpers.mjs'
 import {
   createScriptFileAccess, createScriptName, featureOverlay, manifest, postScriptFileAccess, postScriptName,
   postScriptPath, productionOverlay, scriptConsents,
@@ -194,7 +195,7 @@ describe('Surveys report pages', () => {
 
   it('groups surveys by status on the surveys page', () => {
     const page = documents['surveys.page.yaml']
-    const panels = page.spec.tree[0].children.find(node => node.type === 'canvas.tabs').children
+    const panels = stagePanels(page.spec.tree[0].children.find(node => node.type === 'canvas.tabs'))
     expect(panels.map(panel => panel.slot)).toEqual(['draft', 'open', 'closed'])
     const open = panels.find(panel => panel.slot === 'open').children[0]
     expect(template(open.props.rows, data).map(row => row.code)).toEqual(['SUR-1'])

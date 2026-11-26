@@ -38,67 +38,113 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Helpdesk",
+          "icon": "ticket",
+          "active": "sla.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Queue",
+              "icon": "inbox",
+              "count": "{{ (data.rows || []).filter(r => !['solved', 'closed'].includes(r.stage)).length }}"
+            },
+            {
+              "id": "tickets.page.yaml",
+              "label": "Board",
+              "icon": "kanban"
+            },
+            {
+              "id": "sla.page.yaml",
+              "label": "SLA",
+              "icon": "alarm-clock",
+              "count": "{{ (data.rows || []).filter(r => !['solved', 'closed'].includes(r.stage)).filter(r => r.overdue).length }}",
+              "tone": "danger"
+            },
+            {
+              "id": "workload.page.yaml",
+              "label": "Workload",
+              "icon": "users"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/helpdesk/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/helpdesk.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "SLA report",
+              "note": "Open tickets by SLA deadline. The deadline is computed from the team's SLA hours when a ticket is created."
+            },
+            "children": []
+          },
           {
             "type": "canvas.stack",
             "layout": {
               "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
+                "gap": 2
               }
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "SLA report"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Open tickets by SLA deadline. The deadline is computed from the team's SLA hours when a ticket is created.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Next 48 hours"
+                }
               },
               {
-                "type": "canvas.button",
+                "type": "canvas.text",
                 "props": {
-                  "label": "Helpdesk",
-                  "variant": "ghost",
-                  "icon": "ticket",
-                  "size": "sm"
+                  "text": "Open tickets on their SLA deadline. Overdue is left of now; due soon means within 4 hours.",
+                  "tone": "muted"
+                }
+              },
+              {
+                "type": "canvas.time-strip",
+                "props": {
+                  "rows": "{{ (data.rows || []).filter(r => !['solved', 'closed'].includes(r.stage)).filter(r => !!r.deadline) }}",
+                  "emptyText": "Nothing due",
+                  "at": "deadline",
+                  "title": "subject",
+                  "window": {
+                    "from": "-12h",
+                    "to": "48h"
+                  },
+                  "soon": "4h"
                 },
                 "on": {
-                  "click": [
+                  "open": [
                     {
                       "open-file": {
-                        "path": "/applications/helpdesk/canvas/home.page.yaml"
+                        "path": "{{ event.row.path }}",
+                        "mode": "edit",
+                        "open": "side"
                       }
                     }
                   ]
@@ -107,21 +153,19 @@
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /helpdesk-teams folder could not be read. Reinstall Helpdesk to recreate it."
-            },
-            "rules": {
-              "visible": "data.$teams.status === 'error'"
+              "for": "teams",
+              "compact": true,
+              "description": "The /helpdesk-teams folder could not be read. Reinstall Helpdesk to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /tickets folder could not be read. Reinstall Helpdesk to recreate it."
-            },
-            "rules": {
-              "visible": "data.$tickets.status === 'error'"
+              "for": "tickets",
+              "compact": true,
+              "description": "The /tickets folder could not be read. Reinstall Helpdesk to recreate it."
             }
           },
           {
@@ -209,6 +253,10 @@
                 }
               ],
               "emptyText": "No open tickets",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
               "clickable": true
             },
             "on": {
@@ -216,7 +264,8 @@
                 {
                   "open-file": {
                     "path": "{{ event.path }}",
-                    "mode": "edit"
+                    "mode": "edit",
+                    "open": "side"
                   }
                 }
               ]

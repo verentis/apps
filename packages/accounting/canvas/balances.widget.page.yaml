@@ -1,109 +1,142 @@
-api-version: canvas.verentis.io/v1
-kind: Page
-metadata:
-  id: accounting-balances-widget
-  name: Balances
-  description: Balance-sheet account balances for the workspace dashboard.
-  icon: scale
-spec:
-  access:
-  - path: /chart-of-accounts
-    reason: Show the balance-sheet accounts
-  - path: /journals
-    reason: Sum the posted journals
-  data:
-    accounts:
-      kind: folder
-      path: /chart-of-accounts
-      contents: true
-      mime-pattern: application/vnd.verentis.accounting.account+json
-    journals:
-      kind: folder
-      path: /journals
-      contents: true
-      mime-pattern: application/vnd.verentis.accounting.journal+json
-    balances:
-      kind: computed
-      expr: '(data.accounts || []).filter(e => e.kind === ''file'' && e.data && e.data.kind === ''account''
-        && ["asset","liability","equity"].includes(e.data.accountType)).map(e => ({ path: e.path, code:
-        e.data.code || e.name, number: e.data.number || '''', name: e.data.name || '''', type: e.data.accountType,
-        units: (e.data.accountType === ''asset'' ? 1 : -1) * (data.journals || []).filter(j => j.kind
-        === ''file'' && j.data && j.data.status === ''posted'' && Array.isArray(j.data.lines)).reduce((sum,
-        j) => sum + j.data.lines.filter(l => l.account === e.path).reduce((s, l) => s + (l.direction ===
-        ''debit'' ? 1 : -1) * Math.round(Number(l.amount || 0) * 10000), 0), 0) })).filter(b => b.units
-        !== 0).sort((a, b) => (String(a.number) + a.code < String(b.number) + b.code ? -1 : 1))'
-  tree:
-  - type: canvas.stack
-    layout:
-      base:
-        gap: 2
-    children:
-    - type: canvas.stack
-      layout:
-        base:
-          direction: row
-          wrap: true
-          gap: 2
-          align: center
-          justify: between
-      children:
-      - type: canvas.stack
-        layout:
-          base:
-            gap: 1
-        children:
-        - type: canvas.heading
-          props:
-            level: 3
-            text: Balances
-        - type: canvas.text
-          props:
-            text: Assets {{ ((data.balances || []).filter(b => b.type === 'asset').reduce((s, b) => s
-              + b.units, 0) / 10000).toFixed(2) }} · Liabilities {{ ((data.balances || []).filter(b =>
-              b.type === 'liability').reduce((s, b) => s + b.units, 0) / 10000).toFixed(2) }}
-            tone: muted
-      - type: canvas.button
-        props:
-          label: Reports
-          variant: ghost
-          icon: chart-column
-          size: sm
-        'on':
-          click:
-          - open-file:
-              path: /applications/accounting/canvas/reports.page.yaml
-    - type: canvas.text
-      props:
-        text: '{{ data.$accounts.error }}'
-      rules:
-        visible: data.$accounts.status === 'error'
-    - type: canvas.text
-      props:
-        text: '{{ data.$journals.error }}'
-      rules:
-        visible: data.$journals.status === 'error'
-    - type: canvas.text
-      props:
-        text: Loading…
-        tone: muted
-      rules:
-        visible: data.$accounts.status === 'loading' || data.$journals.status === 'loading'
-    - type: canvas.table
-      props:
-        rows: '{{ (data.balances || []).map(b => ({ path: b.path, account: [b.number, b.name].filter(Boolean).join(''
-          ''), type: b.type, balance: (b.units / 10000).toFixed(2) })) }}'
-        columns:
-        - key: account
-          label: Account
-        - key: type
-          label: Type
-        - key: balance
-          label: Balance
-          align: right
-        emptyText: No posted balances yet
-        clickable: true
-      'on':
-        row-click:
-        - open-file:
-            path: '{{ event.path }}'
-            mode: edit
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "accounting-balances-widget",
+    "name": "Balances",
+    "description": "Balance-sheet account balances for the workspace dashboard.",
+    "icon": "scale"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/chart-of-accounts",
+        "reason": "Show the balance-sheet accounts"
+      },
+      {
+        "path": "/journals",
+        "reason": "Sum the posted journals"
+      }
+    ],
+    "data": {
+      "accounts": {
+        "kind": "folder",
+        "path": "/chart-of-accounts",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.accounting.account+json"
+      },
+      "journals": {
+        "kind": "folder",
+        "path": "/journals",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.accounting.journal+json"
+      },
+      "balances": {
+        "kind": "computed",
+        "expr": "(data.accounts || []).filter(e => e.kind === 'file' && e.data && e.data.kind === 'account' && [\"asset\",\"liability\",\"equity\"].includes(e.data.accountType)).map(e => ({ path: e.path, code: e.data.code || e.name, number: e.data.number || '', name: e.data.name || '', type: e.data.accountType, units: (e.data.accountType === 'asset' ? 1 : -1) * (data.journals || []).filter(j => j.kind === 'file' && j.data && j.data.status === 'posted' && Array.isArray(j.data.lines)).reduce((sum, j) => sum + j.data.lines.filter(l => l.account === e.path).reduce((s, l) => s + (l.direction === 'debit' ? 1 : -1) * Math.round(Number(l.amount || 0) * 10000), 0), 0) })).filter(b => b.units !== 0).sort((a, b) => (String(a.number) + a.code < String(b.number) + b.code ? -1 : 1))"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "gap": 2
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Balances",
+              "note": "Assets {{ ((data.balances || []).filter(b => b.type === 'asset').reduce((s, b) => s + b.units, 0) / 10000).toFixed(2) }} · Liabilities {{ ((data.balances || []).filter(b => b.type === 'liability').reduce((s, b) => s + b.units, 0) / 10000).toFixed(2) }}"
+            },
+            "children": [
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Reports",
+                  "variant": "ghost",
+                  "icon": "chart-column",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "/applications/accounting/canvas/reports.page.yaml"
+                      }
+                    }
+                  ]
+                },
+                "slot": "actions"
+              }
+            ]
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "accounts",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "journals",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Loading…",
+              "tone": "muted"
+            },
+            "rules": {
+              "visible": "data.$accounts.status === 'loading' || data.$journals.status === 'loading'"
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.balances || []).map(b => ({ path: b.path, account: [b.number, b.name].filter(Boolean).join(' '), type: b.type, balance: (b.units / 10000).toFixed(2) })) }}",
+              "columns": [
+                {
+                  "key": "account",
+                  "label": "Account"
+                },
+                {
+                  "key": "type",
+                  "label": "Type"
+                },
+                {
+                  "key": "balance",
+                  "label": "Balance",
+                  "align": "right"
+                }
+              ],
+              "emptyText": "No posted balances yet",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

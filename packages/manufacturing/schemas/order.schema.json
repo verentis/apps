@@ -145,6 +145,51 @@
       },
       "minItems": 0,
       "maxItems": 250
+    },
+    "operations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "done": {
+            "type": "boolean"
+          },
+          "doneAt": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "seconds": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 31536000
+          },
+          "startedAt": {
+            "type": "string",
+            "maxLength": 40
+          }
+        },
+        "required": [
+          "label"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "maxItems": 100
     }
   },
   "required": [

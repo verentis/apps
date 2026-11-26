@@ -3,8 +3,8 @@
   "kind": "Form",
   "metadata": {
     "id": "legal-matters-matter",
-    "name": "Synthetic legal matter",
-    "description": "Isolated pilot matter and pre-bill.",
+    "name": "Legal matter",
+    "description": "Matter intake, conflict decision and pre-bill.",
     "icon": "briefcase-business"
   },
   "spec": {
@@ -17,7 +17,7 @@
         "json-schema": {
           "id": "https://schemas.verentis.io/legal-matters/v1/matter.schema.json",
           "source": "/applications/legal-matters/schemas/matter.schema.json",
-          "title": "Synthetic legal matter",
+          "title": "Legal matter",
           "version": "1"
         }
       }
@@ -32,7 +32,7 @@
         "json-schema": {
           "id": "https://schemas.verentis.io/legal-matters/v1/matter.schema.json",
           "source": "/applications/legal-matters/schemas/matter.schema.json",
-          "title": "Synthetic legal matter",
+          "title": "Legal matter",
           "version": "1"
         }
       }
@@ -55,18 +55,55 @@
         "path": "/applications/legal-matters/",
         "mode": "read",
         "reason": "Read the matter schema and run the guarded workflow"
+      },
+      {
+        "path": "/timesheets",
+        "mode": "read",
+        "reason": "Offer this matter’s validated time as charges"
+      },
+      {
+        "path": "/expense-reports",
+        "mode": "read",
+        "reason": "Offer approved expense reports as recoverable expenses"
       }
     ],
     "access": [
       {
         "path": "/applications/legal-matters/",
         "reason": "Read the matter schema and run the guarded workflow"
+      },
+      {
+        "path": "/timesheets",
+        "reason": "Offer this matter’s validated time as charges"
+      },
+      {
+        "path": "/expense-reports",
+        "reason": "Offer approved expense reports as recoverable expenses"
       }
     ],
     "data": {
       "record": {
         "kind": "document",
         "consistency": "conditional"
+      },
+      "appops": {
+        "kind": "app-operations"
+      },
+      "timeentries": {
+        "kind": "folder",
+        "path": "/timesheets",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.timesheets.entry+json"
+      },
+      "expensereports": {
+        "kind": "folder",
+        "path": "/expense-reports",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.expenses.report+json"
+      },
+      "sourceoptions": {
+        "kind": "computed",
+        "expr": "(data.timeentries || []).filter(e => e.kind === 'file' && e.data && e.data.status === 'validated' && !!form.values.project && e.data.project === form.values.project).map(e => ({ value: e.path, label: 'Time · ' + (e.data.date || '') + ' · ' + (e.data.employee || '') + ' · ' + (e.data.hours || '') + ' h' })).concat((data.expensereports || []).filter(e => e.kind === 'file' && e.data && ['approved', 'posted'].includes(e.data.status)).map(e => ({ value: e.path, label: 'Expense · ' + (e.data.code || e.name) + ' · ' + (e.data.employeeName || '') + ' · ' + (e.data.total || '') })))"
       }
     },
     "tree": [
@@ -84,16 +121,105 @@
         },
         "children": [
           {
+            "type": "canvas.validation-summary",
+            "props": {
+              "title": "Fix these before saving"
+            }
+          },
+          {
             "type": "canvas.heading",
             "props": {
               "level": 2,
-              "text": "Matter · {{ form.values.status }}"
+              "text": "Matter · {{ form.values.title || form.values.status }}"
+            }
+          },
+          {
+            "type": "canvas.status-steps",
+            "props": {
+              "value": "{{ (form.values.invoices || []).length > 0 ? 'invoice' : form.values.prebill ? 'prebill' : (form.values.charges || []).length > 0 ? 'wip' : form.values.status === 'open' ? 'open' : form.values.status === 'declined' ? 'declined' : form.values.status === 'screened' ? (form.values.disposition && form.values.disposition !== 'undecided' ? 'decision' : 'screen') : 'intake' }}",
+              "steps": [
+                {
+                  "value": "intake",
+                  "label": "Intake"
+                },
+                {
+                  "value": "screen",
+                  "label": "Screen"
+                },
+                {
+                  "value": "decision",
+                  "label": "Decision"
+                },
+                {
+                  "value": "open",
+                  "label": "Open"
+                },
+                {
+                  "value": "wip",
+                  "label": "WIP"
+                },
+                {
+                  "value": "prebill",
+                  "label": "Pre-bill"
+                },
+                {
+                  "value": "invoice",
+                  "label": "Draft invoice"
+                }
+              ],
+              "branches": [
+                {
+                  "value": "declined",
+                  "label": "Declined"
+                }
+              ]
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 2,
+                "gap": 4
+              },
+              "desktop": {
+                "columns": 3
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Sources for the next invoice",
+                  "value": "{{ (form.values.charges || []).length }}",
+                  "icon": "clock"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Pre-bill",
+                  "value": "{{ (form.values.prebill && form.values.prebill.stage) || 'Not prepared' }}",
+                  "icon": "receipt-text"
+                }
+              },
+              {
+                "type": "canvas.dashboard.stat",
+                "props": {
+                  "label": "Invoice drafts",
+                  "value": "{{ (form.values.invoices || []).length }}",
+                  "icon": "file-text"
+                }
+              }
+            ],
+            "rules": {
+              "visible": "form.values.status === 'open'"
             }
           },
           {
             "type": "canvas.text",
             "props": {
-              "text": "Synthetic pilot only. Do not enter real names, client instructions or confidential records. Everyone in this isolated workspace must be authorised for every pilot file."
+              "text": "Matter files are visible to everyone who can read /legal-matters. Keep matters for different teams apart with workspace or folder permissions."
             }
           },
           {
@@ -142,22 +268,10 @@
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "{{ data.$record.error }}"
-            },
-            "rules": {
-              "visible": "data.$record.status === 'error'"
-            }
-          },
-          {
-            "type": "canvas.text",
-            "props": {
-              "text": "Loading…",
-              "tone": "muted"
-            },
-            "rules": {
-              "visible": "data.$record.status === 'loading'"
+              "for": "record",
+              "compact": true
             }
           },
           {
@@ -169,7 +283,7 @@
               {
                 "type": "canvas.form.input",
                 "props": {
-                  "label": "Synthetic instruction",
+                  "label": "Instruction",
                   "value": "{{ form.values.title }}"
                 },
                 "rules": {
@@ -177,11 +291,11 @@
                 }
               },
               {
-                "type": "canvas.form.array",
+                "type": "canvas.form.line-items",
                 "props": {
                   "label": "Parties and aliases",
                   "value": "{{ form.values.parties }}",
-                  "fields": [
+                  "columns": [
                     {
                       "key": "role",
                       "label": "Role",
@@ -203,15 +317,18 @@
                     },
                     {
                       "key": "name",
-                      "label": "Party name"
+                      "label": "Party name",
+                      "type": "text"
                     },
                     {
                       "key": "crm",
-                      "label": "CRM path (/customers/…)"
+                      "label": "CRM path (/customers/…)",
+                      "type": "text"
                     },
                     {
                       "key": "aliases",
-                      "label": "Aliases; separate with semicolons"
+                      "label": "Aliases; separate with semicolons",
+                      "type": "text"
                     }
                   ],
                   "defaultRow": {
@@ -220,11 +337,15 @@
                     "crm": "",
                     "aliases": ""
                   },
-                  "rowIds": false,
+                  "storeComputed": false,
                   "minimum": 0,
                   "maximum": 100,
-                  "addLabel": "Add row",
-                  "removeLabel": "Remove row"
+                  "addLabel": "Add row"
+                },
+                "layout": {
+                  "tablet": {
+                    "colSpan": 2
+                  }
                 },
                 "rules": {
                   "disabled": "(form.values.status === 'open' || form.values.status === 'declined')"
@@ -272,22 +393,26 @@
                 }
               },
               {
-                "type": "canvas.form.array",
+                "type": "canvas.form.line-items",
                 "props": {
                   "label": "Hourly rates by fee earner and effective date",
                   "value": "{{ form.values.rates }}",
-                  "fields": [
+                  "columns": [
                     {
                       "key": "employee",
-                      "label": "Timesheets employee"
+                      "label": "Timesheets employee",
+                      "type": "text"
                     },
                     {
                       "key": "effective",
-                      "label": "From (YYYY-MM-DD)"
+                      "label": "From (YYYY-MM-DD)",
+                      "type": "text"
                     },
                     {
                       "key": "amount",
-                      "label": "Hourly rate"
+                      "label": "Hourly rate",
+                      "type": "text",
+                      "align": "right"
                     }
                   ],
                   "defaultRow": {
@@ -295,11 +420,15 @@
                     "effective": "",
                     "amount": ""
                   },
-                  "rowIds": false,
+                  "storeComputed": false,
                   "minimum": 0,
                   "maximum": 100,
-                  "addLabel": "Add row",
-                  "removeLabel": "Remove row"
+                  "addLabel": "Add row"
+                },
+                "layout": {
+                  "tablet": {
+                    "colSpan": 2
+                  }
                 },
                 "rules": {
                   "disabled": "(form.values.status === 'open' || form.values.status === 'declined')"
@@ -428,11 +557,11 @@
                 }
               },
               {
-                "type": "canvas.form.array",
+                "type": "canvas.form.line-items",
                 "props": {
                   "label": "Documents, project tasks and manually verified deadlines",
                   "value": "{{ form.values.links }}",
-                  "fields": [
+                  "columns": [
                     {
                       "key": "kind",
                       "label": "Type",
@@ -454,15 +583,18 @@
                     },
                     {
                       "key": "description",
-                      "label": "Description"
+                      "label": "Description",
+                      "type": "text"
                     },
                     {
                       "key": "path",
-                      "label": "Workspace path"
+                      "label": "Workspace path",
+                      "type": "text"
                     },
                     {
                       "key": "date",
-                      "label": "Date (YYYY-MM-DD)"
+                      "label": "Date (YYYY-MM-DD)",
+                      "type": "text"
                     }
                   ],
                   "defaultRow": {
@@ -471,11 +603,15 @@
                     "path": "",
                     "date": ""
                   },
-                  "rowIds": false,
+                  "storeComputed": false,
                   "minimum": 0,
                   "maximum": 200,
-                  "addLabel": "Add row",
-                  "removeLabel": "Remove row"
+                  "addLabel": "Add row"
+                },
+                "layout": {
+                  "tablet": {
+                    "colSpan": 2
+                  }
                 },
                 "rules": {
                   "disabled": "(form.values.status === 'declined' || !!form.values.prebill)"
@@ -506,11 +642,11 @@
                 }
               },
               {
-                "type": "canvas.form.array",
+                "type": "canvas.form.line-items",
                 "props": {
                   "label": "Sources for the next invoice",
                   "value": "{{ form.values.charges }}",
-                  "fields": [
+                  "columns": [
                     {
                       "key": "source",
                       "label": "Charge",
@@ -532,23 +668,29 @@
                     },
                     {
                       "key": "path",
-                      "label": "Source path (blank for fixed fee)"
+                      "label": "Source (blank for fixed fee)",
+                      "type": "select",
+                      "options": "{{ data.sourceoptions }}"
                     },
                     {
                       "key": "release",
-                      "label": "Narrative approved for the client"
+                      "label": "Narrative approved for the client",
+                      "type": "text"
                     },
                     {
                       "key": "writeDown",
-                      "label": "Write-down amount"
+                      "label": "Write-down amount",
+                      "type": "text"
                     },
                     {
                       "key": "reason",
-                      "label": "Internal write-down reason"
+                      "label": "Internal write-down reason",
+                      "type": "text"
                     },
                     {
                       "key": "recoverability",
-                      "label": "Expense: why this client owes the disbursement"
+                      "label": "Expense: why this client owes the disbursement",
+                      "type": "text"
                     }
                   ],
                   "defaultRow": {
@@ -559,11 +701,15 @@
                     "reason": "",
                     "recoverability": ""
                   },
-                  "rowIds": false,
+                  "storeComputed": false,
                   "minimum": 0,
                   "maximum": 100,
-                  "addLabel": "Add row",
-                  "removeLabel": "Remove row"
+                  "addLabel": "Add row"
+                },
+                "layout": {
+                  "tablet": {
+                    "colSpan": 2
+                  }
                 },
                 "rules": {
                   "disabled": "(form.values.status !== 'open' || !!form.values.prebill)"
@@ -639,7 +785,11 @@
                       "label": "Client narrative"
                     }
                   ],
-                  "emptyText": "No pre-bill"
+                  "emptyText": "No pre-bill",
+                  "search": true,
+                  "sortable": true,
+                  "pageSize": 25,
+                  "narrow": "list"
                 }
               },
               {
@@ -684,6 +834,15 @@
                 ]
               },
               {
+                "type": "canvas.text",
+                "props": {
+                  "text": "Install Invoicing to turn an approved pre-bill into a draft invoice."
+                },
+                "rules": {
+                  "visible": "form.values.prebill && form.values.prebill.stage === 'pending' && !((data.appops || []).some(o => o.app === 'invoicing' && o.operation === 'create-draft-invoice' && o.available))"
+                }
+              },
+              {
                 "type": "canvas.table",
                 "props": {
                   "rows": "{{ (form.values.invoices || []).map(path => ({ path })) }}",
@@ -694,6 +853,10 @@
                     }
                   ],
                   "emptyText": "No drafts created",
+                  "search": true,
+                  "sortable": true,
+                  "pageSize": 25,
+                  "narrow": "list",
                   "clickable": true
                 },
                 "on": {
@@ -701,7 +864,8 @@
                     {
                       "open-file": {
                         "path": "{{ event.path }}",
-                        "mode": "edit"
+                        "mode": "edit",
+                        "open": "side"
                       }
                     }
                   ]
@@ -725,7 +889,11 @@
                       "label": "Event"
                     }
                   ],
-                  "emptyText": "No decisions recorded"
+                  "emptyText": "No decisions recorded",
+                  "search": true,
+                  "sortable": true,
+                  "pageSize": 25,
+                  "narrow": "list"
                 }
               }
             ]
@@ -761,7 +929,7 @@
           },
           {
             "toast": {
-              "message": "Saved synthetic matter",
+              "message": "Saved matter",
               "variant": "success"
             }
           }
@@ -782,8 +950,8 @@
         "steps": [
           {
             "confirm": {
-              "title": "Screen synthetic parties",
-              "message": "Compare all pilot matters, including archived files?"
+              "title": "Screen parties",
+              "message": "Compare against all matters, including archived files?"
             }
           },
           {
@@ -929,6 +1097,24 @@
         ],
         "steps": [
           {
+            "set-state": {
+              "key": "lastresult",
+              "value": null
+            }
+          },
+          {
+            "set-state": {
+              "key": "appcall",
+              "value": null
+            }
+          },
+          {
+            "set-state": {
+              "key": "recorded",
+              "value": null
+            }
+          },
+          {
             "confirm": {
               "title": "Approve or resume invoice draft",
               "message": "Reserve these sources and create one ordinary draft in Invoicing? Only released narratives leave the pre-bill."
@@ -947,13 +1133,39 @@
             }
           },
           {
+            "call-app": {
+              "if": "(data.appops || []).some(o => o.app === 'invoicing' && o.operation === 'create-draft-invoice' && o.available) && !!state.lastresult && !!state.lastresult.invoiceRequest",
+              "app": "invoicing",
+              "operation": "create-draft-invoice",
+              "input": {
+                "$expr": "state.lastresult.invoiceRequest"
+              },
+              "idempotency-key": "{{ ('prebill-' + (form.values.prebill && form.values.prebill.id)) + '-' + Date.now() }}",
+              "assign": "appcall"
+            }
+          },
+          {
+            "run-script": {
+              "if": "(data.appops || []).some(o => o.app === 'invoicing' && o.operation === 'create-draft-invoice' && o.available) && !!state.lastresult && !!state.lastresult.invoiceRequest && !!state.appcall && !!state.appcall.path",
+              "file": "/applications/legal-matters/scripts/workflow",
+              "timeout": 120,
+              "parameters": {
+                "operation": "record-invoice",
+                "path": "{{ ctx.file.path }}",
+                "invoice": "{{ state.appcall.path }}",
+                "revision": "{{ state.lastresult.revision }}"
+              },
+              "assign": "recorded"
+            }
+          },
+          {
             "refresh-source": {
               "source": "record"
             }
           },
           {
             "toast": {
-              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "message": "{{ (state.recorded && state.recorded.message) || (state.lastresult && state.lastresult.message) || 'Done' }}",
               "variant": "success"
             }
           }

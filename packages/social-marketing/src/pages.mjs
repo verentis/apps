@@ -1,10 +1,11 @@
 // Generates the Social Marketing Canvas documents: a bound form per record kind, the settings form, the launch
 // page, the upcoming-posts page and the per-account engagement page. Scheduling, publishing and cancelling
 // (status transitions, account checks, locking) are done by the action script the post form runs.
+import { views } from './views.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   humanize, iconName, options, openFile, page, panel, projectRegistration, recordButtons, row, scriptAction,
-  stat, stats, status, table, tabs, text, toneExpression,
+  stat, stats, status, table, tabs, text, toneExpression, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import {
   containers, installRoot, mimeTypes, networkLabels, publishableStatuses, recordKinds, schemaId, settingsPath,
@@ -84,21 +85,19 @@ function recordExtras(kind) {
 function recordForm(kind) {
   const entity = entities[kind]
   const extras = recordExtras(kind)
-  const header = row([
-    column([
-      row([
-        heading(`{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`),
+  const header = recordHeader(
+    `{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`,
+    [
         ...(entity.status ? [badge(humanize(entity.status), toneExpression(entity.status, statusTones), { visible: `!!form.values.${entity.status}` })] : []),
         badge('Archived', 'warning', { visible: archived }, 'archive'),
-      ]),
-      text(`${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`, 'muted'),
-    ]),
-    row([...extras.buttons, recordButtons(extras.locked)]),
-  ], 'between')
+    ],
+    `${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`,
+    [...extras.buttons, recordButtons(extras.locked)],
+  )
   const tree = [
     header,
-    ...status('record'),
-    badge(`This ${entity.singular.toLowerCase()} is archived. Restore it to edit.`, 'warning', { visible: archived }, 'archive'),
+    ...status('record'), ...lifecycle(entity),
+    archivedAlert(entity.singular),
     ...extras.notices,
     grid(sectionCards(entity.sections)),
   ]
@@ -123,13 +122,13 @@ function settingsForm() {
       access: [accountsAccess('Choose the default social account for new posts'), schemaAccess],
       data: accountSources,
       tree: [
-        row([
-          column([heading('Social Marketing settings'), text('Defaults for new posts. Code prefixes are app settings, managed with the installed app.', 'muted')]),
+        pageHeader(
+          [heading('Social Marketing settings'), text('Defaults for new posts. Code prefixes are app settings, managed with the installed app.', 'muted')], [
           row([
             button('Reset', [{ 'reset-form': {} }], { disabled: 'form.saving || !form.dirty' }, 'ghost'),
             button('Save', [{ save: {} }, { toast: { message: 'Saved', variant: 'success' } }], { disabled: 'form.saving || !form.dirty || form.invalid' }, undefined, 'save'),
           ]),
-        ], 'between'),
+        ]),
         ...status('record'),
         ...status('accounts', `The ${containers.accounts.path} folder could not be read. Reinstall Social Marketing to recreate it.`),
         grid([card('Defaults', [grid(settingsFields.map(field => formControl(field, null)))])], 1),
@@ -172,14 +171,14 @@ function homePage() {
         access: pageAccess('Count posts and engagement and show the social accounts and posts'),
         data: postSources,
         tree: page([
-          row([
-            column([heading('Social Marketing'), text('Social accounts and posts are files in your workspace. Draft posts in /social-posts, then schedule, publish or cancel them from their forms. Delivery to the networks is a platform integration.', 'muted')]),
+          pageHeader(
+            [heading('Social Marketing'), text('Social accounts and posts are files in your workspace. Draft posts in /social-posts, then schedule, publish or cancel them from their forms. Delivery to the networks is a platform integration.', 'muted')], [
             row([
               button('Upcoming posts', [openFile(`${installRoot}/canvas/upcoming.page.yaml`)], undefined, 'outline', 'calendar-clock'),
               button('Engagement', [openFile(`${installRoot}/canvas/engagement.page.yaml`)], undefined, 'outline', 'heart'),
               button('Settings', [openFile(settingsPath, 'edit')], undefined, 'ghost', 'settings'),
             ]),
-          ], 'between'),
+          ]),
           stats([
             stat('Published posts', countOf("r.status === 'published'"), 'megaphone', loading('posts')),
             stat('Scheduled', countOf("r.status === 'scheduled'"), 'calendar-clock', loading('posts')),
@@ -216,10 +215,10 @@ function upcomingPage() {
         access: pageAccess('List scheduled posts in calendar order with their account handles'),
         data: postSources,
         tree: page([
-          row([
-            column([heading('Upcoming posts'), text('Every scheduled post, earliest first. Click a row to open the post.', 'muted')]),
+          pageHeader(
+            [heading('Upcoming posts'), text('Every scheduled post, earliest first. Click a row to open the post.', 'muted')], [
             button('Social Marketing', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'megaphone'),
-          ], 'between'),
+          ]),
           ...containerNotices(),
           stats(statuses.map(value => stat(statusLabel(value), countOf(`r.status === '${value}'`), 'megaphone', loading('posts'))), 4),
           card('Calendar', [table(upcoming, [['scheduledDate', 'Date'], ...postColumns.slice(0, 3)], 'Nothing scheduled', true)]),
@@ -245,10 +244,10 @@ function engagementPage() {
         access: pageAccess('Sum published posts and engagement per social account'),
         data: postSources,
         tree: page([
-          row([
-            column([heading('Engagement by account'), text('Published posts and their hand-recorded likes, shares and comments, summed per social account.', 'muted')]),
+          pageHeader(
+            [heading('Engagement by account'), text('Published posts and their hand-recorded likes, shares and comments, summed per social account.', 'muted')], [
             button('Social Marketing', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'megaphone'),
-          ], 'between'),
+          ]),
           ...containerNotices(),
           stats([
             stat('Published posts', countOf("r.status === 'published'"), 'megaphone', loading('posts')),
@@ -267,5 +266,5 @@ function engagementPage() {
 
 export function buildPages() {
   const documents = [homePage(), upcomingPage(), engagementPage(), ...recordKinds.map(recordForm), settingsForm()]
-  return Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)]))
+  return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

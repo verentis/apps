@@ -45,90 +45,124 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Approvals",
+          "icon": "file-check",
+          "active": "by-type.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "requests.page.yaml",
+              "label": "All requests",
+              "icon": "list"
+            },
+            {
+              "id": "pending.page.yaml",
+              "label": "Inbox",
+              "icon": "inbox",
+              "count": "{{ (data.rows || []).filter(r => r.status === 'submitted').length }}"
+            },
+            {
+              "id": "by-type.page.yaml",
+              "label": "Types",
+              "icon": "shapes"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/approvals/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/approvals.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Approvals by type",
+              "note": "Every approval type with its threshold and its requests, counted by status."
+            },
+            "children": []
+          },
           {
             "type": "canvas.stack",
             "layout": {
               "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
+                "gap": 2
               }
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Approvals by type"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Every approval type with its threshold and its requests, counted by status.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Requests per type"
+                }
               },
               {
-                "type": "canvas.button",
+                "type": "canvas.chart",
                 "props": {
-                  "label": "Approvals",
-                  "variant": "ghost",
-                  "icon": "file-check",
-                  "size": "sm"
-                },
-                "on": {
-                  "click": [
-                    {
-                      "open-file": {
-                        "path": "/applications/approvals/canvas/home.page.yaml"
-                      }
-                    }
-                  ]
+                  "rows": "{{ (data.summary || []).map(s => ({ path: s.path, label: s.name || s.code, submitted: s.submitted || 0, approved: s.approved || 0, refused: s.refused || 0 })) }}",
+                  "showLegend": true,
+                  "emptyText": "Nothing to chart yet",
+                  "kind": "stacked-hbar",
+                  "x": "label",
+                  "y": [
+                    "submitted",
+                    "approved",
+                    "refused"
+                  ],
+                  "labels": {
+                    "submitted": "Waiting",
+                    "approved": "Approved",
+                    "refused": "Refused"
+                  },
+                  "palette": {
+                    "submitted": "warning",
+                    "approved": "success",
+                    "refused": "danger"
+                  },
+                  "format": "integer"
                 }
               }
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "{{ data.$requests.error }}"
-            },
-            "rules": {
-              "visible": "data.$requests.status === 'error'"
+              "for": "requests",
+              "compact": true
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "{{ data.$types.error }}"
-            },
-            "rules": {
-              "visible": "data.$types.status === 'error'"
+              "for": "types",
+              "compact": true
             }
           },
           {
@@ -224,6 +258,10 @@
                 }
               ],
               "emptyText": "No approval types",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
               "clickable": true
             },
             "on": {
@@ -231,7 +269,8 @@
                 {
                   "open-file": {
                     "path": "{{ event.path }}",
-                    "mode": "edit"
+                    "mode": "edit",
+                    "open": "side"
                   }
                 }
               ]

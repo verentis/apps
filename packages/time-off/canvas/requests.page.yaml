@@ -38,90 +38,78 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Time Off",
+          "icon": "calendar-off",
+          "active": "requests.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "requests.page.yaml",
+              "label": "Requests",
+              "icon": "kanban",
+              "count": "{{ (data.rows || []).filter(r => r.status === 'submitted').length }}"
+            },
+            {
+              "id": "allocations.page.yaml",
+              "label": "Balances",
+              "icon": "scale"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/time-off/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/time-off.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Leave requests by status",
+              "note": "Every active leave request, grouped by its status. Click a row to open the request."
             },
-            "children": [
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Leave requests by status"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Every active leave request, grouped by its status. Click a row to open the request.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.button",
-                "props": {
-                  "label": "Time Off",
-                  "variant": "ghost",
-                  "icon": "calendar-off",
-                  "size": "sm"
-                },
-                "on": {
-                  "click": [
-                    {
-                      "open-file": {
-                        "path": "/applications/time-off/canvas/home.page.yaml"
-                      }
-                    }
-                  ]
-                }
-              }
-            ]
+            "children": []
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /leave-types folder could not be read. Reinstall Time Off to recreate it."
-            },
-            "rules": {
-              "visible": "data.$types.status === 'error'"
+              "for": "types",
+              "compact": true,
+              "description": "The /leave-types folder could not be read. Reinstall Time Off to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /leave-requests folder could not be read. Reinstall Time Off to recreate it."
-            },
-            "rules": {
-              "visible": "data.$requests.status === 'error'"
+              "for": "requests",
+              "compact": true,
+              "description": "The /leave-requests folder could not be read. Reinstall Time Off to recreate it."
             }
           },
           {
@@ -245,6 +233,10 @@
                         }
                       ],
                       "emptyText": "No draft requests",
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
                       "clickable": true
                     },
                     "on": {
@@ -252,7 +244,8 @@
                         {
                           "open-file": {
                             "path": "{{ event.path }}",
-                            "mode": "edit"
+                            "mode": "edit",
+                            "open": "side"
                           }
                         }
                       ]
@@ -305,6 +298,10 @@
                         }
                       ],
                       "emptyText": "No submitted requests",
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
                       "clickable": true
                     },
                     "on": {
@@ -312,7 +309,8 @@
                         {
                           "open-file": {
                             "path": "{{ event.path }}",
-                            "mode": "edit"
+                            "mode": "edit",
+                            "open": "side"
                           }
                         }
                       ]
@@ -365,6 +363,10 @@
                         }
                       ],
                       "emptyText": "No approved requests",
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
                       "clickable": true
                     },
                     "on": {
@@ -372,7 +374,8 @@
                         {
                           "open-file": {
                             "path": "{{ event.path }}",
-                            "mode": "edit"
+                            "mode": "edit",
+                            "open": "side"
                           }
                         }
                       ]
@@ -425,6 +428,10 @@
                         }
                       ],
                       "emptyText": "No refused requests",
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
                       "clickable": true
                     },
                     "on": {
@@ -432,7 +439,8 @@
                         {
                           "open-file": {
                             "path": "{{ event.path }}",
-                            "mode": "edit"
+                            "mode": "edit",
+                            "open": "side"
                           }
                         }
                       ]

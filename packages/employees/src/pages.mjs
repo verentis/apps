@@ -1,10 +1,11 @@
 // Generates the Employees Canvas documents: a bound form per record kind, the settings form, the launch page,
 // the employee directory and the department summary. Terminating (status transition, termination date, locking)
 // is done by the action script the employee form runs.
+import { views } from './views.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   humanize, iconName, options, openFile, page, panel, projectRegistration, recordButtons, row, scriptAction,
-  sectionCards, stat, stats, status, table, tabs, text, toneExpression,
+  sectionCards, stat, stats, status, table, tabs, text, toneExpression, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { containers, installRoot, mimeTypes, recordKinds, schemaId, settingsPath } from './contracts.mjs'
 import { entities, postScriptPath, settingsFields } from './app.mjs'
@@ -29,6 +30,31 @@ const employeeSources = {
 }
 
 /** Kind-specific data, access, actions, header buttons, state and notices of a record form. */
+
+// What this person has in the other HR and operations apps, matched by name. A section shows only when its app
+// is installed (its folder exists); each record opens beside the profile.
+const elsewhere = [
+  { key: 'leave', title: 'Time off', path: '/leave-requests', mime: 'application/vnd.verentis.time-off.request+json', field: 'employee',
+    item: { title: 'type', subtitle: ['startDate', 'endDate'], badge: 'status' }, map: "type: e.data.type || 'Leave', startDate: e.data.startDate, endDate: e.data.endDate, status: e.data.status" },
+  { key: 'hours', title: 'Timesheets', path: '/timesheets', mime: 'application/vnd.verentis.timesheets.entry+json', field: 'employee',
+    item: { title: 'date', subtitle: ['hours'], badge: 'status' }, map: "date: e.data.date, hours: (e.data.hours || '0') + ' h', status: e.data.status" },
+  { key: 'reviews', title: 'Appraisals', path: '/appraisals', mime: 'application/vnd.verentis.appraisals.appraisal+json', field: 'employee',
+    item: { title: 'period', subtitle: ['score'], badge: 'status' }, map: "period: e.data.period || e.data.code, score: e.data.overallScore ? 'Score ' + e.data.overallScore : '', status: e.data.status" },
+  { key: 'shifts', title: 'Shifts', path: '/shifts', mime: 'application/vnd.verentis.planning.shift+json', field: 'employee',
+    item: { title: 'date', subtitle: ['time'], badge: 'status' }, map: "date: e.data.date, time: [e.data.startTime, e.data.endTime].filter(t => t).join(' to '), status: e.data.status" },
+  { key: 'tickets', title: 'Tickets', path: '/tickets', mime: 'application/vnd.verentis.helpdesk.ticket+json', field: 'assignee',
+    item: { title: 'subject', subtitle: ['code'], badge: 'stage' }, map: "subject: e.data.subject || e.data.code, code: e.data.code, stage: e.data.stage" },
+]
+const elsewhereRows = app => `(data.${app.key} || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && String(e.data.${app.field} || '').trim().toLowerCase() === String(form.values.name || '').trim().toLowerCase()).map(e => ({ path: e.path, ${app.map} })).sort((a, b) => String(b.date || b.startDate || '') < String(a.date || a.startDate || '') ? -1 : 1)`
+const elsewhereCards = () => grid(elsewhere.map(app => ({
+  ...card(app.title, [{
+    type: 'canvas.related',
+    props: { rows: `{{ ${elsewhereRows(app)} }}`, item: app.item, limit: 5, emptyText: `Nothing in ${app.title} for this person` },
+    on: { open: [openFile('{{ event.row.path }}', 'edit', 'side')], more: [openFile(app.path)] },
+  }]),
+  rules: { visible: `data.$${app.key}.status === 'ready'` },
+})))
+
 function recordExtras(kind) {
   if (kind === 'department') {
     return {
@@ -42,10 +68,12 @@ function recordExtras(kind) {
       departmentsAccess('Choose the department an employee belongs to'),
       employeesAccess('Choose an employee\'s manager'),
       schemaAccess,
+      ...elsewhere.map(app => ({ path: app.path, reason: `Show this person's ${app.title.toLowerCase()} (when that app is installed)` })),
     ],
     data: {
       ...departmentSources,
       ...employeeSources,
+      ...Object.fromEntries(elsewhere.map(app => [app.key, { kind: 'folder', path: app.path, contents: true, 'mime-pattern': app.mime }])),
       manageroptions: { kind: 'computed', expr: options('staff', "e.data.name || ''", "e.data.status !== 'terminated'") },
     },
     state: { terminationdate: '' },
@@ -74,23 +102,22 @@ function recordForm(kind) {
   const entity = entities[kind]
   const extras = recordExtras(kind)
   const readOnly = `${archived} || (${extras.locked})`
-  const header = row([
-    column([
-      row([
-        heading(`{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`),
+  const header = recordHeader(
+    `{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`,
+    [
         ...(entity.status ? [badge(humanize(entity.status), toneExpression(entity.status, statusTones), { visible: `!!form.values.${entity.status}` })] : []),
         badge('Archived', 'warning', { visible: archived }, 'archive'),
-      ]),
-      text(`${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`, 'muted'),
-    ]),
-    row([...extras.buttons, recordButtons(extras.locked)]),
-  ], 'between')
+    ],
+    `${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`,
+    [...extras.buttons, recordButtons(extras.locked)],
+  )
   const tree = [
     header,
-    ...status('record'),
-    badge(`This ${entity.singular.toLowerCase()} is archived. Restore it to edit.`, 'warning', { visible: archived }, 'archive'),
+    ...status('record'), ...lifecycle(entity),
+    archivedAlert(entity.singular),
     ...extras.notices,
     grid(sectionCards(entity.sections, readOnly)),
+    ...(kind === 'employee' ? [elsewhereCards()] : []),
   ]
   return {
     file: `${kind}.form.yaml`,
@@ -113,13 +140,13 @@ function settingsForm() {
       access: [departmentsAccess('Choose the default department for new employees'), schemaAccess],
       data: departmentSources,
       tree: [
-        row([
-          column([heading('Employees settings'), text('The default department for new employees. Code prefixes are app settings, managed with the installed app.', 'muted')]),
+        pageHeader(
+          [heading('Employees settings'), text('The default department for new employees. Code prefixes are app settings, managed with the installed app.', 'muted')], [
           row([
             button('Reset', [{ 'reset-form': {} }], { disabled: 'form.saving || !form.dirty' }, 'ghost'),
             button('Save', [{ save: {} }, { toast: { message: 'Saved', variant: 'success' } }], { disabled: 'form.saving || !form.dirty || form.invalid' }, undefined, 'save'),
           ]),
-        ], 'between'),
+        ]),
         ...status('record'),
         ...status('departments', `The ${containers.departments.path} folder could not be read. Reinstall Employees to recreate it.`),
         grid([card('Defaults', [grid(settingsFields.map(field => formControl(field, null)))])], 1),
@@ -158,14 +185,14 @@ function homePage() {
         access: pageAccess('Count employees and show the departments and the directory'),
         data: pageSources,
         tree: page([
-          row([
-            column([heading('Employees'), text('Departments and employees are files in your workspace. Keep the directory in /employees, organize it by department, and terminate employees from their forms.', 'muted')]),
+          pageHeader(
+            [heading('Employees'), text('Departments and employees are files in your workspace. Keep the directory in /employees, organize it by department, and terminate employees from their forms.', 'muted')], [
             row([
               button('Directory', [openFile(`${installRoot}/canvas/directory.page.yaml`)], undefined, 'outline', 'users'),
               button('Departments', [openFile(`${installRoot}/canvas/departments.page.yaml`)], undefined, 'outline', 'building-2'),
               button('Settings', [openFile(settingsPath, 'edit')], undefined, 'ghost', 'settings'),
             ]),
-          ], 'between'),
+          ]),
           stats([
             stat('Active', countOf("r.status === 'active'"), 'user-round', loading('staff')),
             stat('On leave', countOf("r.status === 'on-leave'"), 'plane', loading('staff')),
@@ -203,10 +230,10 @@ function directoryPage() {
         data: pageSources,
         state: { showterminated: false },
         tree: page([
-          row([
-            column([heading('Employee directory'), text('Every employee with their department, manager and status. Click a row to open the employee.', 'muted')]),
+          pageHeader(
+            [heading('Employee directory'), text('Every employee with their department, manager and status. Click a row to open the employee.', 'muted')], [
             button('Employees', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'user-round'),
-          ], 'between'),
+          ]),
           ...containerNotices(),
           stats([
             stat('Active', countOf("r.status === 'active'"), 'user-round', loading('staff')),
@@ -233,10 +260,10 @@ function departmentsPage() {
         access: pageAccess('Sum employees per department with their managers'),
         data: pageSources,
         tree: page([
-          row([
-            column([heading('Departments'), text('Headcount per department: active and on-leave employees, with the department manager. Click a department to open it.', 'muted')]),
+          pageHeader(
+            [heading('Departments'), text('Headcount per department: active and on-leave employees, with the department manager. Click a department to open it.', 'muted')], [
             button('Employees', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'user-round'),
-          ], 'between'),
+          ]),
           ...containerNotices(),
           stats([
             stat('Departments', `{{ (data.departments || []).filter(e => ${active}).length }}`, 'building-2', loading('departments')),
@@ -253,5 +280,5 @@ function departmentsPage() {
 
 export function buildPages() {
   const documents = [homePage(), directoryPage(), departmentsPage(), ...recordKinds.map(recordForm), settingsForm()]
-  return Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)]))
+  return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

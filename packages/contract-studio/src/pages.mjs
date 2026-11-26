@@ -1,6 +1,7 @@
+import { views } from './views.mjs'
 import {
   apiVersion, boundForm, button, card, folder, grid, heading, openFile, page,
-  projectRegistration, row, scriptPermissions, status, table, text,
+  projectRegistration, row, scriptPermissions, status, table, text, appNavigation,
 } from '../../../tools/file-apps/canvas.mjs'
 import { catalog, contracts, mime, packs, precedents, root, schemaId } from '../scripts/draft/model.mjs'
 
@@ -42,7 +43,7 @@ function home() {
         'Publish this firm-approved revision? Revisions cannot be edited here.'),
       },
       tree: page([
-        heading('Contract Studio'), text('Draft ordered points, review their sources, then issue a clean agreement. Use synthetic material until workspace isolation is verified.', 'muted'),
+        heading('Contract Studio'), text('Draft ordered points, review their sources, then issue a clean agreement.', 'muted'),
         card('Start an agreement', [grid([control('code','Unique agreement code'), control('title','Client-facing title'),
           control('matter','Optional matter path', 'input', { placeholder: '/legal-matters/MAT-0001 (not opened or verified)' })]),
         button('Create and open draft','create')]),
@@ -101,6 +102,17 @@ function contract() {
       ...status('record'),
       display(card('Agreement details', [button('Load current details', [set('title',expr('form.values.title')),set('matter',expr('form.values.matter'))],undefined,'ghost'),
         grid([control('title','Client-facing title'),control('matter','Optional matter path')]),button('Update agreement details','metadata')]), draft),
+      card('Agreement', [text('The points as the client will read them, numbered as they stand. Click a point to load it into the editor below.', 'muted'), {
+        type: 'canvas.outline',
+        props: {
+          readOnly: true, selectable: true, selected: '{{ state.pointId }}',
+          value: expr("(form.values.points || []).map(p => ({ id: p.id, level: 0, text: p.origin === 'firm' ? (p.variation || (p.precedent && p.precedent.wording) || '') : (p.wording || '') }))"),
+          // Confirmed values (one name=value per line on each point) fill the {{ name }} chips.
+          variables: expr("(form.values.points || []).map(p => String(p.bindings || '')).join('\\n').split('\\n').filter(line => line.indexOf('=') > 0).reduce((all, line) => withPath(all, line.slice(0, line.indexOf('=')).trim(), line.slice(line.indexOf('=') + 1).trim()), {})"),
+        },
+        on: { select: [set('pointId', expr('event.id')), set('wording', expr("((form.values.points || []).find(p => p.id === event.id) || {}).origin === 'firm' ? (((form.values.points || []).find(p => p.id === event.id) || {}).variation || '') : (((form.values.points || []).find(p => p.id === event.id) || {}).wording || '')")),
+          set('bindings', expr("((form.values.points || []).find(p => p.id === event.id) || {}).bindings || ''")), set('note', expr("((form.values.points || []).find(p => p.id === event.id) || {}).note || ''")), set('position', expr('event.index + 1')), set('result', {})] },
+      }]),
       card('Points and sources', [text('Select a row to load it into the editor. Point IDs stay fixed when numbering changes. No citation or internal note is copied into the client document.'), listing]),
       display(card('Point editor', [grid([control('pointId','Stable point ID'),control('position','Move to position','number',{ min:1, step:1 })]),
         control('wording','Inline wording / local variation','textarea',{ description:'Leave blank on a firm point to retain the approved template. To refer to another point, put point:ID inside double braces.' }),
@@ -132,4 +144,4 @@ function contract() {
   })
 }
 
-export const pages = Object.fromEntries([['home.page.yaml',home()],['contract.form.yaml',contract()]].map(([name,doc]) => [name,projectRegistration(doc,`${root}/canvas/${name}`)]))
+export const pages = appNavigation(Object.fromEntries([['home.page.yaml',home()],['contract.form.yaml',contract()]].map(([name,doc]) => [name,projectRegistration(doc,`${root}/canvas/${name}`)])), root, views)

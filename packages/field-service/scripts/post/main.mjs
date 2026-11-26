@@ -4,22 +4,14 @@
 // (BigInt, never floats) and updates the task conditionally (If-Match), so a concurrent edit fails instead of
 // being overwritten.
 //
-// Integrity model: when Invoicing is installed (its /invoices container exists), completing drafts an invoice
-// under the task's own code, create-only (If-None-Match: *), so a retried completion never drafts twice; a run
-// interrupted between the invoice draft and the task update completes on retry. Re-running a finished operation
-// returns a friendly message instead of failing.
-import { randomUUID } from 'node:crypto'
+// Completing returns what Invoicing needs to draft the invoice; the form or board asks Invoicing through the
+// platform (Invoicing returns the same draft when asked again) and `record-invoice` stores the link. Field Service
+// never writes Invoicing's files. Re-running a finished operation returns a friendly message instead of failing.
 
-export const operations = ['schedule', 'start', 'complete', 'cancel']
+export const operations = ['schedule', 'start', 'complete', 'cancel', 'record-invoice']
 export const fieldService = {
   tasks: '/field-tasks',
   mime: 'application/vnd.verentis.field-service.task+json',
-}
-/** Invoicing's public file contract: completing a task drafts an invoice here when the container exists. */
-export const invoicing = {
-  invoices: '/invoices',
-  invoiceMime: 'application/vnd.verentis.invoicing.invoice+json',
-  invoiceSchemaId: 'https://schemas.verentis.io/invoicing/v1/invoice.schema.json',
 }
 /** The stages a task can be cancelled from. */
 export const cancellableStages = ['new', 'scheduled', 'on-site']
@@ -130,60 +122,55 @@ export async function startTask(files, path, { now }) {
   return { message: `Started ${label(record)}`, path }
 }
 
-/** A draft invoice for the completed task, in Invoicing's vendor MIME: a labour line plus the materials. */
-export function draftInvoice(record, { now, uuid }) {
-  const emptyParty = { name: '', legalName: '', email: '', phone: '', taxIdentifier: '', address: { lines: [], city: '', region: '', postalCode: '', country: '' } }
+/**
+ * What Invoicing needs to draft the completed task's invoice (its `create-draft-invoice` operation): a labour line
+ * plus the materials. Rates and currency are completed in Invoicing. The task form (or board) asks Invoicing through
+ * the platform; Field Service never writes Invoicing's files.
+ */
+export function invoiceRequest(path, record) {
   return {
-    $schema: invoicing.invoiceSchemaId, schemaVersion: 1, kind: 'invoice', id: uuid(), state: 'active',
-    createdAt: now, updatedAt: now, code: record.code, issueDate: '', dueDate: '', currency: '',
-    reference: `Field task ${record.code}`, customerRef: record.customerRef || '',
-    customer: { ...emptyParty, name: record.customerName || '' },
+    source: { path, code: record.code },
+    reference: `Field task ${record.code}`,
+    ...(record.customerRef ? { customerRef: record.customerRef } : {}),
+    customer: { name: record.customerName || '' },
     lines: [
-      { description: `Labour — ${record.hours} h on site`, quantity: record.hours, unitPrice: '', taxRate: '' },
+      { description: `Labour — ${record.hours} h on site`, quantity: record.hours, unitPrice: '' },
       ...(record.materials ?? []).filter(material => String(material?.quantity ?? '').trim() || String(material?.unitPrice ?? '').trim())
-        .map(material => ({ description: material.description || '', quantity: material.quantity || '0', unitPrice: material.unitPrice || '', taxRate: '' })),
+        .map(material => ({ description: material.description || 'Materials', quantity: material.quantity || '0', unitPrice: material.unitPrice || '' })),
     ],
     notes: `Drafted from Field Service task ${record.code}.`,
-    status: 'draft',
   }
+}
+
+/** Records the invoice Invoicing drafted for a completed task (the path its operation returned). */
+export async function recordInvoice(files, path, invoicePath, { now }) {
+  const task = await readTask(files, path)
+  const { record } = task
+  if (record.stage !== 'done') fail(`${label(record)} is not done.`)
+  if (typeof invoicePath !== 'string' || !invoicePath.startsWith('/invoices/')) fail('Invoicing returned no invoice.')
+  if (record.invoice === invoicePath) return { message: `${label(record)} already links ${invoicePath.split('/').pop()}`, path }
+  Object.assign(record, { invoice: invoicePath, updatedAt: now })
+  await saveTask(files, task)
+  return { message: `Drafted invoice ${invoicePath.split('/').pop()} for ${label(record)}`, path }
 }
 
 /**
  * on-site → done: checks the hours, computes the materials total, drafts an invoice when Invoicing's /invoices
  * container exists (create-only under the task's code, so retries never draft twice), stamps completedAt and locks.
  */
-export async function completeTask(files, path, { now, uuid }) {
+export async function completeTask(files, path, { now }) {
   const task = await readTask(files, path)
   const { record } = task
-  if (record.stage === 'done') return { message: `${label(record)} is already done`, path }
+  if (record.stage === 'done') {
+    return { message: `${label(record)} is already done`, path, ...(record.invoice ? {} : { invoiceRequest: invoiceRequest(path, record) }) }
+  }
   if (record.stage !== 'on-site') fail(`${label(record)} is ${record.stage ?? 'in no stage'}; only on-site tasks can be completed.`)
   record.hours = checkHours(record.hours, record)
   record.materialsTotal = materialsTotal(record.materials, record)
-  let invoicePath = ''
-  if (await files.stat(invoicing.invoices)) {
-    invoicePath = `${invoicing.invoices}/${record.code}`
-    try {
-      await files.write(invoicePath, JSON.stringify(draftInvoice(record, { now, uuid }), null, 2),
-        { contentType: invoicing.invoiceMime, ifNoneMatch: '*' })
-    } catch (error) {
-      if (statusOf(error) !== 412) throw error
-      // A file already exists under this task's code: accept it only when it is this task's own draft
-      // from an earlier, interrupted run — never silently link an unrelated invoice.
-      let existing
-      try {
-        existing = await files.readJson(invoicePath)
-      } catch {
-        existing = undefined
-      }
-      if (existing?.notes !== `Drafted from Field Service task ${record.code}.`) {
-        fail(`Invoice ${invoicePath} already exists and was not drafted from ${label(record)}; move it aside or change the task code, then complete again.`)
-      }
-    }
-  }
-  Object.assign(record, { stage: 'done', completedAt: now, updatedAt: now, ...(invoicePath ? { invoice: invoicePath } : {}) })
+  Object.assign(record, { stage: 'done', completedAt: now, updatedAt: now })
   await saveTask(files, task)
-  const invoiced = invoicePath ? ` and drafted invoice ${record.code}` : ''
-  return { message: `Completed ${label(record)} (materials ${record.materialsTotal})${invoiced}`, path }
+  // The form asks Invoicing (when installed) to draft the invoice from this, then records the link.
+  return { message: `Completed ${label(record)} (materials ${record.materialsTotal})`, path, invoiceRequest: invoiceRequest(path, record) }
 }
 
 /** new/scheduled/on-site → cancelled; the task form locks itself once cancelled. */
@@ -199,13 +186,14 @@ export async function cancelTask(files, path, { now }) {
   return { message: `Cancelled ${label(record)}`, path }
 }
 
-export async function run(parameters, files, { now = nowIso(), uuid = randomUUID } = {}) {
+export async function run(parameters, files, { now = nowIso() } = {}) {
   const { operation, path } = parameters ?? {}
-  const options = { now, uuid }
+  const options = { now }
   if (operation === 'schedule') return scheduleTask(files, path, options)
   if (operation === 'start') return startTask(files, path, options)
   if (operation === 'complete') return completeTask(files, path, options)
   if (operation === 'cancel') return cancelTask(files, path, options)
+  if (operation === 'record-invoice') return recordInvoice(files, path, parameters.invoice, options)
   return fail(`Unsupported operation ${JSON.stringify(operation ?? '')}. Expected one of ${operations.join(', ')}.`)
 }
 

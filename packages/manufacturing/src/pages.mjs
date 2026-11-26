@@ -2,12 +2,13 @@
 // and the manufacturing order list. Production rules (active BoMs, positive quantities, demand computation,
 // stock-move emission, immutability once done) are enforced by the production script the forms run; the forms
 // only lock what the script has confirmed or completed.
+import { views } from './views.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, grid, heading, humanize,
-  iconName, linkButton, openFile, options, page, panel, projectRegistration, recordButtons, row, scriptAction,
-  sectionCards, stat, stats, status, table, tabs, text, toneExpression,
+  iconName, linkButton, openFile, options, page, panel, projectRegistration, recordButtons, row, scriptAction, appOperationsSource, offers, withAppCall,
+  sectionCards, stat, stats, status, table, tabs, text, toneExpression, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
-import { containers, installRoot, inventory, mimeTypes, recordKinds, schemaId } from './contracts.mjs'
+import { containers, installRoot, inventory, mimeTypes, products, recordKinds, schemaId } from './contracts.mjs'
 import { entities, postScriptPath } from './app.mjs'
 
 export { collectSteps, documentFileAccess, projectRegistration } from '../../../tools/file-apps/canvas.mjs'
@@ -23,21 +24,30 @@ const draft = "(!form.values.status || form.values.status === 'draft')"
 const units = amount => `Math.round(Number(${amount} || 0) * 10000)`
 const display = value => `(${value} / 10000)`
 
+const doneStock = "(data.stockmoves || []).filter(m => m.kind === 'file' && m.data && m.data.status === 'done')"
+const onHand = product => `${doneStock}.reduce((s, m) => s + (m.data.product === ${product} ? (m.data.toWarehouse ? Number(m.data.quantity || 0) : 0) - (m.data.fromWarehouse ? Number(m.data.quantity || 0) : 0) : 0), 0)`
+const productLabel = product => `((((data.products || []).find(p => p.path === ${product}) || {}).data || {}).name || ${product})`
+const previewExpr = `((((data.boms || []).find(b => b.path === form.values.bom) || {}).data || {}).components || []).filter(c => !!c.product).map(c => ({ product: c.product, name: c.name || ${productLabel('c.product')}, needed: Number(c.quantity || 0) * Number(form.values.quantity || 0), onhand: ${onHand('c.product')} })).map(r => ({ product: r.product, name: r.name, needed: r.needed, onhand: r.onhand, short: r.needed - r.onhand }))`
+
 const bomSources = {
   boms: folder(containers.boms.path, mimeTypes.bom),
   bomoptions: { kind: 'computed', expr: options('boms', "e.data.productName || ''") },
 }
 const productSources = {
-  products: folder(inventory.products, inventory.productMime),
+  products: folder(products.path, products.mime),
   productoptions: { kind: 'computed', expr: options('products', "(e.data.name || '') + (e.data.sku ? ' (' + e.data.sku + ')' : '')") },
 }
 
 /** Kind-specific data, access, actions, header buttons and links of a record form. */
+/** Inventory records a completed order's stock moves through its API; the order's code keys the call. */
+const orderProduction = { app: 'inventory', operation: 'record-production', script: postScriptPath, recordOperation: 'record-moves',
+  parameter: 'moves', field: 'productionRequest', returned: 'moves', key: "'production-' + form.values.code" }
+
 function recordExtras(kind) {
   if (kind === 'bom') {
     return {
       locked: 'false',
-      access: [{ path: inventory.products, reason: 'Offer Inventory products to build (when Inventory is installed)' }, schemaAccess],
+      access: [{ path: products.path, reason: 'Offer the products to build (when Products is installed)' }, schemaAccess],
       data: productSources,
       notices: [
         stats([
@@ -53,8 +63,20 @@ function recordExtras(kind) {
   const moveRows = `{{ (form.values.moves || []).map(m => ({ path: m.path, move: m.path.split('/').pop() })) }}`
   return {
     locked: `!${draft}`,
-    access: [{ path: containers.boms.path, reason: 'Choose the bill of materials to build' }, schemaAccess],
-    data: bomSources,
+    access: [
+      { path: containers.boms.path, reason: 'Choose the bill of materials to build' },
+      { path: inventory.moves, reason: 'Show what is in stock for the components (when Inventory is installed)' },
+      { path: products.path, reason: 'Name the components (when Products is installed)' },
+      schemaAccess,
+    ],
+    data: {
+      ...bomSources,
+      ...appOperationsSource,
+      stockmoves: folder(inventory.moves, inventory.moveMime),
+      products: folder(products.path, products.mime),
+      // Before confirming: each BoM component × the quantity to make, against done stock across warehouses.
+      preview: { kind: 'computed', expr: previewExpr },
+    },
     notices: [
       stats([
         stat('Produces', "{{ form.values.productName || '—' }}", 'package'),
@@ -67,15 +89,24 @@ function recordExtras(kind) {
       button('Start', 'start', { visible: "form.values.status === 'confirmed'", disabled: idle }, undefined, 'play'),
       button('Complete', 'complete', { visible: "form.values.status === 'in-progress'", disabled: idle }, undefined, 'check-check'),
       button('Cancel order', 'cancel', { visible: `(${draft} || form.values.status === 'confirmed') && !(${archived})`, disabled: idle }, 'ghost', 'x'),
+      // Done but no stock moves yet (Inventory arrived later, or recording failed): ask Inventory again.
+      button('Record stock moves', 'record-production', { visible: `form.values.status === 'done' && !(form.values.moves && form.values.moves.length) && ${offers('inventory', 'record-production')}`, disabled: idle }, 'outline', 'arrow-left-right'),
     ],
     links: [linkButton('Bill of materials', 'form.values.bom', 'list-tree')],
     panels: [
+      { ...card('Will it build?', [
+        text('The BoM components × the quantity to make, against what Inventory has on hand. Confirming computes the demand for real.', 'muted'),
+        table("{{ (data.preview || []).map(r => ({ path: r.product, product: r.name, needed: r.needed.toFixed(2), onhand: r.onhand.toFixed(2), short: r.short > 0 ? r.short.toFixed(2) : '' })) }}",
+          [['product', 'Component'], ['needed', 'Needed', 'end'], ['onhand', 'On hand', 'end'], ['short', 'Short', 'end']], 'Choose a bill of materials and a quantity'),
+        { type: 'canvas.alert', props: { tone: 'warning', title: 'Not enough stock', text: "{{ (data.preview || []).filter(r => r.short > 0).length + ' component(s) short. The order can still be confirmed; production waits for stock.' }}" },
+          rules: { visible: '(data.preview || []).some(r => r.short > 0)' } },
+      ]), rules: { visible: draft } },
       card('Component demand', [
         text('Computed from the BoM components × the quantity to produce when the order is confirmed.', 'muted'),
         table(demandRows, [['product', 'Product'], ['name', 'Name'], ['quantity', 'Quantity', 'end']], 'Not confirmed yet'),
       ]),
       card('Stock moves', [
-        text('Consumption and production moves emitted into /stock-moves on completion, when Inventory is installed.', 'muted'),
+        text('Inventory records the consumption and production moves when the order completes, when Inventory is installed.', 'muted'),
         table(moveRows, [['move', 'Move'], ['path', 'Path']], 'No stock moves emitted', true),
       ]),
     ],
@@ -86,9 +117,10 @@ function recordExtras(kind) {
       start: scriptAction(postScriptPath, 'start-mo', {
         confirm: { title: 'Start production', message: 'Start production of this manufacturing order?' },
       }),
-      complete: scriptAction(postScriptPath, 'complete-mo', {
-        confirm: { title: 'Complete order', message: 'Complete this manufacturing order? When Inventory is installed, consumption and production stock moves are written to /stock-moves. Done orders cannot be edited.' },
-      }),
+      complete: withAppCall(scriptAction(postScriptPath, 'complete-mo', {
+        confirm: { title: 'Complete order', message: 'Complete this manufacturing order? When Inventory is installed, it records the consumption and production stock moves. Done orders cannot be edited.' },
+      }), orderProduction),
+      'record-production': withAppCall(scriptAction(postScriptPath, 'complete-mo', {}), orderProduction),
       cancel: { steps: [
         { confirm: { title: 'Cancel order', message: 'Cancel this manufacturing order? Cancelled orders cannot be confirmed or completed.' } },
         { 'patch-form': { values: { status: 'cancelled', cancelledAt: '{{ Date() }}', updatedAt: '{{ Date() }}' } } },
@@ -104,21 +136,19 @@ function recordForm(kind) {
   const extras = recordExtras(kind)
   const locked = extras.locked
   const readOnly = `${archived} || (${locked})`
-  const header = row([
-    column([
-      row([
-        heading(`{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`),
+  const header = recordHeader(
+    `{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`,
+    [
         ...(entity.status ? [badge(humanize(entity.status), toneExpression(entity.status, statusTones), { visible: `!!form.values.${entity.status}` })] : []),
         badge('Archived', 'warning', { visible: archived }, 'archive'),
-      ]),
-      text(`${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`, 'muted'),
-    ]),
-    row([...extras.buttons, recordButtons(locked)]),
-  ], 'between')
+    ],
+    `${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`,
+    [...extras.buttons, recordButtons(locked)],
+  )
   const tree = [
     header,
-    ...status('record'),
-    badge(`This ${entity.singular.toLowerCase()} is archived. Restore it to edit.`, 'warning', { visible: archived }, 'archive'),
+    ...status('record'), ...lifecycle(entity),
+    archivedAlert(entity.singular),
     ...(extras.links.length ? [row(extras.links)] : []),
     ...extras.notices,
     grid(sectionCards(entity.sections, readOnly)),
@@ -164,13 +194,13 @@ function homePage() {
         ],
         data: { ...bomSources, ...orderSources },
         tree: page([
-          row([
-            column([heading('Manufacturing'), text('Bills of materials and manufacturing orders are files in your workspace. Draft an order in its folder, then confirm, start and complete it from its form.', 'muted')]),
+          pageHeader(
+            [heading('Manufacturing'), text('Bills of materials and manufacturing orders are files in your workspace. Draft an order in its folder, then confirm, start and complete it from its form.', 'muted')], [
             row([
               button('Manufacturing orders', [openFile(`${installRoot}/canvas/orders.page.yaml`)], undefined, 'outline', 'factory'),
               button('Bills of materials', [openFile(`${installRoot}/canvas/boms.page.yaml`)], undefined, 'outline', 'list-tree'),
             ]),
-          ], 'between'),
+          ]),
           stats([
             stat('Bills of materials', count('boms'), 'list-tree', loading('boms')),
             stat('Draft orders', count('orders', "(e.data.status || 'draft') === 'draft'"), 'file-pen', loading('orders')),
@@ -205,13 +235,13 @@ function bomsPage() {
         access: [{ path: containers.boms.path, reason: 'List bills of materials' }],
         data: bomSources,
         tree: page([
-          row([
-            column([heading('Bills of materials'), text('What each product is built from. Archived BoMs cannot be confirmed against.', 'muted')]),
+          pageHeader(
+            [heading('Bills of materials'), text('What each product is built from. Archived BoMs cannot be confirmed against.', 'muted')], [
             row([
               button('Open /bills-of-materials', [openFile(containers.boms.path)], undefined, 'outline', 'folder-open'),
               button('Manufacturing', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'factory'),
             ]),
-          ], 'between'),
+          ]),
           ...status('boms'),
           table(rows, [['code', 'BoM'], ['productName', 'Product'], ['outputQty', 'Output', 'end'], ['components', 'Components', 'end'], ['operations', 'Operations', 'end']],
             'No bills of materials yet. Use New in /bills-of-materials.', true),
@@ -233,13 +263,13 @@ function ordersPage() {
         data: orderSources,
         state: { showclosed: false },
         tree: page([
-          row([
-            column([heading('Manufacturing orders'), text('Orders move draft → confirmed → in progress → done. Confirmed orders are locked; done orders emitted their stock moves.', 'muted')]),
+          pageHeader(
+            [heading('Manufacturing orders'), text('Orders move draft → confirmed → in progress → done. Confirmed orders are locked; done orders emitted their stock moves.', 'muted')], [
             row([
               button('Open /manufacturing-orders', [openFile(containers.orders.path)], undefined, 'outline', 'folder-open'),
               button('Manufacturing', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'factory'),
             ]),
-          ], 'between'),
+          ]),
           ...status('orders'),
           stats([
             stat('Draft', count('orders', "(e.data.status || 'draft') === 'draft'"), 'file-pen', loading('orders')),
@@ -258,5 +288,5 @@ function ordersPage() {
 
 export function buildPages() {
   const documents = [homePage(), bomsPage(), ordersPage(), ...recordKinds.map(recordForm)]
-  return Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)]))
+  return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

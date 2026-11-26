@@ -2,10 +2,11 @@
 // the reports list page and the by-category summary. Submitting, approving, refusing and posting (totals,
 // journals, immutability) are done by the posting script the report form runs; the forms only lock what the
 // script has moved beyond draft.
+import { views } from './views.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading, humanize,
-  iconName, linkButton, openFile, options, page, panel, projectRegistration, recordButtons, row, scriptAction,
-  sectionCards, stat, stats, status, table, tabs, text, toneExpression,
+  iconName, linkButton, openFile, options, page, panel, projectRegistration, recordButtons, row, scriptAction, appOperationsSource, withAppCall,
+  sectionCards, stat, stats, status, table, tabs, text, toneExpression, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { accounting, containers, installRoot, mimeTypes, recordKinds, schemaId, settingsPath } from './contracts.mjs'
 import { entities, postScriptPath, settingsSections } from './app.mjs'
@@ -36,6 +37,10 @@ const display = value => `(${value} / 10000).toFixed(2)`
 const lineSum = report => `(${report}.lines || []).reduce((s, l) => s + ${units('l.amount')}, 0)`
 
 /** Kind-specific data, access, actions, header buttons and notices of a record form. */
+/** Accounting posts the journal through its API from what the script returned; the script then completes the record. */
+const posting = complete => ({ app: 'accounting', operation: 'post-journal', required: true, label: 'Accounting', script: postScriptPath, recordOperation: complete,
+  parameter: 'journal', field: 'journalRequest', key: "'journal-' + form.values.code" })
+
 function recordExtras(kind) {
   if (kind === 'category') {
     return {
@@ -51,7 +56,7 @@ function recordExtras(kind) {
   const visibleWhenSubmitted = { visible: submitted }
   return {
     access: [{ path: containers.categories.path, reason: 'Offer the expense categories for each line' }],
-    data: categorySources,
+    data: { ...categorySources, ...appOperationsSource },
     state: { approver: '', refusalreason: '' },
     notices: [
       text(`Total {{ form.values.total || ${display(lineSum('form.values'))} }}`, 'muted'),
@@ -81,9 +86,9 @@ function recordExtras(kind) {
         confirm: { title: 'Refuse report', message: 'Refuse this expense report? Give the reason in the Refusal reason field.' },
         parameters: { reason: '{{ state.refusalreason }}' },
       }),
-      post: scriptAction(postScriptPath, 'post-report', {
+      post: withAppCall(scriptAction(postScriptPath, 'post-report', {
         confirm: { title: 'Post report', message: 'Post this approved report to the Accounting ledger? Posted reports cannot be edited.' },
-      }),
+      }), posting('complete-report')),
     },
     locked: `!${draft}`,
   }
@@ -93,21 +98,19 @@ function recordForm(kind) {
   const entity = entities[kind]
   const extras = recordExtras(kind)
   const readOnly = `${archived} || (${extras.locked})`
-  const header = row([
-    column([
-      row([
-        heading(`{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`),
+  const header = recordHeader(
+    `{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`,
+    [
         badge(humanize(entity.status), toneExpression(entity.status, statusTones), { visible: `!!form.values.${entity.status}` }),
         badge('Archived', 'warning', { visible: archived }, 'archive'),
-      ]),
-      text(`${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`, 'muted'),
-    ]),
-    row([...extras.buttons, recordButtons(extras.locked)]),
-  ], 'between')
+    ],
+    `${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`,
+    [...extras.buttons, recordButtons(extras.locked)],
+  )
   const tree = [
     header,
-    ...status('record'),
-    badge(`This ${entity.singular.toLowerCase()} is archived. Restore it to edit.`, 'warning', { visible: archived }, 'archive'),
+    ...status('record'), ...lifecycle(entity),
+    archivedAlert(entity.singular),
     ...(extras.links.length ? [row(extras.links)] : []),
     ...extras.notices,
     grid(sectionCards(entity.sections, readOnly)),
@@ -134,13 +137,13 @@ function settingsForm() {
       access: [accountsAccess('Choose the account posted reports credit'), schemaAccess],
       data: accountSources,
       tree: [
-        row([
-          column([heading('Expenses settings'), text('The account posted reports credit (what the business owes back). The currency is the Accounting base currency; number prefixes are app settings, managed with the installed app.', 'muted')]),
+        pageHeader(
+          [heading('Expenses settings'), text('The account posted reports credit (what the business owes back). The currency is the Accounting base currency; number prefixes are app settings, managed with the installed app.', 'muted')], [
           row([
             button('Reset', [{ 'reset-form': {} }], { disabled: 'form.saving || !form.dirty' }, 'ghost'),
             button('Save', [{ save: {} }, { toast: { message: 'Saved', variant: 'success' } }], { disabled: 'form.saving || !form.dirty || form.invalid' }, undefined, 'save'),
           ]),
-        ], 'between'),
+        ]),
         ...status('record'),
         ...status('accounts', `The Accounting chart of accounts (${accounting.accounts}) could not be read. Install Accounting to post expense reports.`),
         grid(settingsSections.map(section => card(section.title, [grid(section.fields.map(field => formControl(field, null)))], section.description)), 1),
@@ -177,14 +180,14 @@ function homePage() {
         access: containerAccess('List expense reports and categories'),
         data: reportSources,
         tree: page([
-          row([
-            column([heading('Expenses'), text('Expense categories and employee expense reports are files in your workspace. Draft reports in their folder, then submit, approve and post them from their forms to the Accounting ledger.', 'muted')]),
+          pageHeader(
+            [heading('Expenses'), text('Expense categories and employee expense reports are files in your workspace. Draft reports in their folder, then submit, approve and post them from their forms to the Accounting ledger.', 'muted')], [
             row([
               button('Reports', [openFile(`${installRoot}/canvas/reports.page.yaml`)], undefined, 'outline', 'receipt'),
               button('By category', [openFile(`${installRoot}/canvas/by-category.page.yaml`)], undefined, 'outline', 'tags'),
               button('Settings', [openFile(settingsPath, 'edit')], undefined, 'ghost', 'settings'),
             ]),
-          ], 'between'),
+          ]),
           stats([
             stat('Draft reports', count('reports', "(e.data.status || 'draft') === 'draft'"), 'file-pen', loading('reports')),
             stat('Awaiting approval', count('reports', "e.data.status === 'submitted'"), 'hourglass', loading('reports')),
@@ -220,10 +223,10 @@ function reportsPage() {
         data: reportSources,
         state: { showall: false },
         tree: page([
-          row([
-            column([heading('Expense reports'), text('Draft reports are estimates; submitting computes the exact total.', 'muted')]),
+          pageHeader(
+            [heading('Expense reports'), text('Draft reports are estimates; submitting computes the exact total.', 'muted')], [
             button('Expenses', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'receipt'),
-          ], 'between'),
+          ]),
           status('reports')[0],
           stats([
             stat('Awaiting approval', count('reports', "e.data.status === 'submitted'"), 'hourglass', loading('reports')),
@@ -254,10 +257,10 @@ function byCategoryPage() {
         data: { ...reportSources, summary: { kind: 'computed', expr: summary } },
         state: { showempty: false },
         tree: page([
-          row([
-            column([heading('Expenses by category'), text('Submitted, approved and posted report lines, summed by their category.', 'muted')]),
+          pageHeader(
+            [heading('Expenses by category'), text('Submitted, approved and posted report lines, summed by their category.', 'muted')], [
             button('Expenses', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'receipt'),
-          ], 'between'),
+          ]),
           ...['reports', 'categories'].map(name => status(name)[0]),
           stats([
             stat('Categories', count('categories'), 'tags', loading('categories')),
@@ -274,5 +277,5 @@ function byCategoryPage() {
 
 export function buildPages() {
   const documents = [homePage(), reportsPage(), byCategoryPage(), ...recordKinds.map(recordForm), settingsForm()]
-  return Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)]))
+  return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

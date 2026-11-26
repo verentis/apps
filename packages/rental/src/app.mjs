@@ -30,7 +30,6 @@ export const postScriptFileAccess = [
   { path: settingsPath, mode: 'read', reason: 'Read the currency and the daily late rate' },
   { path: containers.products.path, mode: 'read', reason: 'Check booked products, their rates and the quantity owned' },
   { path: containers.bookings.path, mode: 'write', reason: 'Confirm, pick up, return and cancel bookings, checking overlapping bookings' },
-  { path: invoicing.invoices, mode: 'write', reason: 'Draft an invoice for a returned booking when Invoicing is installed' },
 ]
 
 const text = (key, label, extra = {}) => ({ key, label, ...extra })

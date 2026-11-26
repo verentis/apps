@@ -14,12 +14,20 @@ export const createScript = 'scripts/create'
 export const createScriptName = 'purchase-create'
 export const postScript = 'scripts/post'
 export const postScriptName = 'purchase-post'
+/** The API script: the operations other apps call through the platform (api.yaml). */
+export const apiScript = 'scripts/api'
+export const apiScriptName = 'purchase-api'
 /** Where `spec.install` places the order script; Canvas actions run it by path. */
 export const postScriptPath = `${installRoot}/${postScript}`
 
 const plural = { vendor: 'vendors', order: 'purchase orders' }
 
 /** What the create script may touch: it writes new records create-only and reads the defaults they start with. */
+/** What the API script may touch: it drafts purchase orders other apps ask for, numbered like any new order. */
+export const apiScriptFileAccess = [
+  { path: containers.orders.path, mode: 'write', reason: 'Draft purchase orders other apps ask for (a reorder), with the next number' },
+]
+
 export const createScriptFileAccess = [
   ...recordKinds.map(kind => ({ path: containers[containerOf[kind]].path, mode: 'write', reason: `Create ${plural[kind]} with the next number` })),
   { path: settingsPath, mode: 'read', reason: 'Default new purchase orders\' dates, currency and notes' },
@@ -29,7 +37,6 @@ export const createScriptFileAccess = [
 export const postScriptFileAccess = [
   { path: containers.vendors.path, mode: 'read', reason: 'Check the vendor a confirmed order buys from' },
   { path: containers.orders.path, mode: 'write', reason: 'Mark purchase orders confirmed or received' },
-  { path: invoicing.invoices, mode: 'write', reason: 'Draft a vendor bill for a received order when Invoicing is installed' },
 ]
 
 const text = (key, label, extra = {}) => ({ key, label, ...extra })
@@ -156,7 +163,7 @@ export const manifest = {
       { package: 'verentis/invoicing', version: 'latest', optional: true },
     ],
     engine: 'verentis/nodejs',
-    scripts: [createScript, postScript],
+    scripts: [createScript, postScript, apiScript],
     install,
     creatables,
     sandbox: { 'allow-scripts': true, 'allow-same-origin': true, 'allow-forms': true, 'allow-popups': false },
@@ -186,6 +193,7 @@ export const productionOverlay = {
 export const scriptConsents = [
   ...scriptConsent(createScriptName, createScriptFileAccess),
   ...scriptConsent(postScriptName, postScriptFileAccess),
+  ...scriptConsent(apiScriptName, apiScriptFileAccess),
 ]
 
 /** What the create script needs to know about each kind (generated into `scripts/create/config.mjs`). */

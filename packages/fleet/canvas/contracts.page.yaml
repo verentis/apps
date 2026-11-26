@@ -41,67 +41,107 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Fleet",
+          "icon": "car",
+          "active": "contracts.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Vehicles",
+              "icon": "car"
+            },
+            {
+              "id": "contracts.page.yaml",
+              "label": "Contracts",
+              "icon": "file-signature",
+              "count": "{{ (data.expiring || []).length }}",
+              "tone": "warning"
+            },
+            {
+              "id": "costs.page.yaml",
+              "label": "Costs",
+              "icon": "chart-column"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/fleet/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/fleet.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Contracts",
+              "note": "Lease, insurance and service contracts per vehicle. Active contracts ending within the expiring-soon window are flagged below."
+            },
+            "children": []
+          },
           {
             "type": "canvas.stack",
             "layout": {
               "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
+                "gap": 2
               }
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Contracts"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Lease, insurance and service contracts per vehicle. Active contracts ending within the expiring-soon window are flagged below.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Contracts ending"
+                }
               },
               {
-                "type": "canvas.button",
+                "type": "canvas.text",
                 "props": {
-                  "label": "Fleet",
-                  "variant": "ghost",
-                  "icon": "car",
-                  "size": "sm"
+                  "text": "Active contracts by end date over the next six months.",
+                  "tone": "muted"
+                }
+              },
+              {
+                "type": "canvas.time-strip",
+                "props": {
+                  "rows": "{{ (data.rows || []).filter(c => c.status === 'active' && !!c.endDate).map(c => ({ path: c.path, title: [c.vehicle, c.type].filter(part => part).join(' · '), at: c.endDate })) }}",
+                  "emptyText": "Nothing due",
+                  "at": "at",
+                  "title": "title",
+                  "window": {
+                    "from": "-30d",
+                    "to": "180d"
+                  },
+                  "soon": "60d"
                 },
                 "on": {
-                  "click": [
+                  "open": [
                     {
                       "open-file": {
-                        "path": "/applications/fleet/canvas/home.page.yaml"
+                        "path": "{{ event.row.path }}",
+                        "mode": "edit",
+                        "open": "side"
                       }
                     }
                   ]
@@ -110,22 +150,10 @@
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "{{ data.$contracts.error }}"
-            },
-            "rules": {
-              "visible": "data.$contracts.status === 'error'"
-            }
-          },
-          {
-            "type": "canvas.text",
-            "props": {
-              "text": "Loading…",
-              "tone": "muted"
-            },
-            "rules": {
-              "visible": "data.$contracts.status === 'loading'"
+              "for": "contracts",
+              "compact": true
             }
           },
           {
@@ -216,6 +244,10 @@
                     }
                   ],
                   "emptyText": "No active contract ends within the window",
+                  "search": true,
+                  "sortable": true,
+                  "pageSize": 25,
+                  "narrow": "list",
                   "clickable": true
                 },
                 "on": {
@@ -223,7 +255,8 @@
                     {
                       "open-file": {
                         "path": "{{ event.path }}",
-                        "mode": "edit"
+                        "mode": "edit",
+                        "open": "side"
                       }
                     }
                   ]
@@ -277,6 +310,10 @@
                     }
                   ],
                   "emptyText": "No contracts yet. Use New in /fleet-contracts.",
+                  "search": true,
+                  "sortable": true,
+                  "pageSize": 25,
+                  "narrow": "list",
                   "clickable": true
                 },
                 "on": {
@@ -284,7 +321,8 @@
                     {
                       "open-file": {
                         "path": "{{ event.path }}",
-                        "mode": "edit"
+                        "mode": "edit",
+                        "open": "side"
                       }
                     }
                   ]

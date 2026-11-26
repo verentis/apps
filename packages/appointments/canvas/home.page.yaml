@@ -34,127 +34,78 @@
       "rows": {
         "kind": "computed",
         "expr": "(data.appointments || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, guest: e.data.guestName || '', typePath: e.data.type || '', type: ((((data.types || []).find(t => t.kind === 'file' && t.data && t.path === e.data.type) || {}).data || {}).name) || '', host: e.data.host || '', date: e.data.date || '', start: e.data.startTime || '', time: [e.data.startTime, e.data.endTime].filter(Boolean).join('–'), status: e.data.status || '' }))"
+      },
+      "listappointments": {
+        "kind": "folder",
+        "path": "/appointments",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.appointments.appointment+json"
+      },
+      "listappointmenttypes": {
+        "kind": "folder",
+        "path": "/appointment-types",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.appointments.type+json"
       }
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Appointments",
+          "icon": "calendar-check",
+          "active": "home.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "upcoming.page.yaml",
+              "label": "Calendar",
+              "icon": "calendar"
+            },
+            {
+              "id": "types.page.yaml",
+              "label": "Types",
+              "icon": "shapes"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/appointments/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/appointments.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Appointments",
+              "note": "Appointment types and bookings are files in your workspace. Book appointments in /appointments, confirm them conflict-checked, then complete them from their forms."
             },
-            "children": [
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Appointments"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Appointment types and bookings are files in your workspace. Book appointments in /appointments, confirm them conflict-checked, then complete them from their forms.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "direction": "row",
-                    "wrap": true,
-                    "gap": 2,
-                    "align": "center"
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Upcoming",
-                      "variant": "outline",
-                      "icon": "calendar-check",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/appointments/canvas/upcoming.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Types",
-                      "variant": "outline",
-                      "icon": "calendar-clock",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/appointments/canvas/types.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Settings",
-                      "variant": "ghost",
-                      "icon": "settings",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/settings/appointments.json",
-                            "mode": "edit"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ]
-              }
-            ]
+            "children": []
           },
           {
             "type": "canvas.grid",
@@ -207,21 +158,19 @@
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /appointments folder could not be read. Reinstall Appointments to recreate it."
-            },
-            "rules": {
-              "visible": "data.$appointments.status === 'error'"
+              "for": "appointments",
+              "compact": true,
+              "description": "The /appointments folder could not be read. Reinstall Appointments to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /appointment-types folder could not be read. Reinstall Appointments to recreate it."
-            },
-            "rules": {
-              "visible": "data.$types.status === 'error'"
+              "for": "types",
+              "compact": true,
+              "description": "The /appointment-types folder could not be read. Reinstall Appointments to recreate it."
             }
           },
           {
@@ -281,17 +230,19 @@
                     ]
                   },
                   {
-                    "type": "canvas.files",
+                    "type": "canvas.empty-state",
                     "props": {
-                      "path": "/appointments/",
-                      "mimeTypes": [
-                        "application/vnd.verentis.appointments.appointment+json"
-                      ],
-                      "showFolders": false,
-                      "navigable": false,
+                      "for": "listappointments",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listappointments || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
                       "columns": [
                         {
-                          "key": "name",
+                          "key": "data.code",
                           "label": "Appointment"
                         },
                         {
@@ -300,7 +251,8 @@
                         },
                         {
                           "key": "data.date",
-                          "label": "Date"
+                          "label": "Date",
+                          "format": "date"
                         },
                         {
                           "key": "data.startTime",
@@ -312,10 +264,34 @@
                         },
                         {
                           "key": "data.status",
-                          "label": "Status"
+                          "label": "Status",
+                          "format": "badge"
                         }
                       ],
+                      "facets": [
+                        "data.status"
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
                       "emptyText": "No appointments yet. Use New in /appointments."
+                    },
+                    "rules": {
+                      "visible": "data.$listappointments.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
                     }
                   }
                 ],
@@ -361,17 +337,19 @@
                     ]
                   },
                   {
-                    "type": "canvas.files",
+                    "type": "canvas.empty-state",
                     "props": {
-                      "path": "/appointment-types/",
-                      "mimeTypes": [
-                        "application/vnd.verentis.appointments.type+json"
-                      ],
-                      "showFolders": false,
-                      "navigable": false,
+                      "for": "listappointmenttypes",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listappointmenttypes || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
                       "columns": [
                         {
-                          "key": "name",
+                          "key": "data.code",
                           "label": "Type"
                         },
                         {
@@ -387,7 +365,27 @@
                           "label": "Host"
                         }
                       ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
                       "emptyText": "No types yet. Use New in /appointment-types."
+                    },
+                    "rules": {
+                      "visible": "data.$listappointmenttypes.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
                     }
                   }
                 ],

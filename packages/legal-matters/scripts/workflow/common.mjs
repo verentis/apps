@@ -15,16 +15,14 @@ export function direct(path, parent) {
   check(typeof path === 'string' && path === `${parent}/${nameOf(path)}` && /^[A-Za-z0-9][A-Za-z0-9_-]*(?:\.[A-Za-z0-9_-]+)*$/.test(nameOf(path)), `Expected a direct record in ${parent}.`)
   return path
 }
+/** Matters, the billing register and invoice drafts are written with conditional writes on main only. */
 export function gate(engine) {
-  const workspace = engine.context.workspace?.id
-  check(uuidPattern.test(workspace || '') && engine.settings.get('synthetic-workspace-id') === workspace &&
-    engine.settings.get('pilot-mode') === 'isolated-synthetic' && (engine.context.file?.branch ?? 'main') === 'main',
-  'Disabled. Only the designated, isolated synthetic workspace on main can run Legal Matters. Never enter real client data.')
+  check((engine.context.file?.branch ?? 'main') === 'main', 'Legal Matters runs on the main branch only.')
 }
 export async function load(files, path) {
   const current = await readRecord(files, direct(path, matters), 'matter')
-  check(strong(current.etag) && current.record.pilot === 'synthetic-only' && current.record.state === 'active' &&
-    uuidPattern.test(current.record.id), 'Active synthetic matter and VFS ETag required.')
+  check(strong(current.etag) && current.record.state === 'active' &&
+    uuidPattern.test(current.record.id), 'An active matter and its VFS ETag are required.')
   return current
 }
 export async function save(files, current, now, event) {

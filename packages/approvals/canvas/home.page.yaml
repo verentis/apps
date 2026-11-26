@@ -34,145 +34,84 @@
       "rows": {
         "kind": "computed",
         "expr": "(data.requests || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, title: e.data.title || '', requester: e.data.requester || '', type: e.data.type || '', typeName: (((data.types || []).find(t => t.path === e.data.type) || {}).data || {}).name || '', required: (((data.types || []).find(t => t.path === e.data.type) || {}).data || {}).requiredApprovers || 0, approvers: (e.data.approvals || []).filter(a => a.decision === 'approve').map(a => a.approver), deciders: (e.data.approvals || []).map(a => a.approver), amount: e.data.amount || '', date: e.data.date || '', status: e.data.status || 'draft' }))"
+      },
+      "listapprovalrequests": {
+        "kind": "folder",
+        "path": "/approval-requests",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.approvals.request+json"
+      },
+      "listapprovaltypes": {
+        "kind": "folder",
+        "path": "/approval-types",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.approvals.type+json"
       }
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Approvals",
+          "icon": "file-check",
+          "active": "home.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "requests.page.yaml",
+              "label": "All requests",
+              "icon": "list"
+            },
+            {
+              "id": "pending.page.yaml",
+              "label": "Inbox",
+              "icon": "inbox",
+              "count": "{{ (data.rows || []).filter(r => r.status === 'submitted').length }}"
+            },
+            {
+              "id": "by-type.page.yaml",
+              "label": "Types",
+              "icon": "shapes"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/approvals/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/approvals.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Approvals",
+              "note": "Approval types and requests are files in your workspace. Draft a request in its folder, then submit it; approvers decide from its form until the type's threshold approves it, one refusal refuses it."
             },
-            "children": [
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Approvals"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Approval types and requests are files in your workspace. Draft a request in its folder, then submit it; approvers decide from its form until the type's threshold approves it, one refusal refuses it.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "direction": "row",
-                    "wrap": true,
-                    "gap": 2,
-                    "align": "center"
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Requests",
-                      "variant": "outline",
-                      "icon": "file-check",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/approvals/canvas/requests.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "To decide",
-                      "variant": "outline",
-                      "icon": "hourglass",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/approvals/canvas/pending.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "By type",
-                      "variant": "outline",
-                      "icon": "list-checks",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/approvals/canvas/by-type.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Settings",
-                      "variant": "ghost",
-                      "icon": "settings",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/settings/approvals.json",
-                            "mode": "edit"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ]
-              }
-            ]
+            "children": []
           },
           {
             "type": "canvas.grid",
@@ -225,21 +164,19 @@
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /approval-types folder could not be read. Reinstall Approvals to recreate it."
-            },
-            "rules": {
-              "visible": "data.$types.status === 'error'"
+              "for": "types",
+              "compact": true,
+              "description": "The /approval-types folder could not be read. Reinstall Approvals to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /approval-requests folder could not be read. Reinstall Approvals to recreate it."
-            },
-            "rules": {
-              "visible": "data.$requests.status === 'error'"
+              "for": "requests",
+              "compact": true,
+              "description": "The /approval-requests folder could not be read. Reinstall Approvals to recreate it."
             }
           },
           {
@@ -299,17 +236,19 @@
                     ]
                   },
                   {
-                    "type": "canvas.files",
+                    "type": "canvas.empty-state",
                     "props": {
-                      "path": "/approval-requests/",
-                      "mimeTypes": [
-                        "application/vnd.verentis.approvals.request+json"
-                      ],
-                      "showFolders": false,
-                      "navigable": false,
+                      "for": "listapprovalrequests",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listapprovalrequests || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
                       "columns": [
                         {
-                          "key": "name",
+                          "key": "data.code",
                           "label": "Number"
                         },
                         {
@@ -322,15 +261,38 @@
                         },
                         {
                           "key": "data.amount",
-                          "label": "Amount",
-                          "align": "end"
+                          "label": "Amount"
                         },
                         {
                           "key": "data.status",
-                          "label": "Status"
+                          "label": "Status",
+                          "format": "badge"
                         }
                       ],
+                      "facets": [
+                        "data.status"
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
                       "emptyText": "No approval requests yet. Use New in /approval-requests."
+                    },
+                    "rules": {
+                      "visible": "data.$listapprovalrequests.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
                     }
                   }
                 ],
@@ -376,17 +338,19 @@
                     ]
                   },
                   {
-                    "type": "canvas.files",
+                    "type": "canvas.empty-state",
                     "props": {
-                      "path": "/approval-types/",
-                      "mimeTypes": [
-                        "application/vnd.verentis.approvals.type+json"
-                      ],
-                      "showFolders": false,
-                      "navigable": false,
+                      "for": "listapprovaltypes",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listapprovaltypes || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
                       "columns": [
                         {
-                          "key": "name",
+                          "key": "data.code",
                           "label": "Number"
                         },
                         {
@@ -395,11 +359,30 @@
                         },
                         {
                           "key": "data.requiredApprovers",
-                          "label": "Required approvals",
-                          "align": "end"
+                          "label": "Required approvals"
                         }
                       ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
                       "emptyText": "No approval types yet. Use New in /approval-types."
+                    },
+                    "rules": {
+                      "visible": "data.$listapprovaltypes.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
                     }
                   }
                 ],

@@ -16,9 +16,3 @@ file-access:
   - path: "/manufacturing-orders"
     mode: write
     reason: "Confirm, start and complete manufacturing orders"
-  - path: "/stock-moves"
-    mode: write
-    reason: "Emit consumption and production stock moves for completed orders when Inventory is installed"
-  - path: "/settings/inventory.json"
-    mode: read
-    reason: "Stamp emitted stock moves with the Inventory default warehouse when it is set"

@@ -38,67 +38,108 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Appointments",
+          "icon": "calendar-check",
+          "active": "upcoming.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "upcoming.page.yaml",
+              "label": "Calendar",
+              "icon": "calendar"
+            },
+            {
+              "id": "types.page.yaml",
+              "label": "Types",
+              "icon": "shapes"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/appointments/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/appointments.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Upcoming appointments",
+              "note": "Booked and confirmed appointments from today on, in schedule order. Click an appointment to open it."
+            },
+            "children": []
+          },
           {
             "type": "canvas.stack",
             "layout": {
               "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
+                "gap": 2
               }
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Upcoming appointments"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Booked and confirmed appointments from today on, in schedule order. Click an appointment to open it.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Calendar"
+                }
               },
               {
-                "type": "canvas.button",
+                "type": "canvas.text",
                 "props": {
-                  "label": "Appointments",
-                  "variant": "ghost",
-                  "icon": "calendar-check",
-                  "size": "sm"
+                  "text": "Appointments by host.",
+                  "tone": "muted"
+                }
+              },
+              {
+                "type": "canvas.calendar",
+                "props": {
+                  "rows": "{{ (data.rows || []).filter(r => !!r.date).map(r => ({ path: r.path, title: [r.time, r.guest].filter(part => part).join(' · '), host: r.host || 'No host', status: r.status, at: r.date + (r.start ? 'T' + r.start : '') })) }}",
+                  "views": [
+                    "week",
+                    "month",
+                    "agenda"
+                  ],
+                  "showLegend": true,
+                  "emptyText": "Nothing scheduled",
+                  "start": "at",
+                  "title": "title",
+                  "colorBy": "host",
+                  "view": "week"
                 },
                 "on": {
-                  "click": [
+                  "open": [
                     {
                       "open-file": {
-                        "path": "/applications/appointments/canvas/home.page.yaml"
+                        "path": "{{ event.row.path }}",
+                        "mode": "edit",
+                        "open": "side"
                       }
                     }
                   ]
@@ -107,21 +148,19 @@
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /appointments folder could not be read. Reinstall Appointments to recreate it."
-            },
-            "rules": {
-              "visible": "data.$appointments.status === 'error'"
+              "for": "appointments",
+              "compact": true,
+              "description": "The /appointments folder could not be read. Reinstall Appointments to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /appointment-types folder could not be read. Reinstall Appointments to recreate it."
-            },
-            "rules": {
-              "visible": "data.$types.status === 'error'"
+              "for": "types",
+              "compact": true,
+              "description": "The /appointment-types folder could not be read. Reinstall Appointments to recreate it."
             }
           },
           {
@@ -206,6 +245,10 @@
                     }
                   ],
                   "emptyText": "No appointments today",
+                  "search": true,
+                  "sortable": true,
+                  "pageSize": 25,
+                  "narrow": "list",
                   "clickable": true
                 },
                 "on": {
@@ -213,7 +256,8 @@
                     {
                       "open-file": {
                         "path": "{{ event.path }}",
-                        "mode": "edit"
+                        "mode": "edit",
+                        "open": "side"
                       }
                     }
                   ]
@@ -262,6 +306,10 @@
                     }
                   ],
                   "emptyText": "No upcoming appointments",
+                  "search": true,
+                  "sortable": true,
+                  "pageSize": 25,
+                  "narrow": "list",
                   "clickable": true
                 },
                 "on": {
@@ -269,7 +317,8 @@
                     {
                       "open-file": {
                         "path": "{{ event.path }}",
-                        "mode": "edit"
+                        "mode": "edit",
+                        "open": "side"
                       }
                     }
                   ]

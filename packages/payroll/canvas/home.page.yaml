@@ -20,109 +20,177 @@
         "path": "/pay-runs",
         "contents": true,
         "mime-pattern": "application/vnd.verentis.payroll.payrun+json"
+      },
+      "listpayruns": {
+        "kind": "folder",
+        "path": "/pay-runs",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.payroll.payrun+json"
       }
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Payroll",
+          "icon": "calendar-check",
+          "active": "home.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Pay runs",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "structures.page.yaml",
+              "label": "Structures",
+              "icon": "layers"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/payroll/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/payroll.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "canvas.stack",
-            "layout": {
-              "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
-              }
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Payroll",
+              "note": "A region-agnostic payroll engine: salary structures and their rules are your data. Draft a pay run for a period, Compute payslips for every active pay profile, Approve, then Post one journal to the Accounting ledger."
             },
-            "children": [
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
+            "children": []
+          },
+          {
+            "type": "canvas.board",
+            "props": {
+              "rows": "{{ (data.runs || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
+              "groupBy": "data.status",
+              "columns": [
+                {
+                  "value": "draft",
+                  "label": "Draft",
+                  "locked": true
                 },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Payroll"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "A region-agnostic payroll engine: salary structures and their rules are your data. Draft a pay run for a period, Compute payslips for every active pay profile, Approve, then Post one journal to the Accounting ledger.",
-                      "tone": "muted"
-                    }
-                  }
+                {
+                  "value": "computed",
+                  "label": "Computed"
+                },
+                {
+                  "value": "approved",
+                  "label": "Approved"
+                },
+                {
+                  "value": "posted",
+                  "label": "Posted"
+                }
+              ],
+              "card": {
+                "title": "data.period",
+                "code": "data.code",
+                "meta": [
+                  "data.currency"
                 ]
               },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "direction": "row",
-                    "wrap": true,
-                    "gap": 2,
-                    "align": "center"
+              "readOnly": false,
+              "rowKey": "path",
+              "emptyText": "Nothing here",
+              "lockedWhen": "[\"posted\"].includes(row.data.status)"
+            },
+            "on": {
+              "open": [
+                {
+                  "open-file": {
+                    "path": "{{ event.row.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ],
+              "move": [
+                {
+                  "confirm": {
+                    "if": "event.to === 'posted'",
+                    "title": "Move to Posted?",
+                    "message": "{{ event.row.data.code }} moves to Posted. Posting writes the payroll journal.",
+                    "confirm-label": "Move to Posted"
                   }
                 },
-                "children": [
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Structures",
-                      "variant": "outline",
-                      "icon": "layers",
-                      "size": "sm"
+                {
+                  "run-script": {
+                    "if": "event.to === 'computed'",
+                    "file": "/applications/payroll/scripts/post",
+                    "timeout": 120,
+                    "parameters": {
+                      "operation": "compute-run",
+                      "path": "{{ event.path }}"
                     },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/payroll/canvas/structures.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Settings",
-                      "variant": "ghost",
-                      "icon": "settings",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/settings/payroll.json",
-                            "mode": "edit"
-                          }
-                        }
-                      ]
-                    }
+                    "assign": "lastmove"
                   }
-                ]
-              }
-            ]
+                },
+                {
+                  "run-script": {
+                    "if": "event.to === 'approved'",
+                    "file": "/applications/payroll/scripts/post",
+                    "timeout": 120,
+                    "parameters": {
+                      "operation": "approve-run",
+                      "path": "{{ event.path }}"
+                    },
+                    "assign": "lastmove"
+                  }
+                },
+                {
+                  "run-script": {
+                    "if": "event.to === 'posted'",
+                    "file": "/applications/payroll/scripts/post",
+                    "timeout": 120,
+                    "parameters": {
+                      "operation": "post-run",
+                      "path": "{{ event.path }}"
+                    },
+                    "assign": "lastmove"
+                  }
+                },
+                {
+                  "refresh-source": {
+                    "source": "runs"
+                  }
+                },
+                {
+                  "refresh-source": {
+                    "source": "listpayruns"
+                  }
+                },
+                {
+                  "toast": {
+                    "message": "{{ [\"computed\",\"approved\",\"posted\"].includes(event.to) ? ((state.lastmove && state.lastmove.message) || 'Done') : 'Moved to ' + ({\"draft\":\"Draft\",\"computed\":\"Computed\",\"approved\":\"Approved\",\"posted\":\"Posted\"}[event.to] || event.to) }}",
+                    "variant": "success"
+                  }
+                }
+              ]
+            }
           },
           {
             "type": "canvas.grid",
@@ -175,12 +243,11 @@
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /pay-runs folder could not be read. Reinstall Payroll to recreate it."
-            },
-            "rules": {
-              "visible": "data.$runs.status === 'error'"
+              "for": "runs",
+              "compact": true,
+              "description": "The /pay-runs folder could not be read. Reinstall Payroll to recreate it."
             }
           },
           {
@@ -215,17 +282,19 @@
             ]
           },
           {
-            "type": "canvas.files",
+            "type": "canvas.empty-state",
             "props": {
-              "path": "/pay-runs/",
-              "mimeTypes": [
-                "application/vnd.verentis.payroll.payrun+json"
-              ],
-              "showFolders": false,
-              "navigable": false,
+              "for": "listpayruns",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.listpayruns || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
               "columns": [
                 {
-                  "key": "name",
+                  "key": "data.code",
                   "label": "Code"
                 },
                 {
@@ -234,20 +303,42 @@
                 },
                 {
                   "key": "data.status",
-                  "label": "Status"
+                  "label": "Status",
+                  "format": "badge"
                 },
                 {
                   "key": "data.totals.gross",
-                  "label": "Gross",
-                  "align": "end"
+                  "label": "Gross"
                 },
                 {
                   "key": "data.totals.net",
-                  "label": "Net",
-                  "align": "end"
+                  "label": "Net"
                 }
               ],
+              "facets": [
+                "data.status"
+              ],
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
+              "clickable": true,
+              "rowKey": "path",
               "emptyText": "No pay runs yet. Use New in /pay-runs."
+            },
+            "rules": {
+              "visible": "data.$listpayruns.status === 'ready'"
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ]
             }
           }
         ]

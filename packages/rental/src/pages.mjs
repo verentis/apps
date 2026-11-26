@@ -2,10 +2,11 @@
 // the bookings list, the availability summary and the revenue summary. Confirming, picking up, returning and
 // cancelling (totals, availability, late fees, the optional draft invoice, immutability) are done by the booking
 // script the booking form runs; the forms only lock what the script has confirmed.
+import { views } from './views.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   humanize, iconName, linkButton, openFile, options, page, panel, projectRegistration, recordButtons, row,
-  scriptAction, sectionCards, stat, stats, status, table, tabs, text, toneExpression,
+  appOperationsSource, offers, scriptAction, withInvoice, sectionCards, stat, stats, status, table, tabs, text, toneExpression, recordHeader, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { containers, crm, installRoot, mimeTypes, recordKinds, schemaId, settingsPath } from './contracts.mjs'
 import { entities, postScriptPath, settingsSections } from './app.mjs'
@@ -32,6 +33,9 @@ const display = value => `(${value} / 10000).toFixed(2)`
 const copyName = `(data.companies || []).concat(data.contacts || []).filter(e => e.kind === 'file' && e.data && e.path === form.values.customerRef).map(e => e.data.name || [e.data.givenName, e.data.familyName].filter(Boolean).join(' '))[0] || form.values.customerName`
 
 /** Kind-specific data, access, actions, header buttons and lock of a record form. */
+/** Invoicing drafts a returned booking's invoice; the booking's code keys the call. */
+const bookingInvoice = { script: postScriptPath, key: "'booking-' + form.values.code" }
+
 function recordExtras(kind) {
   if (kind === 'booking') {
     const returnVisible = { visible: pickedUp }
@@ -46,6 +50,7 @@ function recordExtras(kind) {
         contacts: folder(crm.customers, crm.contactMime),
         customeroptions: { kind: 'computed', expr: `${options('companies', "e.data.name || ''")}.concat(${options('contacts', "[e.data.givenName, e.data.familyName].filter(Boolean).join(' ')")})` },
         ...productSources,
+        ...appOperationsSource,
       },
       state: { returndate: '' },
       notices: [
@@ -55,6 +60,8 @@ function recordExtras(kind) {
           stat('Late fee', "{{ form.values.lateFee || '—' }}", 'alarm-clock'),
         ], 3), rules: { visible: '!!form.values.total' } },
         { ...text('Confirming checks availability and computes the exact total (days × daily rate × quantity).', 'muted'), rules: { visible: `${draft}` } },
+        { ...text('Install Invoicing to draft an invoice from a returned booking.', 'muted'),
+          rules: { visible: `form.values.status === 'returned' && !(form.values.invoice && form.values.invoice.path) && !(${offers('invoicing', 'create-draft-invoice')})` } },
         grid([
           { type: 'canvas.form.date', props: { label: 'Return date', description: 'Defaults to today; late fees count days past the end date.', value: '{{ state.returndate }}' }, rules: returnVisible },
         ]),
@@ -66,6 +73,8 @@ function recordExtras(kind) {
         button('Return', 'return', { visible: pickedUp, disabled: idle }, undefined, 'package-check'),
         button('Cancel', 'cancel', { visible: `(${draft} || ${confirmed}) && !(${archived})`, disabled: idle }, 'ghost', 'x'),
         button('Reopen', 'reopen', { visible: `form.values.status === 'cancelled' && !(${archived})`, disabled: 'form.saving' }, 'outline', 'rotate-ccw'),
+        // Returned but no invoice yet (Invoicing arrived later, or drafting failed): ask Invoicing again.
+        button('Draft invoice', 'draft-invoice', { visible: `form.values.status === 'returned' && !(form.values.invoice && form.values.invoice.path) && ${offers('invoicing', 'create-draft-invoice')}`, disabled: idle }, 'outline', 'file-text'),
       ],
       links: [
         linkButton('Product', 'form.values.product', 'package'),
@@ -76,10 +85,11 @@ function recordExtras(kind) {
         'copy-name': { steps: [{ 'patch-form': { values: { customerName: `{{ ${copyName} }}` } } }] },
         confirm: scriptAction(postScriptPath, 'confirm-booking', { confirm: { title: 'Confirm booking', message: 'Confirm this booking? Availability is checked against overlapping bookings and the exact total is computed. Confirmed bookings cannot be edited.' } }),
         pickup: scriptAction(postScriptPath, 'pickup-booking', { confirm: { title: 'Pick up', message: 'Mark this booking picked up? The rented units leave with the customer.' } }),
-        return: scriptAction(postScriptPath, 'return-booking', {
-          confirm: { title: 'Return', message: 'Mark this booking returned? Days past the end date are charged at the daily late rate, and an invoice is drafted when Invoicing is installed.' },
+        return: withInvoice(scriptAction(postScriptPath, 'return-booking', {
+          confirm: { title: 'Return', message: 'Mark this booking returned? Days past the end date are charged at the daily late rate, and Invoicing drafts the invoice when it is installed.' },
           parameters: { date: '{{ state.returndate }}' },
-        }),
+        }), bookingInvoice),
+        'draft-invoice': withInvoice(scriptAction(postScriptPath, 'return-booking', {}), bookingInvoice),
         cancel: scriptAction(postScriptPath, 'cancel-booking', { confirm: { title: 'Cancel booking', message: 'Cancel this booking? Its units become available again. It can be reopened later.' } }),
         reopen: { steps: [
           { 'patch-form': { values: { status: 'draft', updatedAt: '{{ Date() }}' } } },
@@ -98,20 +108,18 @@ function recordForm(kind) {
   const readOnly = `${archived} || (${extras.locked})`
   const lower = entity.singular.toLowerCase()
   const displayName = lower.startsWith('rental') ? entity.singular : `Rental ${lower}`
-  const header = row([
-    column([
-      row([
-        heading(`{{ form.values.${entity.titleKey} || 'New ${lower}' }}`),
+  const header = recordHeader(
+    `{{ form.values.${entity.titleKey} || 'New ${lower}' }}`,
+    [
         badge(humanize(entity.status), toneExpression(entity.status, statusTones), { visible: `!!form.values.${entity.status}` }),
         badge('Archived', 'warning', { visible: archived }, 'archive'),
-      ]),
-      text(`${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`, 'muted'),
-    ]),
-    row([...extras.buttons, recordButtons(extras.locked)]),
-  ], 'between')
+    ],
+    `${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`,
+    [...extras.buttons, recordButtons(extras.locked)],
+  )
   const tree = [
     header,
-    ...status('record'),
+    ...status('record'), ...lifecycle(entity),
     badge(`This ${lower} is archived. Restore it to edit.`, 'warning', { visible: archived }, 'archive'),
     ...(extras.links.length ? [row(extras.links)] : []),
     ...extras.notices,
@@ -139,13 +147,13 @@ function settingsForm() {
       access: [schemaAccess],
       data: {},
       tree: [
-        row([
-          column([heading('Rental settings'), text('The currency drafted invoices use and the late fee charged per unit per day past a booking\'s end date.', 'muted')]),
+        pageHeader(
+          [heading('Rental settings'), text('The currency drafted invoices use and the late fee charged per unit per day past a booking\'s end date.', 'muted')], [
           row([
             button('Reset', [{ 'reset-form': {} }], { disabled: 'form.saving || !form.dirty' }, 'ghost'),
             button('Save', [{ save: {} }, { toast: { message: 'Saved', variant: 'success' } }], { disabled: 'form.saving || !form.dirty || form.invalid' }, undefined, 'save'),
           ]),
-        ], 'between'),
+        ]),
         ...status('record'),
         grid(settingsSections.map(section => card(section.title, [grid(section.fields.map(field => formControl(field, null)))], section.description)), 1),
       ],
@@ -187,15 +195,15 @@ function homePage() {
         access: Object.values(containers).map(container => ({ path: container.path, reason: `List ${container.path.slice(1).split('-').join(' ')}` })),
         data: { ...productSources, ...bookingSources },
         tree: page([
-          row([
-            column([heading('Rental'), text('Rental products and bookings are files in your workspace. Draft bookings in their folder, then confirm, pick up and return them from their forms.', 'muted')]),
+          pageHeader(
+            [heading('Rental'), text('Rental products and bookings are files in your workspace. Draft bookings in their folder, then confirm, pick up and return them from their forms.', 'muted')], [
             row([
               button('Bookings', [openFile(`${installRoot}/canvas/bookings.page.yaml`)], undefined, 'outline', 'calendar-check'),
               button('Availability', [openFile(`${installRoot}/canvas/availability.page.yaml`)], undefined, 'outline', 'boxes'),
               button('Revenue', [openFile(`${installRoot}/canvas/revenue.page.yaml`)], undefined, 'outline', 'chart-no-axes-combined'),
               button('Settings', [openFile(settingsPath, 'edit')], undefined, 'ghost', 'settings'),
             ]),
-          ], 'between'),
+          ]),
           stats([
             stat('Rental products', count('products'), 'package', loading('products')),
             stat('Draft bookings', count('bookings', "e.data.status === 'draft'"), 'file-pen', loading('bookings')),
@@ -231,10 +239,10 @@ function bookingsPage() {
         data: bookingSources,
         state: { showclosed: false },
         tree: page([
-          row([
-            column([heading('Bookings'), text('The rental calendar as a list: bookings ordered by start date, badged by status. Confirming reserves the units; picking up and returning move them through the lifecycle.', 'muted')]),
+          pageHeader(
+            [heading('Bookings'), text('The rental calendar as a list: bookings ordered by start date, badged by status. Confirming reserves the units; picking up and returning move them through the lifecycle.', 'muted')], [
             button('Rental', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'key'),
-          ], 'between'),
+          ]),
           ...status('bookings'),
           stats([
             stat('Draft', count('bookings', "e.data.status === 'draft'"), 'file-pen', loading('bookings')),
@@ -269,10 +277,10 @@ function availabilityPage() {
           availability: { kind: 'computed', expr: availability },
         },
         tree: page([
-          row([
-            column([heading('Availability'), text('Per product: units owned, out on confirmed and picked-up bookings covering today, and what is left to rent.', 'muted')]),
+          pageHeader(
+            [heading('Availability'), text('Per product: units owned, out on confirmed and picked-up bookings covering today, and what is left to rent.', 'muted')], [
             button('Rental', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'key'),
-          ], 'between'),
+          ]),
           ...status('products'),
           ...status('bookings'),
           stats([
@@ -301,10 +309,10 @@ function revenuePage() {
         access: [{ path: containers.bookings.path, reason: 'Sum booking totals, late fees and deposits' }],
         data: bookingSources,
         tree: page([
-          row([
-            column([heading('Revenue'), text('Confirmed, picked-up and returned bookings use their exact script-computed totals; late fees are added on return.', 'muted')]),
+          pageHeader(
+            [heading('Revenue'), text('Confirmed, picked-up and returned bookings use their exact script-computed totals; late fees are added on return.', 'muted')], [
             button('Rental', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'key'),
-          ], 'between'),
+          ]),
           ...status('bookings'),
           stats([
             stat('Booked revenue', `{{ ${display(billedValue(`${open} || e.data.status === 'returned'`))} }}`, 'receipt', loading('bookings')),
@@ -322,5 +330,5 @@ function revenuePage() {
 
 export function buildPages() {
   const documents = [homePage(), bookingsPage(), availabilityPage(), revenuePage(), ...recordKinds.map(recordForm), settingsForm()]
-  return Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)]))
+  return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

@@ -89,6 +89,8 @@ export const schemas = {
     reversalOf: fileReference,
     reversedBy: fileReference,
     reversedAt: timestamp,
+    // The app that posted it through Accounting's API (post-journal); only that app may reverse it the same way.
+    postedBy: object({ app: optional(100) }, []),
   }, ['code', 'date', 'description', 'currency', 'lines', 'status'], [
     whenStatus(['posted'], ['postedAt', 'period']),
     { if: requires(['reversedBy']), then: requires(['reversedAt']) },

@@ -1,511 +1,959 @@
-api-version: canvas.verentis.io/v1
-kind: Form
-metadata:
-  id: invoicing-payment
-  name: Invoicing payment
-  description: View and edit an Invoicing payment.
-  icon: banknote
-spec:
-  binds:
-  - pattern: application/vnd.verentis.invoicing.payment+json
-    mode: edit
-    priority: 200
-    scope: global
-    json-schema:
-      id: https://schemas.verentis.io/invoicing/v1/payment.schema.json
-      source: /applications/invoicing/schemas/payment.schema.json
-      title: Invoicing payment
-      version: '1'
-  entry: ${var:canvas-origin}/render?document=%2Fapplications%2Finvoicing%2Fcanvas%2Fpayment.form.yaml
-  scope: global
-  mime-types:
-  - pattern: application/vnd.verentis.invoicing.payment+json
-    mode: edit
-    priority: 200
-    json-schema:
-      id: https://schemas.verentis.io/invoicing/v1/payment.schema.json
-      source: /applications/invoicing/schemas/payment.schema.json
-      title: Invoicing payment
-      version: '1'
-  permissions:
-  - file.read
-  - file.write
-  - execution.run
-  - execution.read
-  capabilities: []
-  sandbox:
-    allow-scripts: true
-    allow-same-origin: true
-    allow-popups: false
-    allow-forms: true
-  file-access:
-  - path: /chart-of-accounts
-    mode: read
-    reason: Choose the bank account
-  - path: /invoices
-    mode: read
-    reason: Choose the invoices a payment settles
-  - path: /applications/invoicing/
-    mode: read
-    reason: Read the Invoicing schemas and run the posting script
-  access:
-  - path: /chart-of-accounts
-    reason: Choose the bank account
-  - path: /invoices
-    reason: Choose the invoices a payment settles
-  - path: /applications/invoicing/
-    reason: Read the Invoicing schemas and run the posting script
-  data:
-    record:
-      kind: document
-      consistency: conditional
-    accounts:
-      kind: folder
-      path: /chart-of-accounts
-      contents: true
-      mime-pattern: application/vnd.verentis.accounting.account+json
-    accountoptions:
-      kind: computed
-      expr: '(data.accounts || []).filter(e => e.kind === ''file'' && e.data && e.data.state !== ''archived''
-        && (true)).map(e => ({ label: (e.data.code || e.name) + '' · '' + ((e.data.number ? e.data.number
-        + '' '' : '''') + (e.data.name || '''')), value: e.path }))'
-    invoices:
-      kind: folder
-      path: /invoices
-      contents: true
-      mime-pattern: application/vnd.verentis.invoicing.invoice+json
-    invoiceoptions:
-      kind: computed
-      expr: '(data.invoices || []).filter(e => e.kind === ''file'' && e.data && e.data.state !== ''archived''
-        && (e.data.status === ''issued'')).map(e => ({ label: (e.data.code || e.name) + '' · '' + (((e.data.customer
-        && e.data.customer.name) || '''') + '' · '' + e.data.currency + '' '' + ((e.data.totals && e.data.totals.gross)
-        || '''')), value: e.path }))'
-    bankaccountoptions:
-      kind: computed
-      expr: '(data.accounts || []).filter(e => e.kind === ''file'' && e.data && e.data.state !== ''archived''
-        && (e.data.accountType === ''asset'')).map(e => ({ label: (e.data.code || e.name) + '' · '' +
-        ((e.data.number ? e.data.number + '' '' : '''') + (e.data.name || '''')), value: e.path }))'
-  state:
-    reversaldate: ''
-    reversalreason: ''
-  tree:
-  - type: canvas.stack
-    layout:
-      base:
-        padding: 6
-        gap: 4
-        maxWidth: 72rem
-        margin:
-          x: auto
-    children:
-    - type: canvas.stack
-      layout:
-        base:
-          direction: row
-          wrap: true
-          gap: 2
-          align: center
-          justify: between
-      children:
-      - type: canvas.stack
-        layout:
-          base:
-            gap: 1
-        children:
-        - type: canvas.stack
-          layout:
-            base:
-              direction: row
-              wrap: true
-              gap: 2
-              align: center
-          children:
-          - type: canvas.heading
-            props:
-              level: 2
-              text: '{{ form.values.reference || ''New payment'' }}'
-          - type: canvas.dashboard.badge
-            props:
-              text: '{{ String(form.values.status || '''').split(''-'').join('' '') }}'
-              tone: '{{ ["issued","posted"].includes(form.values.status) ? ''success'' : ["draft"].includes(form.values.status)
-                ? ''warning'' : ["reversed"].includes(form.values.status) ? ''danger'' : ''neutral'' }}'
-            rules:
-              visible: '!!form.values.status'
-          - type: canvas.dashboard.badge
-            props:
-              text: Archived
-              tone: warning
-              icon: archive
-            rules:
-              visible: form.values.state === 'archived'
-        - type: canvas.text
-          props:
-            text: Payment {{ form.values.code || '' }} · {{ ctx.file.path }}
-            tone: muted
-      - type: canvas.stack
-        layout:
-          base:
-            direction: row
-            wrap: true
-            gap: 2
-            align: center
-        children:
-        - type: canvas.button
-          props:
-            label: Post
-            icon: check
-            size: sm
-          'on':
-            click: post
-          rules:
-            visible: (!form.values.status || form.values.status === 'draft') && !(form.values.state ===
-              'archived')
-            disabled: form.saving || form.dirty || form.invalid
-        - type: canvas.button
-          props:
-            label: Reverse
-            variant: outline
-            icon: undo-2
-            size: sm
-          'on':
-            click: reverse
-          rules:
-            visible: form.values.status === 'posted'
-            disabled: form.saving || form.dirty
-        - type: canvas.stack
-          layout:
-            base:
-              direction: row
-              wrap: true
-              gap: 2
-              align: center
-          children:
-          - type: canvas.button
-            props:
-              label: Archive
-              variant: ghost
-              icon: archive
-              size: sm
-            'on':
-              click: archive
-            rules:
-              visible: '!(form.values.state === ''archived'') && !(!(!form.values.status || form.values.status
-                === ''draft''))'
-              disabled: form.saving || form.dirty
-          - type: canvas.button
-            props:
-              label: Restore
-              variant: outline
-              icon: archive-restore
-              size: sm
-            'on':
-              click: restore
-            rules:
-              visible: form.values.state === 'archived'
-              disabled: form.saving || form.dirty
-          - type: canvas.button
-            props:
-              label: Reset
-              variant: ghost
-              size: sm
-            'on':
-              click: reset
-            rules:
-              disabled: form.saving || !form.dirty
-          - type: canvas.button
-            props:
-              label: Save
-              icon: save
-              size: sm
-            'on':
-              click: save
-            rules:
-              disabled: form.saving || !form.dirty || form.invalid || form.values.state === 'archived'
-                || (!(!form.values.status || form.values.status === 'draft'))
-    - type: canvas.text
-      props:
-        text: '{{ data.$record.error }}'
-      rules:
-        visible: data.$record.status === 'error'
-    - type: canvas.text
-      props:
-        text: Loading…
-        tone: muted
-      rules:
-        visible: data.$record.status === 'loading'
-    - type: canvas.dashboard.badge
-      props:
-        text: This payment is archived. Restore it to edit.
-        tone: warning
-        icon: archive
-      rules:
-        visible: form.values.state === 'archived'
-    - type: canvas.stack
-      layout:
-        base:
-          direction: row
-          wrap: true
-          gap: 2
-          align: center
-      children:
-      - type: canvas.button
-        props:
-          label: Journal
-          variant: ghost
-          icon: notebook-pen
-          size: sm
-        'on':
-          click:
-          - open-file:
-              path: '{{ form.values.journal && form.values.journal.path }}'
-              mode: edit
-        rules:
-          visible: '!!(form.values.journal && form.values.journal.path)'
-      - type: canvas.button
-        props:
-          label: Reversal
-          variant: ghost
-          icon: undo-2
-          size: sm
-        'on':
-          click:
-          - open-file:
-              path: '{{ form.values.reversalJournal && form.values.reversalJournal.path }}'
-              mode: edit
-        rules:
-          visible: '!!(form.values.reversalJournal && form.values.reversalJournal.path)'
-    - type: canvas.text
-      props:
-        text: Allocated {{ ((form.values.allocations || []).reduce((s, a) => s + Math.round(Number(a.amount
-          || 0) * 100), 0) / 100).toFixed(2) }} of {{ form.values.amount || '0.00' }}
-        tone: muted
-    - type: canvas.grid
-      layout:
-        base:
-          columns: 1
-          gap: 4
-        tablet:
-          columns: 2
-      children:
-      - type: canvas.form.date
-        props:
-          label: Reversal date
-          description: Defaults to today.
-          value: '{{ state.reversaldate }}'
-        rules:
-          visible: form.values.status === 'posted'
-      - type: canvas.form.input
-        props:
-          label: Reason
-          placeholder: Why is this being reversed?
-          value: '{{ state.reversalreason }}'
-        rules:
-          visible: form.values.status === 'posted'
-    - type: canvas.grid
-      layout:
-        base:
-          columns: 1
-          gap: 4
-        tablet:
-          columns: 2
-      children:
-      - type: canvas.card
-        props:
-          title: Payment
-        children:
-        - type: canvas.grid
-          layout:
-            base:
-              columns: 1
-              gap: 4
-            tablet:
-              columns: 2
-          children:
-          - type: canvas.form.date
-            props:
-              label: Date received
-              value: '{{ form.values.date }}'
-              required: true
-            rules:
-              disabled: (form.values.state === 'archived' || (!(!form.values.status || form.values.status
-                === 'draft')))
-          - type: canvas.form.select
-            props:
-              label: Method
-              value: '{{ form.values.method }}'
-              options:
-              - value: bank-transfer
-                label: Bank transfer
-              - value: card
-                label: Card
-              - value: cash
-                label: Cash
-              - value: other
-                label: Other
-            rules:
-              disabled: (form.values.state === 'archived' || (!(!form.values.status || form.values.status
-                === 'draft')))
-          - type: canvas.form.input
-            props:
-              label: Currency
-              value: '{{ form.values.currency }}'
-              required: true
-              placeholder: ZAR
-            rules:
-              disabled: (form.values.state === 'archived' || (!(!form.values.status || form.values.status
-                === 'draft')))
-          - type: canvas.form.input
-            props:
-              label: Amount
-              value: '{{ form.values.amount }}'
-              required: true
-              placeholder: '0.00'
-            rules:
-              disabled: (form.values.state === 'archived' || (!(!form.values.status || form.values.status
-                === 'draft')))
-          - type: canvas.form.input
-            props:
-              label: Payer
-              value: '{{ form.values.payer }}'
-            rules:
-              disabled: (form.values.state === 'archived' || (!(!form.values.status || form.values.status
-                === 'draft')))
-          - type: canvas.form.input
-            props:
-              label: Reference
-              value: '{{ form.values.reference }}'
-            rules:
-              disabled: (form.values.state === 'archived' || (!(!form.values.status || form.values.status
-                === 'draft')))
-          - type: canvas.form.select
-            props:
-              label: Received into
-              value: '{{ form.values.bankAccount }}'
-              required: true
-              options: '{{ data.bankaccountoptions }}'
-            layout:
-              tablet:
-                colSpan: 2
-            rules:
-              disabled: (form.values.state === 'archived' || (!(!form.values.status || form.values.status
-                === 'draft')))
-      - type: canvas.card
-        props:
-          title: Allocations
-          description: Settle issued invoices. Anything unallocated stays on account in receivables.
-        children:
-        - type: canvas.grid
-          layout:
-            base:
-              columns: 1
-              gap: 4
-            tablet:
-              columns: 2
-          children:
-          - type: canvas.form.array
-            props:
-              label: Allocations
-              value: '{{ form.values.allocations }}'
-              fields:
-              - key: invoice
-                label: Invoice
-                type: select
-                required: true
-                options: '{{ data.invoiceoptions }}'
-              - key: amount
-                label: Amount
-                required: true
-              defaultRow:
-                invoice: ''
-                amount: ''
-              rowIds: false
-              minimum: 0
-              maximum: 500
-              addLabel: Allocate to an invoice
-              removeLabel: Remove row
-            layout:
-              tablet:
-                colSpan: 2
-            rules:
-              disabled: (form.values.state === 'archived' || (!(!form.values.status || form.values.status
-                === 'draft')))
-  actions:
-    save:
-      steps:
-      - patch-form:
-          values:
-            updatedAt: '{{ Date() }}'
-      - save: {}
-      - toast:
-          message: Saved
-          variant: success
-    reset:
-      steps:
-      - reset-form: {}
-    archive:
-      steps:
-      - confirm:
-          title: Archive
-          message: Archive this record? It stays in the workspace and can be restored.
-      - patch-form:
-          values:
-            state: archived
-            archivedAt: '{{ Date() }}'
-            updatedAt: '{{ Date() }}'
-      - save: {}
-      - toast:
-          message: Archived
-          variant: success
-    restore:
-      steps:
-      - patch-form:
-          values:
-            state: active
-            updatedAt: '{{ Date() }}'
-      - save: {}
-      - toast:
-          message: Restored
-          variant: success
-    post:
-      permissions:
-      - execution.run
-      - execution.read
-      steps:
-      - confirm:
-          title: Post payment
-          message: Post this payment to the ledger and settle its allocations? Posted payments cannot
-            be edited, only reversed.
-      - run-script:
-          file: /applications/invoicing/scripts/post
-          timeout: 120
-          parameters:
-            operation: post-payment
-            path: '{{ ctx.file.path }}'
-          assign: lastresult
-      - refresh-source:
-          source: record
-      - toast:
-          message: '{{ (state.lastresult && state.lastresult.message) || ''Done'' }}'
-          variant: success
-    reverse:
-      permissions:
-      - execution.run
-      - execution.read
-      steps:
-      - confirm:
-          title: Reverse payment
-          message: Reverse this payment's journal? Its allocations no longer settle their invoices.
-      - run-script:
-          file: /applications/invoicing/scripts/post
-          timeout: 120
-          parameters:
-            operation: reverse-payment
-            path: '{{ ctx.file.path }}'
-            date: '{{ state.reversaldate }}'
-            reason: '{{ state.reversalreason }}'
-          assign: lastresult
-      - refresh-source:
-          source: record
-      - toast:
-          message: '{{ (state.lastresult && state.lastresult.message) || ''Done'' }}'
-          variant: success
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Form",
+  "metadata": {
+    "id": "invoicing-payment",
+    "name": "Invoicing payment",
+    "description": "View and edit an Invoicing payment.",
+    "icon": "banknote"
+  },
+  "spec": {
+    "binds": [
+      {
+        "pattern": "application/vnd.verentis.invoicing.payment+json",
+        "mode": "edit",
+        "priority": 200,
+        "scope": "global",
+        "json-schema": {
+          "id": "https://schemas.verentis.io/invoicing/v1/payment.schema.json",
+          "source": "/applications/invoicing/schemas/payment.schema.json",
+          "title": "Invoicing payment",
+          "version": "1"
+        }
+      }
+    ],
+    "entry": "${var:canvas-origin}/render?document=%2Fapplications%2Finvoicing%2Fcanvas%2Fpayment.form.yaml",
+    "scope": "global",
+    "mime-types": [
+      {
+        "pattern": "application/vnd.verentis.invoicing.payment+json",
+        "mode": "edit",
+        "priority": 200,
+        "json-schema": {
+          "id": "https://schemas.verentis.io/invoicing/v1/payment.schema.json",
+          "source": "/applications/invoicing/schemas/payment.schema.json",
+          "title": "Invoicing payment",
+          "version": "1"
+        }
+      }
+    ],
+    "permissions": [
+      "file.read",
+      "file.write",
+      "execution.run",
+      "execution.read"
+    ],
+    "capabilities": [],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-popups": false,
+      "allow-forms": true
+    },
+    "file-access": [
+      {
+        "path": "/chart-of-accounts",
+        "mode": "read",
+        "reason": "Choose the bank account"
+      },
+      {
+        "path": "/invoices",
+        "mode": "read",
+        "reason": "Choose the invoices a payment settles"
+      },
+      {
+        "path": "/credit-notes",
+        "mode": "read",
+        "reason": "Work out what each invoice still owes"
+      },
+      {
+        "path": "/payments",
+        "mode": "read",
+        "reason": "Work out what each invoice still owes"
+      },
+      {
+        "path": "/applications/invoicing/",
+        "mode": "read",
+        "reason": "Read the Invoicing schemas and run the posting script"
+      }
+    ],
+    "access": [
+      {
+        "path": "/chart-of-accounts",
+        "reason": "Choose the bank account"
+      },
+      {
+        "path": "/invoices",
+        "reason": "Choose the invoices a payment settles"
+      },
+      {
+        "path": "/credit-notes",
+        "reason": "Work out what each invoice still owes"
+      },
+      {
+        "path": "/payments",
+        "reason": "Work out what each invoice still owes"
+      },
+      {
+        "path": "/applications/invoicing/",
+        "reason": "Read the Invoicing schemas and run the posting script"
+      }
+    ],
+    "data": {
+      "record": {
+        "kind": "document",
+        "consistency": "conditional"
+      },
+      "appops": {
+        "kind": "app-operations"
+      },
+      "accounts": {
+        "kind": "folder",
+        "path": "/chart-of-accounts",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.accounting.account+json"
+      },
+      "accountoptions": {
+        "kind": "computed",
+        "expr": "(data.accounts || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code || e.name) + ' · ' + ((e.data.number ? e.data.number + ' ' : '') + (e.data.name || '')), value: e.path }))"
+      },
+      "invoices": {
+        "kind": "folder",
+        "path": "/invoices",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.invoicing.invoice+json"
+      },
+      "invoiceoptions": {
+        "kind": "computed",
+        "expr": "(data.invoices || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.status === 'issued')).map(e => ({ label: (e.data.code || e.name) + ' · ' + (((e.data.customer && e.data.customer.name) || '') + ' · ' + e.data.currency + ' ' + ((e.data.totals && e.data.totals.gross) || '')), value: e.path }))"
+      },
+      "credits": {
+        "kind": "folder",
+        "path": "/credit-notes",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.invoicing.credit+json"
+      },
+      "payments": {
+        "kind": "folder",
+        "path": "/payments",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.invoicing.payment+json"
+      },
+      "openinvoices": {
+        "kind": "computed",
+        "expr": "(data.invoices || []).filter(e => e.kind === 'file' && e.data && e.data.status === 'issued' && e.data.totals && e.data.currency === form.values.currency && String((e.data.customer && e.data.customer.name) || '').toLowerCase() === String(form.values.payer || '').trim().toLowerCase()).map(e => ({ path: e.path, due: e.data.dueDate || '', open: Math.round(Number(e.data.totals.gross || 0) * 10000) - (data.credits || []).filter(c => c.kind === 'file' && c.data && c.data.status === 'issued' && c.data.invoice === e.path).reduce((s, c) => s + Math.round(Number(c.data.totals.gross || 0) * 10000), 0) - (data.payments || []).filter(p => p.kind === 'file' && p.data && p.data.status === 'posted').reduce((s, p) => s + (p.data.allocations || []).filter(a => a.invoice === e.path).reduce((t, a) => t + Math.round(Number(a.amount || 0) * 10000), 0), 0) })).filter(e => e.open > 0).sort((a, b) => (a.due < b.due ? -1 : a.due > b.due ? 1 : 0))"
+      },
+      "bankaccountoptions": {
+        "kind": "computed",
+        "expr": "(data.accounts || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (e.data.accountType === 'asset')).map(e => ({ label: (e.data.code || e.name) + ' · ' + ((e.data.number ? e.data.number + ' ' : '') + (e.data.name || '')), value: e.path }))"
+      }
+    },
+    "state": {
+      "reversaldate": "",
+      "reversalreason": ""
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.validation-summary",
+            "props": {
+              "title": "Fix these before saving"
+            }
+          },
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "{{ form.values.reference || 'New payment' }}",
+              "note": "Payment {{ form.values.code || '' }}"
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.dashboard.badge",
+                    "props": {
+                      "text": "{{ String(form.values.status || '').split('-').join(' ') }}",
+                      "tone": "{{ [\"issued\",\"posted\"].includes(form.values.status) ? 'success' : [\"draft\"].includes(form.values.status) ? 'warning' : [\"reversed\"].includes(form.values.status) ? 'danger' : 'neutral' }}"
+                    },
+                    "rules": {
+                      "visible": "!!form.values.status"
+                    }
+                  },
+                  {
+                    "type": "canvas.dashboard.badge",
+                    "props": {
+                      "text": "Archived",
+                      "tone": "warning",
+                      "icon": "archive"
+                    },
+                    "rules": {
+                      "visible": "form.values.state === 'archived'"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Allocate oldest first",
+                  "variant": "outline",
+                  "icon": "list-ordered",
+                  "size": "sm",
+                  "reason": "{{ !form.values.payer ? 'Enter the payer first' : (data.openinvoices || []).length === 0 ? 'The payer has no open invoices in this currency' : '' }}"
+                },
+                "on": {
+                  "click": "allocate"
+                },
+                "rules": {
+                  "visible": "(!form.values.status || form.values.status === 'draft') && !(form.values.state === 'archived')",
+                  "disabled": "form.saving || !form.values.payer || !(Number(form.values.amount) > 0) || (data.openinvoices || []).length === 0"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Post",
+                  "icon": "check",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "post"
+                },
+                "rules": {
+                  "visible": "(!form.values.status || form.values.status === 'draft') && !(form.values.state === 'archived')",
+                  "disabled": "form.saving || form.dirty || form.invalid"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Reverse",
+                  "variant": "outline",
+                  "icon": "undo-2",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "reverse"
+                },
+                "rules": {
+                  "visible": "form.values.status === 'posted'",
+                  "disabled": "form.saving || form.dirty"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Archive",
+                      "variant": "ghost",
+                      "icon": "archive",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "archive"
+                    },
+                    "rules": {
+                      "visible": "!(form.values.state === 'archived') && !(!(!form.values.status || form.values.status === 'draft'))",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Restore",
+                      "variant": "outline",
+                      "icon": "archive-restore",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "restore"
+                    },
+                    "rules": {
+                      "visible": "form.values.state === 'archived'",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Reset",
+                      "variant": "ghost",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "reset"
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Save",
+                      "icon": "save",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "save"
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft'))"
+                    }
+                  }
+                ],
+                "slot": "actions"
+              }
+            ]
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "record",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.alert",
+            "props": {
+              "tone": "warning",
+              "title": "This payment is archived",
+              "text": "Restore it to edit.",
+              "icon": "archive",
+              "action": {
+                "label": "Restore",
+                "id": "restore"
+              }
+            },
+            "rules": {
+              "visible": "form.values.state === 'archived'"
+            },
+            "on": {
+              "action": "restore"
+            }
+          },
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "direction": "row",
+                "wrap": true,
+                "gap": 2,
+                "align": "center"
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Journal",
+                  "variant": "ghost",
+                  "icon": "notebook-pen",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "{{ form.values.journal && form.values.journal.path }}",
+                        "mode": "edit"
+                      }
+                    }
+                  ]
+                },
+                "rules": {
+                  "visible": "!!(form.values.journal && form.values.journal.path)"
+                }
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Reversal",
+                  "variant": "ghost",
+                  "icon": "undo-2",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "open-file": {
+                        "path": "{{ form.values.reversalJournal && form.values.reversalJournal.path }}",
+                        "mode": "edit"
+                      }
+                    }
+                  ]
+                },
+                "rules": {
+                  "visible": "!!(form.values.reversalJournal && form.values.reversalJournal.path)"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "Allocated {{ ((form.values.allocations || []).reduce((s, a) => s + Math.round(Number(a.amount || 0) * 100), 0) / 100).toFixed(2) }} of {{ form.values.amount || '0.00' }}",
+              "tone": "muted"
+            }
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 1,
+                "gap": 4
+              },
+              "tablet": {
+                "columns": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.form.date",
+                "props": {
+                  "label": "Reversal date",
+                  "description": "Defaults to today.",
+                  "value": "{{ state.reversaldate }}"
+                },
+                "rules": {
+                  "visible": "form.values.status === 'posted'"
+                }
+              },
+              {
+                "type": "canvas.form.input",
+                "props": {
+                  "label": "Reason",
+                  "placeholder": "Why is this being reversed?",
+                  "value": "{{ state.reversalreason }}"
+                },
+                "rules": {
+                  "visible": "form.values.status === 'posted'"
+                }
+              }
+            ]
+          },
+          {
+            "type": "canvas.grid",
+            "layout": {
+              "base": {
+                "columns": 1,
+                "gap": 4
+              },
+              "tablet": {
+                "columns": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Payment"
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.date",
+                        "props": {
+                          "label": "Date received",
+                          "value": "{{ form.values.date }}",
+                          "required": true
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft')))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Method",
+                          "value": "{{ form.values.method }}",
+                          "options": [
+                            {
+                              "value": "bank-transfer",
+                              "label": "Bank transfer"
+                            },
+                            {
+                              "value": "card",
+                              "label": "Card"
+                            },
+                            {
+                              "value": "cash",
+                              "label": "Cash"
+                            },
+                            {
+                              "value": "other",
+                              "label": "Other"
+                            }
+                          ],
+                          "display": "segmented"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft')))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Currency",
+                          "value": "{{ form.values.currency }}",
+                          "required": true,
+                          "placeholder": "ZAR"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft')))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Amount",
+                          "value": "{{ form.values.amount }}",
+                          "required": true,
+                          "placeholder": "0.00"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft')))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Payer",
+                          "value": "{{ form.values.payer }}"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft')))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.input",
+                        "props": {
+                          "label": "Reference",
+                          "value": "{{ form.values.reference }}"
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft')))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Received into",
+                          "value": "{{ form.values.bankAccount }}",
+                          "required": true,
+                          "options": "{{ data.bankaccountoptions }}",
+                          "searchable": true
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft')))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "canvas.card",
+                "props": {
+                  "title": "Allocations",
+                  "description": "Settle issued invoices. Anything unallocated stays on account in receivables."
+                },
+                "children": [
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.line-items",
+                        "props": {
+                          "label": "Allocations",
+                          "value": "{{ form.values.allocations }}",
+                          "columns": [
+                            {
+                              "key": "invoice",
+                              "label": "Invoice",
+                              "type": "select",
+                              "options": "{{ data.invoiceoptions }}"
+                            },
+                            {
+                              "key": "amount",
+                              "label": "Amount",
+                              "type": "text",
+                              "align": "right"
+                            }
+                          ],
+                          "defaultRow": {
+                            "invoice": "",
+                            "amount": ""
+                          },
+                          "storeComputed": false,
+                          "minimum": 0,
+                          "maximum": 500,
+                          "addLabel": "Allocate to an invoice"
+                        },
+                        "layout": {
+                          "tablet": {
+                            "colSpan": 2
+                          }
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (!(!form.values.status || form.values.status === 'draft')))"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "actions": {
+      "save": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Saved",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "reset": {
+        "steps": [
+          {
+            "reset-form": {}
+          }
+        ]
+      },
+      "archive": {
+        "steps": [
+          {
+            "confirm": {
+              "title": "Archive",
+              "message": "Archive this record? It stays in the workspace and can be restored."
+            }
+          },
+          {
+            "patch-form": {
+              "values": {
+                "state": "archived",
+                "archivedAt": "{{ Date() }}",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Archived",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "restore": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "state": "active",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Restored",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "allocate": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "allocations": {
+                  "$expr": "(data.openinvoices || []).reduce((acc, inv) => acc.left <= 0 ? acc : ({ left: acc.left - Math.min(acc.left, inv.open), rows: acc.rows.concat([{ invoice: inv.path, amount: (Math.min(acc.left, inv.open) / 10000).toFixed(2) }]) }), { left: Math.round(Number(form.values.amount || 0) * 10000), rows: [] }).rows"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "post": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "set-state": {
+              "key": "lastresult",
+              "value": null
+            }
+          },
+          {
+            "set-state": {
+              "key": "appcall",
+              "value": null
+            }
+          },
+          {
+            "set-state": {
+              "key": "recorded",
+              "value": null
+            }
+          },
+          {
+            "toast": {
+              "if": "!((data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available))",
+              "variant": "error",
+              "message": "Accounting is not available right now, so nothing was done. Check that Accounting is installed and approved, then try again."
+            }
+          },
+          {
+            "confirm": {
+              "title": "Post payment",
+              "message": "Post this payment to the ledger and settle its allocations? Posted payments cannot be edited, only reversed.",
+              "details": "{{ [{ label: 'Debit ' + ((((data.accounts || []).find(a => a.path === form.values.bankAccount) || {}).data || {}).name || 'the bank account'), value: Number(form.values.amount || 0).toFixed(2) }].concat((form.values.allocations || []).map(a => ({ label: 'Settles ' + (((data.invoiceoptions || []).find(o => o.value === a.invoice) || {}).label || a.invoice), value: Number(a.amount || 0).toFixed(2) }))) }}",
+              "if": "(data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available)"
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/invoicing/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "post-payment",
+                "path": "{{ ctx.file.path }}"
+              },
+              "assign": "lastresult",
+              "if": "(data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available)"
+            }
+          },
+          {
+            "call-app": {
+              "if": "((data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available)) && ((data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available) && !!state.lastresult && !!state.lastresult.journalRequest)",
+              "app": "accounting",
+              "operation": "post-journal",
+              "input": {
+                "$expr": "state.lastresult.journalRequest"
+              },
+              "idempotency-key": "{{ ('journal-' + form.values.code) + '-' + Date.now() }}",
+              "assign": "appcall"
+            }
+          },
+          {
+            "run-script": {
+              "if": "((data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available)) && ((data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available) && !!state.lastresult && !!state.lastresult.journalRequest && !!state.appcall && !!state.appcall.path)",
+              "file": "/applications/invoicing/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "complete-payment",
+                "path": "{{ ctx.file.path }}",
+                "journal": "{{ state.appcall.path }}"
+              },
+              "assign": "recorded"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record",
+              "if": "(data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available)"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.recorded && state.recorded.message) || (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success",
+              "if": "((data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available)) && (!(!!state.lastresult && !!state.lastresult.journalRequest) || !!state.recorded)"
+            }
+          },
+          {
+            "toast": {
+              "if": "((data.appops || []).some(o => o.app === 'accounting' && o.operation === 'post-journal' && o.available)) && !!state.lastresult && !!state.lastresult.journalRequest && !state.recorded",
+              "variant": "error",
+              "message": "Accounting did not confirm this. Nothing was marked as done; try again."
+            }
+          }
+        ]
+      },
+      "reverse": {
+        "permissions": [
+          "execution.run",
+          "execution.read"
+        ],
+        "steps": [
+          {
+            "set-state": {
+              "key": "lastresult",
+              "value": null
+            }
+          },
+          {
+            "set-state": {
+              "key": "appcall",
+              "value": null
+            }
+          },
+          {
+            "set-state": {
+              "key": "recorded",
+              "value": null
+            }
+          },
+          {
+            "toast": {
+              "if": "!((data.appops || []).some(o => o.app === 'accounting' && o.operation === 'reverse-journal' && o.available))",
+              "variant": "error",
+              "message": "Accounting is not available right now, so nothing was done. Check that Accounting is installed and approved, then try again."
+            }
+          },
+          {
+            "confirm": {
+              "title": "Reverse payment",
+              "message": "Reverse this payment's journal? Its allocations no longer settle their invoices.",
+              "if": "(data.appops || []).some(o => o.app === 'accounting' && o.operation === 'reverse-journal' && o.available)"
+            }
+          },
+          {
+            "run-script": {
+              "file": "/applications/invoicing/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "reverse-payment",
+                "path": "{{ ctx.file.path }}",
+                "date": "{{ state.reversaldate }}",
+                "reason": "{{ state.reversalreason }}"
+              },
+              "assign": "lastresult",
+              "if": "(data.appops || []).some(o => o.app === 'accounting' && o.operation === 'reverse-journal' && o.available)"
+            }
+          },
+          {
+            "call-app": {
+              "if": "((data.appops || []).some(o => o.app === 'accounting' && o.operation === 'reverse-journal' && o.available)) && ((data.appops || []).some(o => o.app === 'accounting' && o.operation === 'reverse-journal' && o.available) && !!state.lastresult && !!state.lastresult.reversalRequest)",
+              "app": "accounting",
+              "operation": "reverse-journal",
+              "input": {
+                "$expr": "state.lastresult.reversalRequest"
+              },
+              "idempotency-key": "{{ ('reversal-' + form.values.code) + '-' + Date.now() }}",
+              "assign": "appcall"
+            }
+          },
+          {
+            "run-script": {
+              "if": "((data.appops || []).some(o => o.app === 'accounting' && o.operation === 'reverse-journal' && o.available)) && ((data.appops || []).some(o => o.app === 'accounting' && o.operation === 'reverse-journal' && o.available) && !!state.lastresult && !!state.lastresult.reversalRequest && !!state.appcall && !!state.appcall.path)",
+              "file": "/applications/invoicing/scripts/post",
+              "timeout": 120,
+              "parameters": {
+                "operation": "complete-reversal",
+                "path": "{{ ctx.file.path }}",
+                "reversal": "{{ state.appcall.path }}"
+              },
+              "assign": "recorded"
+            }
+          },
+          {
+            "refresh-source": {
+              "source": "record",
+              "if": "(data.appops || []).some(o => o.app === 'accounting' && o.operation === 'reverse-journal' && o.available)"
+            }
+          },
+          {
+            "toast": {
+              "message": "{{ (state.recorded && state.recorded.message) || (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "variant": "success",
+              "if": "((data.appops || []).some(o => o.app === 'accounting' && o.operation === 'reverse-journal' && o.available)) && (!(!!state.lastresult && !!state.lastresult.reversalRequest) || !!state.recorded)"
+            }
+          },
+          {
+            "toast": {
+              "if": "((data.appops || []).some(o => o.app === 'accounting' && o.operation === 'reverse-journal' && o.available)) && !!state.lastresult && !!state.lastresult.reversalRequest && !state.recorded",
+              "variant": "error",
+              "message": "Accounting did not confirm this. Nothing was marked as done; try again."
+            }
+          }
+        ]
+      }
+    }
+  }
+}

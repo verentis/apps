@@ -27,7 +27,7 @@
         "kind": "folder",
         "path": "/products",
         "contents": true,
-        "mime-pattern": "application/vnd.verentis.inventory.product+json"
+        "mime-pattern": "application/vnd.verentis.products.product+json"
       },
       "warehouses": {
         "kind": "folder",
@@ -48,22 +48,67 @@
       "levels": {
         "kind": "computed",
         "expr": "(data.products || []).filter(p => p.kind === 'file' && p.data && p.data.kind === 'product').reduce((rows, p) => rows.concat((data.warehouses || []).filter(w => w.kind === 'file' && w.data && w.data.kind === 'warehouse').map(w => ({ path: p.path, code: p.data.code || p.name, product: p.data.name || '', warehouse: w.data.name || w.name, units: (data.moves || []).filter(m => m.kind === 'file' && m.data && m.data.kind === 'move' && m.data.status === 'done').reduce((s, m) => s + (m.data.product === p.path ? ((m.data.toWarehouse === w.path ? Math.round(Number(m.data.quantity || 0) * 10000) : 0) - (m.data.fromWarehouse === w.path ? Math.round(Number(m.data.quantity || 0) * 10000) : 0)) : 0), 0) }))), []).filter(l => l.units !== 0)"
+      },
+      "appops": {
+        "kind": "app-operations"
       }
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Inventory",
+          "icon": "package",
+          "active": "stock.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "stock.page.yaml",
+              "label": "Stock",
+              "icon": "boxes",
+              "count": "{{ (data.totals || []).filter(t => t.hasReorder && t.units <= t.reorder).length }}",
+              "tone": "warning"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/inventory/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/inventory.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Stock levels",
+              "note": "Computed from done stock moves; applied inventory adjustments count through their corrective moves. Draft moves are ignored."
+            },
+            "children": []
+          },
           {
             "type": "canvas.stack",
             "layout": {
@@ -72,109 +117,84 @@
                 "wrap": true,
                 "gap": 2,
                 "align": "center",
-                "justify": "between"
+                "justify": "end"
               }
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Stock levels"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Computed from done stock moves; applied inventory adjustments count through their corrective moves. Draft moves are ignored.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
-              },
-              {
                 "type": "canvas.button",
                 "props": {
-                  "label": "Inventory",
-                  "variant": "ghost",
-                  "icon": "package",
+                  "label": "Draft purchase order ({{ (data.totals || []).filter(t => t.hasReorder && t.units <= t.reorder).length }})",
+                  "icon": "shopping-cart",
                   "size": "sm"
                 },
                 "on": {
                   "click": [
                     {
+                      "confirm": {
+                        "title": "Draft a purchase order",
+                        "message": "Ask Purchase to draft an order for the {{ (data.totals || []).filter(t => t.hasReorder && t.units <= t.reorder).length }} products at or below their reorder point? Each is ordered up to twice its reorder point; choose the vendor and prices on the draft."
+                      }
+                    },
+                    {
+                      "call-app": {
+                        "app": "purchase",
+                        "operation": "create-draft-order",
+                        "idempotency-key": "{{ ('reorder-' + Date().slice(0, 10)) + '-' + Date.now() }}",
+                        "assign": "order",
+                        "input": {
+                          "$expr": "({ source: { path: '/products#reorder-' + Date().slice(0, 10), code: 'Reorder ' + Date().slice(0, 10) }, lines: (data.totals || []).filter(t => t.hasReorder && t.units <= t.reorder).map(t => ({ description: [t.product || t.code, t.sku ? '(' + t.sku + ')' : ''].filter(part => part).join(' '), quantity: String(Math.max(1, Math.ceil((2 * t.reorder - t.units) / 10000))) })), notes: 'Drafted from Inventory products at or below their reorder point.' })"
+                        }
+                      }
+                    },
+                    {
                       "open-file": {
-                        "path": "/applications/inventory/canvas/home.page.yaml"
+                        "path": "{{ state.order.path }}"
+                      }
+                    },
+                    {
+                      "toast": {
+                        "message": "{{ state.order.created ? 'Drafted purchase order ' + state.order.code : 'Opened today\\'s reorder ' + state.order.code }}",
+                        "variant": "success"
                       }
                     }
                   ]
+                },
+                "rules": {
+                  "visible": "(data.appops || []).some(o => o.app === 'purchase' && o.operation === 'create-draft-order' && o.available) && (data.totals || []).filter(t => t.hasReorder && t.units <= t.reorder).length > 0"
+                }
+              },
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "Install Purchase to draft purchase orders for products below their reorder point.",
+                  "tone": "muted"
+                },
+                "rules": {
+                  "visible": "!((data.appops || []).some(o => o.app === 'purchase' && o.operation === 'create-draft-order' && o.available)) && (data.totals || []).filter(t => t.hasReorder && t.units <= t.reorder).length > 0"
                 }
               }
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "{{ data.$products.error }}"
-            },
-            "rules": {
-              "visible": "data.$products.status === 'error'"
+              "for": "products",
+              "compact": true
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "Loading…",
-              "tone": "muted"
-            },
-            "rules": {
-              "visible": "data.$products.status === 'loading'"
+              "for": "warehouses",
+              "compact": true
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "{{ data.$warehouses.error }}"
-            },
-            "rules": {
-              "visible": "data.$warehouses.status === 'error'"
-            }
-          },
-          {
-            "type": "canvas.text",
-            "props": {
-              "text": "Loading…",
-              "tone": "muted"
-            },
-            "rules": {
-              "visible": "data.$warehouses.status === 'loading'"
-            }
-          },
-          {
-            "type": "canvas.text",
-            "props": {
-              "text": "{{ data.$moves.error }}"
-            },
-            "rules": {
-              "visible": "data.$moves.status === 'error'"
-            }
-          },
-          {
-            "type": "canvas.text",
-            "props": {
-              "text": "Loading…",
-              "tone": "muted"
-            },
-            "rules": {
-              "visible": "data.$moves.status === 'loading'"
+              "for": "moves",
+              "compact": true
             }
           },
           {
@@ -280,6 +300,10 @@
                         }
                       ],
                       "emptyText": "No products yet",
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
                       "clickable": true
                     },
                     "on": {
@@ -287,7 +311,8 @@
                         {
                           "open-file": {
                             "path": "{{ event.path }}",
-                            "mode": "edit"
+                            "mode": "edit",
+                            "open": "side"
                           }
                         }
                       ]
@@ -328,6 +353,10 @@
                         }
                       ],
                       "emptyText": "No stock in any warehouse yet",
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
                       "clickable": true
                     },
                     "on": {
@@ -335,7 +364,8 @@
                         {
                           "open-file": {
                             "path": "{{ event.path }}",
-                            "mode": "edit"
+                            "mode": "edit",
+                            "open": "side"
                           }
                         }
                       ]
@@ -345,9 +375,144 @@
                 "slot": "warehouse"
               }
             ]
+          },
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "gap": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Reorder point"
+                }
+              },
+              {
+                "type": "canvas.text",
+                "props": {
+                  "text": "Products keeps each product's reorder point; Inventory changes it through Products.",
+                  "tone": "muted"
+                }
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center",
+                    "justify": "end"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.form.select",
+                    "props": {
+                      "label": "Product",
+                      "value": "{{ state.reorderproduct }}",
+                      "options": "{{ (data.totals || []).map(t => ({ label: t.code + ' · ' + t.product, value: t.path })) }}"
+                    }
+                  },
+                  {
+                    "type": "canvas.form.input",
+                    "props": {
+                      "label": "Reorder point",
+                      "placeholder": "0",
+                      "value": "{{ state.reorderpoint }}"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Set reorder point",
+                      "icon": "save",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "call-app": {
+                            "app": "products",
+                            "operation": "update-product",
+                            "assign": "updated",
+                            "idempotency-key": "{{ ('reorder-point-' + state.reorderproduct) + '-' + Date.now() }}",
+                            "input": {
+                              "$expr": "({ path: state.reorderproduct, values: { reorderPoint: state.reorderpoint.trim() } })"
+                            }
+                          }
+                        },
+                        {
+                          "refresh-source": {
+                            "source": "products"
+                          }
+                        },
+                        {
+                          "toast": {
+                            "message": "{{ state.updated.changed.length ? 'Set the reorder point of ' + state.updated.code : state.updated.code + ' already has that reorder point' }}",
+                            "variant": "success"
+                          }
+                        }
+                      ]
+                    },
+                    "rules": {
+                      "disabled": "!state.reorderproduct || !/^((0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?)?$/.test(state.reorderpoint.trim()) || !((data.appops || []).some(o => o.app === 'products' && o.operation === 'update-product' && o.available))"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.stack",
+            "layout": {
+              "base": {
+                "gap": 2
+              }
+            },
+            "children": [
+              {
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Below reorder point"
+                }
+              },
+              {
+                "type": "canvas.chart",
+                "props": {
+                  "rows": "{{ (data.totals || []).filter(t => t.hasReorder && t.units <= t.reorder).map(t => ({ path: t.path, label: t.product || t.code, onhand: (t.units || 0) / 10000, short: Math.max(0, (t.reorder - (t.units || 0)) / 10000) })) }}",
+                  "showLegend": true,
+                  "emptyText": "Every product is above its reorder point",
+                  "kind": "stacked-hbar",
+                  "x": "label",
+                  "y": [
+                    "onhand",
+                    "short"
+                  ],
+                  "labels": {
+                    "onhand": "On hand",
+                    "short": "Short of reorder point"
+                  },
+                  "palette": {
+                    "onhand": "chart-1",
+                    "short": "danger"
+                  },
+                  "format": "number"
+                }
+              }
+            ]
           }
         ]
       }
-    ]
+    ],
+    "state": {
+      "reorderproduct": "",
+      "reorderpoint": ""
+    }
   }
 }

@@ -32,7 +32,6 @@ export const postScriptFileAccess = [
   { path: accountingSettingsPath, mode: 'read', reason: 'Read the ledger\'s base currency and precision' },
   { path: accounting.accounts, mode: 'read', reason: 'Check that posted accounts exist and are active' },
   { path: accounting.periods, mode: 'read', reason: 'Find the open period a pay run posts in' },
-  { path: accounting.journals, mode: 'write', reason: 'Post one journal per pay run' },
   { path: containers.structures.path, mode: 'read', reason: 'Read the salary structures payslips are computed from' },
   { path: containers.profiles.path, mode: 'read', reason: 'Read the active pay profiles a run pays' },
   { path: containers.runs.path, mode: 'write', reason: 'Store computed payslips and mark runs computed, approved or posted' },

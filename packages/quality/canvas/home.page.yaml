@@ -48,124 +48,116 @@
       "alertrows": {
         "kind": "computed",
         "expr": "(data.alerts || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, title: e.data.title || '', severity: e.data.severity || '', stage: e.data.stage || 'new' }))"
+      },
+      "listqualitychecks": {
+        "kind": "folder",
+        "path": "/quality-checks",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.quality.check+json"
+      },
+      "listqualityalerts": {
+        "kind": "folder",
+        "path": "/quality-alerts",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.quality.alert+json"
+      },
+      "listqualitycontrolpoints": {
+        "kind": "folder",
+        "path": "/quality-control-points",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.quality.point+json"
       }
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Quality",
+          "icon": "badge-check",
+          "active": "home.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "checks.page.yaml",
+              "label": "Checks",
+              "icon": "clipboard-check",
+              "count": "{{ (data.checkrows || []).filter(c => c.result === 'pending').length }}"
+            },
+            {
+              "id": "alerts.page.yaml",
+              "label": "Alerts",
+              "icon": "triangle-alert",
+              "count": "{{ (data.alertrows || []).filter(a => a.stage !== 'resolved').length }}",
+              "tone": "danger"
+            },
+            {
+              "id": "points.page.yaml",
+              "label": "Control points",
+              "icon": "crosshair"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/quality/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            }
+          ]
         },
         "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Quality",
+              "note": "Control points, checks and alerts are files in your workspace. Draft a check in /quality-checks, record it from its form; failed checks raise alerts."
+            },
+            "children": []
+          },
           {
             "type": "canvas.stack",
             "layout": {
               "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
+                "gap": 2
               }
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Quality"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Control points, checks and alerts are files in your workspace. Draft a check in /quality-checks, record it from its form; failed checks raise alerts.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Checks by result"
+                }
               },
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "direction": "row",
-                    "wrap": true,
-                    "gap": 2,
-                    "align": "center"
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Quality checks",
-                      "variant": "outline",
-                      "icon": "clipboard-check",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/quality/canvas/checks.page.yaml"
-                          }
-                        }
-                      ]
-                    }
+                "type": "canvas.chart",
+                "props": {
+                  "rows": "{{ ['pending', 'pass', 'fail'].map(result => ({ label: result, value: (data.checkrows || []).filter(c => c.result === result).length })) }}",
+                  "showLegend": true,
+                  "emptyText": "No checks yet",
+                  "kind": "strip",
+                  "x": "label",
+                  "y": "value",
+                  "labels": {
+                    "pending": "Pending",
+                    "pass": "Passed",
+                    "fail": "Failed"
                   },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Quality alerts",
-                      "variant": "outline",
-                      "icon": "siren",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/quality/canvas/alerts.page.yaml"
-                          }
-                        }
-                      ]
-                    }
+                  "palette": {
+                    "pending": "muted",
+                    "pass": "success",
+                    "fail": "danger"
                   },
-                  {
-                    "type": "canvas.button",
-                    "props": {
-                      "label": "Control points",
-                      "variant": "outline",
-                      "icon": "crosshair",
-                      "size": "sm"
-                    },
-                    "on": {
-                      "click": [
-                        {
-                          "open-file": {
-                            "path": "/applications/quality/canvas/points.page.yaml"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ]
+                  "format": "integer"
+                }
               }
             ]
           },
@@ -220,30 +212,27 @@
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /quality-control-points folder could not be read. Reinstall Quality to recreate it."
-            },
-            "rules": {
-              "visible": "data.$points.status === 'error'"
+              "for": "points",
+              "compact": true,
+              "description": "The /quality-control-points folder could not be read. Reinstall Quality to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /quality-checks folder could not be read. Reinstall Quality to recreate it."
-            },
-            "rules": {
-              "visible": "data.$checks.status === 'error'"
+              "for": "checks",
+              "compact": true,
+              "description": "The /quality-checks folder could not be read. Reinstall Quality to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /quality-alerts folder could not be read. Reinstall Quality to recreate it."
-            },
-            "rules": {
-              "visible": "data.$alerts.status === 'error'"
+              "for": "alerts",
+              "compact": true,
+              "description": "The /quality-alerts folder could not be read. Reinstall Quality to recreate it."
             }
           },
           {
@@ -308,17 +297,19 @@
                     ]
                   },
                   {
-                    "type": "canvas.files",
+                    "type": "canvas.empty-state",
                     "props": {
-                      "path": "/quality-checks/",
-                      "mimeTypes": [
-                        "application/vnd.verentis.quality.check+json"
-                      ],
-                      "showFolders": false,
-                      "navigable": false,
+                      "for": "listqualitychecks",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listqualitychecks || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
                       "columns": [
                         {
-                          "key": "name",
+                          "key": "data.code",
                           "label": "Check"
                         },
                         {
@@ -327,14 +318,35 @@
                         },
                         {
                           "key": "data.date",
-                          "label": "Date"
+                          "label": "Date",
+                          "format": "date"
                         },
                         {
                           "key": "data.result",
                           "label": "Result"
                         }
                       ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
                       "emptyText": "No checks yet. Use New in /quality-checks."
+                    },
+                    "rules": {
+                      "visible": "data.$listqualitychecks.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
                     }
                   }
                 ],
@@ -380,17 +392,19 @@
                     ]
                   },
                   {
-                    "type": "canvas.files",
+                    "type": "canvas.empty-state",
                     "props": {
-                      "path": "/quality-alerts/",
-                      "mimeTypes": [
-                        "application/vnd.verentis.quality.alert+json"
-                      ],
-                      "showFolders": false,
-                      "navigable": false,
+                      "for": "listqualityalerts",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listqualityalerts || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
                       "columns": [
                         {
-                          "key": "name",
+                          "key": "data.code",
                           "label": "Alert"
                         },
                         {
@@ -403,10 +417,34 @@
                         },
                         {
                           "key": "data.stage",
-                          "label": "Stage"
+                          "label": "Stage",
+                          "format": "badge"
                         }
                       ],
+                      "facets": [
+                        "data.stage"
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
                       "emptyText": "No alerts yet. Use New in /quality-alerts."
+                    },
+                    "rules": {
+                      "visible": "data.$listqualityalerts.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
                     }
                   }
                 ],
@@ -452,17 +490,19 @@
                     ]
                   },
                   {
-                    "type": "canvas.files",
+                    "type": "canvas.empty-state",
                     "props": {
-                      "path": "/quality-control-points/",
-                      "mimeTypes": [
-                        "application/vnd.verentis.quality.point+json"
-                      ],
-                      "showFolders": false,
-                      "navigable": false,
+                      "for": "listqualitycontrolpoints",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.listqualitycontrolpoints || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived') }}",
                       "columns": [
                         {
-                          "key": "name",
+                          "key": "data.code",
                           "label": "Point"
                         },
                         {
@@ -478,7 +518,27 @@
                           "label": "Frequency"
                         }
                       ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
                       "emptyText": "No control points yet. Use New in /quality-control-points."
+                    },
+                    "rules": {
+                      "visible": "data.$listqualitycontrolpoints.status === 'ready'"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
                     }
                   }
                 ],

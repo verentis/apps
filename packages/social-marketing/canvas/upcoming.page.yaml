@@ -38,67 +38,108 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Social Marketing",
+          "icon": "megaphone",
+          "active": "upcoming.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "upcoming.page.yaml",
+              "label": "Calendar",
+              "icon": "calendar"
+            },
+            {
+              "id": "engagement.page.yaml",
+              "label": "Engagement",
+              "icon": "chart-column"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/social-marketing/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/social-marketing.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Upcoming posts",
+              "note": "Every scheduled post, earliest first. Click a row to open the post."
+            },
+            "children": []
+          },
           {
             "type": "canvas.stack",
             "layout": {
               "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
+                "gap": 2
               }
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Upcoming posts"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Every scheduled post, earliest first. Click a row to open the post.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Content calendar"
+                }
               },
               {
-                "type": "canvas.button",
+                "type": "canvas.text",
                 "props": {
-                  "label": "Social Marketing",
-                  "variant": "ghost",
-                  "icon": "megaphone",
-                  "size": "sm"
+                  "text": "Scheduled and published posts per account.",
+                  "tone": "muted"
+                }
+              },
+              {
+                "type": "canvas.calendar",
+                "props": {
+                  "rows": "{{ (data.rows || []).filter(r => !!(r.scheduledDate || r.publishedAt)).map(r => ({ path: r.path, title: r.excerpt || r.code, handle: r.handle || 'No account', at: r.scheduledDate || r.publishedAt })) }}",
+                  "views": [
+                    "month",
+                    "week",
+                    "agenda"
+                  ],
+                  "showLegend": true,
+                  "emptyText": "Nothing scheduled",
+                  "start": "at",
+                  "title": "title",
+                  "colorBy": "handle",
+                  "view": "month"
                 },
                 "on": {
-                  "click": [
+                  "open": [
                     {
                       "open-file": {
-                        "path": "/applications/social-marketing/canvas/home.page.yaml"
+                        "path": "{{ event.row.path }}",
+                        "mode": "edit",
+                        "open": "side"
                       }
                     }
                   ]
@@ -107,21 +148,19 @@
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /social-posts folder could not be read. Reinstall Social Marketing to recreate it."
-            },
-            "rules": {
-              "visible": "data.$posts.status === 'error'"
+              "for": "posts",
+              "compact": true,
+              "description": "The /social-posts folder could not be read. Reinstall Social Marketing to recreate it."
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "The /social-accounts folder could not be read. Reinstall Social Marketing to recreate it."
-            },
-            "rules": {
-              "visible": "data.$accounts.status === 'error'"
+              "for": "accounts",
+              "compact": true,
+              "description": "The /social-accounts folder could not be read. Reinstall Social Marketing to recreate it."
             }
           },
           {
@@ -203,6 +242,10 @@
                     }
                   ],
                   "emptyText": "Nothing scheduled",
+                  "search": true,
+                  "sortable": true,
+                  "pageSize": 25,
+                  "narrow": "list",
                   "clickable": true
                 },
                 "on": {
@@ -210,7 +253,8 @@
                     {
                       "open-file": {
                         "path": "{{ event.path }}",
-                        "mode": "edit"
+                        "mode": "edit",
+                        "open": "side"
                       }
                     }
                   ]
@@ -221,26 +265,18 @@
           {
             "type": "canvas.tabs",
             "props": {
+              "variant": "pill",
+              "persist": true,
               "items": [
                 {
-                  "value": "draft",
-                  "label": "Draft",
-                  "icon": "megaphone"
+                  "value": "board",
+                  "label": "Board",
+                  "icon": "kanban"
                 },
                 {
-                  "value": "scheduled",
-                  "label": "Scheduled",
-                  "icon": "megaphone"
-                },
-                {
-                  "value": "published",
-                  "label": "Published",
-                  "icon": "megaphone"
-                },
-                {
-                  "value": "cancelled",
-                  "label": "Cancelled",
-                  "icon": "megaphone"
+                  "value": "list",
+                  "label": "List",
+                  "icon": "list"
                 }
               ]
             },
@@ -254,47 +290,127 @@
                 },
                 "children": [
                   {
-                    "type": "canvas.table",
+                    "type": "canvas.board",
                     "props": {
-                      "rows": "{{ (data.rows || []).filter(r => r.status === 'draft') }}",
+                      "rows": "{{ (data.rows || []) }}",
+                      "groupBy": "status",
+                      "readOnly": false,
+                      "rowKey": "path",
                       "columns": [
                         {
-                          "key": "code",
-                          "label": "Post"
+                          "value": "draft",
+                          "label": "Draft",
+                          "locked": true
                         },
                         {
-                          "key": "handle",
-                          "label": "Account"
-                        },
-                        {
-                          "key": "excerpt",
-                          "label": "Content"
-                        },
-                        {
-                          "key": "scheduledDate",
+                          "value": "scheduled",
                           "label": "Scheduled"
                         },
                         {
-                          "key": "publishedAt",
-                          "label": "Published at"
+                          "value": "published",
+                          "label": "Published"
+                        },
+                        {
+                          "value": "cancelled",
+                          "label": "Cancelled"
                         }
                       ],
-                      "emptyText": "No draft posts",
-                      "clickable": true
+                      "card": {
+                        "title": "handle",
+                        "code": "code",
+                        "meta": [
+                          "excerpt",
+                          "scheduledDate",
+                          "publishedAt"
+                        ]
+                      },
+                      "emptyText": "Nothing here",
+                      "lockedWhen": "[\"published\",\"cancelled\"].includes(row.status)"
                     },
                     "on": {
-                      "row-click": [
+                      "open": [
                         {
                           "open-file": {
-                            "path": "{{ event.path }}",
-                            "mode": "edit"
+                            "path": "{{ event.row.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ],
+                      "move": [
+                        {
+                          "confirm": {
+                            "if": "event.to === 'published'",
+                            "title": "Move to Published?",
+                            "message": "{{ event.row.code }} moves to Published. It cannot be moved back from the board.",
+                            "confirm-label": "Move to Published"
+                          }
+                        },
+                        {
+                          "confirm": {
+                            "if": "event.to === 'cancelled'",
+                            "title": "Move to Cancelled?",
+                            "message": "{{ event.row.code }} moves to Cancelled. It cannot be moved back from the board.",
+                            "confirm-label": "Move to Cancelled"
+                          }
+                        },
+                        {
+                          "run-script": {
+                            "if": "event.to === 'scheduled'",
+                            "file": "/applications/social-marketing/scripts/post",
+                            "timeout": 120,
+                            "parameters": {
+                              "operation": "schedule",
+                              "path": "{{ event.path }}"
+                            },
+                            "assign": "lastmove"
+                          }
+                        },
+                        {
+                          "run-script": {
+                            "if": "event.to === 'published'",
+                            "file": "/applications/social-marketing/scripts/post",
+                            "timeout": 120,
+                            "parameters": {
+                              "operation": "publish",
+                              "path": "{{ event.path }}"
+                            },
+                            "assign": "lastmove"
+                          }
+                        },
+                        {
+                          "run-script": {
+                            "if": "event.to === 'cancelled'",
+                            "file": "/applications/social-marketing/scripts/post",
+                            "timeout": 120,
+                            "parameters": {
+                              "operation": "cancel",
+                              "path": "{{ event.path }}"
+                            },
+                            "assign": "lastmove"
+                          }
+                        },
+                        {
+                          "refresh-source": {
+                            "source": "posts"
+                          }
+                        },
+                        {
+                          "refresh-source": {
+                            "source": "accounts"
+                          }
+                        },
+                        {
+                          "toast": {
+                            "message": "{{ [\"scheduled\",\"published\",\"cancelled\"].includes(event.to) ? ((state.lastmove && state.lastmove.message) || 'Done') : 'Moved to ' + ({\"draft\":\"Draft\",\"scheduled\":\"Scheduled\",\"published\":\"Published\",\"cancelled\":\"Cancelled\"}[event.to] || event.to) }}",
+                            "variant": "success"
                           }
                         }
                       ]
                     }
                   }
                 ],
-                "slot": "draft"
+                "slot": "board"
               },
               {
                 "type": "canvas.stack",
@@ -307,7 +423,7 @@
                   {
                     "type": "canvas.table",
                     "props": {
-                      "rows": "{{ (data.rows || []).filter(r => r.status === 'scheduled') }}",
+                      "rows": "{{ (data.rows || []) }}",
                       "columns": [
                         {
                           "key": "code",
@@ -328,126 +444,67 @@
                         {
                           "key": "publishedAt",
                           "label": "Published at"
+                        },
+                        {
+                          "key": "status",
+                          "label": "Stage",
+                          "format": "badge",
+                          "labels": {
+                            "draft": "Draft",
+                            "scheduled": "Scheduled",
+                            "published": "Published",
+                            "cancelled": "Cancelled"
+                          }
                         }
                       ],
-                      "emptyText": "No scheduled posts",
-                      "clickable": true
+                      "views": [
+                        {
+                          "value": "all",
+                          "label": "All"
+                        },
+                        {
+                          "value": "draft",
+                          "label": "Draft",
+                          "where": "row.status === 'draft'"
+                        },
+                        {
+                          "value": "scheduled",
+                          "label": "Scheduled",
+                          "where": "row.status === 'scheduled'"
+                        },
+                        {
+                          "value": "published",
+                          "label": "Published",
+                          "where": "row.status === 'published'"
+                        },
+                        {
+                          "value": "cancelled",
+                          "label": "Cancelled",
+                          "where": "row.status === 'cancelled'"
+                        }
+                      ],
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list",
+                      "clickable": true,
+                      "rowKey": "path",
+                      "emptyText": "Nothing here"
                     },
                     "on": {
                       "row-click": [
                         {
                           "open-file": {
                             "path": "{{ event.path }}",
-                            "mode": "edit"
+                            "mode": "edit",
+                            "open": "side"
                           }
                         }
                       ]
                     }
                   }
                 ],
-                "slot": "scheduled"
-              },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 4
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.table",
-                    "props": {
-                      "rows": "{{ (data.rows || []).filter(r => r.status === 'published') }}",
-                      "columns": [
-                        {
-                          "key": "code",
-                          "label": "Post"
-                        },
-                        {
-                          "key": "handle",
-                          "label": "Account"
-                        },
-                        {
-                          "key": "excerpt",
-                          "label": "Content"
-                        },
-                        {
-                          "key": "scheduledDate",
-                          "label": "Scheduled"
-                        },
-                        {
-                          "key": "publishedAt",
-                          "label": "Published at"
-                        }
-                      ],
-                      "emptyText": "No published posts",
-                      "clickable": true
-                    },
-                    "on": {
-                      "row-click": [
-                        {
-                          "open-file": {
-                            "path": "{{ event.path }}",
-                            "mode": "edit"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ],
-                "slot": "published"
-              },
-              {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 4
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.table",
-                    "props": {
-                      "rows": "{{ (data.rows || []).filter(r => r.status === 'cancelled') }}",
-                      "columns": [
-                        {
-                          "key": "code",
-                          "label": "Post"
-                        },
-                        {
-                          "key": "handle",
-                          "label": "Account"
-                        },
-                        {
-                          "key": "excerpt",
-                          "label": "Content"
-                        },
-                        {
-                          "key": "scheduledDate",
-                          "label": "Scheduled"
-                        },
-                        {
-                          "key": "publishedAt",
-                          "label": "Published at"
-                        }
-                      ],
-                      "emptyText": "No cancelled posts",
-                      "clickable": true
-                    },
-                    "on": {
-                      "row-click": [
-                        {
-                          "open-file": {
-                            "path": "{{ event.path }}",
-                            "mode": "edit"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ],
-                "slot": "cancelled"
+                "slot": "list"
               }
             ]
           }

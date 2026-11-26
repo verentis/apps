@@ -1,3 +1,4 @@
+import { apiContract } from '../../../tools/file-apps/build.mjs'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { parse } from 'yaml'
 import { describe, expect, it } from 'vitest'
@@ -20,13 +21,13 @@ const steps = document => Object.values(document.spec.actions ?? {}).flatMap(act
 describe('Invoicing Canvas documents', () => {
   // The committed manifest and Canvas documents are YAML renderings of what src/build.mjs models; CI owns the
   // manifest's metadata.version.
-  it('are up to date with the generator', () => {
+  it('are up to date with the generator', async () => {
     const pages = buildPages()
     expect(Object.keys(documents).sort()).toEqual(Object.keys(pages).sort())
     for (const [name, document] of Object.entries(pages)) expect(documents[name], name).toEqual(plain(document))
     const { metadata: { version: _version, ...metadata }, ...installed } = read('invoicing.app.yaml')
     const { metadata: { version: _source, ...expectedMetadata }, ...expected } = plain({
-      ...manifest, spec: { ...manifest.spec, 'file-access': [...documentFileAccess(pages), ...scriptConsents] },
+      ...manifest, spec: { ...manifest.spec, 'file-access': [...documentFileAccess(pages), ...scriptConsents], api: await apiContract(new URL('../', import.meta.url)) },
     })
     expect({ ...installed, metadata }).toEqual({ ...expected, metadata: expectedMetadata })
     expect(read('environments/feature.yaml')).toEqual(featureOverlay)
@@ -52,12 +53,15 @@ describe('Invoicing Canvas documents', () => {
     for (const grant of spec.access) expect(grant.mode ?? 'read').toBe('read')
   })
 
-  it.each([['invoice', ['issue-invoice']], ['credit', ['issue-credit']], ['payment', ['post-payment', 'reverse-payment']]])(
+  it.each([['invoice', ['issue-invoice', 'complete-invoice']], ['credit', ['issue-credit', 'complete-credit']],
+    ['payment', ['post-payment', 'complete-payment', 'reverse-payment', 'complete-reversal']]])(
     'runs the posting script from %s forms', (kind, operations) => {
       const document = documents[`${kind}.form.yaml`]
       const runs = steps(document).filter(step => 'run-script' in step).map(step => step['run-script'])
       expect(runs.map(run => run.parameters.operation)).toEqual(operations)
       for (const run of runs) expect(run).toMatchObject({ file: postScriptPath, parameters: { path: '{{ ctx.file.path }}' } })
+      // Accounting posts the journal through its API between the two runs; Invoicing never writes /journals.
+      expect(steps(document).filter(step => 'call-app' in step).map(step => step['call-app'].app)).toEqual(operations.length > 2 ? ['accounting', 'accounting'] : ['accounting'])
       expect(document.spec.permissions).toEqual(expect.arrayContaining(['execution.run']))
       // A script reloads the record afterwards, which a dirty form would refuse.
       expect(JSON.stringify(document.spec.tree)).toMatch(/form\.saving \|\| form\.dirty/)
@@ -96,7 +100,9 @@ describe('Invoicing manifest', () => {
       { package: 'verentis/canvas', version: 'latest' }, { package: 'verentis/nodejs', version: 'latest' },
       { package: 'verentis/accounting', version: 'latest' }, { package: 'verentis/crm', version: 'latest', optional: true },
     ])
-    expect(spec.scripts).toEqual(['scripts/create', 'scripts/post'])
+    expect(spec.scripts).toEqual(['scripts/create', 'scripts/post', 'scripts/api'])
+    // Other apps draft invoices through Invoicing's API, never by writing /invoices.
+    expect(read('invoicing.app.yaml').spec.api.operations.map(operation => operation.key)).toEqual(['create-draft-invoice'])
   })
 
   it('asks install consent for every document\'s file access', () => {
@@ -182,7 +188,7 @@ describe('Invoicing workspace desktop', () => {
       { path: '/invoices/INV-1', code: 'INV-1', customer: 'Customer INV-1', amount: 'ZAR 70.00', due: '2020-01-01 · overdue' },
       { path: '/invoices/INV-2', code: 'INV-2', customer: 'Customer INV-2', amount: 'ZAR 50.00', due: '2999-01-01' },
     ])
-    expect(table.on['row-click']).toEqual([{ 'open-file': { path: '{{ event.path }}', mode: 'edit' } }])
+    expect(table.on['row-click']).toEqual([{ 'open-file': { path: '{{ event.path }}', mode: 'edit', open: 'side' } }])
   })
 
   it('installs a valid Invoice follow-up window layout into its app desktop folder', () => {

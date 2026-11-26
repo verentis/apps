@@ -170,7 +170,7 @@ describe('Employees report pages', () => {
     const tableNode = documents['directory.page.yaml'].spec.tree[0].children.find(node => node.type === 'canvas.table')
     expect(template(tableNode.props.rows, data, { showterminated: false }).map(row => row.name)).toEqual(['Avery', 'Jordan', 'Sam'])
     expect(template(tableNode.props.rows, data, { showterminated: true }).map(row => row.name)).toEqual(['Avery', 'Jordan', 'Riley', 'Sam'])
-    expect(tableNode.on['row-click']).toEqual([{ 'open-file': { path: '{{ event.path }}', mode: 'edit' } }])
+    expect(tableNode.on['row-click']).toEqual([{ 'open-file': { path: '{{ event.path }}', mode: 'edit', open: 'side' } }])
   })
 
   it('sums headcount per department in the organization summary', () => {

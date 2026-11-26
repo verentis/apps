@@ -1,10 +1,11 @@
 // Confirms Sales quotations. The quotation form runs this script (run-script) against a saved record; it
-// validates the quotation, computes its exact totals, creates the sales order it becomes and, when Invoicing is
-// installed, drafts an invoice in Invoicing's vendor format, then marks the quotation confirmed with the file
-// access its installer consented to (manifest `file-access`).
+// validates the quotation, computes its exact totals, creates the sales order it becomes and marks the quotation
+// confirmed with the file access its installer consented to (manifest `file-access`). It returns what Invoicing needs
+// to draft the invoice; the form asks Invoicing through the platform (Invoicing's `create-draft-invoice`), and
+// `record-invoice` stores the link. Sales never writes Invoicing's files.
 //
-// Integrity model: the sales order and the draft invoice get deterministic names (`/sales-orders/QUO-0001`,
-// `/invoices/QUO-0001`) and are created create-only, so a retried operation never creates twice; the quotation is
+// Integrity model: the sales order gets a deterministic name (`/sales-orders/QUO-0001`) and is created create-only,
+// so a retried operation never creates twice; Invoicing returns the same draft when asked again; the quotation is
 // updated conditionally (If-Match), so a concurrent edit fails instead of being overwritten. The steps are not one
 // transaction: if a run stops between writing the order and updating the quotation, running confirm again
 // completes it.
@@ -13,7 +14,7 @@ import {
   divideHalfUp, fail, formatMinor, nameOf, nowIso, parseDecimal, readRecord, readSettings, saveRecord, statusOf, toMinor,
 } from './ledger.mjs'
 
-export const operations = ['confirm-quotation']
+export const operations = ['confirm-quotation', 'record-invoice']
 export const sales = {
   settingsPath: '/settings/sales.json',
   products: '/products',
@@ -21,12 +22,6 @@ export const sales = {
   orders: '/sales-orders',
   mime: kind => `application/vnd.verentis.sales.${kind}+json`,
   schema: kind => `https://schemas.verentis.io/sales/v1/${kind}.schema.json`,
-}
-/** Invoicing's public file contract: present only when Invoicing is installed. */
-export const invoicing = {
-  invoices: '/invoices',
-  mime: 'application/vnd.verentis.invoicing.invoice+json',
-  schema: 'https://schemas.verentis.io/invoicing/v1/invoice.schema.json',
 }
 /** Quotations are kept in the currency's minor unit; two digits covers the supported currencies. */
 export const digits = 2
@@ -120,47 +115,46 @@ async function createOrder(files, path, order) {
 }
 
 /**
- * Drafts an Invoicing invoice for the confirmed quotation when Invoicing is installed (its /invoices container
- * exists). Each quotation line becomes one invoice line carrying its discounted net. Absent Invoicing, missing
- * write access and an invoice drafted by an earlier attempt are all tolerated.
+ * What Invoicing needs to draft the confirmed quotation's invoice (its `create-draft-invoice` operation): each
+ * quotation line becomes one invoice line carrying its discounted net. The quotation form asks Invoicing through the
+ * platform; Sales never writes Invoicing's files.
  */
-async function draftInvoice(files, record, nets, { now, uuid }) {
-  if (!await files.stat(invoicing.invoices)) return null
-  const path = `${invoicing.invoices}/${record.code}`
-  const lines = record.lines.map((line, index) => ({
-    description: `${line.quantity} × ${line.description}${Number(line.discount) ? ` (${line.discount}% discount)` : ''}`,
-    quantity: '1', unitPrice: formatMinor(nets[index], digits), taxRate: '',
-  }))
-  const invoice = {
-    $schema: invoicing.schema, schemaVersion: 1, kind: 'invoice', id: uuid(), state: 'active',
-    createdAt: now, updatedAt: now, code: record.code, issueDate: '', dueDate: '', currency: record.currency,
-    reference: record.reference || record.code, customerRef: record.customerRef || '', customer: record.customer ?? {},
-    lines, notes: `Drafted from quotation ${record.code}.`, status: 'draft',
+export function invoiceRequest(path, record, nets) {
+  return {
+    source: { path, code: record.code },
+    currency: record.currency,
+    reference: record.reference || record.code,
+    ...(record.customerRef ? { customerRef: record.customerRef } : {}),
+    customer: record.customer ?? {},
+    lines: record.lines.map((line, index) => ({
+      description: `${line.quantity} × ${line.description}${Number(line.discount) ? ` (${line.discount}% discount)` : ''}`,
+      quantity: '1', unitPrice: formatMinor(nets[index], digits),
+    })),
+    notes: `Drafted from quotation ${record.code}.`,
   }
-  try {
-    await files.write(path, JSON.stringify(invoice, null, 2), { contentType: invoicing.mime, ifNoneMatch: '*' })
-  } catch (error) {
-    const status = statusOf(error)
-    if (status === 403 || status === 404) return null
-    if (status !== 412) throw error
-    let existing
-    try {
-      existing = await files.readJson(path)
-    } catch {
-      existing = null
-    }
-    if (existing?.kind !== 'invoice' || existing.code !== record.code) {
-      fail(`${path} already exists and belongs to something else. Rename it and try again.`)
-    }
-  }
-  return path
+}
+
+/** Records the invoice Invoicing drafted for a confirmed quotation (the path its operation returned). */
+export async function recordInvoice(files, path, invoicePath, { now }) {
+  const quotation = await readRecord(files, checkPath(path, sales.quotations), 'quotation')
+  const { record } = quotation
+  if (record.status !== 'confirmed') fail(`${label(record)} is not confirmed.`)
+  if (typeof invoicePath !== 'string' || !invoicePath.startsWith('/invoices/')) fail('Invoicing returned no invoice.')
+  if (record.invoice?.path === invoicePath) return { message: `${label(record)} already links ${nameOf(invoicePath)}`, path }
+  Object.assign(record, { invoice: { path: invoicePath }, updatedAt: now })
+  await saveRecord(files, quotation, sales.mime('quotation'))
+  return { message: `Drafted invoice ${nameOf(invoicePath)} for ${label(record)}`, path }
 }
 
 export async function confirmQuotation(files, path, { now, uuid }) {
   const quotation = await readRecord(files, checkPath(path, sales.quotations), 'quotation')
   const { record } = quotation
   if (record.state === 'archived') fail(`${label(record)} is archived. Restore it first.`)
-  if (record.status === 'confirmed') return { message: `${label(record)} is already confirmed`, path: record.order?.path ?? path }
+  if (record.status === 'confirmed') {
+    return { message: `${label(record)} is already confirmed`, path: record.order?.path ?? path,
+      // Confirmed without an invoice yet (Invoicing was missing or the draft failed): ask again.
+      ...(record.invoice?.path ? {} : { invoiceRequest: invoiceRequest(path, record, quoteTotals(record.lines).nets) }) }
+  }
   if (record.status === 'cancelled') fail(`${label(record)} is cancelled. Reopen it first.`)
   if (!codePattern.test(record.code ?? '')) fail('The quotation has no number. Create quotations with New so they are numbered.')
   if (!String(record.customer?.name ?? '').trim()) fail('Enter the customer\'s name before confirming.')
@@ -183,21 +177,16 @@ export async function confirmQuotation(files, path, { now, uuid }) {
     deliveryStatus: 'pending', notes: record.notes ?? '',
   })
   Object.assign(record, { currency, lines: totals.lines, totals: formatted })
-  const invoicePath = await draftInvoice(files, record, totals.nets, { now, uuid })
-  Object.assign(record, {
-    status: 'confirmed', confirmedAt: now, order: { path: orderPath },
-    ...(invoicePath ? { invoice: { path: invoicePath } } : {}), updatedAt: now,
-  })
+  Object.assign(record, { status: 'confirmed', confirmedAt: now, order: { path: orderPath }, updatedAt: now })
   await saveRecord(files, quotation, sales.mime('quotation'))
-  return {
-    message: `Confirmed ${label(record)} into ${nameOf(orderPath)}${invoicePath ? ` and drafted invoice ${nameOf(invoicePath)}` : ''}`,
-    path: orderPath,
-  }
+  // The form asks Invoicing (when installed) to draft the invoice from this, then records the link.
+  return { message: `Confirmed ${label(record)} into ${nameOf(orderPath)}`, path: orderPath, invoiceRequest: invoiceRequest(path, record, totals.nets) }
 }
 
 export async function run(parameters, files, { now = nowIso(), uuid = randomUUID } = {}) {
   const { operation, path } = parameters ?? {}
   if (operation === 'confirm-quotation') return confirmQuotation(files, path, { now, uuid })
+  if (operation === 'record-invoice') return recordInvoice(files, path, parameters.invoice, { now })
   return fail(`Unsupported operation ${JSON.stringify(operation ?? '')}. Expected one of ${operations.join(', ')}.`)
 }
 

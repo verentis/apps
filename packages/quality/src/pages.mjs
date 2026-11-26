@@ -1,10 +1,11 @@
 // Generates the Quality Canvas documents: one bound form per record kind, the launch page, the checks list by
 // result, the alerts board by stage and the control points list. Recording a check (pending → pass/fail,
 // tolerance validation, auto-alert on fail) and resolving an alert are done by the action script the forms run.
+import { views } from './views.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   humanize, iconName, linkButton, openFile, options, page, panel, projectRegistration, recordButtons, row,
-  scriptAction, stat, stats, status, table, tabs, text, toneExpression,
+  scriptAction, stat, stats, status, table, tabs, text, toneExpression, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { alertStages, checkTypes, containers, installRoot, mimeTypes, recordKinds, results, schemaId } from './contracts.mjs'
 import { entities, postScriptPath } from './app.mjs'
@@ -33,6 +34,11 @@ function control(field, readOnly) {
 const sectionCards = (sections, readOnly) =>
   sections.map(section => card(section.title, [grid(section.fields.map(field => control(field, readOnly)))], section.description))
 
+// A measure check with a measured value and a point that has both tolerance limits.
+const measurable = "data.spec.checkType === 'measure' && form.values.measuredValue !== '' && form.values.measuredValue != null && Number.isFinite(Number(form.values.measuredValue)) && data.spec.toleranceMin !== '' && data.spec.toleranceMin != null && data.spec.toleranceMax !== '' && data.spec.toleranceMax != null"
+const band = 'Math.max(Number(data.spec.toleranceMax) - Number(data.spec.toleranceMin), 0)'
+const inTolerance = '(Number(form.values.measuredValue) >= Number(data.spec.toleranceMin) && Number(form.values.measuredValue) <= Number(data.spec.toleranceMax))'
+
 const pointSources = {
   points: folder(containers.points.path, mimeTypes.point),
   pointoptions: { kind: 'computed', expr: options('points', "e.data.title || ''", 'e.data.active !== false') },
@@ -47,9 +53,25 @@ function recordExtras(kind) {
     return {
       locked: `!${pending}`,
       access: [{ path: containers.points.path, reason: 'Choose the control point a check verifies' }, schemaAccess],
-      data: pointSources,
+      data: {
+        ...pointSources,
+        // The chosen control point's tolerance, for the measure gauge.
+        spec: { kind: 'computed', expr: "(((data.points || []).find(p => p.kind === 'file' && p.data && p.path === form.values.point) || {}).data || {})" },
+      },
       notices: [
         { ...text('This check is recorded and can no longer be edited.', 'muted'), rules: { visible: `!${pending}` } },
+        {
+          // Where the measured value sits in the point's tolerance band; red when it is outside.
+          type: 'canvas.meter',
+          rules: { visible: `${measurable}` },
+          props: {
+            label: "{{ 'Tolerance ' + data.spec.toleranceMin + ' to ' + data.spec.toleranceMax }}",
+            value: `{{ Math.max(0, Math.min(${band}, Number(form.values.measuredValue) - Number(data.spec.toleranceMin))) }}`,
+            max: `{{ ${band} }}`,
+            tone: `{{ ${inTolerance} ? 'success' : 'danger' }}`,
+            text: `{{ 'Measured ' + form.values.measuredValue + (${inTolerance} ? ', within tolerance' : ', outside tolerance by ' + Number(Math.max(Number(data.spec.toleranceMin) - Number(form.values.measuredValue), Number(form.values.measuredValue) - Number(data.spec.toleranceMax)).toFixed(4))) }}`,
+          },
+        },
       ],
       buttons: [
         button('Record pass', 'record-pass', { visible: `${pending} && !(${archived})`, disabled: `${idle} || form.invalid` }, undefined, 'check'),
@@ -93,21 +115,19 @@ function recordForm(kind) {
   const extras = recordExtras(kind)
   const readOnly = `${archived} || (${extras.locked})`
   const tones = kind === 'alert' ? stageTones : resultTones
-  const header = row([
-    column([
-      row([
-        heading(`{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`),
+  const header = recordHeader(
+    `{{ form.values.${entity.titleKey} || 'New ${entity.singular.toLowerCase()}' }}`,
+    [
         ...(entity.status ? [badge(humanize(entity.status), toneExpression(entity.status, tones), { visible: `!!form.values.${entity.status}` })] : []),
         badge('Archived', 'warning', { visible: archived }, 'archive'),
-      ]),
-      text(`${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`, 'muted'),
-    ]),
-    row([...extras.buttons, recordButtons(extras.locked)]),
-  ], 'between')
+    ],
+    `${entity.singular} {{ form.values.code || '' }} · {{ ctx.file.path }}`,
+    [...extras.buttons, recordButtons(extras.locked)],
+  )
   const tree = [
     header,
-    ...status('record'),
-    badge(`This ${entity.singular.toLowerCase()} is archived. Restore it to edit.`, 'warning', { visible: archived }, 'archive'),
+    ...status('record'), ...lifecycle(entity),
+    archivedAlert(entity.singular),
     ...(extras.links.length ? [row(extras.links)] : []),
     ...extras.notices,
     grid(sectionCards(entity.sections, readOnly)),
@@ -157,14 +177,14 @@ function homePage() {
         access: pageAccess('Count checks and alerts and show the quality containers'),
         data: pageSources,
         tree: page([
-          row([
-            column([heading('Quality'), text('Control points, checks and alerts are files in your workspace. Draft a check in /quality-checks, record it from its form; failed checks raise alerts.', 'muted')]),
+          pageHeader(
+            [heading('Quality'), text('Control points, checks and alerts are files in your workspace. Draft a check in /quality-checks, record it from its form; failed checks raise alerts.', 'muted')], [
             row([
               button('Quality checks', [openFile(`${installRoot}/canvas/checks.page.yaml`)], undefined, 'outline', 'clipboard-check'),
               button('Quality alerts', [openFile(`${installRoot}/canvas/alerts.page.yaml`)], undefined, 'outline', 'siren'),
               button('Control points', [openFile(`${installRoot}/canvas/points.page.yaml`)], undefined, 'outline', 'crosshair'),
             ]),
-          ], 'between'),
+          ]),
           stats([
             stat('Pending checks', checkCount("r.result === 'pending'"), 'clipboard-list', loading('checks')),
             stat('Failed checks', checkCount("r.result === 'fail'"), 'x', loading('checks')),
@@ -205,10 +225,10 @@ function checksPage() {
         access: pageAccess('List checks by result with their control point titles'),
         data: pageSources,
         tree: page([
-          row([
-            column([heading('Checks by result'), text('Every active quality check, grouped by its result. Click a row to open the check.', 'muted')]),
+          pageHeader(
+            [heading('Checks by result'), text('Every active quality check, grouped by its result. Click a row to open the check.', 'muted')], [
             button('Quality', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'badge-check'),
-          ], 'between'),
+          ]),
           ...containerNotices(),
           stats(results.map(result => stat(stageLabel(result), checkCount(`r.result === '${result}'`), 'clipboard-check', loading('checks'))), 3),
           tabs(results.map(result => ({ value: result, label: stageLabel(result), icon: 'clipboard-check' })),
@@ -231,10 +251,10 @@ function alertsPage() {
         access: pageAccess('Board alerts by stage'),
         data: pageSources,
         tree: page([
-          row([
-            column([heading('Alerts by stage'), text('Every active quality alert, grouped by its stage. Click a row to open the alert.', 'muted')]),
+          pageHeader(
+            [heading('Alerts by stage'), text('Every active quality alert, grouped by its stage. Click a row to open the alert.', 'muted')], [
             button('Quality', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'badge-check'),
-          ], 'between'),
+          ]),
           ...containerNotices(),
           stats(alertStages.map(stage => stat(stageLabel(stage), alertCount(`r.stage === '${stage}'`), 'siren', loading('alerts'))), 4),
           tabs(alertStages.map(stage => ({ value: stage, label: stageLabel(stage), icon: 'siren' })),
@@ -256,13 +276,13 @@ function pointsPage() {
         access: pageAccess('List control points with their check counts'),
         data: pageSources,
         tree: page([
-          row([
-            column([heading('Control points'), text('What is checked, how and how often. Inactive points cannot record checks.', 'muted')]),
+          pageHeader(
+            [heading('Control points'), text('What is checked, how and how often. Inactive points cannot record checks.', 'muted')], [
             row([
               button('Open /quality-control-points', [openFile(containers.points.path)], undefined, 'outline', 'folder-open'),
               button('Quality', [openFile(`${installRoot}/canvas/home.page.yaml`)], undefined, 'ghost', 'badge-check'),
             ]),
-          ], 'between'),
+          ]),
           ...containerNotices(),
           stats([
             stat('Control points', `{{ (data.points || []).filter(e => ${active}).length }}`, 'crosshair', loading('points')),
@@ -279,5 +299,5 @@ function pointsPage() {
 
 export function buildPages() {
   const documents = [homePage(), checksPage(), alertsPage(), pointsPage(), ...recordKinds.map(recordForm)]
-  return Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)]))
+  return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

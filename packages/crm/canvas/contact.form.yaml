@@ -1,1022 +1,1759 @@
-api-version: canvas.verentis.io/v1
-kind: Form
-metadata:
-  id: crm-contact
-  name: CRM contact
-  description: View and edit a CRM contact.
-  icon: user
-spec:
-  binds:
-  - pattern: application/vnd.verentis.crm.contact+json
-    mode: edit
-    priority: 200
-    scope: global
-    json-schema:
-      id: https://schemas.verentis.io/crm/v1/contact.schema.json
-      source: /applications/crm/schemas/contact.schema.json
-      title: CRM contact
-      version: '1'
-  entry: ${var:canvas-origin}/render?document=%2Fapplications%2Fcrm%2Fcanvas%2Fcontact.form.yaml
-  scope: global
-  mime-types:
-  - pattern: application/vnd.verentis.crm.contact+json
-    mode: edit
-    priority: 200
-    json-schema:
-      id: https://schemas.verentis.io/crm/v1/contact.schema.json
-      source: /applications/crm/schemas/contact.schema.json
-      title: CRM contact
-      version: '1'
-  permissions:
-  - file.read
-  - file.write
-  capabilities: []
-  sandbox:
-    allow-scripts: true
-    allow-same-origin: true
-    allow-popups: false
-    allow-forms: true
-  file-access:
-  - path: /customers
-    mode: read
-    reason: List the contacts and companies of this customer
-  - path: /deals
-    mode: read
-    reason: Show this customer's deals
-  - path: /cases
-    mode: read
-    reason: Show this customer's cases
-  - path: /applications/crm/
-    mode: read
-    reason: Read the CRM schemas
-  access:
-  - path: /customers
-    reason: List the contacts and companies of this customer
-  - path: /deals
-    reason: Show this customer's deals
-  - path: /cases
-    reason: Show this customer's cases
-  - path: /applications/crm/
-    reason: Read the CRM schemas
-  data:
-    record:
-      kind: document
-      consistency: conditional
-    companies:
-      kind: folder
-      path: /customers
-      contents: true
-      mime-pattern: application/vnd.verentis.crm.company+json
-    companyoptions:
-      kind: computed
-      expr: '(data.companies || []).filter(e => e.kind === ''file'' && e.data && e.data.state !== ''archived''
-        && (true)).map(e => ({ label: (e.data.code ? e.data.code + '' · '' : '''') + (e.data.name || [e.data.salutation,
-        e.data.givenName, e.data.familyName].filter(Boolean).join('' '').trim() || e.data.code || e.name),
-        value: e.path }))'
-    deals:
-      kind: folder
-      path: /deals
-      contents: true
-      mime-pattern: application/vnd.verentis.crm.deal+json
-    cases:
-      kind: folder
-      path: /cases
-      contents: true
-      mime-pattern: application/vnd.verentis.crm.case+json
-  state:
-    showarchived: false
-  tree:
-  - type: canvas.stack
-    layout:
-      base:
-        padding: 6
-        gap: 4
-        maxWidth: 72rem
-        margin:
-          x: auto
-    children:
-    - type: canvas.stack
-      layout:
-        base:
-          direction: row
-          wrap: true
-          gap: 2
-          align: center
-          justify: between
-      children:
-      - type: canvas.stack
-        layout:
-          base:
-            gap: 1
-        children:
-        - type: canvas.stack
-          layout:
-            base:
-              direction: row
-              wrap: true
-              gap: 2
-              align: center
-          children:
-          - type: canvas.heading
-            props:
-              level: 2
-              text: '{{ [form.values.salutation, form.values.givenName, form.values.familyName].filter(Boolean).join(''
-                '') || ''New contact'' }}'
-          - type: canvas.dashboard.badge
-            props:
-              text: Archived
-              tone: warning
-              icon: archive
-            rules:
-              visible: form.values.state === 'archived'
-        - type: canvas.text
-          props:
-            text: Contact {{ form.values.code || '' }} · {{ ctx.file.path }}
-            tone: muted
-      - type: canvas.stack
-        layout:
-          base:
-            direction: row
-            wrap: true
-            gap: 2
-            align: center
-        children:
-        - type: canvas.button
-          props:
-            label: Archive
-            variant: ghost
-            icon: archive
-            size: sm
-          'on':
-            click: archive
-          rules:
-            visible: '!(form.values.state === ''archived'')'
-            disabled: form.saving || form.dirty
-        - type: canvas.button
-          props:
-            label: Restore
-            variant: outline
-            icon: archive-restore
-            size: sm
-          'on':
-            click: restore
-          rules:
-            visible: form.values.state === 'archived'
-            disabled: form.saving || form.dirty
-        - type: canvas.button
-          props:
-            label: Reset
-            variant: ghost
-            size: sm
-          'on':
-            click: reset
-          rules:
-            disabled: form.saving || !form.dirty
-        - type: canvas.button
-          props:
-            label: Save
-            icon: save
-            size: sm
-          'on':
-            click: save
-          rules:
-            disabled: form.saving || !form.dirty || form.invalid || form.values.state === 'archived'
-    - type: canvas.text
-      props:
-        text: '{{ data.$record.error }}'
-      rules:
-        visible: data.$record.status === 'error'
-    - type: canvas.text
-      props:
-        text: Loading…
-        tone: muted
-      rules:
-        visible: data.$record.status === 'loading'
-    - type: canvas.dashboard.badge
-      props:
-        text: This contact is archived. Restore it to edit.
-        tone: warning
-        icon: archive
-      rules:
-        visible: form.values.state === 'archived'
-    - type: canvas.tabs
-      props:
-        items:
-        - value: overview
-          label: Overview
-          icon: user
-        - value: activities
-          label: Activities
-          icon: calendar-check
-        - value: deals
-          label: Deals
-          icon: handshake
-        - value: cases
-          label: Cases
-          icon: life-buoy
-        - value: notes
-          label: Notes
-          icon: sticky-note
-        - value: documents
-          label: Documents
-          icon: paperclip
-      children:
-      - type: canvas.stack
-        layout:
-          base:
-            gap: 4
-        children:
-        - type: canvas.stack
-          layout:
-            base:
-              direction: row
-              wrap: true
-              gap: 2
-              align: center
-          children:
-          - type: canvas.button
-            props:
-              label: Company
-              variant: ghost
-              icon: building-2
-              size: sm
-            'on':
-              click:
-              - open-file:
-                  path: '{{ form.values.company.path }}'
-                  mode: edit
-            rules:
-              visible: '!!(form.values.company && form.values.company.path)'
-        - type: canvas.grid
-          layout:
-            base:
-              columns: 1
-              gap: 4
-            tablet:
-              columns: 2
-          children:
-          - type: canvas.card
-            props:
-              title: Person
-            children:
-            - type: canvas.grid
-              layout:
-                base:
-                  columns: 1
-                  gap: 4
-                tablet:
-                  columns: 2
-              children:
-              - type: canvas.form.input
-                props:
-                  label: Salutation
-                  value: '{{ form.values.salutation }}'
-                  placeholder: Ms
-                rules:
-                  disabled: form.values.state === 'archived'
-              - type: canvas.form.input
-                props:
-                  label: Given name
-                  value: '{{ form.values.givenName }}'
-                  required: true
-                rules:
-                  disabled: form.values.state === 'archived'
-              - type: canvas.form.input
-                props:
-                  label: Family name
-                  value: '{{ form.values.familyName }}'
-                rules:
-                  disabled: form.values.state === 'archived'
-              - type: canvas.form.input
-                props:
-                  label: Job title
-                  value: '{{ form.values.jobTitle }}'
-                rules:
-                  disabled: form.values.state === 'archived'
-              - type: canvas.form.input
-                props:
-                  label: Department
-                  value: '{{ form.values.department }}'
-                rules:
-                  disabled: form.values.state === 'archived'
-              - type: canvas.form.select
-                props:
-                  label: Company
-                  value: '{{ form.values.company.path }}'
-                  options: '{{ data.companyoptions }}'
-                rules:
-                  disabled: form.values.state === 'archived'
-          - type: canvas.card
-            props:
-              title: Contact details
-            children:
-            - type: canvas.grid
-              layout:
-                base:
-                  columns: 1
-                  gap: 4
-                tablet:
-                  columns: 2
-              children:
-              - type: canvas.form.input
-                props:
-                  label: Email
-                  value: '{{ form.values.email }}'
-                  inputType: email
-                rules:
-                  disabled: form.values.state === 'archived'
-              - type: canvas.form.input
-                props:
-                  label: Phone
-                  value: '{{ form.values.phone }}'
-                rules:
-                  disabled: form.values.state === 'archived'
-              - type: canvas.form.input
-                props:
-                  label: Mobile
-                  value: '{{ form.values.mobile }}'
-                rules:
-                  disabled: form.values.state === 'archived'
-              - type: canvas.form.input
-                props:
-                  label: Owner
-                  value: '{{ form.values.owner }}'
-                  placeholder: Name or email
-                rules:
-                  disabled: form.values.state === 'archived'
-          - type: canvas.card
-            props:
-              title: Address
-            children:
-            - type: canvas.grid
-              layout:
-                base:
-                  columns: 1
-                  gap: 4
-                tablet:
-                  columns: 2
-              children:
-              - type: canvas.form.text-list
-                props:
-                  label: Street
-                  value: '{{ form.values.address.lines }}'
-                layout:
-                  tablet:
-                    colSpan: 2
-                rules:
-                  disabled: form.values.state === 'archived'
-              - type: canvas.form.input
-                props:
-                  label: City
-                  value: '{{ form.values.address.city }}'
-                rules:
-                  disabled: form.values.state === 'archived'
-              - type: canvas.form.input
-                props:
-                  label: Region
-                  value: '{{ form.values.address.region }}'
-                rules:
-                  disabled: form.values.state === 'archived'
-              - type: canvas.form.input
-                props:
-                  label: Postal code
-                  value: '{{ form.values.address.postalCode }}'
-                rules:
-                  disabled: form.values.state === 'archived'
-              - type: canvas.form.input
-                props:
-                  label: Country code
-                  value: '{{ form.values.address.country }}'
-                  placeholder: ZA
-                rules:
-                  disabled: form.values.state === 'archived'
-          - type: canvas.card
-            props:
-              title: More
-            children:
-            - type: canvas.grid
-              layout:
-                base:
-                  columns: 1
-                  gap: 4
-                tablet:
-                  columns: 2
-              children:
-              - type: canvas.form.textarea
-                props:
-                  label: Description
-                  value: '{{ form.values.description }}'
-                  rows: 4
-                layout:
-                  tablet:
-                    colSpan: 2
-                rules:
-                  disabled: form.values.state === 'archived'
-        slot: overview
-      - type: canvas.stack
-        layout:
-          base:
-            gap: 4
-        children:
-        - type: canvas.stack
-          layout:
-            base:
-              direction: row
-              wrap: true
-              gap: 2
-              align: center
-          children:
-          - type: canvas.text
-            props:
-              text: New
-              tone: muted
-          - type: canvas.stack
-            layout:
-              base:
-                direction: row
-                wrap: true
-                gap: 2
-                align: center
-            children:
-            - type: canvas.button
-              props:
-                label: Email
-                variant: outline
-                icon: mail
-                size: sm
-              'on':
-                click: new-email
-              rules:
-                disabled: form.values.state === 'archived'
-            - type: canvas.button
-              props:
-                label: Call
-                variant: outline
-                icon: phone
-                size: sm
-              'on':
-                click: new-call
-              rules:
-                disabled: form.values.state === 'archived'
-            - type: canvas.button
-              props:
-                label: Meeting
-                variant: outline
-                icon: calendar-days
-                size: sm
-              'on':
-                click: new-meeting
-              rules:
-                disabled: form.values.state === 'archived'
-            - type: canvas.button
-              props:
-                label: Task
-                variant: outline
-                icon: square-check
-                size: sm
-              'on':
-                click: new-task
-              rules:
-                disabled: form.values.state === 'archived'
-        - type: canvas.tabs
-          props:
-            items:
-            - value: all
-              label: All
-            - value: email
-              label: Emails
-            - value: call
-              label: Calls
-            - value: meeting
-              label: Meetings
-            - value: task
-              label: Tasks
-          children:
-          - type: canvas.stack
-            layout:
-              base:
-                gap: 4
-            children:
-            - type: canvas.files
-              props:
-                path: ./activities/
-                mimeTypes:
-                - application/vnd.verentis.crm.email+json
-                - application/vnd.verentis.crm.call+json
-                - application/vnd.verentis.crm.meeting+json
-                - application/vnd.verentis.crm.task+json
-                showFolders: false
-                navigable: false
-                columns:
-                - key: data.subject
-                  label: Subject
-                - key: type
-                  label: Type
-                - key: data.status
-                  label: Status
-                - key: modified
-                  label: Updated
-                typeLabels:
-                  application/vnd.verentis.crm.email+json: Email
-                  application/vnd.verentis.crm.call+json: Call
-                  application/vnd.verentis.crm.meeting+json: Meeting
-                  application/vnd.verentis.crm.task+json: Task
-                  application/vnd.verentis.crm.note+json: Note
-                valueLabels:
-                  data.status:
-                    not-started: Not started
-                    in-progress: In progress
-                    not-held: Not held
-                sort: name
-                descending: true
-                emptyText: No activity yet
-            slot: all
-          - type: canvas.stack
-            layout:
-              base:
-                gap: 4
-            children:
-            - type: canvas.files
-              props:
-                path: ./activities/
-                mimeTypes:
-                - application/vnd.verentis.crm.email+json
-                showFolders: false
-                navigable: false
-                columns:
-                - key: data.subject
-                  label: Subject
-                - key: type
-                  label: Type
-                - key: data.status
-                  label: Status
-                - key: modified
-                  label: Updated
-                typeLabels:
-                  application/vnd.verentis.crm.email+json: Email
-                  application/vnd.verentis.crm.call+json: Call
-                  application/vnd.verentis.crm.meeting+json: Meeting
-                  application/vnd.verentis.crm.task+json: Task
-                  application/vnd.verentis.crm.note+json: Note
-                valueLabels:
-                  data.status:
-                    not-started: Not started
-                    in-progress: In progress
-                    not-held: Not held
-                sort: name
-                descending: true
-                emptyText: No emails yet
-            slot: email
-          - type: canvas.stack
-            layout:
-              base:
-                gap: 4
-            children:
-            - type: canvas.files
-              props:
-                path: ./activities/
-                mimeTypes:
-                - application/vnd.verentis.crm.call+json
-                showFolders: false
-                navigable: false
-                columns:
-                - key: data.subject
-                  label: Subject
-                - key: type
-                  label: Type
-                - key: data.status
-                  label: Status
-                - key: modified
-                  label: Updated
-                typeLabels:
-                  application/vnd.verentis.crm.email+json: Email
-                  application/vnd.verentis.crm.call+json: Call
-                  application/vnd.verentis.crm.meeting+json: Meeting
-                  application/vnd.verentis.crm.task+json: Task
-                  application/vnd.verentis.crm.note+json: Note
-                valueLabels:
-                  data.status:
-                    not-started: Not started
-                    in-progress: In progress
-                    not-held: Not held
-                sort: name
-                descending: true
-                emptyText: No calls yet
-            slot: call
-          - type: canvas.stack
-            layout:
-              base:
-                gap: 4
-            children:
-            - type: canvas.files
-              props:
-                path: ./activities/
-                mimeTypes:
-                - application/vnd.verentis.crm.meeting+json
-                showFolders: false
-                navigable: false
-                columns:
-                - key: data.subject
-                  label: Subject
-                - key: type
-                  label: Type
-                - key: data.status
-                  label: Status
-                - key: modified
-                  label: Updated
-                typeLabels:
-                  application/vnd.verentis.crm.email+json: Email
-                  application/vnd.verentis.crm.call+json: Call
-                  application/vnd.verentis.crm.meeting+json: Meeting
-                  application/vnd.verentis.crm.task+json: Task
-                  application/vnd.verentis.crm.note+json: Note
-                valueLabels:
-                  data.status:
-                    not-started: Not started
-                    in-progress: In progress
-                    not-held: Not held
-                sort: name
-                descending: true
-                emptyText: No meetings yet
-            slot: meeting
-          - type: canvas.stack
-            layout:
-              base:
-                gap: 4
-            children:
-            - type: canvas.files
-              props:
-                path: ./activities/
-                mimeTypes:
-                - application/vnd.verentis.crm.task+json
-                showFolders: false
-                navigable: false
-                columns:
-                - key: data.subject
-                  label: Subject
-                - key: type
-                  label: Type
-                - key: data.status
-                  label: Status
-                - key: modified
-                  label: Updated
-                typeLabels:
-                  application/vnd.verentis.crm.email+json: Email
-                  application/vnd.verentis.crm.call+json: Call
-                  application/vnd.verentis.crm.meeting+json: Meeting
-                  application/vnd.verentis.crm.task+json: Task
-                  application/vnd.verentis.crm.note+json: Note
-                valueLabels:
-                  data.status:
-                    not-started: Not started
-                    in-progress: In progress
-                    not-held: Not held
-                sort: name
-                descending: true
-                emptyText: No tasks yet
-            slot: task
-        slot: activities
-      - type: canvas.stack
-        layout:
-          base:
-            gap: 4
-        children:
-        - type: canvas.stack
-          layout:
-            base:
-              direction: row
-              wrap: true
-              gap: 2
-              align: center
-          children:
-          - type: canvas.button
-            props:
-              label: Note
-              variant: outline
-              icon: sticky-note
-              size: sm
-            'on':
-              click: new-note
-            rules:
-              disabled: form.values.state === 'archived'
-        - type: canvas.files
-          props:
-            path: ./notes/
-            mimeTypes:
-            - application/vnd.verentis.crm.note+json
-            showFolders: false
-            navigable: false
-            columns:
-            - key: data.title
-              label: Title
-            - key: modified
-              label: Updated
-            typeLabels:
-              application/vnd.verentis.crm.email+json: Email
-              application/vnd.verentis.crm.call+json: Call
-              application/vnd.verentis.crm.meeting+json: Meeting
-              application/vnd.verentis.crm.task+json: Task
-              application/vnd.verentis.crm.note+json: Note
-            valueLabels:
-              data.status:
-                not-started: Not started
-                in-progress: In progress
-                not-held: Not held
-            sort: name
-            descending: true
-            emptyText: No notes yet
-        slot: notes
-      - type: canvas.stack
-        layout:
-          base:
-            gap: 4
-        children:
-        - type: canvas.text
-          props:
-            text: Files of any type in {{ ctx.file.path }}/documents. Upload or create them from Files.
-            tone: muted
-        - type: canvas.stack
-          layout:
-            base:
-              direction: row
-              wrap: true
-              gap: 2
-              align: center
-          children:
-          - type: canvas.button
-            props:
-              label: Open in Files
-              variant: outline
-              icon: folder-open
-              size: sm
-            'on':
-              click:
-              - open-file:
-                  path: '{{ ctx.file.path }}/documents'
-        - type: canvas.files
-          props:
-            path: ./documents/
-            columns:
-            - name
-            - type
-            - size
-            - modified
-            emptyText: No documents yet
-        slot: documents
-      - type: canvas.stack
-        layout:
-          base:
-            gap: 4
-        children:
-        - type: canvas.text
-          props:
-            text: '{{ data.$deals.error }}'
-          rules:
-            visible: data.$deals.status === 'error'
-        - type: canvas.text
-          props:
-            text: Loading…
-            tone: muted
-          rules:
-            visible: data.$deals.status === 'loading'
-        - type: canvas.table
-          props:
-            rows: '{{ (data.deals || []).filter(e => e.kind === ''file'' && e.data && (state.showarchived
-              || e.data.state !== ''archived'') && e.data.contact && e.data.contact.path === ctx.file.path).map(e
-              => ({ path: e.path, code: e.data.code || e.name, title: e.data.title, stage: e.data.stageId,
-              amount: [e.data.currency, Number(e.data.amount || 0).toFixed(2)].filter(Boolean).join(''
-              ''), outcome: e.data.outcome })) }}'
-            columns:
-            - key: code
-              label: Code
-            - key: title
-              label: Title
-            - key: stage
-              label: Stage
-            - key: amount
-              label: Amount
-            - key: outcome
-              label: Outcome
-            emptyText: No deals yet
-            clickable: true
-          'on':
-            row-click:
-            - open-file:
-                path: '{{ event.path }}'
-                mode: edit
-        slot: deals
-      - type: canvas.stack
-        layout:
-          base:
-            gap: 4
-        children:
-        - type: canvas.text
-          props:
-            text: '{{ data.$cases.error }}'
-          rules:
-            visible: data.$cases.status === 'error'
-        - type: canvas.text
-          props:
-            text: Loading…
-            tone: muted
-          rules:
-            visible: data.$cases.status === 'loading'
-        - type: canvas.table
-          props:
-            rows: '{{ (data.cases || []).filter(e => e.kind === ''file'' && e.data && (state.showarchived
-              || e.data.state !== ''archived'') && e.data.contact && e.data.contact.path === ctx.file.path).map(e
-              => ({ path: e.path, code: e.data.code || e.name, subject: e.data.subject, status: e.data.status,
-              priority: e.data.priority })) }}'
-            columns:
-            - key: code
-              label: Code
-            - key: subject
-              label: Subject
-            - key: status
-              label: Status
-            - key: priority
-              label: Priority
-            emptyText: No cases yet
-            clickable: true
-          'on':
-            row-click:
-            - open-file:
-                path: '{{ event.path }}'
-                mode: edit
-        slot: cases
-    - type: canvas.form.switch
-      props:
-        label: Show archived
-        value: '{{ state.showarchived }}'
-  actions:
-    save:
-      steps:
-      - patch-form:
-          values:
-            updatedAt: '{{ Date() }}'
-      - save: {}
-      - toast:
-          message: Saved
-          variant: success
-    reset:
-      steps:
-      - reset-form: {}
-    archive:
-      steps:
-      - confirm:
-          title: Archive
-          message: Archive this record? It stays in the workspace and can be restored.
-      - patch-form:
-          values:
-            state: archived
-            archivedAt: '{{ Date() }}'
-            updatedAt: '{{ Date() }}'
-      - save: {}
-      - toast:
-          message: Archived
-          variant: success
-    restore:
-      steps:
-      - patch-form:
-          values:
-            state: active
-            updatedAt: '{{ Date() }}'
-      - save: {}
-      - toast:
-          message: Restored
-          variant: success
-    new-email:
-      permissions:
-      - file.write
-      steps:
-      - set-state:
-          key: newid
-          value:
-            $expr: 'Array.from(''xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'', c => c === ''x'' ? Math.floor(Math.random()
-              * 16).toString(16) : (c === ''y'' ? (8 + Math.floor(Math.random() * 4)).toString(16) : c)).join('''')'
-      - set-state:
-          key: newat
-          value:
-            $expr: Date()
-      - set-state:
-          key: newstamp
-          value:
-            $expr: Date().slice(0, 19).split('-').join('').split(':').join('').split('T').join('-')
-      - write-file:
-          path: '{{ ctx.file.path }}/activities/{{ state.newstamp }}-email.json'
-          mime: application/vnd.verentis.crm.email+json
-          content: '{{ JSON.stringify({ "$schema": "https://schemas.verentis.io/crm/v1/email.schema.json",
-            "schemaVersion": 1, "kind": "email", "id": state.newid, "state": "active", "createdAt": state.newat,
-            "updatedAt": state.newat, "subject": '''', "direction": "outbound", "status": "draft", "to":
-            [], "cc": [], "regarding": { "path": ctx.file.path } }, null, 2) }}'
-      - open-file:
-          path: '{{ ctx.file.path }}/activities/{{ state.newstamp }}-email.json'
-          mode: edit
-    new-call:
-      permissions:
-      - file.write
-      steps:
-      - set-state:
-          key: newid
-          value:
-            $expr: 'Array.from(''xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'', c => c === ''x'' ? Math.floor(Math.random()
-              * 16).toString(16) : (c === ''y'' ? (8 + Math.floor(Math.random() * 4)).toString(16) : c)).join('''')'
-      - set-state:
-          key: newat
-          value:
-            $expr: Date()
-      - set-state:
-          key: newstamp
-          value:
-            $expr: Date().slice(0, 19).split('-').join('').split(':').join('').split('T').join('-')
-      - write-file:
-          path: '{{ ctx.file.path }}/activities/{{ state.newstamp }}-call.json'
-          mime: application/vnd.verentis.crm.call+json
-          content: '{{ JSON.stringify({ "$schema": "https://schemas.verentis.io/crm/v1/call.schema.json",
-            "schemaVersion": 1, "kind": "call", "id": state.newid, "state": "active", "createdAt": state.newat,
-            "updatedAt": state.newat, "subject": '''', "direction": "outbound", "status": "planned", "regarding":
-            { "path": ctx.file.path } }, null, 2) }}'
-      - open-file:
-          path: '{{ ctx.file.path }}/activities/{{ state.newstamp }}-call.json'
-          mode: edit
-    new-meeting:
-      permissions:
-      - file.write
-      steps:
-      - set-state:
-          key: newid
-          value:
-            $expr: 'Array.from(''xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'', c => c === ''x'' ? Math.floor(Math.random()
-              * 16).toString(16) : (c === ''y'' ? (8 + Math.floor(Math.random() * 4)).toString(16) : c)).join('''')'
-      - set-state:
-          key: newat
-          value:
-            $expr: Date()
-      - set-state:
-          key: newstamp
-          value:
-            $expr: Date().slice(0, 19).split('-').join('').split(':').join('').split('T').join('-')
-      - write-file:
-          path: '{{ ctx.file.path }}/activities/{{ state.newstamp }}-meeting.json'
-          mime: application/vnd.verentis.crm.meeting+json
-          content: '{{ JSON.stringify({ "$schema": "https://schemas.verentis.io/crm/v1/meeting.schema.json",
-            "schemaVersion": 1, "kind": "meeting", "id": state.newid, "state": "active", "createdAt":
-            state.newat, "updatedAt": state.newat, "subject": '''', "status": "planned", "attendees":
-            [], "regarding": { "path": ctx.file.path } }, null, 2) }}'
-      - open-file:
-          path: '{{ ctx.file.path }}/activities/{{ state.newstamp }}-meeting.json'
-          mode: edit
-    new-task:
-      permissions:
-      - file.write
-      steps:
-      - set-state:
-          key: newid
-          value:
-            $expr: 'Array.from(''xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'', c => c === ''x'' ? Math.floor(Math.random()
-              * 16).toString(16) : (c === ''y'' ? (8 + Math.floor(Math.random() * 4)).toString(16) : c)).join('''')'
-      - set-state:
-          key: newat
-          value:
-            $expr: Date()
-      - set-state:
-          key: newstamp
-          value:
-            $expr: Date().slice(0, 19).split('-').join('').split(':').join('').split('T').join('-')
-      - write-file:
-          path: '{{ ctx.file.path }}/activities/{{ state.newstamp }}-task.json'
-          mime: application/vnd.verentis.crm.task+json
-          content: '{{ JSON.stringify({ "$schema": "https://schemas.verentis.io/crm/v1/task.schema.json",
-            "schemaVersion": 1, "kind": "task", "id": state.newid, "state": "active", "createdAt": state.newat,
-            "updatedAt": state.newat, "subject": '''', "status": "not-started", "priority": "normal",
-            "regarding": { "path": ctx.file.path } }, null, 2) }}'
-      - open-file:
-          path: '{{ ctx.file.path }}/activities/{{ state.newstamp }}-task.json'
-          mode: edit
-    new-note:
-      permissions:
-      - file.write
-      steps:
-      - set-state:
-          key: newid
-          value:
-            $expr: 'Array.from(''xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'', c => c === ''x'' ? Math.floor(Math.random()
-              * 16).toString(16) : (c === ''y'' ? (8 + Math.floor(Math.random() * 4)).toString(16) : c)).join('''')'
-      - set-state:
-          key: newat
-          value:
-            $expr: Date()
-      - set-state:
-          key: newstamp
-          value:
-            $expr: Date().slice(0, 19).split('-').join('').split(':').join('').split('T').join('-')
-      - write-file:
-          path: '{{ ctx.file.path }}/notes/{{ state.newstamp }}-note.json'
-          mime: application/vnd.verentis.crm.note+json
-          content: '{{ JSON.stringify({ "$schema": "https://schemas.verentis.io/crm/v1/note.schema.json",
-            "schemaVersion": 1, "kind": "note", "id": state.newid, "state": "active", "createdAt": state.newat,
-            "updatedAt": state.newat, "title": '''', "content": "", "regarding": { "path": ctx.file.path
-            } }, null, 2) }}'
-      - open-file:
-          path: '{{ ctx.file.path }}/notes/{{ state.newstamp }}-note.json'
-          mode: edit
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Form",
+  "metadata": {
+    "id": "crm-contact",
+    "name": "CRM contact",
+    "description": "View and edit a CRM contact.",
+    "icon": "user"
+  },
+  "spec": {
+    "binds": [
+      {
+        "pattern": "application/vnd.verentis.crm.contact+json",
+        "mode": "edit",
+        "priority": 200,
+        "scope": "global",
+        "json-schema": {
+          "id": "https://schemas.verentis.io/crm/v1/contact.schema.json",
+          "source": "/applications/crm/schemas/contact.schema.json",
+          "title": "CRM contact",
+          "version": "1"
+        }
+      }
+    ],
+    "entry": "${var:canvas-origin}/render?document=%2Fapplications%2Fcrm%2Fcanvas%2Fcontact.form.yaml",
+    "scope": "global",
+    "mime-types": [
+      {
+        "pattern": "application/vnd.verentis.crm.contact+json",
+        "mode": "edit",
+        "priority": 200,
+        "json-schema": {
+          "id": "https://schemas.verentis.io/crm/v1/contact.schema.json",
+          "source": "/applications/crm/schemas/contact.schema.json",
+          "title": "CRM contact",
+          "version": "1"
+        }
+      }
+    ],
+    "permissions": [
+      "file.read",
+      "file.write"
+    ],
+    "capabilities": [],
+    "sandbox": {
+      "allow-scripts": true,
+      "allow-same-origin": true,
+      "allow-popups": false,
+      "allow-forms": true
+    },
+    "file-access": [
+      {
+        "path": "/customers",
+        "mode": "read",
+        "reason": "List the contacts and companies of this customer"
+      },
+      {
+        "path": "/deals",
+        "mode": "read",
+        "reason": "Show this customer's deals"
+      },
+      {
+        "path": "/cases",
+        "mode": "read",
+        "reason": "Show this customer's cases"
+      },
+      {
+        "path": "/applications/crm/",
+        "mode": "read",
+        "reason": "Read the CRM schemas"
+      }
+    ],
+    "access": [
+      {
+        "path": "/customers",
+        "reason": "List the contacts and companies of this customer"
+      },
+      {
+        "path": "/deals",
+        "reason": "Show this customer's deals"
+      },
+      {
+        "path": "/cases",
+        "reason": "Show this customer's cases"
+      },
+      {
+        "path": "/applications/crm/",
+        "reason": "Read the CRM schemas"
+      }
+    ],
+    "data": {
+      "record": {
+        "kind": "document",
+        "consistency": "conditional"
+      },
+      "companies": {
+        "kind": "folder",
+        "path": "/customers",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.crm.company+json"
+      },
+      "companyoptions": {
+        "kind": "computed",
+        "expr": "(data.companies || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && (true)).map(e => ({ label: (e.data.code ? e.data.code + ' · ' : '') + (e.data.name || [e.data.salutation, e.data.givenName, e.data.familyName].filter(Boolean).join(' ').trim() || e.data.code || e.name), value: e.path }))"
+      },
+      "deals": {
+        "kind": "folder",
+        "path": "/deals",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.crm.deal+json"
+      },
+      "cases": {
+        "kind": "folder",
+        "path": "/cases",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.crm.case+json"
+      },
+      "activityfiles": {
+        "kind": "folder",
+        "path": "{{ ctx.file.path }}/activities",
+        "contents": true
+      },
+      "notefiles": {
+        "kind": "folder",
+        "path": "{{ ctx.file.path }}/notes",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.crm.note+json"
+      }
+    },
+    "state": {
+      "showarchived": false
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.validation-summary",
+            "props": {
+              "title": "Fix these before saving"
+            }
+          },
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "{{ [form.values.salutation, form.values.givenName, form.values.familyName].filter(Boolean).join(' ') || 'New contact' }}",
+              "note": "Contact {{ form.values.code || '' }}"
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.dashboard.badge",
+                    "props": {
+                      "text": "Archived",
+                      "tone": "warning",
+                      "icon": "archive"
+                    },
+                    "rules": {
+                      "visible": "form.values.state === 'archived'"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Archive",
+                      "variant": "ghost",
+                      "icon": "archive",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "archive"
+                    },
+                    "rules": {
+                      "visible": "!(form.values.state === 'archived')",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Restore",
+                      "variant": "outline",
+                      "icon": "archive-restore",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "restore"
+                    },
+                    "rules": {
+                      "visible": "form.values.state === 'archived'",
+                      "disabled": "form.saving || form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Reset",
+                      "variant": "ghost",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "reset"
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty"
+                    }
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Save",
+                      "icon": "save",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": "save"
+                    },
+                    "rules": {
+                      "disabled": "form.saving || !form.dirty || form.invalid || form.values.state === 'archived'"
+                    }
+                  }
+                ],
+                "slot": "actions"
+              }
+            ]
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "record",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.alert",
+            "props": {
+              "tone": "warning",
+              "title": "This contact is archived",
+              "text": "Restore it to edit.",
+              "icon": "archive",
+              "action": {
+                "label": "Restore",
+                "id": "restore"
+              }
+            },
+            "rules": {
+              "visible": "form.values.state === 'archived'"
+            },
+            "on": {
+              "action": "restore"
+            }
+          },
+          {
+            "type": "canvas.tabs",
+            "props": {
+              "items": [
+                {
+                  "value": "overview",
+                  "label": "Overview",
+                  "icon": "user"
+                },
+                {
+                  "value": "timeline",
+                  "label": "Timeline",
+                  "icon": "history"
+                },
+                {
+                  "value": "deals",
+                  "label": "Deals",
+                  "icon": "handshake"
+                },
+                {
+                  "value": "cases",
+                  "label": "Cases",
+                  "icon": "life-buoy"
+                },
+                {
+                  "value": "activities",
+                  "label": "Activities",
+                  "icon": "calendar-check"
+                },
+                {
+                  "value": "notes",
+                  "label": "Notes",
+                  "icon": "sticky-note"
+                },
+                {
+                  "value": "documents",
+                  "label": "Documents",
+                  "icon": "paperclip"
+                }
+              ]
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Company",
+                          "variant": "ghost",
+                          "icon": "building-2",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "open-file": {
+                                "path": "{{ form.values.company.path }}",
+                                "mode": "edit"
+                              }
+                            }
+                          ]
+                        },
+                        "rules": {
+                          "visible": "!!(form.values.company && form.values.company.path)"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.grid",
+                    "layout": {
+                      "base": {
+                        "columns": 1,
+                        "gap": 4
+                      },
+                      "tablet": {
+                        "columns": 2
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.card",
+                        "props": {
+                          "title": "Person"
+                        },
+                        "children": [
+                          {
+                            "type": "canvas.grid",
+                            "layout": {
+                              "base": {
+                                "columns": 1,
+                                "gap": 4
+                              },
+                              "tablet": {
+                                "columns": 2
+                              }
+                            },
+                            "children": [
+                              {
+                                "type": "canvas.form.input",
+                                "props": {
+                                  "label": "Salutation",
+                                  "value": "{{ form.values.salutation }}",
+                                  "placeholder": "Ms"
+                                },
+                                "rules": {
+                                  "disabled": "form.values.state === 'archived'"
+                                }
+                              },
+                              {
+                                "type": "canvas.form.input",
+                                "props": {
+                                  "label": "Given name",
+                                  "value": "{{ form.values.givenName }}",
+                                  "required": true
+                                },
+                                "rules": {
+                                  "disabled": "form.values.state === 'archived'"
+                                }
+                              },
+                              {
+                                "type": "canvas.form.input",
+                                "props": {
+                                  "label": "Family name",
+                                  "value": "{{ form.values.familyName }}"
+                                },
+                                "rules": {
+                                  "disabled": "form.values.state === 'archived'"
+                                }
+                              },
+                              {
+                                "type": "canvas.form.input",
+                                "props": {
+                                  "label": "Job title",
+                                  "value": "{{ form.values.jobTitle }}"
+                                },
+                                "rules": {
+                                  "disabled": "form.values.state === 'archived'"
+                                }
+                              },
+                              {
+                                "type": "canvas.form.input",
+                                "props": {
+                                  "label": "Department",
+                                  "value": "{{ form.values.department }}"
+                                },
+                                "rules": {
+                                  "disabled": "form.values.state === 'archived'"
+                                }
+                              },
+                              {
+                                "type": "canvas.form.select",
+                                "props": {
+                                  "label": "Company",
+                                  "value": "{{ form.values.company.path }}",
+                                  "options": "{{ data.companyoptions }}"
+                                },
+                                "rules": {
+                                  "disabled": "form.values.state === 'archived'"
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "canvas.card",
+                        "props": {
+                          "title": "Contact details"
+                        },
+                        "children": [
+                          {
+                            "type": "canvas.grid",
+                            "layout": {
+                              "base": {
+                                "columns": 1,
+                                "gap": 4
+                              },
+                              "tablet": {
+                                "columns": 2
+                              }
+                            },
+                            "children": [
+                              {
+                                "type": "canvas.form.input",
+                                "props": {
+                                  "label": "Email",
+                                  "value": "{{ form.values.email }}",
+                                  "inputType": "email"
+                                },
+                                "rules": {
+                                  "disabled": "form.values.state === 'archived'"
+                                }
+                              },
+                              {
+                                "type": "canvas.form.input",
+                                "props": {
+                                  "label": "Phone",
+                                  "value": "{{ form.values.phone }}"
+                                },
+                                "rules": {
+                                  "disabled": "form.values.state === 'archived'"
+                                }
+                              },
+                              {
+                                "type": "canvas.form.input",
+                                "props": {
+                                  "label": "Mobile",
+                                  "value": "{{ form.values.mobile }}"
+                                },
+                                "rules": {
+                                  "disabled": "form.values.state === 'archived'"
+                                }
+                              },
+                              {
+                                "type": "canvas.form.input",
+                                "props": {
+                                  "label": "Owner",
+                                  "value": "{{ form.values.owner }}",
+                                  "placeholder": "Name or email"
+                                },
+                                "rules": {
+                                  "disabled": "form.values.state === 'archived'"
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "canvas.card",
+                        "props": {
+                          "title": "Address"
+                        },
+                        "children": [
+                          {
+                            "type": "canvas.grid",
+                            "layout": {
+                              "base": {
+                                "columns": 1,
+                                "gap": 4
+                              },
+                              "tablet": {
+                                "columns": 2
+                              }
+                            },
+                            "children": [
+                              {
+                                "type": "canvas.form.text-list",
+                                "props": {
+                                  "label": "Street",
+                                  "value": "{{ form.values.address.lines }}"
+                                },
+                                "layout": {
+                                  "tablet": {
+                                    "colSpan": 2
+                                  }
+                                },
+                                "rules": {
+                                  "disabled": "form.values.state === 'archived'"
+                                }
+                              },
+                              {
+                                "type": "canvas.form.input",
+                                "props": {
+                                  "label": "City",
+                                  "value": "{{ form.values.address.city }}"
+                                },
+                                "rules": {
+                                  "disabled": "form.values.state === 'archived'"
+                                }
+                              },
+                              {
+                                "type": "canvas.form.input",
+                                "props": {
+                                  "label": "Region",
+                                  "value": "{{ form.values.address.region }}"
+                                },
+                                "rules": {
+                                  "disabled": "form.values.state === 'archived'"
+                                }
+                              },
+                              {
+                                "type": "canvas.form.input",
+                                "props": {
+                                  "label": "Postal code",
+                                  "value": "{{ form.values.address.postalCode }}"
+                                },
+                                "rules": {
+                                  "disabled": "form.values.state === 'archived'"
+                                }
+                              },
+                              {
+                                "type": "canvas.form.input",
+                                "props": {
+                                  "label": "Country code",
+                                  "value": "{{ form.values.address.country }}",
+                                  "placeholder": "ZA"
+                                },
+                                "rules": {
+                                  "disabled": "form.values.state === 'archived'"
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "type": "canvas.card",
+                        "props": {
+                          "title": "More"
+                        },
+                        "children": [
+                          {
+                            "type": "canvas.grid",
+                            "layout": {
+                              "base": {
+                                "columns": 1,
+                                "gap": 4
+                              },
+                              "tablet": {
+                                "columns": 2
+                              }
+                            },
+                            "children": [
+                              {
+                                "type": "canvas.form.textarea",
+                                "props": {
+                                  "label": "Description",
+                                  "value": "{{ form.values.description }}",
+                                  "rows": 4
+                                },
+                                "layout": {
+                                  "tablet": {
+                                    "colSpan": 2
+                                  }
+                                },
+                                "rules": {
+                                  "disabled": "form.values.state === 'archived'"
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ],
+                "slot": "overview"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.timeline",
+                    "props": {
+                      "sources": [
+                        {
+                          "type": "email",
+                          "label": "Emails",
+                          "icon": "mail",
+                          "rows": "{{ (data.activityfiles || []).filter(e => e.kind === 'file' && e.data && e.mimeType === 'application/vnd.verentis.crm.email+json' && e.data.state !== 'archived').map(e => ({ path: e.path, title: e.data.subject, at: e.data.sentAt || e.data.createdAt || e.modified, subtitle: e.data.direction === 'inbound' ? 'From ' + (e.data.from || '') : 'Sent', status: e.data.status })) }}",
+                          "date": "at",
+                          "title": "title",
+                          "subtitle": "subtitle",
+                          "badge": "status"
+                        },
+                        {
+                          "type": "call",
+                          "label": "Calls",
+                          "icon": "phone",
+                          "rows": "{{ (data.activityfiles || []).filter(e => e.kind === 'file' && e.data && e.mimeType === 'application/vnd.verentis.crm.call+json' && e.data.state !== 'archived').map(e => ({ path: e.path, title: e.data.subject, at: e.data.startsAt || e.data.createdAt || e.modified, subtitle: e.data.result || '', status: e.data.status })) }}",
+                          "date": "at",
+                          "title": "title",
+                          "subtitle": "subtitle",
+                          "badge": "status"
+                        },
+                        {
+                          "type": "meeting",
+                          "label": "Meetings",
+                          "icon": "calendar-days",
+                          "rows": "{{ (data.activityfiles || []).filter(e => e.kind === 'file' && e.data && e.mimeType === 'application/vnd.verentis.crm.meeting+json' && e.data.state !== 'archived').map(e => ({ path: e.path, title: e.data.subject, at: e.data.startsAt || e.data.createdAt || e.modified, subtitle: e.data.location || '', status: e.data.status })) }}",
+                          "date": "at",
+                          "title": "title",
+                          "subtitle": "subtitle",
+                          "badge": "status"
+                        },
+                        {
+                          "type": "task",
+                          "label": "Tasks",
+                          "icon": "square-check",
+                          "rows": "{{ (data.activityfiles || []).filter(e => e.kind === 'file' && e.data && e.mimeType === 'application/vnd.verentis.crm.task+json' && e.data.state !== 'archived').map(e => ({ path: e.path, title: e.data.subject, at: e.data.dueDate || e.data.createdAt || e.modified, subtitle: e.data.priority || '', status: e.data.status })) }}",
+                          "date": "at",
+                          "title": "title",
+                          "subtitle": "subtitle",
+                          "badge": "status"
+                        },
+                        {
+                          "type": "note",
+                          "label": "Notes",
+                          "icon": "sticky-note",
+                          "rows": "{{ (data.notefiles || []).filter(e => e.kind === 'file' && e.data && e.mimeType === 'application/vnd.verentis.crm.note+json' && e.data.state !== 'archived').map(e => ({ path: e.path, title: e.data.title, at: e.data.updatedAt || e.data.createdAt || e.modified })) }}",
+                          "date": "at",
+                          "title": "title"
+                        }
+                      ],
+                      "facets": true,
+                      "limit": 50,
+                      "emptyText": "No activity yet",
+                      "emptyDescription": "Emails, calls, meetings, tasks and notes on this record appear here by date."
+                    },
+                    "on": {
+                      "open": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "timeline"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.text",
+                        "props": {
+                          "text": "New",
+                          "tone": "muted"
+                        }
+                      },
+                      {
+                        "type": "canvas.stack",
+                        "layout": {
+                          "base": {
+                            "direction": "row",
+                            "wrap": true,
+                            "gap": 2,
+                            "align": "center"
+                          }
+                        },
+                        "children": [
+                          {
+                            "type": "canvas.button",
+                            "props": {
+                              "label": "Email",
+                              "variant": "outline",
+                              "icon": "mail",
+                              "size": "sm"
+                            },
+                            "on": {
+                              "click": "new-email"
+                            },
+                            "rules": {
+                              "disabled": "form.values.state === 'archived'"
+                            }
+                          },
+                          {
+                            "type": "canvas.button",
+                            "props": {
+                              "label": "Call",
+                              "variant": "outline",
+                              "icon": "phone",
+                              "size": "sm"
+                            },
+                            "on": {
+                              "click": "new-call"
+                            },
+                            "rules": {
+                              "disabled": "form.values.state === 'archived'"
+                            }
+                          },
+                          {
+                            "type": "canvas.button",
+                            "props": {
+                              "label": "Meeting",
+                              "variant": "outline",
+                              "icon": "calendar-days",
+                              "size": "sm"
+                            },
+                            "on": {
+                              "click": "new-meeting"
+                            },
+                            "rules": {
+                              "disabled": "form.values.state === 'archived'"
+                            }
+                          },
+                          {
+                            "type": "canvas.button",
+                            "props": {
+                              "label": "Task",
+                              "variant": "outline",
+                              "icon": "square-check",
+                              "size": "sm"
+                            },
+                            "on": {
+                              "click": "new-task"
+                            },
+                            "rules": {
+                              "disabled": "form.values.state === 'archived'"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.tabs",
+                    "props": {
+                      "items": [
+                        {
+                          "value": "all",
+                          "label": "All"
+                        },
+                        {
+                          "value": "email",
+                          "label": "Emails"
+                        },
+                        {
+                          "value": "call",
+                          "label": "Calls"
+                        },
+                        {
+                          "value": "meeting",
+                          "label": "Meetings"
+                        },
+                        {
+                          "value": "task",
+                          "label": "Tasks"
+                        }
+                      ]
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.stack",
+                        "layout": {
+                          "base": {
+                            "gap": 4
+                          }
+                        },
+                        "children": [
+                          {
+                            "type": "canvas.files",
+                            "props": {
+                              "path": "./activities/",
+                              "mimeTypes": [
+                                "application/vnd.verentis.crm.email+json",
+                                "application/vnd.verentis.crm.call+json",
+                                "application/vnd.verentis.crm.meeting+json",
+                                "application/vnd.verentis.crm.task+json"
+                              ],
+                              "showFolders": false,
+                              "navigable": false,
+                              "columns": [
+                                {
+                                  "key": "data.subject",
+                                  "label": "Subject"
+                                },
+                                {
+                                  "key": "type",
+                                  "label": "Type"
+                                },
+                                {
+                                  "key": "data.status",
+                                  "label": "Status"
+                                },
+                                {
+                                  "key": "modified",
+                                  "label": "Updated"
+                                }
+                              ],
+                              "typeLabels": {
+                                "application/vnd.verentis.crm.email+json": "Email",
+                                "application/vnd.verentis.crm.call+json": "Call",
+                                "application/vnd.verentis.crm.meeting+json": "Meeting",
+                                "application/vnd.verentis.crm.task+json": "Task",
+                                "application/vnd.verentis.crm.note+json": "Note"
+                              },
+                              "valueLabels": {
+                                "data.status": {
+                                  "not-started": "Not started",
+                                  "in-progress": "In progress",
+                                  "not-held": "Not held"
+                                }
+                              },
+                              "sort": "name",
+                              "descending": true,
+                              "emptyText": "No activity yet"
+                            }
+                          }
+                        ],
+                        "slot": "all"
+                      },
+                      {
+                        "type": "canvas.stack",
+                        "layout": {
+                          "base": {
+                            "gap": 4
+                          }
+                        },
+                        "children": [
+                          {
+                            "type": "canvas.files",
+                            "props": {
+                              "path": "./activities/",
+                              "mimeTypes": [
+                                "application/vnd.verentis.crm.email+json"
+                              ],
+                              "showFolders": false,
+                              "navigable": false,
+                              "columns": [
+                                {
+                                  "key": "data.subject",
+                                  "label": "Subject"
+                                },
+                                {
+                                  "key": "type",
+                                  "label": "Type"
+                                },
+                                {
+                                  "key": "data.status",
+                                  "label": "Status"
+                                },
+                                {
+                                  "key": "modified",
+                                  "label": "Updated"
+                                }
+                              ],
+                              "typeLabels": {
+                                "application/vnd.verentis.crm.email+json": "Email",
+                                "application/vnd.verentis.crm.call+json": "Call",
+                                "application/vnd.verentis.crm.meeting+json": "Meeting",
+                                "application/vnd.verentis.crm.task+json": "Task",
+                                "application/vnd.verentis.crm.note+json": "Note"
+                              },
+                              "valueLabels": {
+                                "data.status": {
+                                  "not-started": "Not started",
+                                  "in-progress": "In progress",
+                                  "not-held": "Not held"
+                                }
+                              },
+                              "sort": "name",
+                              "descending": true,
+                              "emptyText": "No emails yet"
+                            }
+                          }
+                        ],
+                        "slot": "email"
+                      },
+                      {
+                        "type": "canvas.stack",
+                        "layout": {
+                          "base": {
+                            "gap": 4
+                          }
+                        },
+                        "children": [
+                          {
+                            "type": "canvas.files",
+                            "props": {
+                              "path": "./activities/",
+                              "mimeTypes": [
+                                "application/vnd.verentis.crm.call+json"
+                              ],
+                              "showFolders": false,
+                              "navigable": false,
+                              "columns": [
+                                {
+                                  "key": "data.subject",
+                                  "label": "Subject"
+                                },
+                                {
+                                  "key": "type",
+                                  "label": "Type"
+                                },
+                                {
+                                  "key": "data.status",
+                                  "label": "Status"
+                                },
+                                {
+                                  "key": "modified",
+                                  "label": "Updated"
+                                }
+                              ],
+                              "typeLabels": {
+                                "application/vnd.verentis.crm.email+json": "Email",
+                                "application/vnd.verentis.crm.call+json": "Call",
+                                "application/vnd.verentis.crm.meeting+json": "Meeting",
+                                "application/vnd.verentis.crm.task+json": "Task",
+                                "application/vnd.verentis.crm.note+json": "Note"
+                              },
+                              "valueLabels": {
+                                "data.status": {
+                                  "not-started": "Not started",
+                                  "in-progress": "In progress",
+                                  "not-held": "Not held"
+                                }
+                              },
+                              "sort": "name",
+                              "descending": true,
+                              "emptyText": "No calls yet"
+                            }
+                          }
+                        ],
+                        "slot": "call"
+                      },
+                      {
+                        "type": "canvas.stack",
+                        "layout": {
+                          "base": {
+                            "gap": 4
+                          }
+                        },
+                        "children": [
+                          {
+                            "type": "canvas.files",
+                            "props": {
+                              "path": "./activities/",
+                              "mimeTypes": [
+                                "application/vnd.verentis.crm.meeting+json"
+                              ],
+                              "showFolders": false,
+                              "navigable": false,
+                              "columns": [
+                                {
+                                  "key": "data.subject",
+                                  "label": "Subject"
+                                },
+                                {
+                                  "key": "type",
+                                  "label": "Type"
+                                },
+                                {
+                                  "key": "data.status",
+                                  "label": "Status"
+                                },
+                                {
+                                  "key": "modified",
+                                  "label": "Updated"
+                                }
+                              ],
+                              "typeLabels": {
+                                "application/vnd.verentis.crm.email+json": "Email",
+                                "application/vnd.verentis.crm.call+json": "Call",
+                                "application/vnd.verentis.crm.meeting+json": "Meeting",
+                                "application/vnd.verentis.crm.task+json": "Task",
+                                "application/vnd.verentis.crm.note+json": "Note"
+                              },
+                              "valueLabels": {
+                                "data.status": {
+                                  "not-started": "Not started",
+                                  "in-progress": "In progress",
+                                  "not-held": "Not held"
+                                }
+                              },
+                              "sort": "name",
+                              "descending": true,
+                              "emptyText": "No meetings yet"
+                            }
+                          }
+                        ],
+                        "slot": "meeting"
+                      },
+                      {
+                        "type": "canvas.stack",
+                        "layout": {
+                          "base": {
+                            "gap": 4
+                          }
+                        },
+                        "children": [
+                          {
+                            "type": "canvas.files",
+                            "props": {
+                              "path": "./activities/",
+                              "mimeTypes": [
+                                "application/vnd.verentis.crm.task+json"
+                              ],
+                              "showFolders": false,
+                              "navigable": false,
+                              "columns": [
+                                {
+                                  "key": "data.subject",
+                                  "label": "Subject"
+                                },
+                                {
+                                  "key": "type",
+                                  "label": "Type"
+                                },
+                                {
+                                  "key": "data.status",
+                                  "label": "Status"
+                                },
+                                {
+                                  "key": "modified",
+                                  "label": "Updated"
+                                }
+                              ],
+                              "typeLabels": {
+                                "application/vnd.verentis.crm.email+json": "Email",
+                                "application/vnd.verentis.crm.call+json": "Call",
+                                "application/vnd.verentis.crm.meeting+json": "Meeting",
+                                "application/vnd.verentis.crm.task+json": "Task",
+                                "application/vnd.verentis.crm.note+json": "Note"
+                              },
+                              "valueLabels": {
+                                "data.status": {
+                                  "not-started": "Not started",
+                                  "in-progress": "In progress",
+                                  "not-held": "Not held"
+                                }
+                              },
+                              "sort": "name",
+                              "descending": true,
+                              "emptyText": "No tasks yet"
+                            }
+                          }
+                        ],
+                        "slot": "task"
+                      }
+                    ]
+                  }
+                ],
+                "slot": "activities"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Note",
+                          "variant": "outline",
+                          "icon": "sticky-note",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": "new-note"
+                        },
+                        "rules": {
+                          "disabled": "form.values.state === 'archived'"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.files",
+                    "props": {
+                      "path": "./notes/",
+                      "mimeTypes": [
+                        "application/vnd.verentis.crm.note+json"
+                      ],
+                      "showFolders": false,
+                      "navigable": false,
+                      "columns": [
+                        {
+                          "key": "data.title",
+                          "label": "Title"
+                        },
+                        {
+                          "key": "modified",
+                          "label": "Updated"
+                        }
+                      ],
+                      "typeLabels": {
+                        "application/vnd.verentis.crm.email+json": "Email",
+                        "application/vnd.verentis.crm.call+json": "Call",
+                        "application/vnd.verentis.crm.meeting+json": "Meeting",
+                        "application/vnd.verentis.crm.task+json": "Task",
+                        "application/vnd.verentis.crm.note+json": "Note"
+                      },
+                      "valueLabels": {
+                        "data.status": {
+                          "not-started": "Not started",
+                          "in-progress": "In progress",
+                          "not-held": "Not held"
+                        }
+                      },
+                      "sort": "name",
+                      "descending": true,
+                      "emptyText": "No notes yet"
+                    }
+                  }
+                ],
+                "slot": "notes"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.text",
+                    "props": {
+                      "text": "Files of any type in {{ ctx.file.path }}/documents. Upload or create them from Files.",
+                      "tone": "muted"
+                    }
+                  },
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "direction": "row",
+                        "wrap": true,
+                        "gap": 2,
+                        "align": "center"
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.form.file-upload",
+                        "props": {
+                          "label": "Add files",
+                          "multiple": true
+                        },
+                        "rules": {
+                          "disabled": "form.values.state === 'archived'"
+                        },
+                        "on": {
+                          "files": [
+                            {
+                              "for-each": {
+                                "items": "{{ event }}",
+                                "as": "picked",
+                                "steps": [
+                                  {
+                                    "write-file": {
+                                      "path": "{{ ctx.file.path }}/documents/{{ picked.name }}",
+                                      "content": "{{ picked }}"
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            {
+                              "toast": {
+                                "message": "Added to Documents",
+                                "variant": "success"
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "type": "canvas.button",
+                        "props": {
+                          "label": "Open in Files",
+                          "variant": "outline",
+                          "icon": "folder-open",
+                          "size": "sm"
+                        },
+                        "on": {
+                          "click": [
+                            {
+                              "open-file": {
+                                "path": "{{ ctx.file.path }}/documents"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.files",
+                    "props": {
+                      "path": "./documents/",
+                      "columns": [
+                        "name",
+                        "type",
+                        "size",
+                        "modified"
+                      ],
+                      "emptyText": "No documents yet"
+                    }
+                  }
+                ],
+                "slot": "documents"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.empty-state",
+                    "props": {
+                      "for": "deals",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.deals || []).filter(e => e.kind === 'file' && e.data && (state.showarchived || e.data.state !== 'archived') && e.data.contact && e.data.contact.path === ctx.file.path).map(e => ({ path: e.path, code: e.data.code || e.name, title: e.data.title, stage: e.data.stageId, amount: [e.data.currency, Number(e.data.amount || 0).toFixed(2)].filter(Boolean).join(' '), outcome: e.data.outcome })) }}",
+                      "columns": [
+                        {
+                          "key": "code",
+                          "label": "Code"
+                        },
+                        {
+                          "key": "title",
+                          "label": "Title"
+                        },
+                        {
+                          "key": "stage",
+                          "label": "Stage"
+                        },
+                        {
+                          "key": "amount",
+                          "label": "Amount"
+                        },
+                        {
+                          "key": "outcome",
+                          "label": "Outcome"
+                        }
+                      ],
+                      "emptyText": "No deals yet",
+                      "clickable": true,
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "deals"
+              },
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "gap": 4
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.empty-state",
+                    "props": {
+                      "for": "cases",
+                      "compact": true
+                    }
+                  },
+                  {
+                    "type": "canvas.table",
+                    "props": {
+                      "rows": "{{ (data.cases || []).filter(e => e.kind === 'file' && e.data && (state.showarchived || e.data.state !== 'archived') && e.data.contact && e.data.contact.path === ctx.file.path).map(e => ({ path: e.path, code: e.data.code || e.name, subject: e.data.subject, status: e.data.status, priority: e.data.priority })) }}",
+                      "columns": [
+                        {
+                          "key": "code",
+                          "label": "Code"
+                        },
+                        {
+                          "key": "subject",
+                          "label": "Subject"
+                        },
+                        {
+                          "key": "status",
+                          "label": "Status"
+                        },
+                        {
+                          "key": "priority",
+                          "label": "Priority"
+                        }
+                      ],
+                      "emptyText": "No cases yet",
+                      "clickable": true,
+                      "search": true,
+                      "sortable": true,
+                      "pageSize": 25,
+                      "narrow": "list"
+                    },
+                    "on": {
+                      "row-click": [
+                        {
+                          "open-file": {
+                            "path": "{{ event.path }}",
+                            "mode": "edit",
+                            "open": "side"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "slot": "cases"
+              }
+            ]
+          },
+          {
+            "type": "canvas.form.switch",
+            "props": {
+              "label": "Show archived",
+              "value": "{{ state.showarchived }}"
+            }
+          }
+        ]
+      }
+    ],
+    "actions": {
+      "save": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Saved",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "reset": {
+        "steps": [
+          {
+            "reset-form": {}
+          }
+        ]
+      },
+      "archive": {
+        "steps": [
+          {
+            "confirm": {
+              "title": "Archive",
+              "message": "Archive this record? It stays in the workspace and can be restored."
+            }
+          },
+          {
+            "patch-form": {
+              "values": {
+                "state": "archived",
+                "archivedAt": "{{ Date() }}",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Archived",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "restore": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "state": "active",
+                "updatedAt": "{{ Date() }}"
+              }
+            }
+          },
+          {
+            "save": {}
+          },
+          {
+            "toast": {
+              "message": "Restored",
+              "variant": "success"
+            }
+          }
+        ]
+      },
+      "new-email": {
+        "permissions": [
+          "file.write"
+        ],
+        "steps": [
+          {
+            "set-state": {
+              "key": "newid",
+              "value": {
+                "$expr": "Array.from('xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx', c => c === 'x' ? Math.floor(Math.random() * 16).toString(16) : (c === 'y' ? (8 + Math.floor(Math.random() * 4)).toString(16) : c)).join('')"
+              }
+            }
+          },
+          {
+            "set-state": {
+              "key": "newat",
+              "value": {
+                "$expr": "Date()"
+              }
+            }
+          },
+          {
+            "set-state": {
+              "key": "newstamp",
+              "value": {
+                "$expr": "Date().slice(0, 19).split('-').join('').split(':').join('').split('T').join('-')"
+              }
+            }
+          },
+          {
+            "write-file": {
+              "path": "{{ ctx.file.path }}/activities/{{ state.newstamp }}-email.json",
+              "mime": "application/vnd.verentis.crm.email+json",
+              "content": "{{ JSON.stringify({ \"$schema\": \"https://schemas.verentis.io/crm/v1/email.schema.json\", \"schemaVersion\": 1, \"kind\": \"email\", \"id\": state.newid, \"state\": \"active\", \"createdAt\": state.newat, \"updatedAt\": state.newat, \"subject\": '', \"direction\": \"outbound\", \"status\": \"draft\", \"to\": [], \"cc\": [], \"regarding\": { \"path\": ctx.file.path } }, null, 2) }}"
+            }
+          },
+          {
+            "open-file": {
+              "path": "{{ ctx.file.path }}/activities/{{ state.newstamp }}-email.json",
+              "mode": "edit"
+            }
+          }
+        ]
+      },
+      "new-call": {
+        "permissions": [
+          "file.write"
+        ],
+        "steps": [
+          {
+            "set-state": {
+              "key": "newid",
+              "value": {
+                "$expr": "Array.from('xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx', c => c === 'x' ? Math.floor(Math.random() * 16).toString(16) : (c === 'y' ? (8 + Math.floor(Math.random() * 4)).toString(16) : c)).join('')"
+              }
+            }
+          },
+          {
+            "set-state": {
+              "key": "newat",
+              "value": {
+                "$expr": "Date()"
+              }
+            }
+          },
+          {
+            "set-state": {
+              "key": "newstamp",
+              "value": {
+                "$expr": "Date().slice(0, 19).split('-').join('').split(':').join('').split('T').join('-')"
+              }
+            }
+          },
+          {
+            "write-file": {
+              "path": "{{ ctx.file.path }}/activities/{{ state.newstamp }}-call.json",
+              "mime": "application/vnd.verentis.crm.call+json",
+              "content": "{{ JSON.stringify({ \"$schema\": \"https://schemas.verentis.io/crm/v1/call.schema.json\", \"schemaVersion\": 1, \"kind\": \"call\", \"id\": state.newid, \"state\": \"active\", \"createdAt\": state.newat, \"updatedAt\": state.newat, \"subject\": '', \"direction\": \"outbound\", \"status\": \"planned\", \"regarding\": { \"path\": ctx.file.path } }, null, 2) }}"
+            }
+          },
+          {
+            "open-file": {
+              "path": "{{ ctx.file.path }}/activities/{{ state.newstamp }}-call.json",
+              "mode": "edit"
+            }
+          }
+        ]
+      },
+      "new-meeting": {
+        "permissions": [
+          "file.write"
+        ],
+        "steps": [
+          {
+            "set-state": {
+              "key": "newid",
+              "value": {
+                "$expr": "Array.from('xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx', c => c === 'x' ? Math.floor(Math.random() * 16).toString(16) : (c === 'y' ? (8 + Math.floor(Math.random() * 4)).toString(16) : c)).join('')"
+              }
+            }
+          },
+          {
+            "set-state": {
+              "key": "newat",
+              "value": {
+                "$expr": "Date()"
+              }
+            }
+          },
+          {
+            "set-state": {
+              "key": "newstamp",
+              "value": {
+                "$expr": "Date().slice(0, 19).split('-').join('').split(':').join('').split('T').join('-')"
+              }
+            }
+          },
+          {
+            "write-file": {
+              "path": "{{ ctx.file.path }}/activities/{{ state.newstamp }}-meeting.json",
+              "mime": "application/vnd.verentis.crm.meeting+json",
+              "content": "{{ JSON.stringify({ \"$schema\": \"https://schemas.verentis.io/crm/v1/meeting.schema.json\", \"schemaVersion\": 1, \"kind\": \"meeting\", \"id\": state.newid, \"state\": \"active\", \"createdAt\": state.newat, \"updatedAt\": state.newat, \"subject\": '', \"status\": \"planned\", \"attendees\": [], \"regarding\": { \"path\": ctx.file.path } }, null, 2) }}"
+            }
+          },
+          {
+            "open-file": {
+              "path": "{{ ctx.file.path }}/activities/{{ state.newstamp }}-meeting.json",
+              "mode": "edit"
+            }
+          }
+        ]
+      },
+      "new-task": {
+        "permissions": [
+          "file.write"
+        ],
+        "steps": [
+          {
+            "set-state": {
+              "key": "newid",
+              "value": {
+                "$expr": "Array.from('xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx', c => c === 'x' ? Math.floor(Math.random() * 16).toString(16) : (c === 'y' ? (8 + Math.floor(Math.random() * 4)).toString(16) : c)).join('')"
+              }
+            }
+          },
+          {
+            "set-state": {
+              "key": "newat",
+              "value": {
+                "$expr": "Date()"
+              }
+            }
+          },
+          {
+            "set-state": {
+              "key": "newstamp",
+              "value": {
+                "$expr": "Date().slice(0, 19).split('-').join('').split(':').join('').split('T').join('-')"
+              }
+            }
+          },
+          {
+            "write-file": {
+              "path": "{{ ctx.file.path }}/activities/{{ state.newstamp }}-task.json",
+              "mime": "application/vnd.verentis.crm.task+json",
+              "content": "{{ JSON.stringify({ \"$schema\": \"https://schemas.verentis.io/crm/v1/task.schema.json\", \"schemaVersion\": 1, \"kind\": \"task\", \"id\": state.newid, \"state\": \"active\", \"createdAt\": state.newat, \"updatedAt\": state.newat, \"subject\": '', \"status\": \"not-started\", \"priority\": \"normal\", \"regarding\": { \"path\": ctx.file.path } }, null, 2) }}"
+            }
+          },
+          {
+            "open-file": {
+              "path": "{{ ctx.file.path }}/activities/{{ state.newstamp }}-task.json",
+              "mode": "edit"
+            }
+          }
+        ]
+      },
+      "new-note": {
+        "permissions": [
+          "file.write"
+        ],
+        "steps": [
+          {
+            "set-state": {
+              "key": "newid",
+              "value": {
+                "$expr": "Array.from('xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx', c => c === 'x' ? Math.floor(Math.random() * 16).toString(16) : (c === 'y' ? (8 + Math.floor(Math.random() * 4)).toString(16) : c)).join('')"
+              }
+            }
+          },
+          {
+            "set-state": {
+              "key": "newat",
+              "value": {
+                "$expr": "Date()"
+              }
+            }
+          },
+          {
+            "set-state": {
+              "key": "newstamp",
+              "value": {
+                "$expr": "Date().slice(0, 19).split('-').join('').split(':').join('').split('T').join('-')"
+              }
+            }
+          },
+          {
+            "write-file": {
+              "path": "{{ ctx.file.path }}/notes/{{ state.newstamp }}-note.json",
+              "mime": "application/vnd.verentis.crm.note+json",
+              "content": "{{ JSON.stringify({ \"$schema\": \"https://schemas.verentis.io/crm/v1/note.schema.json\", \"schemaVersion\": 1, \"kind\": \"note\", \"id\": state.newid, \"state\": \"active\", \"createdAt\": state.newat, \"updatedAt\": state.newat, \"title\": '', \"content\": \"\", \"regarding\": { \"path\": ctx.file.path } }, null, 2) }}"
+            }
+          },
+          {
+            "open-file": {
+              "path": "{{ ctx.file.path }}/notes/{{ state.newstamp }}-note.json",
+              "mode": "edit"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

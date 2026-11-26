@@ -45,90 +45,107 @@
     },
     "tree": [
       {
-        "type": "canvas.stack",
-        "layout": {
-          "base": {
-            "padding": 6,
-            "gap": 4,
-            "maxWidth": "72rem",
-            "margin": {
-              "x": "auto"
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Expenses",
+          "icon": "receipt",
+          "active": "by-category.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "My reports",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "reports.page.yaml",
+              "label": "All reports",
+              "icon": "kanban",
+              "count": "{{ (data.rows || []).filter(r => r.status === 'submitted').length }}"
+            },
+            {
+              "id": "by-category.page.yaml",
+              "label": "Categories",
+              "icon": "tags"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
             }
-          }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/expenses/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/expenses.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
         },
         "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Expenses by category",
+              "note": "Submitted, approved and posted report lines, summed by their category."
+            },
+            "children": []
+          },
           {
             "type": "canvas.stack",
             "layout": {
               "base": {
-                "direction": "row",
-                "wrap": true,
-                "gap": 2,
-                "align": "center",
-                "justify": "between"
+                "gap": 2
               }
             },
             "children": [
               {
-                "type": "canvas.stack",
-                "layout": {
-                  "base": {
-                    "gap": 1
-                  }
-                },
-                "children": [
-                  {
-                    "type": "canvas.heading",
-                    "props": {
-                      "level": 2,
-                      "text": "Expenses by category"
-                    }
-                  },
-                  {
-                    "type": "canvas.text",
-                    "props": {
-                      "text": "Submitted, approved and posted report lines, summed by their category.",
-                      "tone": "muted"
-                    }
-                  }
-                ]
+                "type": "canvas.heading",
+                "props": {
+                  "level": 3,
+                  "text": "Spend per category"
+                }
               },
               {
-                "type": "canvas.button",
+                "type": "canvas.chart",
                 "props": {
-                  "label": "Expenses",
-                  "variant": "ghost",
-                  "icon": "receipt",
-                  "size": "sm"
-                },
-                "on": {
-                  "click": [
-                    {
-                      "open-file": {
-                        "path": "/applications/expenses/canvas/home.page.yaml"
-                      }
-                    }
-                  ]
+                  "rows": "{{ (data.summary || []).map(s => ({ path: s.path, label: s.name || s.code, value: (s.amount || 0) / 100 })) }}",
+                  "showLegend": true,
+                  "emptyText": "Nothing to chart yet",
+                  "kind": "hbar",
+                  "x": "label",
+                  "y": "value",
+                  "format": "number",
+                  "decimals": 2,
+                  "sort": "-value"
                 }
               }
             ]
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "{{ data.$reports.error }}"
-            },
-            "rules": {
-              "visible": "data.$reports.status === 'error'"
+              "for": "reports",
+              "compact": true
             }
           },
           {
-            "type": "canvas.text",
+            "type": "canvas.empty-state",
             "props": {
-              "text": "{{ data.$categories.error }}"
-            },
-            "rules": {
-              "visible": "data.$categories.status === 'error'"
+              "for": "categories",
+              "compact": true
             }
           },
           {
@@ -204,6 +221,10 @@
                 }
               ],
               "emptyText": "Nothing expensed yet",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
               "clickable": true
             },
             "on": {
@@ -211,7 +232,8 @@
                 {
                   "open-file": {
                     "path": "{{ event.path }}",
-                    "mode": "edit"
+                    "mode": "edit",
+                    "open": "side"
                   }
                 }
               ]
