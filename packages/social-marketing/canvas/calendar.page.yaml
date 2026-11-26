@@ -1,0 +1,170 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "social-calendar",
+    "name": "Content calendar",
+    "description": "Posts by day per channel.",
+    "icon": "calendar-days"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/social-posts",
+        "reason": "List content calendar"
+      }
+    ],
+    "data": {
+      "records": {
+        "kind": "folder",
+        "path": "/social-posts",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.social-marketing.post+json"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Social Marketing",
+          "icon": "megaphone",
+          "active": "calendar.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "upcoming.page.yaml",
+              "label": "Calendar",
+              "icon": "calendar"
+            },
+            {
+              "id": "engagement.page.yaml",
+              "label": "Engagement",
+              "icon": "chart-column"
+            },
+            {
+              "id": "calendar.page.yaml",
+              "label": "Content calendar",
+              "icon": "calendar-days"
+            },
+            {
+              "id": "channels.page.yaml",
+              "label": "Channels",
+              "icon": "radio-tower"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
+            }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/social-marketing/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/social-marketing.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
+        },
+        "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Content calendar",
+              "note": "Posts by day per channel."
+            },
+            "children": []
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "records",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.calendar",
+            "props": {
+              "rows": "{{ (data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').filter(e => !!(e.data.scheduledDate || e.data.publishedAt)).map(e => ({ path: e.path, start: e.data.scheduledDate || e.data.publishedAt, title: String(e.data.content || e.data.code).slice(0, 60), channel: String(e.data.account || '').split('/').pop(), status: e.data.status })) }}",
+              "views": [
+                "month",
+                "week",
+                "agenda"
+              ],
+              "showLegend": true,
+              "emptyText": "Nothing scheduled",
+              "start": "start",
+              "title": "title",
+              "colorBy": "channel",
+              "view": "month"
+            },
+            "on": {
+              "open": [
+                {
+                  "open-file": {
+                    "path": "{{ event.row.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').filter(e => !e.data.scheduledDate && (e.data.status || 'draft') === 'draft').map(e => ({ path: e.path, code: e.data.code || e.name, content: String(e.data.content || '').slice(0, 80), channel: String(e.data.account || '').split('/').pop() })) }}",
+              "columns": [
+                {
+                  "key": "code",
+                  "label": "Post"
+                },
+                {
+                  "key": "content",
+                  "label": "Unscheduled draft"
+                },
+                {
+                  "key": "channel",
+                  "label": "Channel"
+                }
+              ],
+              "emptyText": "Every draft has a date.",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

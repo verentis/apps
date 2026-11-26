@@ -73,6 +73,16 @@
               "count": "{{ (data.rows || []).filter(r => r.status === 'draft').length }}"
             },
             {
+              "id": "day.page.yaml",
+              "label": "Day timeline",
+              "icon": "gantt-chart"
+            },
+            {
+              "id": "roles.page.yaml",
+              "label": "Roles",
+              "icon": "palette"
+            },
+            {
               "id": "settings",
               "label": "Settings",
               "icon": "settings"

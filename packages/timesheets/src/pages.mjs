@@ -2,13 +2,14 @@
 // weekly hours-by-project page. Validating (hours check, immutability) is done by the validation script the form
 // runs; the form only locks what the script has validated.
 import { views } from './views.mjs'
+import { listPages } from './lists.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   humanize, iconName, openFile, options, page, panel, projectRegistration, recordButtons, row, scriptAction,
   sectionCards, stat, stats, status, table, tabs, text, toneExpression, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { containers, installRoot, mimeTypes, project, recordKinds, schemaId, settingsPath } from './contracts.mjs'
-import { entities, postScriptPath, settingsSections } from './app.mjs'
+import { employee, entities, postScriptPath, settingsSections } from './app.mjs'
 
 export { collectSteps, documentFileAccess, projectRegistration } from '../../../tools/file-apps/canvas.mjs'
 
@@ -45,6 +46,7 @@ function recordForm(kind) {
       text(`${entity.singular} {{ form.values.code || '' }}`, 'muted'),
     ]),
     row([
+      { ...employee.meButton, rules: { ...employee.meButton.rules, visible: `${draft} && !(${archived}) && ${employee.meButton.rules.visible}` } },
       button('Validate', 'validate', { visible: `${draft} && !(${archived})`, disabled: `${idle} || form.invalid` }, undefined, 'check'),
       recordButtons(locked),
     ]),
@@ -58,9 +60,10 @@ function recordForm(kind) {
       access: [
         { path: project.projects, reason: 'Offer projects to log time against (when Project is installed)' },
         { path: project.tasks, reason: 'Offer tasks to log time against (when Project is installed)' },
+        ...employee.sources.access,
         schemaAccess,
       ],
-      data: projectSources,
+      data: { ...projectSources, ...employee.sources.data },
       tree: [
         header,
         ...status('record'), ...lifecycle(entity),
@@ -70,6 +73,7 @@ function recordForm(kind) {
       ],
       actions: {
         ...baseActions,
+        ...employee.meAction,
         validate: scriptAction(postScriptPath, 'validate-entry', {
           confirm: { title: 'Validate entry', message: 'Validate this timesheet entry? Validated entries can no longer be edited.' },
         }),
@@ -195,6 +199,6 @@ function weekPage() {
 }
 
 export function buildPages() {
-  const documents = [homePage(), weekPage(), ...recordKinds.map(recordForm), settingsForm()]
+  const documents = [homePage(), weekPage(), ...recordKinds.map(recordForm), settingsForm(), ...listPages()]
   return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

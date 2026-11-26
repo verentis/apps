@@ -61,6 +61,11 @@
               "icon": "chart-column"
             },
             {
+              "id": "responses.page.yaml",
+              "label": "Responses",
+              "icon": "message-square-text"
+            },
+            {
               "id": "settings",
               "label": "Settings",
               "icon": "settings"

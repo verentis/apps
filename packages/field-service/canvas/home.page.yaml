@@ -57,6 +57,11 @@
               "icon": "hard-hat"
             },
             {
+              "id": "technicians.page.yaml",
+              "label": "Technicians",
+              "icon": "users-round"
+            },
+            {
               "id": "settings",
               "label": "Settings",
               "icon": "settings"

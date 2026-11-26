@@ -2,13 +2,14 @@
 // the appraisals list by status and the scores summary. Scheduling and completing (status transitions, ratings
 // check, overall score computation, locking) are done by the action script the appraisal form runs.
 import { views } from './views.mjs'
+import { listPages } from './lists.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   humanize, iconName, options, openFile, page, panel, projectRegistration, recordButtons, row, scriptAction,
   sectionCards, stat, stats, status, table, tabs, text, toneExpression, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { containers, employees, installRoot, mimeTypes, recordKinds, schemaId, settingsPath, statuses } from './contracts.mjs'
-import { entities, postScriptPath, settingsFields } from './app.mjs'
+import { appraisee, entities, postScriptPath, settingsFields } from './app.mjs'
 
 export { collectSteps, documentFileAccess, projectRegistration } from '../../../tools/file-apps/canvas.mjs'
 
@@ -17,19 +18,16 @@ const schemaAccess = { path: `${installRoot}/`, reason: 'Read the Appraisals sch
 const done = "form.values.status === 'done'"
 const idle = 'form.saving || form.dirty'
 
-const fromEmployee = "e.data.name || [e.data.givenName, e.data.familyName].filter(Boolean).join(' ')"
-const copyName = `((data.employeerecords || []).filter(e => e.kind === 'file' && e.data && e.path === form.values.employeeRef).map(e => ${fromEmployee})[0]) || form.values.employeeName`
 
 /** Data, access, actions, header buttons and notices of the appraisal form. */
 function recordExtras() {
   return {
     access: [
-      { path: employees.container, reason: 'Offer Employees records on appraisals (when Employees is installed)' },
+      ...appraisee.sources.access,
       schemaAccess,
     ],
     data: {
-      employeerecords: folder(employees.container, employees.employeeMime),
-      employeeoptions: { kind: 'computed', expr: options('employeerecords', fromEmployee) },
+      ...appraisee.sources.data,
     },
     notices: [
       { ...text('Completed on {{ form.values.completedAt }} with an overall score of {{ form.values.overallScore }}. This appraisal is locked.', 'success'),
@@ -40,10 +38,8 @@ function recordExtras() {
       button('Schedule', 'schedule', { visible: `form.values.status === 'draft' && !(${archived})`, disabled: idle }, 'outline', 'calendar'),
       button('Complete', 'complete', { visible: `form.values.status === 'scheduled' && !(${archived})`,
         disabled: `${idle} || !(form.values.ratings || []).length` }, undefined, 'check'),
-      button('Copy name', 'copy-employee', { visible: `!(${done}) && !!form.values.employeeRef`, disabled: `form.saving || ${archived}` }, 'ghost', 'copy'),
     ],
     actions: {
-      'copy-employee': { steps: [{ 'patch-form': { values: { employeeName: `{{ ${copyName} }}` } } }] },
       schedule: scriptAction(postScriptPath, 'schedule', {
         confirm: { title: 'Schedule appraisal', message: 'Schedule this appraisal on its scheduled date (today when empty)?' },
       }),
@@ -226,6 +222,6 @@ function scoresPage() {
 }
 
 export function buildPages() {
-  const documents = [homePage(), appraisalsPage(), scoresPage(), ...recordKinds.map(recordForm), settingsForm()]
+  const documents = [homePage(), appraisalsPage(), scoresPage(), ...recordKinds.map(recordForm), settingsForm(), ...listPages()]
   return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

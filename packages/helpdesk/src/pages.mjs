@@ -2,13 +2,14 @@
 // the ticket list by stage, the SLA/overdue report and the team workload summary. Resolving and closing
 // (stage transitions, resolution text, locking) are done by the action script the ticket form runs.
 import { views } from './views.mjs'
+import { listPages } from './lists.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   humanize, iconName, options, openFile, page, panel, projectRegistration, recordButtons, row, scriptAction,
   sectionCards, stat, stats, status, table, tabs, text, toneExpression, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { containers, crm, installRoot, mimeTypes, openStages, recordKinds, schemaId, settingsPath, stages } from './contracts.mjs'
-import { entities, postScriptPath, settingsFields } from './app.mjs'
+import { assignee, entities, postScriptPath, settingsFields } from './app.mjs'
 
 export { collectSteps, documentFileAccess, projectRegistration } from '../../../tools/file-apps/canvas.mjs'
 
@@ -41,12 +42,14 @@ function recordExtras(kind) {
     access: [
       teamsAccess('Choose the team a ticket belongs to'),
       { path: crm.customers, reason: 'Offer CRM customers on tickets (when CRM is installed)' },
+      ...assignee.sources.access,
       schemaAccess,
     ],
     data: {
       ...teamSources,
       companies: folder(crm.customers, crm.companyMime),
       contacts: folder(crm.customers, crm.contactMime),
+      ...assignee.sources.data,
       customeroptions: { kind: 'computed', expr: `${options('companies', "e.data.name || ''")}.concat(${options('contacts', "[e.data.givenName, e.data.familyName].filter(Boolean).join(' ')")})` },
     },
     notices: [
@@ -58,10 +61,13 @@ function recordExtras(kind) {
       button('Resolve', 'resolve', { visible: `${resolvable} && !(${archived})`,
         disabled: `${idle} || !String(form.values.resolution || '').trim()` }, undefined, 'check'),
       button('Close', 'close', { visible: `form.values.stage === 'solved' && !(${archived})`, disabled: idle }, 'outline', 'lock'),
+      button('Assign to me', 'assign-to-me', { visible: `!(${closed}) && !!data.me && !!data.me.name && (String(form.values.assignee || '').toLowerCase() !== data.me.name.toLowerCase() || (!!data.me.path && form.values.assigneeRef !== data.me.path))`,
+        disabled: `form.saving || ${archived}` }, 'ghost', 'user-check'),
       button('Copy name', 'copy-customer', { visible: `!(${closed}) && !!form.values.customerRef`, disabled: `form.saving || ${archived}` }, 'ghost', 'copy'),
     ],
     actions: {
       'copy-customer': { steps: [{ 'patch-form': { values: { customerName: `{{ ${copyName} }}` } } }] },
+      'assign-to-me': { steps: [{ 'patch-form': { values: { assignee: '{{ data.me.name }}', assigneeRef: '{{ data.me.path }}' } } }] },
       resolve: scriptAction(postScriptPath, 'resolve', {
         confirm: { title: 'Resolve ticket', message: 'Mark this ticket solved with its resolution text? Solved tickets can only be closed.' },
       }),
@@ -291,6 +297,6 @@ function workloadPage() {
 }
 
 export function buildPages() {
-  const documents = [homePage(), ticketsPage(), slaPage(), workloadPage(), ...recordKinds.map(recordForm), settingsForm()]
+  const documents = [homePage(), ticketsPage(), slaPage(), workloadPage(), ...recordKinds.map(recordForm), settingsForm(), ...listPages()]
   return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

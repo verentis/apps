@@ -65,7 +65,10 @@ export const schemas = {
   report: recordSchema('report', 'expense report', {
     code,
     employeeName: optional(200),
+    // A reference the business uses for the employee (an HR number); free text.
     employeeRef: optional(100),
+    // The employee's Employees record; empty when they are named only (Employees not installed).
+    employeeRecord: pathOrEmpty,
     date: optionalDate,
     lines: array(line, 0, 200),
     // Photos of the receipts, taken with the phone or picked from the device.
@@ -93,13 +96,13 @@ export const schemas = {
 const emptyLine = { category: '', description: '', amount: '', date: '' }
 
 /**
- * New-record templates. `{{ id }}`, `{{ now }}` and `{{ name }}` are substituted; the create script then adds
+ * New-record templates. `{{ id }}`, `{{ now }}`, `{{ name }}` and `{{ user }}` (who is creating) are substituted; the create script then adds
  * the generated `code` and fills the empty report date.
  */
 export const templates = {
   category: recordTemplate('category', { name: '{{ name }}', expenseAccount: '' }),
   report: recordTemplate('report', {
-    employeeName: '{{ name }}', employeeRef: '', date: '', lines: [emptyLine], receipts: [], status: 'draft',
+    employeeName: '{{ user }}', employeeRef: '', employeeRecord: '', date: '', lines: [emptyLine], receipts: [], status: 'draft',
   }),
 }
 

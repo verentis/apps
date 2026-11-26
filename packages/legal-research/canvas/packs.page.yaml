@@ -1,0 +1,99 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "legal-research-packs",
+    "name": "Packs",
+    "icon": "package"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/legal-authority-packs",
+        "reason": "List the installed jurisdiction packs"
+      }
+    ],
+    "data": {
+      "packs": {
+        "kind": "folder",
+        "path": "/legal-authority-packs",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.legal-research.pack+json"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.stack",
+        "layout": {
+          "base": {
+            "padding": 6,
+            "gap": 4,
+            "maxWidth": "72rem",
+            "margin": {
+              "x": "auto"
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "canvas.heading",
+            "props": {
+              "level": 2,
+              "text": "Packs"
+            }
+          },
+          {
+            "type": "canvas.text",
+            "props": {
+              "text": "The jurisdiction packs installed in this workspace. Install or update a pack such as South Africa Law to add authorities.",
+              "tone": "muted"
+            }
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "packs",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.packs || []).filter(e => e.data).map(e => ({ pack: e.data.name || e.data.title || e.name, jurisdiction: e.data.jurisdiction || ((e.data.authorities || [])[0] || {}).jurisdiction || '', revision: e.data.revision || e.data.version || '', authorities: (e.data.authorities || []).length, checked: e.data.checkedThrough || '' })) }}",
+              "columns": [
+                {
+                  "key": "pack",
+                  "label": "Pack"
+                },
+                {
+                  "key": "jurisdiction",
+                  "label": "Jurisdiction",
+                  "format": "badge"
+                },
+                {
+                  "key": "revision",
+                  "label": "Revision"
+                },
+                {
+                  "key": "authorities",
+                  "label": "Authorities",
+                  "align": "end"
+                },
+                {
+                  "key": "checked",
+                  "label": "Checked through",
+                  "format": "date"
+                }
+              ],
+              "emptyText": "No pack is installed yet.",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

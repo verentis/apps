@@ -3,6 +3,7 @@
 import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { parse as parseYaml } from 'yaml'
+import { usesUserProfile } from './canvas.mjs'
 
 export const json = value => `${JSON.stringify(value, null, 2)}\n`
 
@@ -56,7 +57,32 @@ export function scriptManifest(name, fileAccess, comment) {
 /** Install consent entries for a script; `verentis pack` adds the same entries (deduplicated). */
 export const scriptConsent = (name, fileAccess) => fileAccess.map(grant => ({ ...grant, origin: { kind: 'script', id: name } }))
 
-export async function generate({ root, label, outputs, directories, sources = [] }) {
+/**
+ * An app whose own unregistered pages read the signed-in user's email or roles declares `user-profile` on its
+ * manifest, so the install consent shows it and the host shares them (registered pages declare it themselves).
+ * `pages` are the app's Canvas documents; returns the manifest, with the capability added when needed.
+ */
+export function withUserProfile(manifest, pages) {
+  const needed = Object.values(pages).some(document => document?.spec && !document.spec.binds?.length && usesUserProfile(document.spec))
+  const capabilities = manifest.spec.capabilities ?? []
+  if (!needed || capabilities.includes('user-profile')) return manifest
+  return { ...manifest, spec: { ...manifest.spec, capabilities: [...capabilities, 'user-profile'] } }
+}
+
+/** `withUserProfile` over the generated outputs: the `canvas/*.yaml` documents and the `*.app.yaml` manifest. */
+function declareUserProfile(outputs) {
+  const parse = content => { try { return JSON.parse(content) } catch { return null } }
+  const pages = Object.entries(outputs).filter(([path]) => /^canvas\/[^/]+\.yaml$/.test(path)).map(([, content]) => parse(content))
+  return Object.fromEntries(Object.entries(outputs).map(([path, content]) => {
+    const manifest = /^[^/]+\.app\.yaml$/.test(path) ? parse(content) : null
+    if (!manifest?.spec) return [path, content]
+    const declared = withUserProfile(manifest, pages)
+    return [path, declared === manifest ? content : json(declared)]
+  }))
+}
+
+export async function generate({ root, label, outputs: given, directories, sources = [] }) {
+  const outputs = declareUserProfile(given)
   const check = process.argv.includes('--check')
   const kept = new Set(sources)
   const stale = []

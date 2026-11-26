@@ -1,0 +1,201 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "time-off-calendar",
+    "name": "Team calendar",
+    "description": "Who is off when; requests still to be decided are shown as submitted.",
+    "icon": "calendar-days"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/leave-requests",
+        "reason": "List team calendar"
+      }
+    ],
+    "data": {
+      "records": {
+        "kind": "folder",
+        "path": "/leave-requests",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.time-off.request+json"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Time Off",
+          "icon": "calendar-off",
+          "active": "calendar.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "requests.page.yaml",
+              "label": "Requests",
+              "icon": "kanban"
+            },
+            {
+              "id": "allocations.page.yaml",
+              "label": "Balances",
+              "icon": "scale"
+            },
+            {
+              "id": "calendar.page.yaml",
+              "label": "Team calendar",
+              "icon": "calendar-days"
+            },
+            {
+              "id": "mine.page.yaml",
+              "label": "My requests",
+              "icon": "user"
+            },
+            {
+              "id": "to-approve.page.yaml",
+              "label": "To approve",
+              "icon": "circle-check"
+            },
+            {
+              "id": "types.page.yaml",
+              "label": "Leave types",
+              "icon": "tags"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
+            }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/time-off/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/time-off.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
+        },
+        "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Team calendar",
+              "note": "Who is off when; requests still to be decided are shown as submitted."
+            },
+            "children": []
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "records",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.calendar",
+            "props": {
+              "rows": "{{ (data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').filter(e => e.data.status === 'approved' || e.data.status === 'submitted').map(e => ({ path: e.path, start: e.data.startDate, end: e.data.endDate, title: e.data.employeeName || e.data.code, status: e.data.status })) }}",
+              "views": [
+                "month",
+                "week",
+                "agenda"
+              ],
+              "showLegend": true,
+              "emptyText": "Nothing scheduled",
+              "start": "start",
+              "end": "end",
+              "title": "title",
+              "colorBy": "status",
+              "view": "month"
+            },
+            "on": {
+              "open": [
+                {
+                  "open-file": {
+                    "path": "{{ event.row.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').filter(e => e.data.status === 'submitted').map(e => ({ path: e.path, code: e.data.code || e.name, employee: e.data.employeeName || '', type: String(e.data.type || '').split('/').pop(), start: e.data.startDate, end: e.data.endDate, days: e.data.days, status: e.data.status || 'draft' })) }}",
+              "columns": [
+                {
+                  "key": "code",
+                  "label": "Request"
+                },
+                {
+                  "key": "employee",
+                  "label": "Employee"
+                },
+                {
+                  "key": "type",
+                  "label": "Type"
+                },
+                {
+                  "key": "start",
+                  "label": "From",
+                  "format": "date"
+                },
+                {
+                  "key": "end",
+                  "label": "To",
+                  "format": "date"
+                },
+                {
+                  "key": "days",
+                  "label": "Days",
+                  "align": "end"
+                },
+                {
+                  "key": "status",
+                  "label": "Status",
+                  "format": "badge"
+                }
+              ],
+              "emptyText": "No request is waiting for a decision.",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

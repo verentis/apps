@@ -77,10 +77,15 @@
       "tilerows": {
         "kind": "computed",
         "expr": "(((((data.dashboards || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && e.path === state.dashboard)[0] || {}).data || null) || {}).tiles || []).slice().sort((a, b) => Number(a.sequence || 0) - Number(b.sequence || 0)).map(t => ({ t: t, entries: ({ '/customers': data.customers, '/invoices': data.invoices, '/tickets': data.tickets, '/journals': data.journals, '/expenses': data.expenses })[t.source] })).map(c => ({ t: c.t, note: ([\"/customers\",\"/invoices\",\"/tickets\",\"/journals\",\"/expenses\"].indexOf(c.t.source) < 0 ? 'Source ' + (c.t.source || '(none)') + ' is not readable from this viewer; tile skipped.' : (!Array.isArray(c.entries) ? 'Container ' + c.t.source + ' is unavailable; tile skipped. Is its app installed?' : '')), items: (Array.isArray(c.entries) ? c.entries : []).filter(x => x.kind === 'file' && x.data && x.data.state !== 'archived').filter(x => (!c.t.filter || !c.t.filter.field || String(String(c.t.filter.field || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data)) === String(c.t.filter.equals === undefined || c.t.filter.equals === null ? '' : c.t.filter.equals))).map(x => ({ key: (String(c.t.groupByField || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data) === undefined || String(c.t.groupByField || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data) === null || String(c.t.groupByField || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data) === '' ? '(none)' : String(String(c.t.groupByField || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data))), raw: String(c.t.valueField || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data) })) })).map(c => ({ c: c, numeric: c.items.filter(i => (typeof i.raw === 'number' || typeof i.raw === 'string') && i.raw !== '' && Number.isFinite(Number(i.raw))), keys: c.items.map(i => i.key).filter((v, idx, a) => a.indexOf(v) === idx).sort() })).reduce((all, s) => all.concat(s.c.note ? [({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: '', value: '', note: s.c.note })] : s.c.t.kind === 'count' ? [({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: '', value: String(s.c.items.length), note: '' })] : s.c.t.kind === 'sum' ? [({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: '', value: (s.numeric.reduce((m, i) => m + Math.round(Number(i.raw) * 10000), 0) / 10000).toFixed(2), note: (s.c.items.length > s.numeric.length ? (s.c.items.length - s.numeric.length) + ' non-numeric value(s) skipped' : '') })] : s.c.t.kind === 'group-count' ? (s.keys.length ? s.keys.map(k => ({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: k, value: String(s.c.items.filter(i => i.key === k).length), note: '' })) : [({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: '', value: '0', note: 'No matching records.' })]) : s.c.t.kind === 'group-sum' ? (s.keys.length ? s.keys.map(k => ({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: k, value: (s.numeric.filter(i => i.key === k).reduce((m, i) => m + Math.round(Number(i.raw) * 10000), 0) / 10000).toFixed(2), note: (s.c.items.length > s.numeric.length ? (s.c.items.length - s.numeric.length) + ' non-numeric value(s) skipped' : '') })) : [({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: '', value: '0', note: 'No matching records.' })]) : [({ title: s.c.t.title || '', kind: s.c.t.kind || '', detail: '', value: '', note: 'Unknown tile kind ' + JSON.stringify(s.c.t.kind || '') + '; tile skipped.' })]), [])"
+      },
+      "drillrows": {
+        "kind": "computed",
+        "expr": "(state.drill ? [(((((((data.dashboards || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && e.path === state.dashboard)[0] || {}).data || null) || {}).tiles) || []).find(t => (t.title || '') === state.drill.title) || null)] : []).filter(t => !!t).reduce((all, t) => all.concat((({ '/customers': data.customers, '/invoices': data.invoices, '/tickets': data.tickets, '/journals': data.journals, '/expenses': data.expenses })[t.source] || []).filter(x => x.kind === 'file' && x.data && x.data.state !== 'archived').filter(x => !t.filter || !t.filter.field || String(String(t.filter.field || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data)) === String(t.filter.equals === undefined || t.filter.equals === null ? '' : t.filter.equals)).filter(x => !state.drill.detail || (String(t.groupByField || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data) === undefined || String(t.groupByField || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data) === null || String(t.groupByField || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data) === '' ? '(none)' : String(String(t.groupByField || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data))) === state.drill.detail).map(x => ({ path: x.path, code: x.data.code || x.name, label: x.data.name || x.data.title || x.data.subject || x.data.description || '', value: t.valueField ? String(t.valueField || '').split('.').reduce((v, k) => (v === null || v === undefined ? undefined : v[k]), x.data) : '' }))), [])"
       }
     },
     "state": {
-      "dashboard": ""
+      "dashboard": "",
+      "drill": null
     },
     "tree": [
       {
@@ -271,10 +276,90 @@
               "search": true,
               "sortable": true,
               "pageSize": 25,
-              "narrow": "list"
+              "narrow": "list",
+              "clickable": true
             },
             "rules": {
               "visible": "!!state.dashboard"
+            },
+            "on": {
+              "row-click": [
+                {
+                  "set-state": {
+                    "key": "drill",
+                    "value": {
+                      "$expr": "({ title: event.title, detail: event.detail })"
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "type": "canvas.card",
+            "props": {
+              "title": "{{ 'Records behind ' + state.drill.title + (state.drill.detail ? ' · ' + state.drill.detail : '') }}"
+            },
+            "children": [
+              {
+                "type": "canvas.table",
+                "props": {
+                  "rows": "{{ data.drillrows }}",
+                  "columns": [
+                    {
+                      "key": "code",
+                      "label": "Record"
+                    },
+                    {
+                      "key": "label",
+                      "label": "Name"
+                    },
+                    {
+                      "key": "value",
+                      "label": "Value",
+                      "align": "end"
+                    }
+                  ],
+                  "emptyText": "No records behind this tile row.",
+                  "search": true,
+                  "sortable": true,
+                  "pageSize": 25,
+                  "narrow": "list",
+                  "clickable": true
+                },
+                "on": {
+                  "row-click": [
+                    {
+                      "open-file": {
+                        "path": "{{ event.path }}",
+                        "mode": "edit",
+                        "open": "side"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Close",
+                  "variant": "ghost",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": [
+                    {
+                      "set-state": {
+                        "key": "drill",
+                        "value": null
+                      }
+                    }
+                  ]
+                }
+              }
+            ],
+            "rules": {
+              "visible": "!!state.dashboard && !!state.drill"
             }
           },
           {

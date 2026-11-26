@@ -292,6 +292,24 @@
         }
       },
       {
+        "path": "/event-registrations",
+        "mode": "read",
+        "reason": "List check-in",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/check-in.page.yaml"
+        }
+      },
+      {
+        "path": "/applications/events/",
+        "mode": "read",
+        "reason": "Run the check-in script",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/check-in.page.yaml"
+        }
+      },
+      {
         "path": "/events",
         "mode": "write",
         "reason": "Create events with the next code",

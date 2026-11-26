@@ -1,0 +1,153 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "accounting-periods",
+    "name": "Periods",
+    "description": "Open and closed periods; close one from its form, with its checklist.",
+    "icon": "calendar-range"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/periods",
+        "reason": "List periods"
+      }
+    ],
+    "data": {
+      "records": {
+        "kind": "folder",
+        "path": "/periods",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.accounting.period+json"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Accounting",
+          "icon": "book-open",
+          "active": "periods.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "reports.page.yaml",
+              "label": "Reports",
+              "icon": "chart-column"
+            },
+            {
+              "id": "journals.page.yaml",
+              "label": "Journals",
+              "icon": "notebook-pen"
+            },
+            {
+              "id": "expenses.page.yaml",
+              "label": "Expenses",
+              "icon": "receipt"
+            },
+            {
+              "id": "periods.page.yaml",
+              "label": "Periods",
+              "icon": "calendar-range"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
+            }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/accounting/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/accounting.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
+        },
+        "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Periods",
+              "note": "Open and closed periods; close one from its form, with its checklist."
+            },
+            "children": []
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "records",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, name: e.data.name || '', from: e.data.startDate, to: e.data.endDate, status: e.data.status || 'open' })).sort((a, b) => a.from < b.from ? 1 : -1) }}",
+              "columns": [
+                {
+                  "key": "code",
+                  "label": "Code"
+                },
+                {
+                  "key": "name",
+                  "label": "Period"
+                },
+                {
+                  "key": "from",
+                  "label": "From",
+                  "format": "date"
+                },
+                {
+                  "key": "to",
+                  "label": "To",
+                  "format": "date"
+                },
+                {
+                  "key": "status",
+                  "label": "Status",
+                  "format": "badge"
+                }
+              ],
+              "emptyText": "No periods yet.",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

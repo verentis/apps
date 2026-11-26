@@ -273,6 +273,15 @@
         }
       },
       {
+        "path": "/tasks",
+        "mode": "read",
+        "reason": "List tasks",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/tasks.page.yaml"
+        }
+      },
+      {
         "path": "/projects",
         "mode": "write",
         "reason": "Create projects with the next code",

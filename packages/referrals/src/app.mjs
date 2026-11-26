@@ -1,8 +1,13 @@
+import { employeeLink } from '../../../tools/file-apps/canvas.mjs'
 import {
   codeDigits, codeSettings, containerOf, containers, createDefaults, installRoot, mimeTypes, recordKinds,
   settingsPath, statuses,
 } from './contracts.mjs'
 import { scriptConsent } from '../../../tools/file-apps/build.mjs'
+
+
+/** Who referred: an Employees record when Employees is installed (the picker fills the name), else a name. */
+export const referrer = employeeLink('referrerRef', 'referrerName')
 
 export const version = '0.1.0'
 export const canvasOrigin = 'https://canvas.apps.localtest.me'
@@ -47,8 +52,7 @@ export const entities = {
           description: 'Awarded by Mark hired from the Referrals settings.' }] },
       { title: 'Referrer', fields: [
         text('referrerName', 'Referrer', { required: true }),
-        { key: 'referrerRef', label: 'Employee record', type: 'select', options: '{{ data.employeeoptions }}',
-          description: 'Optional. Choose an Employees record, then Copy name.' }] },
+        referrer.field] },
       { title: 'Notes', fields: [{ key: 'notes', label: 'Notes', type: 'textarea', span: 2, rows: 6 }] },
     ],
   },

@@ -47,6 +47,8 @@ export const schemas = {
   entry: recordSchema('entry', 'timesheet entry', {
     code,
     employee: optional(200),
+    // The Employees record the entry belongs to; empty for entries logged by name only (Employees not installed).
+    employeeRef: pathOrEmpty,
     date: optionalDate,
     project: pathOrEmpty,
     task: pathOrEmpty,
@@ -64,12 +66,12 @@ export const schemas = {
 }
 
 /**
- * New-record templates. `{{ id }}`, `{{ now }}` and `{{ name }}` are substituted; the create script then adds
- * the generated `code` and fills the date and the employee from the settings.
+ * New-record templates. `{{ id }}`, `{{ now }}`, `{{ name }}` and `{{ user }}` (who is creating) are substituted; the create script then adds
+ * the generated `code` and fills the date, and the employee from the settings when the creator is unknown.
  */
 export const templates = {
   entry: recordTemplate('entry', {
-    employee: '', date: '', project: '', task: '', hours: '', description: '{{ name }}', status: 'draft',
+    employee: '{{ user }}', employeeRef: '', date: '', project: '', task: '', hours: '', description: '{{ name }}', status: 'draft',
   }),
 }
 

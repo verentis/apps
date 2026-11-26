@@ -1,3 +1,4 @@
+import { handOvers } from '../scripts/post/main.mjs'
 import { apiContract } from '../../../tools/file-apps/build.mjs'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { parse } from 'yaml'
@@ -51,9 +52,11 @@ describe('Payroll Canvas documents', () => {
   it('runs the pay run script with enforced transitions from the pay run form', () => {
     const document = documents['payrun.form.yaml']
     const runs = steps(document).filter(step => 'run-script' in step).map(step => step['run-script'])
-    expect(runs.map(run => run.parameters.operation)).toEqual(['compute-run', 'approve-run', 'post-run', 'complete-run'])
+    expect(runs.map(run => run.parameters.operation)).toEqual(['compute-run', 'approve-run', 'post-run'])
     // Accounting posts the journal through its API; the app never writes /journals.
-    expect(steps(documents[Object.keys(documents).find(name => JSON.stringify(documents[name]).includes('call-app'))]).filter(step => 'call-app' in step).map(step => step['call-app'].operation)).toEqual(['post-journal'])
+    // The script has Accounting post the journal itself; no page calls an app.
+    expect(Object.values(documents).some(page => JSON.stringify(page).includes('call-app'))).toBe(false)
+    expect(handOvers['post-run']).toMatchObject({ app: 'accounting', operation: 'post-journal', recordOperation: 'complete-run', required: true })
     for (const run of runs) expect(run).toMatchObject({ file: postScriptPath, parameters: { path: '{{ ctx.file.path }}' } })
     expect(document.spec.permissions).toEqual(expect.arrayContaining(['execution.run']))
     // A script reloads the record afterwards, which a dirty form would refuse.
@@ -78,7 +81,7 @@ describe('Payroll Canvas documents', () => {
 
   it('offers employee records on the pay profile form only as optional reads', () => {
     const document = documents['profile.form.yaml']
-    expect(document.spec.data.employeesrecords).toMatchObject({ kind: 'folder', path: '/employees' })
+    expect(document.spec.data.employeelinks).toMatchObject({ kind: 'folder', path: '/employees' })
     expect(document.spec.access).toContainEqual(expect.objectContaining({ path: '/employees' }))
   })
 

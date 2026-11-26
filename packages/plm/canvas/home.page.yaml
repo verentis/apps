@@ -47,6 +47,11 @@
               "id": "home.page.yaml",
               "label": "Board",
               "icon": "kanban"
+            },
+            {
+              "id": "changes.page.yaml",
+              "label": "Change orders",
+              "icon": "table-2"
             }
           ],
           "page": true

@@ -33,6 +33,7 @@ await generate({
     'scripts/post/manifest.yaml': scriptManifest(postScriptName, postScriptFileAccess,
       'Issuing and posting validate against the Accounting ledger and write journals, document copies and records conditionally.'),
     'scripts/post/ledger.mjs': await sharedSource('ledger.mjs'),
+    'scripts/post/app-calls.mjs': await sharedSource('app-calls.mjs'),
     'scripts/api/manifest.yaml': scriptManifest(apiScriptName, apiScriptFileAccess,
       'The operations other apps call through the platform (api.yaml); drafts are written create-only.'),
     'scripts/api/runtime.mjs': await sharedSource('api/runtime.mjs'),

@@ -1,0 +1,239 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "events-check-in",
+    "name": "Check-in",
+    "description": "Door mode: find a confirmed registration and check it in.",
+    "icon": "scan-line"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/event-registrations",
+        "reason": "List check-in"
+      },
+      {
+        "path": "/applications/events/",
+        "reason": "Run the check-in script"
+      }
+    ],
+    "data": {
+      "records": {
+        "kind": "folder",
+        "path": "/event-registrations",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.events.registration+json"
+      }
+    },
+    "state": {
+      "find": ""
+    },
+    "permissions": [
+      "execution.run",
+      "execution.read"
+    ],
+    "tree": [
+      {
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Events",
+          "icon": "calendar",
+          "active": "check-in.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "events.page.yaml",
+              "label": "Events",
+              "icon": "kanban"
+            },
+            {
+              "id": "registrations.page.yaml",
+              "label": "Registrations",
+              "icon": "ticket"
+            },
+            {
+              "id": "check-in.page.yaml",
+              "label": "Check-in",
+              "icon": "scan-line"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
+            }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/events/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/events.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
+        },
+        "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Check-in",
+              "note": "Door mode: find a confirmed registration and check it in."
+            },
+            "children": []
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "records",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.form.input",
+            "props": {
+              "label": "",
+              "placeholder": "Search by name or email",
+              "value": "{{ state.find }}"
+            }
+          },
+          {
+            "type": "canvas.repeat",
+            "props": {
+              "items": "{{ (data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').filter(e => e.data.status === 'confirmed').filter(e => !state.find || ((e.data.attendeeName || '') + ' ' + (e.data.attendeeEmail || '')).toLowerCase().includes(state.find.toLowerCase())).slice(0, 30).map(e => ({ path: e.path, name: e.data.attendeeName || e.data.code, email: e.data.attendeeEmail || '', qty: e.data.qty || 1, event: String(e.data.event || '').split('/').pop() })) }}",
+              "layout": "list",
+              "columns": 3,
+              "emptyText": "No confirmed registration matches."
+            },
+            "children": [
+              {
+                "type": "canvas.stack",
+                "layout": {
+                  "base": {
+                    "direction": "row",
+                    "wrap": true,
+                    "gap": 2,
+                    "align": "center",
+                    "justify": "between"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "canvas.stack",
+                    "layout": {
+                      "base": {
+                        "gap": 1
+                      }
+                    },
+                    "children": [
+                      {
+                        "type": "canvas.text",
+                        "props": {
+                          "text": "{{ item.name }}"
+                        }
+                      },
+                      {
+                        "type": "canvas.text",
+                        "props": {
+                          "text": "{{ item.event + ' · ' + item.qty + ' × · ' + item.email }}",
+                          "tone": "muted"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "canvas.button",
+                    "props": {
+                      "label": "Check in",
+                      "icon": "check",
+                      "size": "sm"
+                    },
+                    "on": {
+                      "click": [
+                        {
+                          "run-script": {
+                            "file": "/applications/events/scripts/post",
+                            "timeout": 60,
+                            "parameters": {
+                              "operation": "check-in",
+                              "path": "{{ item.path }}"
+                            },
+                            "assign": "checked"
+                          }
+                        },
+                        {
+                          "refresh-source": {
+                            "source": "records"
+                          }
+                        },
+                        {
+                          "toast": {
+                            "message": "{{ (state.checked && state.checked.message) || 'Checked in' }}",
+                            "variant": "success"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').filter(e => e.data.status === 'attended').map(e => ({ path: e.path, name: e.data.attendeeName || e.data.code, event: String(e.data.event || '').split('/').pop(), qty: e.data.qty })) }}",
+              "columns": [
+                {
+                  "key": "name",
+                  "label": "Checked in"
+                },
+                {
+                  "key": "event",
+                  "label": "Event"
+                },
+                {
+                  "key": "qty",
+                  "label": "Tickets",
+                  "align": "end"
+                }
+              ],
+              "emptyText": "Nobody checked in yet.",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

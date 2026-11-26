@@ -7,8 +7,9 @@
   "createdAt": "{{ now }}",
   "updatedAt": "{{ now }}",
   "code": "",
-  "employeeName": "{{ name }}",
+  "employeeName": "{{ user }}",
   "employeeRef": "",
+  "employeeRecord": "",
   "date": "",
   "lines": [
     {

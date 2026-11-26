@@ -3,11 +3,12 @@
 // positive quantities), computes the exact component demand, then writes with the file access its installer
 // consented to (manifest `file-access`).
 //
-// Completing returns what Inventory needs to record the production; the form asks Inventory through the platform
+// Completing returns what Inventory needs to record the production; the script asks Inventory through the platform
 // (Inventory's `record-production` returns the same moves when asked again) and `record-moves` stores the links.
 // Manufacturing never writes Inventory's files. Orders are updated conditionally (If-Match), so a concurrent edit
 // fails instead of being overwritten.
 import { divideHalfUp, fail, formatMinor, nameOf, nowIso, readRecord, saveRecord, statusOf, toMinor } from './ledger.mjs'
+import { withAppCalls } from './app-calls.mjs'
 
 export const operations = ['confirm-mo', 'start-mo', 'complete-mo', 'record-moves']
 
@@ -110,7 +111,7 @@ export async function startOrder(files, path, { now }) {
 
 /**
  * What Inventory needs to record the completed order (its `record-production` operation): the component demand
- * consumed and the output produced. The order form asks Inventory through the platform; Manufacturing never writes
+ * consumed and the output produced. The script asks Inventory through the platform; Manufacturing never writes
  * Inventory's files.
  */
 export function productionRequest(record, path) {
@@ -146,7 +147,7 @@ export async function completeOrder(files, path, { now }) {
   if (record.status !== 'in-progress') fail(`${label(record)} is ${record.status || 'draft'}. Start it before completing.`)
   Object.assign(record, { status: 'done', completedAt: now, updatedAt: now })
   await saveRecord(files, order, manufacturing.mime('order'))
-  // The form asks Inventory (when installed) to record the stock moves from this, then records their links.
+  // The script asks Inventory (when installed; see `handOvers`) to record the stock moves from this, then records their links.
   return { message: `Completed ${label(record)}`, path, productionRequest: productionRequest(record, path) }
 }
 
@@ -160,6 +161,15 @@ export async function run(parameters, files, { now = nowIso() } = {}) {
   return fail(`Unsupported operation ${JSON.stringify(operation ?? '')}. Expected one of ${operations.join(', ')}.`)
 }
 
+/**
+ * Operations that hand a request to another app: the script calls that app's API operation itself
+ * (`engine.apps.call`, as the same user under the other app's consent) and records the result, in the same run.
+ */
+export const handOvers = {
+  'complete-mo': { app: 'inventory', operation: 'record-production', field: 'productionRequest', recordOperation: 'record-moves', parameter: 'moves', returned: 'moves', key: 'production' },
+}
+export const runWithApps = withAppCalls(run, handOvers)
+
 export default async function post(engine) {
-  await engine.output.result(await run(engine.context.input.parameters, engine.files))
+  await engine.output.result(await runWithApps(engine.context.input.parameters, engine.files, engine.apps))
 }

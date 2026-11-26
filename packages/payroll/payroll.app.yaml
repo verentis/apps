@@ -293,7 +293,7 @@
       {
         "path": "/employees",
         "mode": "read",
-        "reason": "Offer employee records to link (when Employees is installed)",
+        "reason": "Find your Employees record by your work email (when Employees is installed)",
         "origin": {
           "kind": "document",
           "id": "payroll-profile"
@@ -342,6 +342,15 @@
         "origin": {
           "kind": "document",
           "id": "payroll-settings"
+        }
+      },
+      {
+        "path": "/pay-runs",
+        "mode": "read",
+        "reason": "List payslips",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/payslips.page.yaml"
         }
       },
       {

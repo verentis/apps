@@ -68,6 +68,31 @@
               "icon": "users"
             },
             {
+              "id": "mine.page.yaml",
+              "label": "Mine",
+              "icon": "user"
+            },
+            {
+              "id": "unassigned.page.yaml",
+              "label": "Unassigned",
+              "icon": "inbox"
+            },
+            {
+              "id": "overdue.page.yaml",
+              "label": "Overdue",
+              "icon": "alarm-clock-off"
+            },
+            {
+              "id": "waiting.page.yaml",
+              "label": "Waiting",
+              "icon": "hourglass"
+            },
+            {
+              "id": "solved.page.yaml",
+              "label": "Solved",
+              "icon": "circle-check"
+            },
+            {
               "id": "settings",
               "label": "Settings",
               "icon": "settings"

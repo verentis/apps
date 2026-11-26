@@ -2,13 +2,14 @@
 // the request list by status and the remaining-allocation summary. Submitting, approving and refusing (weekday
 // counts, approvals, locking) are done by the action script the request form runs.
 import { views } from './views.mjs'
+import { listPages } from './lists.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
   humanize, iconName, options, openFile, page, panel, projectRegistration, recordButtons, row, scriptAction,
   stat, stats, status, table, tabs, text, toneExpression, recordHeader, archivedAlert, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { containers, employees, installRoot, mimeTypes, recordKinds, schemaId, settingsPath, statuses } from './contracts.mjs'
-import { entities, postScriptPath, settingsFields } from './app.mjs'
+import { employee, entities, postScriptPath, settingsFields } from './app.mjs'
 
 export { collectSteps, documentFileAccess, projectRegistration } from '../../../tools/file-apps/canvas.mjs'
 
@@ -23,7 +24,6 @@ const typeSources = {
   typeoptions: { kind: 'computed', expr: options('types', "e.data.name || ''") },
 }
 const typesAccess = reason => ({ path: containers.types.path, reason })
-const copyName = `(((data.staff || []).filter(e => e.kind === 'file' && e.data && e.path === form.values.employeeRef).map(e => e.data.name || '')[0]) || form.values.employeeName)`
 
 /** Bound form controls; `switch` is a local extension for boolean fields. */
 function control(field, readOnly) {
@@ -47,14 +47,13 @@ function recordExtras(kind) {
   return {
     access: [
       typesAccess('Choose the leave type a request draws on'),
-      { path: employees.directory, reason: 'Offer Employees records on requests (when Employees is installed)' },
+      ...employee.sources.access,
       { path: containers.requests.path, reason: 'Show who else is off on these dates and the days already taken' },
       schemaAccess,
     ],
     data: {
       ...typeSources,
-      staff: folder(employees.directory, employees.employeeMime),
-      employeeoptions: { kind: 'computed', expr: options('staff', "e.data.name || ''", "e.data.status !== 'terminated'") },
+      ...employee.sources.data,
       others: folder(containers.requests.path, mimeTypes.request),
       // Submitted or approved requests of other people overlapping this one's dates.
       clashes: { kind: 'computed', expr: `(data.others || []).filter(e => e.kind === 'file' && e.data && e.path !== ctx.file.path && ['submitted', 'approved'].includes(e.data.status) && !!form.values.startDate && !!e.data.startDate && e.data.employeeName !== form.values.employeeName && e.data.startDate <= (form.values.endDate || form.values.startDate) && (e.data.endDate || e.data.startDate) >= form.values.startDate).map(e => ({ path: e.path, name: e.data.employeeName || e.name, from: e.data.startDate, to: e.data.endDate || e.data.startDate, status: e.data.status }))` },
@@ -81,10 +80,10 @@ function recordExtras(kind) {
       button('Submit', 'submit', { visible: `${draft} && !(${archived})`, disabled: `${idle} || form.invalid` }, undefined, 'send'),
       button('Approve', 'approve', { visible: submitted, disabled: idle }, undefined, 'check'),
       button('Refuse', 'refuse', { visible: submitted, disabled: idle }, 'outline', 'x'),
-      button('Copy name', 'copy-employee', { visible: `${draft} && !!form.values.employeeRef`, disabled: `form.saving || ${archived}` }, 'ghost', 'copy'),
+      { ...employee.meButton, rules: { ...employee.meButton.rules, visible: `${draft} && !(${archived}) && ${employee.meButton.rules.visible}` } },
     ],
     actions: {
-      'copy-employee': { steps: [{ 'patch-form': { values: { employeeName: `{{ ${copyName} }}` } } }] },
+      ...employee.meAction,
       submit: scriptAction(postScriptPath, 'submit', {
         confirm: { title: 'Submit request', message: 'Submit this leave request? Its days are computed as the weekday count of the date range, and it can no longer be edited.' },
       }),
@@ -286,6 +285,6 @@ function allocationsPage() {
 }
 
 export function buildPages() {
-  const documents = [homePage(), requestsPage(), allocationsPage(), ...recordKinds.map(recordForm), settingsForm()]
+  const documents = [homePage(), requestsPage(), allocationsPage(), ...recordKinds.map(recordForm), settingsForm(), ...listPages()]
   return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

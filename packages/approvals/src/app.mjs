@@ -1,8 +1,13 @@
+import { employeeLink } from '../../../tools/file-apps/canvas.mjs'
 import {
   codeDigits, codeSettings, containerOf, containers, createDefaults, installRoot, mimeTypes, recordKinds,
   sampleRequest, settingsPath, starterTypes,
 } from './contracts.mjs'
 import { scriptConsent } from '../../../tools/file-apps/build.mjs'
+
+
+/** The request's requester: an Employees record when Employees is installed (the picker fills the name), else a name. */
+export const requester = employeeLink('requesterRef', 'requester')
 
 export const version = '0.1.0'
 export const canvasOrigin = 'https://canvas.apps.localtest.me'
@@ -59,6 +64,7 @@ export const entities = {
       { title: 'Request', fields: [
         { key: 'type', label: 'Approval type', type: 'select', required: true, options: '{{ data.typeoptions }}' },
         text('requester', 'Requester', { required: true }),
+        requester.field,
         text('title', 'Title', { required: true, span: 2 }),
         { key: 'reason', label: 'Reason', type: 'textarea', required: true, span: 2 }] },
       { title: 'Details', description: 'The approval type decides which of these submitting checks. Amounts are exact decimal strings.', fields: [
@@ -71,7 +77,7 @@ export const entities = {
 
 export const settingsSections = [
   { title: 'Requests', description: 'New requests are prefilled with the default requester; number prefixes are app settings, managed with the installed app.', fields: [
-    text('defaultRequester', 'Default requester', { placeholder: 'Who usually raises requests here?' })] },
+    text('defaultRequester', 'Default requester', { placeholder: 'Who usually raises requests here?', description: 'Used for new requests only when the person creating them is not known.' })] },
 ]
 
 /** `spec.settings`: number prefixes and width the create script reads through the engine SDK. */

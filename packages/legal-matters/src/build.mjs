@@ -55,5 +55,6 @@ await generate({root:new URL('../',import.meta.url), label:'Legal Matters', dire
     'scripts/workflow/initial.mjs':`// Generated from the matter contracts.\nexport const initial = ${json(template)}export const editable = ${json(Object.fromEntries(
       ['team','links','charges','billingReviewer','title','parties','project','engagement','currency','rates','fixedFee','reviewBy','disposition','reviewReason'].map(k=>[k,schema.properties[k]])))}`,
     'scripts/workflow/ledger.mjs':await sharedSource('ledger.mjs'),
+    'scripts/workflow/app-calls.mjs':await sharedSource('app-calls.mjs'),
   },
 })

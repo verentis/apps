@@ -264,7 +264,7 @@
       {
         "path": "/employees",
         "mode": "read",
-        "reason": "Offer employees on shifts (when Employees is installed)",
+        "reason": "Find your Employees record by your work email (when Employees is installed)",
         "origin": {
           "kind": "document",
           "id": "planning-shift"
@@ -295,6 +295,33 @@
         "origin": {
           "kind": "document",
           "id": "planning-settings"
+        }
+      },
+      {
+        "path": "/shifts",
+        "mode": "read",
+        "reason": "List day timeline",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/day.page.yaml"
+        }
+      },
+      {
+        "path": "/shift-roles",
+        "mode": "read",
+        "reason": "List roles",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/roles.page.yaml"
+        }
+      },
+      {
+        "path": "/shifts",
+        "mode": "read",
+        "reason": "Sum the hours planned per role",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/roles.page.yaml"
         }
       },
       {

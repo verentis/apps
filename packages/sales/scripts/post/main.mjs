@@ -1,7 +1,7 @@
 // Confirms Sales quotations. The quotation form runs this script (run-script) against a saved record; it
 // validates the quotation, computes its exact totals, creates the sales order it becomes and marks the quotation
 // confirmed with the file access its installer consented to (manifest `file-access`). It returns what Invoicing needs
-// to draft the invoice; the form asks Invoicing through the platform (Invoicing's `create-draft-invoice`), and
+// to draft the invoice; the script asks Invoicing through the platform (Invoicing's `create-draft-invoice`), and
 // `record-invoice` stores the link. Sales never writes Invoicing's files.
 //
 // Integrity model: the sales order gets a deterministic name (`/sales-orders/QUO-0001`) and is created create-only,
@@ -13,6 +13,7 @@ import { randomUUID } from 'node:crypto'
 import {
   divideHalfUp, fail, formatMinor, nameOf, nowIso, parseDecimal, readRecord, readSettings, saveRecord, statusOf, toMinor,
 } from './ledger.mjs'
+import { withAppCalls } from './app-calls.mjs'
 
 export const operations = ['confirm-quotation', 'record-invoice']
 export const sales = {
@@ -116,7 +117,7 @@ async function createOrder(files, path, order) {
 
 /**
  * What Invoicing needs to draft the confirmed quotation's invoice (its `create-draft-invoice` operation): each
- * quotation line becomes one invoice line carrying its discounted net. The quotation form asks Invoicing through the
+ * quotation line becomes one invoice line carrying its discounted net. The script asks Invoicing through the
  * platform; Sales never writes Invoicing's files.
  */
 export function invoiceRequest(path, record, nets) {
@@ -179,7 +180,7 @@ export async function confirmQuotation(files, path, { now, uuid }) {
   Object.assign(record, { currency, lines: totals.lines, totals: formatted })
   Object.assign(record, { status: 'confirmed', confirmedAt: now, order: { path: orderPath }, updatedAt: now })
   await saveRecord(files, quotation, sales.mime('quotation'))
-  // The form asks Invoicing (when installed) to draft the invoice from this, then records the link.
+  // The script asks Invoicing (when installed; see `handOvers`) to draft the invoice from this, then records the link.
   return { message: `Confirmed ${label(record)} into ${nameOf(orderPath)}`, path: orderPath, invoiceRequest: invoiceRequest(path, record, totals.nets) }
 }
 
@@ -190,6 +191,15 @@ export async function run(parameters, files, { now = nowIso(), uuid = randomUUID
   return fail(`Unsupported operation ${JSON.stringify(operation ?? '')}. Expected one of ${operations.join(', ')}.`)
 }
 
+/**
+ * Operations that hand a request to another app: the script calls that app's API operation itself
+ * (`engine.apps.call`, as the same user under the other app's consent) and records the result, in the same run.
+ */
+export const handOvers = {
+  'confirm-quotation': { app: 'invoicing', operation: 'create-draft-invoice', field: 'invoiceRequest', recordOperation: 'record-invoice', parameter: 'invoice', key: 'quotation' },
+}
+export const runWithApps = withAppCalls(run, handOvers)
+
 export default async function post(engine) {
-  await engine.output.result(await run(engine.context.input.parameters, engine.files))
+  await engine.output.result(await runWithApps(engine.context.input.parameters, engine.files, engine.apps))
 }

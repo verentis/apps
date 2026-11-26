@@ -1,0 +1,171 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "approvals-mine",
+    "name": "My requests",
+    "description": "What you asked for, and where it stands.",
+    "icon": "user"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/approval-requests",
+        "reason": "List my requests"
+      },
+      {
+        "path": "/employees",
+        "reason": "Find your Employees record by your work email (when Employees is installed)"
+      }
+    ],
+    "data": {
+      "records": {
+        "kind": "folder",
+        "path": "/approval-requests",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.approvals.request+json"
+      },
+      "signedinstaff": {
+        "kind": "folder",
+        "path": "/employees",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.employees.employee+json"
+      },
+      "me": {
+        "kind": "computed",
+        "expr": "((data.signedinstaff || []).filter(e => e.kind === 'file' && e.data && e.data.status !== 'terminated' && !!ctx.user && !!ctx.user.email && String(e.data.workEmail || '').toLowerCase() === String(ctx.user.email).toLowerCase()).map(e => ({ path: e.path, name: String(e.data.name || '') }))[0] || { path: '', name: ctx.user ? String(ctx.user.name || '') : '' })"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Approvals",
+          "icon": "file-check",
+          "active": "mine.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "requests.page.yaml",
+              "label": "All requests",
+              "icon": "list"
+            },
+            {
+              "id": "pending.page.yaml",
+              "label": "Inbox",
+              "icon": "inbox"
+            },
+            {
+              "id": "by-type.page.yaml",
+              "label": "Types",
+              "icon": "shapes"
+            },
+            {
+              "id": "mine.page.yaml",
+              "label": "My requests",
+              "icon": "user"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
+            }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/approvals/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/approvals.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
+        },
+        "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "My requests",
+              "note": "What you asked for, and where it stands."
+            },
+            "children": []
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "records",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').filter(e => (!!ctx.user && ((!!data.me && !!data.me.path && e.data.requesterRef === data.me.path) || (String(e.data.requester || '').toLowerCase() !== '' && [data.me ? data.me.name : '', String(ctx.user.name || '')].filter(n => !!n).map(n => n.toLowerCase()).includes(String(e.data.requester || '').toLowerCase()))))).map(e => ({ path: e.path, code: e.data.code || e.name, title: e.data.title || '', type: String(e.data.type || '').split('/').pop(), amount: e.data.amount || '', approvals: (e.data.approvals || []).length, status: e.data.status || 'draft' })) }}",
+              "columns": [
+                {
+                  "key": "code",
+                  "label": "Request"
+                },
+                {
+                  "key": "title",
+                  "label": "Title"
+                },
+                {
+                  "key": "type",
+                  "label": "Type"
+                },
+                {
+                  "key": "amount",
+                  "label": "Amount",
+                  "align": "end"
+                },
+                {
+                  "key": "approvals",
+                  "label": "Approvals",
+                  "align": "end"
+                },
+                {
+                  "key": "status",
+                  "label": "Status",
+                  "format": "badge"
+                }
+              ],
+              "emptyText": "You have not asked for anything.",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

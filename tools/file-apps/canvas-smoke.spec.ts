@@ -14,7 +14,7 @@ const PACKAGES = process.env.APPS_PACKAGES!
 const RECORD = '/records/R-1.json'
 
 type Entry = { path: string, data: Record<string, unknown> }
-interface World { record?: Record<string, unknown>, folders?: Record<string, Entry[]>, files?: Record<string, unknown>, apps?: { app: string, operation: string, available: boolean }[] }
+interface World { record?: Record<string, unknown>, folders?: Record<string, Entry[]>, files?: Record<string, unknown>, apps?: { app: string, operation: string, available: boolean }[], user?: { id: string, name: string, email?: string } }
 
 export async function render(pkg: string, file: string, world: World = {}) {
   const parsed = parseCanvasYaml(readFileSync(`${PACKAGES}/${pkg}/canvas/${file}`, 'utf8').replaceAll('${var:canvas-origin}', 'https://canvas.example'))
@@ -49,7 +49,7 @@ export async function render(pkg: string, file: string, world: World = {}) {
   const ui = { openView: vi.fn(), openFile: vi.fn(), openExternal: vi.fn(), openApp: vi.fn(), confirm: vi.fn(async () => true), toast: vi.fn(), preflight: vi.fn(async () => 'ready' as const) }
   const graph = new CanvasDataGraph({ data: model.spec.data, state: model.spec.state }, {
     host,
-    ctx: bound ? { file: { path: RECORD, name: 'R-1.json', dir: '/records' } } : {},
+    ctx: { ...(bound ? { file: { path: RECORD, name: 'R-1.json', dir: '/records' } } : {}), ...(world.user ? { user: world.user } : {}) },
     ...(bound ? { document: { path: RECORD, nodeId: 'n1', branch: 'main', mimeType: 'application/json' } } : {}),
     onError: (source, error) => errors.push(`${source}: ${String(error)}`),
   })
@@ -619,25 +619,21 @@ describe('the remaining design views work with records', () => {
     page.wrapper.unmount()
   })
 
-  it('sales quotation: Confirm asks Invoicing to draft the invoice and records the draft it returns', async () => {
+  it('sales quotation: Confirm runs the confirm script once; the script has Invoicing draft the invoice', async () => {
     const page = await render('sales', 'quotation.form.yaml', {
       record: { code: 'QUO-0009', state: 'active', status: 'sent', currency: 'ZAR', date: '2026-11-25', customer: { name: 'Cedar Studio' },
         lines: [{ product: '', description: 'Workshop', quantity: '1', unitPrice: '450.00', discount: '' }] },
       apps: [{ app: 'invoicing', operation: 'create-draft-invoice', available: true }],
     })
     expect(page.renderErrors).toEqual([])
-    const request = { source: { path: '/records/R-1.json', code: 'QUO-0009' }, currency: 'ZAR', customer: { name: 'Cedar Studio' }, lines: [{ description: '1 × Workshop', quantity: '1', unitPrice: '450.00' }] }
-    ;(page.host.runScript as unknown as Mocked).mockImplementation(async (run: { parameters: { operation: string } }) =>
-      run.parameters.operation === 'confirm-quotation' ? { message: 'Confirmed QUO-0009', invoiceRequest: request } : { message: 'Drafted invoice INV-0011 for QUO-0009' })
-    ;(page.host.callApp as unknown as Mocked).mockResolvedValue({ result: { path: '/invoices/INV-0011', code: 'INV-0011', created: true } } as never)
+    ;(page.host.runScript as unknown as Mocked).mockResolvedValue({ message: 'Drafted invoice INV-0011 for QUO-0009', path: '/invoices/INV-0011' } as never)
     ;(page.ui.confirm as unknown as Mocked).mockResolvedValue({ values: { prices: true, delivery: true, po: false } } as never)
     await page.wrapper.findAll('button').find(button => button.text() === 'Confirm')!.trigger('click')
     await flushPromises()
     expect(page.errors).toEqual([])
-    // The key names this attempt (the record and the moment), so a later try is never a replay of this one.
-    expect((page.host.callApp as unknown as Mocked).mock.calls[0]![0]).toEqual({ app: 'invoicing', operation: 'create-draft-invoice', input: request, idempotencyKey: expect.stringMatching(/^quotation-QUO-0009-\d{13}$/) })
-    const runs = (page.host.runScript as unknown as Mocked).mock.calls.map(call => (call[0] as { parameters: Record<string, string> }).parameters)
-    expect(runs.at(-1)).toMatchObject({ operation: 'record-invoice', invoice: '/invoices/INV-0011' })
+    const runs = (page.host.runScript as unknown as Mocked).mock.calls.map(call => (call[0] as { parameters: Record<string, string> }).parameters.operation)
+    expect(runs).toEqual(['confirm-quotation'])
+    expect(page.host.callApp).not.toHaveBeenCalled()
     page.wrapper.unmount()
   })
 
@@ -889,15 +885,19 @@ describe('every form renders with a filled record of its kind', () => {
   }
 })
 
-describe('ledger postings go through Accounting, or do nothing', () => {
-  const accounting = (operation: string) => [{ app: 'accounting', operation, available: true }]
-  const postings: [pkg: string, file: string, action: string, first: string, complete: string, operation: string, field: string, copy: boolean][] = [
-    ['invoicing', 'invoice.form.yaml', 'issue', 'issue-invoice', 'complete-invoice', 'post-journal', 'journalRequest', true],
-    ['invoicing', 'credit.form.yaml', 'issue', 'issue-credit', 'complete-credit', 'post-journal', 'journalRequest', true],
-    ['invoicing', 'payment.form.yaml', 'post', 'post-payment', 'complete-payment', 'post-journal', 'journalRequest', false],
-    ['invoicing', 'payment.form.yaml', 'reverse', 'reverse-payment', 'complete-reversal', 'reverse-journal', 'reversalRequest', false],
-    ['expenses', 'report.form.yaml', 'post', 'post-report', 'complete-report', 'post-journal', 'journalRequest', false],
-    ['payroll', 'payrun.form.yaml', 'post', 'post-run', 'complete-run', 'post-journal', 'journalRequest', false],
+describe('cross-app steps run in the app script: the page runs one step and calls no app', () => {
+  // [package, form, action, script operation, issued copy saved afterwards]
+  const actions: [pkg: string, file: string, action: string, operation: string, copy: boolean][] = [
+    ['invoicing', 'invoice.form.yaml', 'issue', 'issue-invoice', true],
+    ['invoicing', 'credit.form.yaml', 'issue', 'issue-credit', true],
+    ['invoicing', 'payment.form.yaml', 'post', 'post-payment', false],
+    ['invoicing', 'payment.form.yaml', 'reverse', 'reverse-payment', false],
+    ['expenses', 'report.form.yaml', 'post', 'post-report', false],
+    ['payroll', 'payrun.form.yaml', 'post', 'post-run', false],
+    ['field-service', 'task.form.yaml', 'complete', 'complete', false],
+    ['manufacturing', 'order.form.yaml', 'complete', 'complete-mo', false],
+    ['purchase', 'order.form.yaml', 'receive', 'receive-order', false],
+    ['rental', 'booking.form.yaml', 'return', 'return-booking', false],
   ]
   const record = { code: 'DOC-1', state: 'active', status: 'draft', lines: [], customer: { name: 'Cedar' }, totals: {} }
   const scripts = (page: Awaited<ReturnType<typeof render>>) => (page.host.runScript as unknown as Mocked).mock.calls.map(call => (call[0] as { parameters: { operation: string } }).parameters.operation)
@@ -905,62 +905,158 @@ describe('ledger postings go through Accounting, or do nothing', () => {
   const toasts = (page: Awaited<ReturnType<typeof render>>) => (page.ui.toast as unknown as Mocked).mock.calls.map(call => [call[1], String(call[0])])
   const run = (page: Awaited<ReturnType<typeof render>>, action: string) => page.engine.dispatch(action, undefined, page.graph.scope as Record<string, unknown>)
 
-  for (const [pkg, file, action, first, complete, operation, field, copy] of postings) {
+  for (const [pkg, file, action, operation, copy] of actions) {
     const name = `${pkg} ${file.replace('.form.yaml', '')} ${action}`
 
-    it(`${name}: the script hands over, Accounting posts, the script completes`, async () => {
-      const page = await render(pkg, file, { record, apps: accounting(operation) })
-      ;(page.host.runScript as unknown as Mocked).mockImplementation(async (request: { parameters: { operation: string } }) =>
-        request.parameters.operation === first ? { message: 'Handing over', [field]: { source: { path: RECORD } } } : { message: 'Completed' })
-      ;(page.host.callApp as unknown as Mocked).mockResolvedValue({ result: { path: '/journals/DOC-1' } } as never)
+    it(`${name}: one script run does the whole step`, async () => {
+      const page = await render(pkg, file, { record })
+      ;(page.host.runScript as unknown as Mocked).mockResolvedValue({ message: 'Done in one run', path: '/records/R-1.json' } as never)
       expect(await run(page, action)).toBe(true)
-      expect(scripts(page)).toEqual([first, complete])
-      const call = (page.host.callApp as unknown as Mocked).mock.calls[0]![0] as { app: string, operation: string, idempotencyKey: string }
-      expect(call).toMatchObject({ app: 'accounting', operation })
-      // A key names one attempt: the platform replays a key for good, a failed execution included.
-      expect(call.idempotencyKey).toMatch(/-\d{13}$/)
-      expect(toasts(page).at(copy ? -2 : -1)).toEqual(['success', 'Completed'])
+      expect(scripts(page)).toEqual([operation])
+      expect(page.host.callApp).not.toHaveBeenCalled()
+      expect(toasts(page).at(copy ? -2 : -1)).toEqual(['success', 'Done in one run'])
       expect(pdfs(page)).toHaveLength(copy ? 1 : 0)
       page.wrapper.unmount()
     })
 
-    it(`${name}: without Accounting nothing runs and the user is told`, async () => {
-      const page = await render(pkg, file, { record, apps: [] })
-      await run(page, action)
-      expect(scripts(page)).toEqual([])
-      expect(page.host.callApp).not.toHaveBeenCalled()
-      expect(page.ui.confirm).not.toHaveBeenCalled()
-      expect(pdfs(page)).toEqual([])
-      expect(toasts(page)).toEqual([['error', expect.stringContaining('Accounting is not available')]])
-      page.wrapper.unmount()
-    })
-
-    it(`${name}: when Accounting fails the record is not completed and no copy is saved`, async () => {
-      const page = await render(pkg, file, { record, apps: accounting(operation) })
-      ;(page.host.runScript as unknown as Mocked).mockResolvedValue({ message: 'Handing over', [field]: { source: { path: RECORD } } } as never)
-      ;(page.host.callApp as unknown as Mocked).mockRejectedValue(new Error('The period is closed'))
+    it(`${name}: when the script fails (the other app refused) nothing is marked done and no copy is saved`, async () => {
+      const page = await render(pkg, file, { record })
+      ;(page.host.runScript as unknown as Mocked).mockRejectedValue(new Error('Accounting is not available right now, so nothing was done.'))
       expect(await run(page, action)).toBe(false)
-      expect(scripts(page)).toEqual([first])
       expect(pdfs(page)).toEqual([])
       expect(toasts(page).filter(([variant]) => variant === 'success')).toEqual([])
-      expect(page.errors.join(' ')).toContain('The period is closed')
-      // A second try is a new attempt, not a replay of the failed one.
-      await new Promise(resolve => setTimeout(resolve, 2))
-      await run(page, action)
-      const keys = (page.host.callApp as unknown as Mocked).mock.calls.map(call => (call[0] as { idempotencyKey: string }).idempotencyKey)
-      expect(new Set(keys).size).toBe(2)
-      page.wrapper.unmount()
-    })
-
-    it(`${name}: an already completed record hands nothing over`, async () => {
-      const page = await render(pkg, file, { record, apps: accounting(operation) })
-      ;(page.host.runScript as unknown as Mocked).mockResolvedValue({ message: 'Already done' } as never)
-      expect(await run(page, action)).toBe(true)
-      expect(scripts(page)).toEqual([first])
-      expect(page.host.callApp).not.toHaveBeenCalled()
-      expect(toasts(page)[0]).toEqual(['success', 'Already done'])
+      expect(page.errors.join(' ')).toContain('nothing was done')
       page.wrapper.unmount()
     })
   }
+})
+
+describe('the designed list pages show the right records', () => {
+  const past = new Date(Date.now() - 3_600_000).toISOString()
+  const future = new Date(Date.now() + 86_400_000).toISOString()
+  const rowsOf = (page: Awaited<ReturnType<typeof render>>) => {
+    let rows: any[] = []
+    page.wrapper.findAllComponents({ name: 'CvTable' }).forEach(table => { rows = rows.concat((table.props('rows') as any[]) || []) })
+    return rows
+  }
+  it('helpdesk queues: unassigned, overdue, waiting and solved', async () => {
+    const ticket = (code: string, stage: string, extra: object = {}) => ({ path: `/tickets/${code}`, data: { code, subject: `Ticket ${code}`, stage, priority: 'normal', state: 'active', ...extra } })
+    const world = { folders: { '/tickets': [ticket('T1', 'new'), ticket('T2', 'in-progress', { assignee: 'Thandi', slaDeadline: past }), ticket('T3', 'waiting', { assignee: 'Ben', slaDeadline: future }), ticket('T4', 'solved', { assignee: 'Ben' })] } }
+    const expected: Record<string, string[]> = { 'unassigned.page.yaml': ['T1'], 'overdue.page.yaml': ['T2'], 'waiting.page.yaml': ['T3'], 'solved.page.yaml': ['T4'] }
+    for (const [file, codes] of Object.entries(expected)) {
+      const page = await render('helpdesk', file, world)
+      expect(page.renderErrors, file).toEqual([])
+      expect(rowsOf(page).map(row => row.code), file).toEqual(codes)
+      page.wrapper.unmount()
+    }
+  })
+
+  it('time off: to approve shows who else is off at the same time', async () => {
+    const request = (code: string, name: string, status: string, from: string, to: string) => ({ path: `/leave-requests/${code}`, data: { code, employeeName: name, status, startDate: from, endDate: to, days: 1, state: 'active' } })
+    const page = await render('time-off', 'to-approve.page.yaml', { folders: { '/leave-requests': [
+      request('R1', 'Ana', 'submitted', '2026-12-01', '2026-12-05'), request('R2', 'Ben', 'approved', '2026-12-04', '2026-12-08'), request('R3', 'Cy', 'approved', '2027-01-01', '2027-01-02')] } })
+    expect(page.renderErrors).toEqual([])
+    expect(rowsOf(page)).toEqual([expect.objectContaining({ code: 'R1', clash: 'Ben' })])
+    page.wrapper.unmount()
+  })
+
+  it('manufacturing: the operation queue puts running before next before waiting, with the workcenter from the BoM', async () => {
+    const page = await render('manufacturing', 'queue.page.yaml', { folders: {
+      '/bills-of-materials': [{ path: '/bills-of-materials/B1', data: { code: 'B1', state: 'active', routing: [{ operation: 'Cut', workcenter: 'Saw' }, { operation: 'Glue', workcenter: 'Bench' }, { operation: 'Pack', workcenter: 'Dock' }] } }],
+      '/manufacturing-orders': [{ path: '/manufacturing-orders/MO1', data: { code: 'MO1', status: 'in-progress', state: 'active', bom: '/bills-of-materials/B1', productName: 'Desk',
+        operations: [{ label: 'Cut', done: true }, { label: 'Glue', startedAt: past }, { label: 'Pack' }] } }] } })
+    expect(page.renderErrors).toEqual([])
+    expect(rowsOf(page).map(row => [row.state, row.operation, row.workcenter])).toEqual([['Running', 'Glue', 'Bench'], ['Waiting', 'Pack', 'Dock']])
+    page.wrapper.unmount()
+  })
+})
+
+describe('"My" pages find the signed-in user', () => {
+  const rowsOf = (page: Awaited<ReturnType<typeof render>>) => {
+    let rows: any[] = []
+    page.wrapper.findAllComponents({ name: 'CvTable' }).forEach(table => { rows = rows.concat((table.props('rows') as any[]) || []) })
+    return rows
+  }
+  const staff = { '/employees': [{ path: '/employees/EMP-0001', data: { code: 'EMP-0001', name: 'Thandi Mokoena', workEmail: 'Thandi@Example.com', status: 'active', state: 'active' } }] }
+  const request = (code: string, name: string, ref = '') => ({ path: `/leave-requests/${code}`, data: { code, employeeName: name, employeeRef: ref, status: 'submitted', startDate: '2026-12-01', endDate: '2026-12-02', state: 'active' } })
+  const requests = [request('R1', 'T. Mokoena', '/employees/EMP-0001'), request('R2', 'thandi mokoena'), request('R3', 'tm'), request('R4', 'Ben Smith')]
+
+  it('by their Employees record (work email) or by their employee or sign-in name', async () => {
+    const page = await render('time-off', 'mine.page.yaml', { folders: { ...staff, '/leave-requests': requests }, user: { id: 'u-1', name: 'tm', email: 'thandi@example.com' } })
+    expect(page.renderErrors).toEqual([])
+    expect(rowsOf(page).map(row => row.code).sort()).toEqual(['R1', 'R2', 'R3'])
+    page.wrapper.unmount()
+  })
+
+  it('by sign-in name alone when there is no email or Employees record, and nothing when nobody is signed in', async () => {
+    const named = await render('time-off', 'mine.page.yaml', { folders: { '/leave-requests': requests }, user: { id: 'u-1', name: 'Ben Smith' } })
+    expect(rowsOf(named).map(row => row.code)).toEqual(['R4'])
+    named.wrapper.unmount()
+    const nobody = await render('time-off', 'mine.page.yaml', { folders: { '/leave-requests': requests } })
+    expect(rowsOf(nobody)).toEqual([])
+    nobody.wrapper.unmount()
+  })
+
+  it('the timesheet week grid shows the signed-in employee before the settings default', async () => {
+    const entry = (code: string, employee: string) => ({ path: `/timesheets/${code}`, data: { code, employee, date: new Date().toISOString().slice(0, 10), project: '', hours: '1', status: 'draft', state: 'active' } })
+    const page = await render('timesheets', 'week.page.yaml', { folders: { ...staff, '/timesheets': [entry('E1', 'Thandi Mokoena'), entry('E2', 'Default Person')] },
+      files: { '/settings/timesheets.json': { employee: 'Default Person' } }, user: { id: 'u-1', name: 'tm', email: 'thandi@example.com' } })
+    expect(page.renderErrors).toEqual([])
+    const picker = page.wrapper.findAllComponents({ name: 'CvSelect' }).find(select => select.props('label') === 'Employee')!
+    expect(picker.props('value')).toBe('Thandi Mokoena')
+    page.wrapper.unmount()
+  })
+})
+
+describe('people link to their Employees record', () => {
+  const staff = { '/employees': [
+    { path: '/employees/EMP-0001', data: { code: 'EMP-0001', name: 'Thandi Mokoena', jobTitle: 'Engineer', workEmail: 'thandi@example.com', status: 'active', state: 'active' } },
+    { path: '/employees/EMP-0002', data: { code: 'EMP-0002', name: 'Gone Person', status: 'terminated', state: 'active' } }] }
+  const user = { id: 'u-1', name: 'tm', email: 'thandi@example.com' }
+
+  it('timesheet entry: picking an employee fills the name, and "This is me" links the signed-in user', async () => {
+    const page = await render('timesheets', 'entry.form.yaml', { record: { ...JSON.parse(JSON.stringify({ code: 'TS-1', kind: 'entry', status: 'draft', state: 'active', employee: '', employeeRef: '' })) }, folders: staff, user })
+    expect(page.renderErrors).toEqual([])
+    const picker = page.wrapper.findAllComponents({ name: 'CvSelect' }).find(select => select.props('label') === 'Employee record')!
+    expect((picker.props('options') as { value: string }[]).map(option => option.value)).toEqual(['/employees/EMP-0001'])
+    picker.vm.$emit('update', '/employees/EMP-0001')
+    await flushPromises()
+    expect(page.graph.scope.form.values).toMatchObject({ employeeRef: '/employees/EMP-0001', employee: 'Thandi Mokoena' })
+    page.wrapper.unmount()
+
+    const fresh = await render('timesheets', 'entry.form.yaml', { record: { code: 'TS-1', kind: 'entry', status: 'draft', state: 'active', employee: '', employeeRef: '' }, folders: staff, user })
+    const me = fresh.wrapper.findAll('button').find(button => button.text().includes('This is me'))!
+    await me.trigger('click')
+    await flushPromises()
+    expect(fresh.graph.scope.form.values).toMatchObject({ employeeRef: '/employees/EMP-0001', employee: 'Thandi Mokoena' })
+    fresh.wrapper.unmount()
+  })
+
+  it.each([
+    ['expenses', 'report.form.yaml', 'employeeRecord', 'employeeName', { kind: 'report', status: 'draft', lines: [] }],
+    ['time-off', 'request.form.yaml', 'employeeRef', 'employeeName', { kind: 'request', status: 'draft' }],
+    ['referrals', 'referral.form.yaml', 'referrerRef', 'referrerName', { kind: 'referral', status: 'submitted' }],
+    ['appraisals', 'appraisal.form.yaml', 'employeeRef', 'employeeName', { kind: 'appraisal', status: 'draft', ratings: [] }],
+    ['planning', 'shift.form.yaml', 'employeeRef', 'employee', { kind: 'shift', status: 'draft' }],
+    ['payroll', 'profile.form.yaml', 'employeeRef', 'employeeName', { kind: 'profile' }],
+  ])('%s: picking an employee fills the name, including one stored with given and family names', async (pkg, file, ref, name, record) => {
+    const folders = { '/employees': [...staff['/employees'], { path: '/employees/EMP-0003', data: { code: 'EMP-0003', givenName: 'Ana', familyName: 'Silva', status: 'active', state: 'active' } }] }
+    const page = await render(pkg, file, { record: { code: 'R-1', state: 'active', [ref]: '', [name]: '', ...record }, folders, user })
+    expect(page.renderErrors).toEqual([])
+    const picker = page.wrapper.findAllComponents({ name: 'CvSelect' }).find(select => select.props('value') === '' && (select.props('options') as { value: string }[] | undefined)?.some(option => option.value === '/employees/EMP-0003'))!
+    picker.vm.$emit('update', '/employees/EMP-0003')
+    await flushPromises()
+    expect(page.graph.scope.form.values).toMatchObject({ [ref]: '/employees/EMP-0003', [name]: 'Ana Silva' })
+    page.wrapper.unmount()
+  })
+
+  it('helpdesk: a ticket linked to me is mine even under another name, and a linked ticket is not unassigned', async () => {
+    const ticket = { path: '/tickets/T1', data: { code: 'T1', subject: 'Linked', stage: 'new', assignee: 'T.M.', assigneeRef: '/employees/EMP-0001', state: 'active' } }
+    const mine = await render('helpdesk', 'mine.page.yaml', { folders: { ...staff, '/tickets': [ticket] }, user })
+    let rows: any[] = []
+    mine.wrapper.findAllComponents({ name: 'CvTable' }).forEach(table => { rows = rows.concat((table.props('rows') as any[]) || []) })
+    expect(rows.map(row => row.code)).toEqual(['T1'])
+    mine.wrapper.unmount()
+  })
 })
 

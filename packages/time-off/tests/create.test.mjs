@@ -17,12 +17,12 @@ const input = (kind, extra = {}) => ({
 })
 
 describe('Time Off create script', () => {
-  it('creates a request with the default leave type and empty days until dates exist', async () => {
+  it('creates a request for whoever creates it, with the default leave type and empty days until dates exist', async () => {
     const files = workspace()
-    const result = await createRecord(input('request'), undefined, files, { uuid })
+    const result = await createRecord(input('request', { user: { id: 'u-1', name: 'Thandi Mokoena' } }), undefined, files, { uuid })
     expect(result).toEqual({ path: '/leave-requests/TO-0001' })
     expect(files.json('/leave-requests/TO-0001')).toMatchObject({
-      kind: 'request', code: 'TO-0001', employeeName: 'Example', status: 'draft',
+      kind: 'request', code: 'TO-0001', employeeName: 'Thandi Mokoena', status: 'draft',
       type: '/leave-types/LT-0001', startDate: '', endDate: '', days: '',
     })
   })

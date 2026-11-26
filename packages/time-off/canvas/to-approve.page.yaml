@@ -1,0 +1,171 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "time-off-to-approve",
+    "name": "To approve",
+    "description": "Submitted requests, with anyone else off at the same time.",
+    "icon": "circle-check"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/leave-requests",
+        "reason": "List to approve"
+      }
+    ],
+    "data": {
+      "records": {
+        "kind": "folder",
+        "path": "/leave-requests",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.time-off.request+json"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Time Off",
+          "icon": "calendar-off",
+          "active": "to-approve.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "requests.page.yaml",
+              "label": "Requests",
+              "icon": "kanban"
+            },
+            {
+              "id": "allocations.page.yaml",
+              "label": "Balances",
+              "icon": "scale"
+            },
+            {
+              "id": "calendar.page.yaml",
+              "label": "Team calendar",
+              "icon": "calendar-days"
+            },
+            {
+              "id": "mine.page.yaml",
+              "label": "My requests",
+              "icon": "user"
+            },
+            {
+              "id": "to-approve.page.yaml",
+              "label": "To approve",
+              "icon": "circle-check"
+            },
+            {
+              "id": "types.page.yaml",
+              "label": "Leave types",
+              "icon": "tags"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
+            }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/time-off/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/time-off.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
+        },
+        "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "To approve",
+              "note": "Submitted requests, with anyone else off at the same time."
+            },
+            "children": []
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "records",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').filter(e => e.data.status === 'submitted').map(e => ({ path: e.path, code: e.data.code || e.name, employee: e.data.employeeName || '', type: String(e.data.type || '').split('/').pop(), start: e.data.startDate, end: e.data.endDate, days: e.data.days, clash: (data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').filter(o => o.path !== e.path && (o.data.status === 'approved' || o.data.status === 'submitted') && o.data.startDate <= e.data.endDate && o.data.endDate >= e.data.startDate).map(o => o.data.employeeName).filter(n => n).join(', ') })) }}",
+              "columns": [
+                {
+                  "key": "code",
+                  "label": "Request"
+                },
+                {
+                  "key": "employee",
+                  "label": "Employee"
+                },
+                {
+                  "key": "type",
+                  "label": "Type"
+                },
+                {
+                  "key": "start",
+                  "label": "From",
+                  "format": "date"
+                },
+                {
+                  "key": "end",
+                  "label": "To",
+                  "format": "date"
+                },
+                {
+                  "key": "days",
+                  "label": "Days",
+                  "align": "end"
+                },
+                {
+                  "key": "clash",
+                  "label": "Also off"
+                }
+              ],
+              "emptyText": "Nothing to approve.",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

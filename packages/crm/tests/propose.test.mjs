@@ -26,6 +26,13 @@ describe('CRM create script', () => {
     expect(nextCode('A.B', 2, ['A.B07', 'AxB99'])).toBe('A.B08')
   })
 
+  it('accepts who is creating and fills {{ user }} with their name', () => {
+    const template = JSON.stringify({ ...templates.deal, owner: '{{ user }}' })
+    const result = propose(input('deal', { template, user: { id: 'u-1', name: 'Thandi "T" Mokoena' } }), settings(), uuid)
+    expect(result.content.owner).toBe('Thandi "T" Mokoena')
+    expect(propose(input('deal', { template, user: null }), settings(), uuid).content.owner).toBe('')
+  })
+
   it('formats sortable UTC stamps', () => {
     expect(stamp(now)).toBe('20260102-093005')
     expect(() => stamp('later')).toThrow()

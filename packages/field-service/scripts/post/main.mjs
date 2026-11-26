@@ -4,9 +4,10 @@
 // (BigInt, never floats) and updates the task conditionally (If-Match), so a concurrent edit fails instead of
 // being overwritten.
 //
-// Completing returns what Invoicing needs to draft the invoice; the form or board asks Invoicing through the
+// Completing returns what Invoicing needs to draft the invoice; the script asks Invoicing through the
 // platform (Invoicing returns the same draft when asked again) and `record-invoice` stores the link. Field Service
 // never writes Invoicing's files. Re-running a finished operation returns a friendly message instead of failing.
+import { withAppCalls } from './app-calls.mjs'
 
 export const operations = ['schedule', 'start', 'complete', 'cancel', 'record-invoice']
 export const fieldService = {
@@ -169,7 +170,7 @@ export async function completeTask(files, path, { now }) {
   record.materialsTotal = materialsTotal(record.materials, record)
   Object.assign(record, { stage: 'done', completedAt: now, updatedAt: now })
   await saveTask(files, task)
-  // The form asks Invoicing (when installed) to draft the invoice from this, then records the link.
+  // The script asks Invoicing (when installed; see `handOvers`) to draft the invoice from this, then records the link.
   return { message: `Completed ${label(record)} (materials ${record.materialsTotal})`, path, invoiceRequest: invoiceRequest(path, record) }
 }
 
@@ -197,6 +198,15 @@ export async function run(parameters, files, { now = nowIso() } = {}) {
   return fail(`Unsupported operation ${JSON.stringify(operation ?? '')}. Expected one of ${operations.join(', ')}.`)
 }
 
+/**
+ * Operations that hand a request to another app: the script calls that app's API operation itself
+ * (`engine.apps.call`, as the same user under the other app's consent) and records the result, in the same run.
+ */
+export const handOvers = {
+  complete: { app: 'invoicing', operation: 'create-draft-invoice', field: 'invoiceRequest', recordOperation: 'record-invoice', parameter: 'invoice', key: 'task' },
+}
+export const runWithApps = withAppCalls(run, handOvers)
+
 export default async function post(engine) {
-  await engine.output.result(await run(engine.context.input.parameters, engine.files))
+  await engine.output.result(await runWithApps(engine.context.input.parameters, engine.files, engine.apps))
 }

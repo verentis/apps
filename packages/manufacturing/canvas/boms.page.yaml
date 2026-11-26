@@ -48,6 +48,11 @@
               "id": "orders.page.yaml",
               "label": "Orders",
               "icon": "kanban"
+            },
+            {
+              "id": "queue.page.yaml",
+              "label": "Operation queue",
+              "icon": "factory"
             }
           ],
           "page": true

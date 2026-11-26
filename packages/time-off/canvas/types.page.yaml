@@ -1,0 +1,158 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "time-off-types",
+    "name": "Leave types",
+    "description": "Days per year, and whether a request needs approval.",
+    "icon": "tags"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/leave-types",
+        "reason": "List leave types"
+      }
+    ],
+    "data": {
+      "records": {
+        "kind": "folder",
+        "path": "/leave-types",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.time-off.type+json"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Time Off",
+          "icon": "calendar-off",
+          "active": "types.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Overview",
+              "icon": "layout-dashboard"
+            },
+            {
+              "id": "requests.page.yaml",
+              "label": "Requests",
+              "icon": "kanban"
+            },
+            {
+              "id": "allocations.page.yaml",
+              "label": "Balances",
+              "icon": "scale"
+            },
+            {
+              "id": "calendar.page.yaml",
+              "label": "Team calendar",
+              "icon": "calendar-days"
+            },
+            {
+              "id": "mine.page.yaml",
+              "label": "My requests",
+              "icon": "user"
+            },
+            {
+              "id": "to-approve.page.yaml",
+              "label": "To approve",
+              "icon": "circle-check"
+            },
+            {
+              "id": "types.page.yaml",
+              "label": "Leave types",
+              "icon": "tags"
+            },
+            {
+              "id": "settings",
+              "label": "Settings",
+              "icon": "settings"
+            }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/time-off/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            },
+            {
+              "open-file": {
+                "path": "/settings/time-off.json",
+                "mode": "edit",
+                "if": "event.id == 'settings'",
+                "open": "side"
+              }
+            }
+          ]
+        },
+        "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Leave types",
+              "note": "Days per year, and whether a request needs approval."
+            },
+            "children": []
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "records",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').map(e => ({ path: e.path, code: e.data.code || e.name, name: e.data.name || '', days: e.data.daysPerYear, approval: e.data.requiresApproval ? 'Needs approval' : 'Automatic' })) }}",
+              "columns": [
+                {
+                  "key": "code",
+                  "label": "Code"
+                },
+                {
+                  "key": "name",
+                  "label": "Leave type"
+                },
+                {
+                  "key": "days",
+                  "label": "Days per year",
+                  "align": "end"
+                },
+                {
+                  "key": "approval",
+                  "label": "Approval",
+                  "format": "badge"
+                }
+              ],
+              "emptyText": "No leave types yet.",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

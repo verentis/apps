@@ -54,6 +54,11 @@
               "icon": "hard-hat"
             },
             {
+              "id": "technicians.page.yaml",
+              "label": "Technicians",
+              "icon": "users-round"
+            },
+            {
               "id": "settings",
               "label": "Settings",
               "icon": "settings"
@@ -286,31 +291,6 @@
                               "path": "{{ event.path }}"
                             },
                             "assign": "lastmove"
-                          }
-                        },
-                        {
-                          "call-app": {
-                            "if": "event.to === 'done' && ((data.appops || []).some(o => o.app === 'invoicing' && o.operation === 'create-draft-invoice' && o.available) && !!state.lastmove && !!state.lastmove.invoiceRequest)",
-                            "app": "invoicing",
-                            "operation": "create-draft-invoice",
-                            "input": {
-                              "$expr": "state.lastmove.invoiceRequest"
-                            },
-                            "idempotency-key": "{{ ('task-' + event.row.data.code) + '-' + Date.now() }}",
-                            "assign": "appcall"
-                          }
-                        },
-                        {
-                          "run-script": {
-                            "if": "event.to === 'done' && ((data.appops || []).some(o => o.app === 'invoicing' && o.operation === 'create-draft-invoice' && o.available) && !!state.lastmove && !!state.lastmove.invoiceRequest && !!state.appcall && !!state.appcall.path)",
-                            "file": "/applications/field-service/scripts/post",
-                            "timeout": 120,
-                            "parameters": {
-                              "operation": "record-invoice",
-                              "path": "{{ event.path }}",
-                              "invoice": "{{ state.appcall.path }}"
-                            },
-                            "assign": "recorded"
                           }
                         },
                         {

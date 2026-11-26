@@ -906,24 +906,6 @@
         ],
         "steps": [
           {
-            "set-state": {
-              "key": "lastresult",
-              "value": null
-            }
-          },
-          {
-            "set-state": {
-              "key": "appcall",
-              "value": null
-            }
-          },
-          {
-            "set-state": {
-              "key": "recorded",
-              "value": null
-            }
-          },
-          {
             "confirm": {
               "title": "Complete order",
               "message": "Complete this manufacturing order? When Inventory is installed, it records the consumption and production stock moves. Done orders cannot be edited."
@@ -941,38 +923,13 @@
             }
           },
           {
-            "call-app": {
-              "if": "(data.appops || []).some(o => o.app === 'inventory' && o.operation === 'record-production' && o.available) && !!state.lastresult && !!state.lastresult.productionRequest",
-              "app": "inventory",
-              "operation": "record-production",
-              "input": {
-                "$expr": "state.lastresult.productionRequest"
-              },
-              "idempotency-key": "{{ ('production-' + form.values.code) + '-' + Date.now() }}",
-              "assign": "appcall"
-            }
-          },
-          {
-            "run-script": {
-              "if": "(data.appops || []).some(o => o.app === 'inventory' && o.operation === 'record-production' && o.available) && !!state.lastresult && !!state.lastresult.productionRequest && !!state.appcall && !!state.appcall.moves",
-              "file": "/applications/manufacturing/scripts/post",
-              "timeout": 120,
-              "parameters": {
-                "operation": "record-moves",
-                "path": "{{ ctx.file.path }}",
-                "moves": "{{ state.appcall.moves }}"
-              },
-              "assign": "recorded"
-            }
-          },
-          {
             "refresh-source": {
               "source": "record"
             }
           },
           {
             "toast": {
-              "message": "{{ (state.recorded && state.recorded.message) || (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
               "variant": "success"
             }
           }
@@ -985,24 +942,6 @@
         ],
         "steps": [
           {
-            "set-state": {
-              "key": "lastresult",
-              "value": null
-            }
-          },
-          {
-            "set-state": {
-              "key": "appcall",
-              "value": null
-            }
-          },
-          {
-            "set-state": {
-              "key": "recorded",
-              "value": null
-            }
-          },
-          {
             "run-script": {
               "file": "/applications/manufacturing/scripts/post",
               "timeout": 120,
@@ -1014,38 +953,13 @@
             }
           },
           {
-            "call-app": {
-              "if": "(data.appops || []).some(o => o.app === 'inventory' && o.operation === 'record-production' && o.available) && !!state.lastresult && !!state.lastresult.productionRequest",
-              "app": "inventory",
-              "operation": "record-production",
-              "input": {
-                "$expr": "state.lastresult.productionRequest"
-              },
-              "idempotency-key": "{{ ('production-' + form.values.code) + '-' + Date.now() }}",
-              "assign": "appcall"
-            }
-          },
-          {
-            "run-script": {
-              "if": "(data.appops || []).some(o => o.app === 'inventory' && o.operation === 'record-production' && o.available) && !!state.lastresult && !!state.lastresult.productionRequest && !!state.appcall && !!state.appcall.moves",
-              "file": "/applications/manufacturing/scripts/post",
-              "timeout": 120,
-              "parameters": {
-                "operation": "record-moves",
-                "path": "{{ ctx.file.path }}",
-                "moves": "{{ state.appcall.moves }}"
-              },
-              "assign": "recorded"
-            }
-          },
-          {
             "refresh-source": {
               "source": "record"
             }
           },
           {
             "toast": {
-              "message": "{{ (state.recorded && state.recorded.message) || (state.lastresult && state.lastresult.message) || 'Done' }}",
+              "message": "{{ (state.lastresult && state.lastresult.message) || 'Done' }}",
               "variant": "success"
             }
           }

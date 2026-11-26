@@ -1,13 +1,10 @@
 // What Field Service adds to its generated pages: the day calendar per technician and load per technician.
-import { appOperationsSource, calendar, callAppSteps, chart, openRow, section } from '../../../tools/file-apps/canvas.mjs'
+import { appOperationsSource, calendar, chart, openRow, section } from '../../../tools/file-apps/canvas.mjs'
 import { containers } from './contracts.mjs'
 import { postScriptPath } from './app.mjs'
 
 const open = "(data.rows || []).filter(r => ['new', 'scheduled', 'on-site'].includes(r.stage))"
 
-// Completing on the board asks Invoicing to draft the task's invoice, as the task form does (see callAppSteps).
-const taskInvoice = callAppSteps({ app: 'invoicing', operation: 'create-draft-invoice', script: postScriptPath, recordOperation: 'record-invoice',
-  result: 'lastmove', path: '{{ event.path }}', key: "'task-' + event.row.data.code" })
 
 export const views = {
   'home.page.yaml': {
@@ -35,6 +32,6 @@ export const views = {
     label: 'All tasks', icon: 'kanban', count: `{{ ${open}.length }}`,
     // Dragging a card: see `movableBoard` in tools/file-apps/canvas.mjs.
     data: { ...appOperationsSource },
-    moves: { container: containers.tasks.path, script: postScriptPath, field: 'stage', run: {scheduled: 'schedule', 'on-site': 'start', done: { operation: 'complete', then: taskInvoice }, cancelled: 'cancel'}, edit: false, final: ['done', 'cancelled'] },
+    moves: { container: containers.tasks.path, script: postScriptPath, field: 'stage', run: {scheduled: 'schedule', 'on-site': 'start', done: 'complete', cancelled: 'cancel'}, edit: false, final: ['done', 'cancelled'] },
   },
 }

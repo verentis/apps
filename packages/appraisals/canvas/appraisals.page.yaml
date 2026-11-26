@@ -52,6 +52,11 @@
               "icon": "star"
             },
             {
+              "id": "cycles.page.yaml",
+              "label": "Past cycles",
+              "icon": "history"
+            },
+            {
               "id": "settings",
               "label": "Settings",
               "icon": "settings"

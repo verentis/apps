@@ -1,12 +1,13 @@
 // Moves Rental bookings through their lifecycle. The booking form runs this script (run-script) against a saved
 // record: confirming validates the dates and availability against overlapping bookings and computes the exact
 // total; picking up and returning move the units out and back (charging a late fee past the end date); returning
-// returns what Invoicing needs to draft the invoice, which the form asks Invoicing for through the platform
+// returns what Invoicing needs to draft the invoice, which the script asks Invoicing for through the platform
 // (`record-invoice` stores the link; Rental never writes Invoicing's files); cancelling releases the units.
 //
 // Integrity model: Invoicing returns the same draft when asked again for the same booking; the booking is updated
 // conditionally (If-Match), so a concurrent edit fails instead of being overwritten.
 import { fail, formatMinor, nameOf, nowIso, readFolder, readRecord, readSettings, saveRecord, statusOf, toMinor } from './ledger.mjs'
+import { withAppCalls } from './app-calls.mjs'
 
 export const operations = ['confirm-booking', 'pickup-booking', 'return-booking', 'cancel-booking', 'record-invoice']
 export const rental = {
@@ -140,7 +141,7 @@ async function pickupBooking(files, path, { now }) {
 
 /**
  * What Invoicing needs to draft the returned booking's invoice (its `create-draft-invoice` operation): one line for
- * the rental and one for any late fee. The booking form asks Invoicing through the platform; Rental never writes
+ * the rental and one for any late fee. The script asks Invoicing through the platform; Rental never writes
  * Invoicing's files.
  */
 export function invoiceRequest(path, record, { days, late, fee, currency }) {
@@ -203,7 +204,7 @@ async function returnBooking(files, path, { date, now }) {
   Object.assign(record, { status: 'returned', returnedAt: now, updatedAt: now })
   await saveRecord(files, booking, rental.mime('booking'))
   const feeNote = fee > 0n ? ` with a ${record.lateFee} late fee (${late} day${late === 1 ? '' : 's'} late)` : ''
-  // The form asks Invoicing (when installed) to draft the invoice from this, then records the link.
+  // The script asks Invoicing (when installed; see `handOvers`) to draft the invoice from this, then records the link.
   return { message: `${label(record)} returned${feeNote}`, path, invoiceRequest: invoiceRequest(path, record, { days, late, fee, currency }) }
 }
 
@@ -230,6 +231,15 @@ export async function run(parameters, files, { now = nowIso() } = {}) {
   return fail(`Unsupported operation ${JSON.stringify(operation ?? '')}. Expected one of ${operations.join(', ')}.`)
 }
 
+/**
+ * Operations that hand a request to another app: the script calls that app's API operation itself
+ * (`engine.apps.call`, as the same user under the other app's consent) and records the result, in the same run.
+ */
+export const handOvers = {
+  'return-booking': { app: 'invoicing', operation: 'create-draft-invoice', field: 'invoiceRequest', recordOperation: 'record-invoice', parameter: 'invoice', key: 'booking' },
+}
+export const runWithApps = withAppCalls(run, handOvers)
+
 export default async function post(engine) {
-  await engine.output.result(await run(engine.context.input.parameters, engine.files))
+  await engine.output.result(await runWithApps(engine.context.input.parameters, engine.files, engine.apps))
 }

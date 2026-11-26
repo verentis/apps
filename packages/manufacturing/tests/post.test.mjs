@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs'
 import { parse } from 'yaml'
 
 const inventoryContract = parse(readFileSync(new URL('../../inventory/api.yaml', import.meta.url), 'utf8'))
-import { run } from '../scripts/post/main.mjs'
+import { run, runWithApps } from '../scripts/post/main.mjs'
 import { memoryFiles } from '../../../tools/file-apps/memory-files.mjs'
 
 const now = '2026-03-10T08:00:00Z'
@@ -127,6 +127,19 @@ describe('Manufacturing production script', () => {
     expect([...files.nodes.keys()].some(path => path.startsWith('/stock-moves/'))).toBe(false)
     const validRequest = new Ajv2020({ strict: false }).compile(inventoryContract.spec.operations[0]['input-schema'])
     expect(validRequest(result.productionRequest), JSON.stringify(validRequest.errors)).toBe(true)
+  })
+
+  it('completing has Inventory record the moves in the same run, and without Inventory just completes', async () => {
+    const files = shop({ '/stock-moves': '', '/settings/inventory.json': { defaultWarehouse: '/warehouses/WH-0001' }, '/manufacturing-orders/MO-0001': startedOrder() })
+    const inventory = { call: async (app, operation, input) => ({ result: await recordProduction(input, { files, caller: { app: 'manufacturing' }, now }) }) }
+    await runWithApps({ operation: 'complete-mo', path: '/manufacturing-orders/MO-0001' }, files, inventory, options)
+    expect(files.json('/manufacturing-orders/MO-0001')).toMatchObject({ status: 'done', moves: [{ path: '/stock-moves/MO-0001-C1' }, { path: '/stock-moves/MO-0001-C2' }, { path: '/stock-moves/MO-0001-OUT' }] })
+
+    const alone = shop({ '/manufacturing-orders/MO-0001': startedOrder() })
+    const missing = { call: async () => { throw Object.assign(new Error('inventory is not installed'), { code: 'target_not_installed' }) } }
+    const result = await runWithApps({ operation: 'complete-mo', path: '/manufacturing-orders/MO-0001' }, alone, missing, options)
+    expect(result.productionRequest).toBeUndefined()
+    expect(alone.json('/manufacturing-orders/MO-0001').status).toBe('done')
   })
 
   it('through Inventory\'s record-production: valid moves through the default warehouse, linked once', async () => {

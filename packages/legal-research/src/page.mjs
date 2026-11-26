@@ -59,3 +59,18 @@ export function researchPage(id, name, country = '') {
 }
 }
 export const home = researchPage('legal-research', 'Legal Research')
+
+/** The installed packs this reader searches: jurisdiction, revision, how many authorities and how far they are checked. */
+export const packsPage = {
+  'api-version': apiVersion, kind: 'Page', metadata: { id: 'legal-research-packs', name: 'Packs', icon: 'package' },
+  spec: {
+    access: [{ path: packPath, reason: 'List the installed jurisdiction packs' }],
+    data: { packs: folder(packPath, packMime) },
+    tree: page([
+      heading('Packs'), text('The jurisdiction packs installed in this workspace. Install or update a pack such as South Africa Law to add authorities.', 'muted'),
+      ...status('packs'),
+      table("{{ (data.packs || []).filter(e => e.data).map(e => ({ pack: e.data.name || e.data.title || e.name, jurisdiction: e.data.jurisdiction || ((e.data.authorities || [])[0] || {}).jurisdiction || '', revision: e.data.revision || e.data.version || '', authorities: (e.data.authorities || []).length, checked: e.data.checkedThrough || '' })) }}",
+        [['pack', 'Pack'], ['jurisdiction', 'Jurisdiction', undefined, 'badge'], ['revision', 'Revision'], ['authorities', 'Authorities', 'end'], ['checked', 'Checked through', undefined, 'date']], 'No pack is installed yet.'),
+    ]),
+  },
+}

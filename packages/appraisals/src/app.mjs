@@ -1,8 +1,13 @@
+import { employeeLink } from '../../../tools/file-apps/canvas.mjs'
 import {
   codeDigits, codeSettings, containerOf, containers, createDefaults, installRoot, mimeTypes, recordKinds,
   scores, settingsPath, statuses,
 } from './contracts.mjs'
 import { scriptConsent } from '../../../tools/file-apps/build.mjs'
+
+
+/** Who is appraised: an Employees record when Employees is installed (the picker fills the name), else a name. */
+export const appraisee = employeeLink('employeeRef', 'employeeName')
 
 export const version = '0.1.0'
 export const canvasOrigin = 'https://canvas.apps.localtest.me'
@@ -39,8 +44,7 @@ export const entities = {
     folderNames: ['appraisals', 'hr'],
     sections: [
       { title: 'Appraisal', fields: [text('employeeName', 'Employee', { required: true }),
-        { key: 'employeeRef', label: 'Employee record', type: 'select', options: '{{ data.employeeoptions }}',
-          description: 'Optional. Choose an Employees record, then Copy name.' },
+        appraisee.field,
         text('period', 'Period', { placeholder: 'e.g. 2026-H1' }),
         text('manager', 'Manager'),
         select('status', 'Status', labelled(statuses), { description: 'Scheduled and Done are set by Schedule and Complete.' }),

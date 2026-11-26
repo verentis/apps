@@ -45,6 +45,12 @@
         "display-name": "Find authorities",
         "route": "/render?document=.%2Fcanvas%2Fhome.page.yaml",
         "order": 10
+      },
+      {
+        "id": "packs",
+        "display-name": "Packs",
+        "route": "/render?document=.%2Fcanvas%2Fpacks.page.yaml",
+        "order": 20
       }
     ],
     "launch": {
@@ -73,12 +79,27 @@
           "kind": "document",
           "id": "canvas/home.page.yaml"
         }
+      },
+      {
+        "path": "/legal-authority-packs",
+        "mode": "read",
+        "reason": "List the installed jurisdiction packs",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/packs.page.yaml"
+        }
       }
     ],
     "install": [
       {
         "from": "canvas/home.page.yaml",
         "to": "/applications/legal-research/canvas/home.page.yaml",
+        "mode": "managed",
+        "mime": "application/vnd.verentis.canvas.page+yaml"
+      },
+      {
+        "from": "canvas/packs.page.yaml",
+        "to": "/applications/legal-research/canvas/packs.page.yaml",
         "mode": "managed",
         "mime": "application/vnd.verentis.canvas.page+yaml"
       },

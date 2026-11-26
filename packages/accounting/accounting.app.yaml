@@ -498,6 +498,33 @@
         }
       },
       {
+        "path": "/journals",
+        "mode": "read",
+        "reason": "List journals",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/journals.page.yaml"
+        }
+      },
+      {
+        "path": "/expenses",
+        "mode": "read",
+        "reason": "List expenses",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/expenses.page.yaml"
+        }
+      },
+      {
+        "path": "/periods",
+        "mode": "read",
+        "reason": "List periods",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/periods.page.yaml"
+        }
+      },
+      {
         "path": "/chart-of-accounts",
         "mode": "write",
         "reason": "Create accounts with the next code",

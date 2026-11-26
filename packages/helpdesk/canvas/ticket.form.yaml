@@ -43,7 +43,9 @@
       "execution.run",
       "execution.read"
     ],
-    "capabilities": [],
+    "capabilities": [
+      "user-profile"
+    ],
     "sandbox": {
       "allow-scripts": true,
       "allow-same-origin": true,
@@ -62,6 +64,11 @@
         "reason": "Offer CRM customers on tickets (when CRM is installed)"
       },
       {
+        "path": "/employees",
+        "mode": "read",
+        "reason": "Find your Employees record by your work email (when Employees is installed)"
+      },
+      {
         "path": "/applications/helpdesk/",
         "mode": "read",
         "reason": "Read the Helpdesk schemas and run the ticket action script"
@@ -75,6 +82,10 @@
       {
         "path": "/customers",
         "reason": "Offer CRM customers on tickets (when CRM is installed)"
+      },
+      {
+        "path": "/employees",
+        "reason": "Find your Employees record by your work email (when Employees is installed)"
       },
       {
         "path": "/applications/helpdesk/",
@@ -107,6 +118,26 @@
         "path": "/customers",
         "contents": true,
         "mime-pattern": "application/vnd.verentis.crm.contact+json"
+      },
+      "signedinstaff": {
+        "kind": "folder",
+        "path": "/employees",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.employees.employee+json"
+      },
+      "me": {
+        "kind": "computed",
+        "expr": "((data.signedinstaff || []).filter(e => e.kind === 'file' && e.data && e.data.status !== 'terminated' && !!ctx.user && !!ctx.user.email && String(e.data.workEmail || '').toLowerCase() === String(ctx.user.email).toLowerCase()).map(e => ({ path: e.path, name: String(e.data.name || '') }))[0] || { path: '', name: ctx.user ? String(ctx.user.name || '') : '' })"
+      },
+      "employeelinks": {
+        "kind": "folder",
+        "path": "/employees",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.employees.employee+json"
+      },
+      "employeelinkoptions": {
+        "kind": "computed",
+        "expr": "(data.employeelinks || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived' && e.data.status !== 'terminated').map(e => ({ value: e.path, label: (String(e.data.name || [e.data.givenName, e.data.familyName].filter(Boolean).join(' ') || '') || e.name) + (e.data.jobTitle ? ' · ' + e.data.jobTitle : '') }))"
       },
       "customeroptions": {
         "kind": "computed",
@@ -204,6 +235,23 @@
                 "rules": {
                   "visible": "form.values.stage === 'solved' && !(form.values.state === 'archived')",
                   "disabled": "form.saving || form.dirty"
+                },
+                "slot": "actions"
+              },
+              {
+                "type": "canvas.button",
+                "props": {
+                  "label": "Assign to me",
+                  "variant": "ghost",
+                  "icon": "user-check",
+                  "size": "sm"
+                },
+                "on": {
+                  "click": "assign-to-me"
+                },
+                "rules": {
+                  "visible": "!(form.values.stage === 'closed') && !!data.me && !!data.me.name && (String(form.values.assignee || '').toLowerCase() !== data.me.name.toLowerCase() || (!!data.me.path && form.values.assigneeRef !== data.me.path))",
+                  "disabled": "form.saving || form.values.state === 'archived'"
                 },
                 "slot": "actions"
               },
@@ -459,6 +507,30 @@
                         },
                         "rules": {
                           "disabled": "(form.values.state === 'archived' || (form.values.stage === 'closed'))"
+                        }
+                      },
+                      {
+                        "type": "canvas.form.select",
+                        "props": {
+                          "label": "Assignee record",
+                          "value": "{{ form.values.assigneeRef }}",
+                          "description": "Optional. Choosing a record fills the name.",
+                          "options": "{{ data.employeelinkoptions }}",
+                          "searchable": true
+                        },
+                        "rules": {
+                          "disabled": "(form.values.state === 'archived' || (form.values.stage === 'closed'))"
+                        },
+                        "on": {
+                          "update": [
+                            {
+                              "patch-form": {
+                                "values": {
+                                  "assignee": "{{ ((data.employeelinks || []).filter(e => e.kind === 'file' && e.data && e.path === event).map(e => String(e.data.name || [e.data.givenName, e.data.familyName].filter(Boolean).join(' ') || ''))[0] || form.values.assignee || '') }}"
+                                }
+                              }
+                            }
+                          ]
                         }
                       },
                       {
@@ -734,6 +806,18 @@
             "patch-form": {
               "values": {
                 "customerName": "{{ ((data.companies || []).concat(data.contacts || []).filter(e => e.kind === 'file' && e.data && e.path === form.values.customerRef).map(e => e.data.name || [e.data.givenName, e.data.familyName].filter(Boolean).join(' '))[0]) || form.values.customerName }}"
+              }
+            }
+          }
+        ]
+      },
+      "assign-to-me": {
+        "steps": [
+          {
+            "patch-form": {
+              "values": {
+                "assignee": "{{ data.me.name }}",
+                "assigneeRef": "{{ data.me.path }}"
               }
             }
           }

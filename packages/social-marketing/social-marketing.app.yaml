@@ -283,6 +283,24 @@
         }
       },
       {
+        "path": "/social-posts",
+        "mode": "read",
+        "reason": "List content calendar",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/calendar.page.yaml"
+        }
+      },
+      {
+        "path": "/social-accounts",
+        "mode": "read",
+        "reason": "List channels",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/channels.page.yaml"
+        }
+      },
+      {
         "path": "/social-accounts",
         "mode": "write",
         "reason": "Create social accounts with the next code",

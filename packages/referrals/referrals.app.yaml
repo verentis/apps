@@ -11,9 +11,23 @@
   },
   "marketplace": {
     "logo": "./icons/app.svg",
-      "hero": {"source": "./marketplace/hero.svg", "alt": "Referrals cover"},
-      "images": [{"source": "./marketplace/overview.png", "alt": "Referrals overview in Canvas", "caption": "Referrals overview"}, {"source": "./marketplace/detail.png", "alt": "Leaderboard in Canvas", "caption": "Leaderboard"}],
-      "readme": "./marketplace/README.md",
+    "hero": {
+      "source": "./marketplace/hero.svg",
+      "alt": "Referrals cover"
+    },
+    "images": [
+      {
+        "source": "./marketplace/overview.png",
+        "alt": "Referrals overview in Canvas",
+        "caption": "Referrals overview"
+      },
+      {
+        "source": "./marketplace/detail.png",
+        "alt": "Leaderboard in Canvas",
+        "caption": "Leaderboard"
+      }
+    ],
+    "readme": "./marketplace/README.md",
     "keywords": [
       "referrals",
       "recruitment",
@@ -203,7 +217,7 @@
       {
         "path": "/employees",
         "mode": "read",
-        "reason": "Offer Employees records on referrals (when Employees is installed)",
+        "reason": "Find your Employees record by your work email (when Employees is installed)",
         "origin": {
           "kind": "document",
           "id": "referrals-referral"
@@ -225,6 +239,24 @@
         "origin": {
           "kind": "document",
           "id": "referrals-settings"
+        }
+      },
+      {
+        "path": "/referrals",
+        "mode": "read",
+        "reason": "List my referrals",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/mine.page.yaml"
+        }
+      },
+      {
+        "path": "/employees",
+        "mode": "read",
+        "reason": "Find your Employees record by your work email (when Employees is installed)",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/mine.page.yaml"
         }
       },
       {
@@ -254,6 +286,9 @@
           "id": "referrals-post"
         }
       }
+    ],
+    "capabilities": [
+      "user-profile"
     ]
   },
   "packaging": {

@@ -1,0 +1,128 @@
+{
+  "api-version": "canvas.verentis.io/v1",
+  "kind": "Page",
+  "metadata": {
+    "id": "contract-studio-issued",
+    "name": "Issued",
+    "description": "Issued agreements and their client and internal files.",
+    "icon": "file-check-2"
+  },
+  "spec": {
+    "access": [
+      {
+        "path": "/legal-contracts",
+        "reason": "List issued"
+      }
+    ],
+    "data": {
+      "records": {
+        "kind": "folder",
+        "path": "/legal-contracts",
+        "contents": true,
+        "mime-pattern": "application/vnd.verentis.contract-studio.contract+json"
+      }
+    },
+    "tree": [
+      {
+        "type": "canvas.app-shell",
+        "props": {
+          "title": "Contract Studio",
+          "icon": "file-pen-line",
+          "active": "issued.page.yaml",
+          "nav": [
+            {
+              "id": "home.page.yaml",
+              "label": "Agreements",
+              "icon": "file-signature"
+            },
+            {
+              "id": "library.page.yaml",
+              "label": "Clause library",
+              "icon": "library"
+            },
+            {
+              "id": "issued.page.yaml",
+              "label": "Issued",
+              "icon": "file-check-2"
+            }
+          ],
+          "page": true
+        },
+        "on": {
+          "navigate": [
+            {
+              "open-view": {
+                "if": "event.id != 'settings'",
+                "document": "/applications/contract-studio/canvas/{{ event.id }}",
+                "open": "replace"
+              }
+            }
+          ]
+        },
+        "children": [
+          {
+            "type": "canvas.record-header",
+            "props": {
+              "title": "Issued",
+              "note": "Issued agreements and their client and internal files."
+            },
+            "children": []
+          },
+          {
+            "type": "canvas.empty-state",
+            "props": {
+              "for": "records",
+              "compact": true
+            }
+          },
+          {
+            "type": "canvas.table",
+            "props": {
+              "rows": "{{ (data.records || []).filter(e => e.kind === 'file' && e.data && e.data.state !== 'archived').filter(e => e.data.stage === 'issued').map(e => ({ path: e.path, code: e.data.code || e.name, title: e.data.title || '', version: e.data.version, client: e.data.clientPath || '', schedule: e.data.schedulePath || '' })) }}",
+              "columns": [
+                {
+                  "key": "code",
+                  "label": "Agreement"
+                },
+                {
+                  "key": "title",
+                  "label": "Title"
+                },
+                {
+                  "key": "version",
+                  "label": "Version",
+                  "align": "end"
+                },
+                {
+                  "key": "client",
+                  "label": "Client file"
+                },
+                {
+                  "key": "schedule",
+                  "label": "Internal schedule"
+                }
+              ],
+              "emptyText": "No agreement has been issued yet.",
+              "search": true,
+              "sortable": true,
+              "pageSize": 25,
+              "narrow": "list",
+              "clickable": true
+            },
+            "on": {
+              "row-click": [
+                {
+                  "open-file": {
+                    "path": "{{ event.path }}",
+                    "mode": "edit",
+                    "open": "side"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

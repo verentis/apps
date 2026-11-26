@@ -292,6 +292,15 @@
         }
       },
       {
+        "path": "/survey-responses",
+        "mode": "read",
+        "reason": "List responses",
+        "origin": {
+          "kind": "document",
+          "id": "canvas/responses.page.yaml"
+        }
+      },
+      {
         "path": "/surveys",
         "mode": "write",
         "reason": "Create surveys with the next code",

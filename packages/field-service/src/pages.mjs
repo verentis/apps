@@ -2,9 +2,10 @@
 // task list by stage and the technician day schedule. Stage transitions (schedule, start, complete, cancel),
 // the materials total and the optional invoice draft are done by the action script the task form runs.
 import { views } from './views.mjs'
+import { listPages } from './lists.mjs'
 import {
   archived, badge, baseActions, boundForm, browser, button, card, column, folder, formControl, grid, heading,
-  humanize, iconName, options, openFile, page, panel, projectRegistration, recordButtons, row, scriptAction, appOperationsSource, offers, withInvoice,
+  humanize, iconName, options, openFile, page, panel, projectRegistration, recordButtons, row, scriptAction, appOperationsSource, offers, 
   sectionCards, stat, stats, status, table, tabs, text, toneExpression, pageHeader, appNavigation, lifecycle,
 } from '../../../tools/file-apps/canvas.mjs'
 import { containers, crm, installRoot, mimeTypes, openStages, recordKinds, schemaId, settingsPath, stages } from './contracts.mjs'
@@ -85,10 +86,10 @@ function taskForm() {
         start: scriptAction(postScriptPath, 'start', {
           confirm: { title: 'Start task', message: 'Mark the technician on site?' },
         }),
-        complete: withInvoice(scriptAction(postScriptPath, 'complete', {
+        complete: scriptAction(postScriptPath, 'complete', {
           confirm: { title: 'Complete task', message: 'Complete this task? The materials total is computed, the task is locked and Invoicing drafts the invoice when it is installed.' },
-        }), taskInvoice),
-        'draft-invoice': withInvoice(scriptAction(postScriptPath, 'complete', {}), taskInvoice),
+        }),
+        'draft-invoice': scriptAction(postScriptPath, 'complete', {}),
         cancel: scriptAction(postScriptPath, 'cancel', {
           confirm: { title: 'Cancel task', message: 'Cancel this task? Cancelled tasks are locked and cannot be edited.' },
         }),
@@ -233,10 +234,8 @@ function schedulePage() {
   }
 }
 
-/** Invoicing drafts a completed task's invoice; the task's code keys the call. */
-const taskInvoice = { script: postScriptPath, key: "'task-' + form.values.code" }
 
 export function buildPages() {
-  const documents = [homePage(), tasksPage(), schedulePage(), ...recordKinds.map(() => taskForm()), settingsForm()]
+  const documents = [homePage(), tasksPage(), schedulePage(), ...recordKinds.map(() => taskForm()), settingsForm(), ...listPages()]
   return appNavigation(Object.fromEntries(documents.map(({ file, document }) => [file, projectRegistration(document, `${installRoot}/canvas/${file}`)])), installRoot, views)
 }

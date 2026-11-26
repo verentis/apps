@@ -3,6 +3,7 @@ import { check, gate, load, matters, mime, save } from './common.mjs'
 import { intake } from './intake.mjs'
 import { billing } from './billing.mjs'
 import { editable, initial } from './initial.mjs'
+import { handOver } from './app-calls.mjs'
 
 // The guarded form accepts only the editable schema subset, never lifecycle, reservations or invoice references.
 function accepted(value, shape) {
@@ -43,4 +44,23 @@ export async function run(engine) {
   }
   return ['screen','decide'].includes(p.operation) ? intake(files, current, p.operation, now) : billing(files, current, p.operation, now, p.invoice)
 }
-export default async function workflow(engine) { await engine.output.result(await run(engine)) }
+/** The same run with other parameters (the record step after a hand-over), keeping the engine's clients. */
+const withParameters = (engine, parameters) => Object.create(engine, {
+  context: { value: { ...engine.context, input: { ...engine.context.input, parameters } } },
+})
+
+/**
+ * Approving a pre-bill hands its invoice request to Invoicing (`create-draft-invoice`, through the platform as the same
+ * user) and records the draft against the matter's new revision, in this run. Without Invoicing the pre-bill waits,
+ * approved.
+ */
+export async function runWithApps(engine) {
+  const result = await run(engine)
+  const p = engine.context.input.parameters
+  if (p?.operation !== 'approve') return result
+  return handOver(engine.apps, result, {
+    app: 'invoicing', operation: 'create-draft-invoice', field: 'invoiceRequest', key: `prebill-${String(p.path ?? '').split('/').pop()}`,
+    record: invoice => run(withParameters(engine, { ...p, operation: 'record-invoice', invoice, revision: result.revision })),
+  })
+}
+export default async function workflow(engine) { await engine.output.result(await runWithApps(engine)) }

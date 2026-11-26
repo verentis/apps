@@ -86,6 +86,11 @@
       "type": "string",
       "maxLength": 200
     },
+    "assigneeRef": {
+      "type": "string",
+      "maxLength": 4096,
+      "pattern": "^(/.*)?$"
+    },
     "description": {
       "type": "string",
       "maxLength": 10000
